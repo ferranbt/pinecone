@@ -1,0 +1,6 @@
+//@version=4
+
+// Numbers starting with decimal point
+x = .5
+y = .088
+z = 1 + .25

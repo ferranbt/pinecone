@@ -1,0 +1,75 @@
+[
+  {
+    "VarDecl": {
+      "name": "lengthInput",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 10.0
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "stochastic",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "stoch",
+          "args": [
+            {
+              "Variable": "close"
+            },
+            {
+              "Variable": "high"
+            },
+            {
+              "Variable": "low"
+            },
+            {
+              "Variable": "lengthInput"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "Expression": {
+      "Binary": {
+        "left": {
+          "Call": {
+            "callee": "sma",
+            "args": [
+              {
+                "Variable": "close"
+              },
+              {
+                "Literal": {
+                  "Number": 14.0
+                }
+              }
+            ]
+          }
+        },
+        "op": "Greater",
+        "right": {
+          "Call": {
+            "callee": "sma",
+            "args": [
+              {
+                "Variable": "close"
+              },
+              {
+                "Literal": {
+                  "Number": 28.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+]

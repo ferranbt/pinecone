@@ -1,0 +1,10 @@
+//@version=4
+
+// Greater than or equal
+a = close >= open
+
+// Less than or equal
+b = close <= open
+
+// Combined with other operators
+c = close >= 100 and close <= 200

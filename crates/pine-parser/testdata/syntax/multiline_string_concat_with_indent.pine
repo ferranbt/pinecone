@@ -1,0 +1,4 @@
+//@version=4
+x = "line1" +
+         "line2" +
+         "line3"

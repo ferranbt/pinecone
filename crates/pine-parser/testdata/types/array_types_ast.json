@@ -1,0 +1,56 @@
+[
+  {
+    "VarDecl": {
+      "name": "numbers",
+      "type_annotation": "int[]",
+      "initializer": {
+        "Call": {
+          "callee": "array.new_int",
+          "args": [
+            {
+              "Literal": {
+                "Number": 0.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "prices",
+      "type_annotation": "float[]",
+      "initializer": {
+        "Call": {
+          "callee": "array.new_float",
+          "args": [
+            {
+              "Literal": {
+                "Number": 5.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "names",
+      "type_annotation": "string[]",
+      "initializer": {
+        "Call": {
+          "callee": "array.new_string",
+          "args": [
+            {
+              "Literal": {
+                "Number": 10.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

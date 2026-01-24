@@ -1,0 +1,13 @@
+//@version=4
+
+var ocCount = -1
+if open[1] == close or close[1] == open
+    ocCount := ocCount + 1
+
+var hCount = -1
+if open == high and close == high
+    hCount := hCount + 1
+
+var flag = true
+if not flag
+    x = 100

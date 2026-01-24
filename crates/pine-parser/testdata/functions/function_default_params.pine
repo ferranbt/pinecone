@@ -1,0 +1,11 @@
+//@version=4
+
+// Function with default parameter values
+add(a, b = 10) => a + b
+
+// Multiple defaults
+greet(name, greeting = "Hello", punctuation = "!") =>
+    greeting + " " + name + punctuation
+
+result = add(5)
+msg = greet("World")

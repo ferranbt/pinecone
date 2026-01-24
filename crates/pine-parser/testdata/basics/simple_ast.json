@@ -1,0 +1,31 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 10.0
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "y",
+      "type_annotation": null,
+      "initializer": {
+        "Index": {
+          "expr": {
+            "Variable": "close"
+          },
+          "index": {
+            "Literal": {
+              "Number": 1.0
+            }
+          }
+        }
+      }
+    }
+  }
+]

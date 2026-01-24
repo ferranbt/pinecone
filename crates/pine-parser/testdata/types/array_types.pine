@@ -1,0 +1,6 @@
+//@version=4
+
+// Array type annotations
+int[] numbers = array.new_int(0)
+float[] prices = array.new_float(5)
+string[] names = array.new_string(10)

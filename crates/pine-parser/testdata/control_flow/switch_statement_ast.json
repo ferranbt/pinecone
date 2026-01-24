@@ -1,0 +1,104 @@
+[
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Switch": {
+          "value": {
+            "Variable": "x"
+          },
+          "cases": [
+            [
+              {
+                "Literal": {
+                  "Number": 1.0
+                }
+              },
+              {
+                "Literal": {
+                  "String": "one"
+                }
+              }
+            ],
+            [
+              {
+                "Literal": {
+                  "Number": 2.0
+                }
+              },
+              {
+                "Literal": {
+                  "String": "two"
+                }
+              }
+            ],
+            [
+              {
+                "Literal": {
+                  "Number": 3.0
+                }
+              },
+              {
+                "Literal": {
+                  "String": "three"
+                }
+              }
+            ]
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "color",
+      "type_annotation": null,
+      "initializer": {
+        "Switch": {
+          "value": {
+            "Variable": "mode"
+          },
+          "cases": [
+            [
+              {
+                "Literal": {
+                  "String": "red"
+                }
+              },
+              {
+                "Literal": {
+                  "HexColor": "#FF0000"
+                }
+              }
+            ],
+            [
+              {
+                "Literal": {
+                  "String": "green"
+                }
+              },
+              {
+                "Literal": {
+                  "HexColor": "#00FF00"
+                }
+              }
+            ],
+            [
+              {
+                "Literal": {
+                  "String": "blue"
+                }
+              },
+              {
+                "Literal": {
+                  "HexColor": "#0000FF"
+                }
+              }
+            ]
+          ]
+        }
+      }
+    }
+  }
+]

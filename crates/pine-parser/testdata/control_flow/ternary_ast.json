@@ -1,0 +1,54 @@
+[
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Ternary": {
+          "condition": {
+            "Binary": {
+              "left": {
+                "Variable": "x"
+              },
+              "op": "Greater",
+              "right": {
+                "Literal": {
+                  "Number": 5.0
+                }
+              }
+            }
+          },
+          "then_expr": {
+            "Literal": {
+              "Number": 10.0
+            }
+          },
+          "else_expr": {
+            "Literal": {
+              "Number": 20.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "color",
+      "type_annotation": null,
+      "initializer": {
+        "Ternary": {
+          "condition": {
+            "Variable": "isGreen"
+          },
+          "then_expr": {
+            "Variable": "green"
+          },
+          "else_expr": {
+            "Variable": "red"
+          }
+        }
+      }
+    }
+  }
+]

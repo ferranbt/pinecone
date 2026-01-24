@@ -1,0 +1,3 @@
+//@version=4
+
+x = na(close[1])

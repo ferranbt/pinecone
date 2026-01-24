@@ -1,0 +1,193 @@
+[
+  {
+    "VarDecl": {
+      "name": "ocCount",
+      "type_annotation": null,
+      "initializer": {
+        "Unary": {
+          "op": "Neg",
+          "expr": {
+            "Literal": {
+              "Number": 1.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "If": {
+      "condition": {
+        "Binary": {
+          "left": {
+            "Binary": {
+              "left": {
+                "Index": {
+                  "expr": {
+                    "Variable": "open"
+                  },
+                  "index": {
+                    "Literal": {
+                      "Number": 1.0
+                    }
+                  }
+                }
+              },
+              "op": "Eq",
+              "right": {
+                "Variable": "close"
+              }
+            }
+          },
+          "op": "Or",
+          "right": {
+            "Binary": {
+              "left": {
+                "Index": {
+                  "expr": {
+                    "Variable": "close"
+                  },
+                  "index": {
+                    "Literal": {
+                      "Number": 1.0
+                    }
+                  }
+                }
+              },
+              "op": "Eq",
+              "right": {
+                "Variable": "open"
+              }
+            }
+          }
+        }
+      },
+      "then_branch": [
+        {
+          "Assignment": {
+            "name": "ocCount",
+            "value": {
+              "Binary": {
+                "left": {
+                  "Variable": "ocCount"
+                },
+                "op": "Add",
+                "right": {
+                  "Literal": {
+                    "Number": 1.0
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "else_branch": null
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "hCount",
+      "type_annotation": null,
+      "initializer": {
+        "Unary": {
+          "op": "Neg",
+          "expr": {
+            "Literal": {
+              "Number": 1.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "If": {
+      "condition": {
+        "Binary": {
+          "left": {
+            "Binary": {
+              "left": {
+                "Variable": "open"
+              },
+              "op": "Eq",
+              "right": {
+                "Variable": "high"
+              }
+            }
+          },
+          "op": "And",
+          "right": {
+            "Binary": {
+              "left": {
+                "Variable": "close"
+              },
+              "op": "Eq",
+              "right": {
+                "Variable": "high"
+              }
+            }
+          }
+        }
+      },
+      "then_branch": [
+        {
+          "Assignment": {
+            "name": "hCount",
+            "value": {
+              "Binary": {
+                "left": {
+                  "Variable": "hCount"
+                },
+                "op": "Add",
+                "right": {
+                  "Literal": {
+                    "Number": 1.0
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "else_branch": null
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "flag",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Bool": true
+        }
+      }
+    }
+  },
+  {
+    "If": {
+      "condition": {
+        "Unary": {
+          "op": "Not",
+          "expr": {
+            "Variable": "flag"
+          }
+        }
+      },
+      "then_branch": [
+        {
+          "VarDecl": {
+            "name": "x",
+            "type_annotation": null,
+            "initializer": {
+              "Literal": {
+                "Number": 100.0
+              }
+            }
+          }
+        }
+      ],
+      "else_branch": null
+    }
+  }
+]

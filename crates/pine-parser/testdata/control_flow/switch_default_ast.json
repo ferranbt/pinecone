@@ -1,0 +1,80 @@
+[
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Switch": {
+          "value": {
+            "Variable": "mode"
+          },
+          "cases": [
+            [
+              {
+                "Literal": {
+                  "String": "option1"
+                }
+              },
+              {
+                "Literal": {
+                  "Number": 10.0
+                }
+              }
+            ],
+            [
+              {
+                "Literal": {
+                  "String": "option2"
+                }
+              },
+              {
+                "Literal": {
+                  "Number": 20.0
+                }
+              }
+            ],
+            [
+              {
+                "Literal": {
+                  "Bool": true
+                }
+              },
+              {
+                "Literal": {
+                  "Number": 30.0
+                }
+              }
+            ]
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "value",
+      "type_annotation": null,
+      "initializer": {
+        "Switch": {
+          "value": {
+            "Variable": "x"
+          },
+          "cases": [
+            [
+              {
+                "Literal": {
+                  "Bool": true
+                }
+              },
+              {
+                "Literal": {
+                  "Number": 0.0
+                }
+              }
+            ]
+          ]
+        }
+      }
+    }
+  }
+]

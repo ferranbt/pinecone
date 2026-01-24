@@ -1,0 +1,13 @@
+//@version=4
+
+// Switch expression
+result = switch x
+    1 => "one"
+    2 => "two"
+    3 => "three"
+
+// Switch with strings
+color = switch mode
+    'red' => #FF0000
+    'green' => #00FF00
+    'blue' => #0000FF

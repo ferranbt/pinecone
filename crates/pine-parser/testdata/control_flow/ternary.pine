@@ -1,0 +1,2 @@
+var result = x > 5 ? 10 : 20
+var color = isGreen ? green : red

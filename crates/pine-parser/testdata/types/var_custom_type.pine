@@ -1,0 +1,3 @@
+//@version=4
+
+var label l = label.new(x=bar_index, y=na)

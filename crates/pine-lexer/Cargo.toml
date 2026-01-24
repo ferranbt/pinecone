@@ -1,0 +1,8 @@
+[package]
+name = "pine-lexer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eyre = { workspace = true }
+thiserror = { workspace = true }

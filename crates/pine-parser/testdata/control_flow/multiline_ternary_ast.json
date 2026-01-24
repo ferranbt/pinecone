@@ -1,0 +1,89 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "Ternary": {
+          "condition": {
+            "Binary": {
+              "left": {
+                "Variable": "close"
+              },
+              "op": "Greater",
+              "right": {
+                "Variable": "open"
+              }
+            }
+          },
+          "then_expr": {
+            "Literal": {
+              "Number": 1.0
+            }
+          },
+          "else_expr": {
+            "Literal": {
+              "Number": 0.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Ternary": {
+          "condition": {
+            "Binary": {
+              "left": {
+                "Variable": "close"
+              },
+              "op": "Greater",
+              "right": {
+                "Variable": "open"
+              }
+            }
+          },
+          "then_expr": {
+            "Literal": {
+              "Number": 1.0
+            }
+          },
+          "else_expr": {
+            "Ternary": {
+              "condition": {
+                "Binary": {
+                  "left": {
+                    "Variable": "close"
+                  },
+                  "op": "Less",
+                  "right": {
+                    "Variable": "open"
+                  }
+                }
+              },
+              "then_expr": {
+                "Unary": {
+                  "op": "Neg",
+                  "expr": {
+                    "Literal": {
+                      "Number": 1.0
+                    }
+                  }
+                }
+              },
+              "else_expr": {
+                "Literal": {
+                  "Number": 0.0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,14 @@
+//@version=4
+
+// Compound assignment operators
+x = 10
+x += 5
+x -= 3
+x *= 2
+x /= 4
+
+// With variables
+count = 0
+count += 1
+total = 100
+total -= 10

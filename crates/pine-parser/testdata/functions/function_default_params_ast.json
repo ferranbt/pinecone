@@ -1,0 +1,115 @@
+[
+  {
+    "VarDecl": {
+      "name": "add",
+      "type_annotation": null,
+      "initializer": {
+        "Function": {
+          "params": [
+            "a",
+            "b"
+          ],
+          "body": [
+            {
+              "Expression": {
+                "Binary": {
+                  "left": {
+                    "Variable": "a"
+                  },
+                  "op": "Add",
+                  "right": {
+                    "Variable": "b"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "greet",
+      "type_annotation": null,
+      "initializer": {
+        "Function": {
+          "params": [
+            "name",
+            "greeting",
+            "punctuation"
+          ],
+          "body": [
+            {
+              "Expression": {
+                "Binary": {
+                  "left": {
+                    "Binary": {
+                      "left": {
+                        "Binary": {
+                          "left": {
+                            "Variable": "greeting"
+                          },
+                          "op": "Add",
+                          "right": {
+                            "Literal": {
+                              "String": " "
+                            }
+                          }
+                        }
+                      },
+                      "op": "Add",
+                      "right": {
+                        "Variable": "name"
+                      }
+                    }
+                  },
+                  "op": "Add",
+                  "right": {
+                    "Variable": "punctuation"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "add",
+          "args": [
+            {
+              "Literal": {
+                "Number": 5.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "msg",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "greet",
+          "args": [
+            {
+              "Literal": {
+                "String": "World"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

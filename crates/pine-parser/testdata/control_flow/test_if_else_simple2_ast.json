@@ -1,0 +1,37 @@
+[
+  {
+    "If": {
+      "condition": {
+        "Literal": {
+          "Bool": true
+        }
+      },
+      "then_branch": [
+        {
+          "VarDecl": {
+            "name": "x",
+            "type_annotation": null,
+            "initializer": {
+              "Literal": {
+                "Number": 1.0
+              }
+            }
+          }
+        }
+      ],
+      "else_branch": [
+        {
+          "VarDecl": {
+            "name": "y",
+            "type_annotation": null,
+            "initializer": {
+              "Literal": {
+                "Number": 2.0
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

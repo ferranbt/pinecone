@@ -1,0 +1,3 @@
+//@version=4
+
+f_format(_val) => _val * 2

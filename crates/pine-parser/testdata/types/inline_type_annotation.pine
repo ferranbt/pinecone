@@ -1,0 +1,10 @@
+//@version=4
+
+// Type annotation before variable name (not after var keyword)
+string name = "test"
+int count = 10
+float price = 99.99
+
+// With na
+string label = na
+int value = na

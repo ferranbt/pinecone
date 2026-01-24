@@ -1,0 +1,95 @@
+[
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Binary": {
+          "left": {
+            "Binary": {
+              "left": {
+                "Literal": {
+                  "String": "Hello"
+                }
+              },
+              "op": "Add",
+              "right": {
+                "Literal": {
+                  "String": " World"
+                }
+              }
+            }
+          },
+          "op": "Add",
+          "right": {
+            "Literal": {
+              "String": " Test"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "value",
+      "type_annotation": null,
+      "initializer": {
+        "Binary": {
+          "left": {
+            "Binary": {
+              "left": {
+                "Literal": {
+                  "Number": 10.0
+                }
+              },
+              "op": "Add",
+              "right": {
+                "Literal": {
+                  "Number": 20.0
+                }
+              }
+            }
+          },
+          "op": "Add",
+          "right": {
+            "Literal": {
+              "Number": 30.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "text",
+      "type_annotation": null,
+      "initializer": {
+        "Binary": {
+          "left": {
+            "Binary": {
+              "left": {
+                "Literal": {
+                  "String": "Line 1"
+                }
+              },
+              "op": "Add",
+              "right": {
+                "Literal": {
+                  "String": "\nLine 2"
+                }
+              }
+            }
+          },
+          "op": "Add",
+          "right": {
+            "Literal": {
+              "String": "\nLine 3"
+            }
+          }
+        }
+      }
+    }
+  }
+]

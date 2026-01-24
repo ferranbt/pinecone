@@ -1,0 +1,102 @@
+[
+  {
+    "VarDecl": {
+      "name": "double",
+      "type_annotation": null,
+      "initializer": {
+        "Function": {
+          "params": [
+            "x"
+          ],
+          "body": [
+            {
+              "Expression": {
+                "Binary": {
+                  "left": {
+                    "Variable": "x"
+                  },
+                  "op": "Mul",
+                  "right": {
+                    "Literal": {
+                      "Number": 2.0
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "add",
+      "type_annotation": null,
+      "initializer": {
+        "Function": {
+          "params": [
+            "a",
+            "b"
+          ],
+          "body": [
+            {
+              "Expression": {
+                "Binary": {
+                  "left": {
+                    "Variable": "a"
+                  },
+                  "op": "Add",
+                  "right": {
+                    "Variable": "b"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "double",
+          "args": [
+            {
+              "Literal": {
+                "Number": 5.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "sum",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "add",
+          "args": [
+            {
+              "Literal": {
+                "Number": 3.0
+              }
+            },
+            {
+              "Literal": {
+                "Number": 4.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,65 @@
+[
+  {
+    "VarDecl": {
+      "name": "price",
+      "type_annotation": null,
+      "initializer": {
+        "Binary": {
+          "left": {
+            "Binary": {
+              "left": {
+                "Variable": "high"
+              },
+              "op": "Add",
+              "right": {
+                "Variable": "low"
+              }
+            }
+          },
+          "op": "Div",
+          "right": {
+            "Literal": {
+              "Number": 2.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "diff",
+      "type_annotation": null,
+      "initializer": {
+        "Binary": {
+          "left": {
+            "Variable": "close"
+          },
+          "op": "Sub",
+          "right": {
+            "Variable": "open"
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "mult",
+      "type_annotation": null,
+      "initializer": {
+        "Binary": {
+          "left": {
+            "Variable": "close"
+          },
+          "op": "Mul",
+          "right": {
+            "Literal": {
+              "Number": 2.0
+            }
+          }
+        }
+      }
+    }
+  }
+]

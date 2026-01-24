@@ -1,0 +1,45 @@
+[
+  {
+    "VarDecl": {
+      "name": "lengthInput",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "input.int",
+          "args": [
+            {
+              "Literal": {
+                "Number": 10.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "stochastic",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "ta.stoch",
+          "args": [
+            {
+              "Variable": "close"
+            },
+            {
+              "Variable": "high"
+            },
+            {
+              "Variable": "low"
+            },
+            {
+              "Variable": "lengthInput"
+            }
+          ]
+        }
+      }
+    }
+  }
+]

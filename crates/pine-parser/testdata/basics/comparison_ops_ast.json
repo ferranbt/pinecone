@@ -1,0 +1,73 @@
+[
+  {
+    "VarDecl": {
+      "name": "a",
+      "type_annotation": null,
+      "initializer": {
+        "Binary": {
+          "left": {
+            "Variable": "close"
+          },
+          "op": "GreaterEq",
+          "right": {
+            "Variable": "open"
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "b",
+      "type_annotation": null,
+      "initializer": {
+        "Binary": {
+          "left": {
+            "Variable": "close"
+          },
+          "op": "LessEq",
+          "right": {
+            "Variable": "open"
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "c",
+      "type_annotation": null,
+      "initializer": {
+        "Binary": {
+          "left": {
+            "Binary": {
+              "left": {
+                "Variable": "close"
+              },
+              "op": "GreaterEq",
+              "right": {
+                "Literal": {
+                  "Number": 100.0
+                }
+              }
+            }
+          },
+          "op": "And",
+          "right": {
+            "Binary": {
+              "left": {
+                "Variable": "close"
+              },
+              "op": "LessEq",
+              "right": {
+                "Literal": {
+                  "Number": 200.0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]

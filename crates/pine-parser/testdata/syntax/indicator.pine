@@ -1,0 +1,4 @@
+int lengthInput = input.int(10, "Length", 1)
+float stochastic = ta.stoch(close, high, low, lengthInput)
+plot(stochastic, "Stochastic %K", color.teal, 3)
+bgcolor(barstate.isrealtime ? color.new(color.purple, 80) : na)

@@ -1,0 +1,143 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 10.0
+        }
+      }
+    }
+  },
+  {
+    "Assignment": {
+      "name": "x",
+      "value": {
+        "Binary": {
+          "left": {
+            "Variable": "x"
+          },
+          "op": "Add",
+          "right": {
+            "Literal": {
+              "Number": 5.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "Assignment": {
+      "name": "x",
+      "value": {
+        "Binary": {
+          "left": {
+            "Variable": "x"
+          },
+          "op": "Sub",
+          "right": {
+            "Literal": {
+              "Number": 3.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "Assignment": {
+      "name": "x",
+      "value": {
+        "Binary": {
+          "left": {
+            "Variable": "x"
+          },
+          "op": "Mul",
+          "right": {
+            "Literal": {
+              "Number": 2.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "Assignment": {
+      "name": "x",
+      "value": {
+        "Binary": {
+          "left": {
+            "Variable": "x"
+          },
+          "op": "Div",
+          "right": {
+            "Literal": {
+              "Number": 4.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "count",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      }
+    }
+  },
+  {
+    "Assignment": {
+      "name": "count",
+      "value": {
+        "Binary": {
+          "left": {
+            "Variable": "count"
+          },
+          "op": "Add",
+          "right": {
+            "Literal": {
+              "Number": 1.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "total",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 100.0
+        }
+      }
+    }
+  },
+  {
+    "Assignment": {
+      "name": "total",
+      "value": {
+        "Binary": {
+          "left": {
+            "Variable": "total"
+          },
+          "op": "Sub",
+          "right": {
+            "Literal": {
+              "Number": 10.0
+            }
+          }
+        }
+      }
+    }
+  }
+]

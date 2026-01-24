@@ -1,0 +1,13 @@
+//@version=4
+
+// Simple multiline ternary
+x = close > open
+    ? 1
+    : 0
+
+// Nested multiline ternary
+result = close > open
+    ? 1
+    : close < open
+        ? -1
+        : 0

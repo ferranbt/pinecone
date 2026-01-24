@@ -1,0 +1,7 @@
+var x = 10
+var y = close[1]
+
+if x > 5
+    y = x * 2
+else
+    y = x + 1

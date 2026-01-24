@@ -1,0 +1,8 @@
+//@version=4
+
+double(x) => x * 2
+
+add(a, b) => a + b
+
+result = double(5)
+sum = add(3, 4)

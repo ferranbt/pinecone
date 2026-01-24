@@ -1,0 +1,3 @@
+int length = 10
+float price = 100.5
+var something = 42

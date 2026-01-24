@@ -1,0 +1,71 @@
+[
+  {
+    "VarDecl": {
+      "name": "sum",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      }
+    }
+  },
+  {
+    "For": {
+      "var_name": "i",
+      "from": {
+        "Literal": {
+          "Number": 0.0
+        }
+      },
+      "to": {
+        "Literal": {
+          "Number": 5.0
+        }
+      },
+      "body": [
+        {
+          "For": {
+            "var_name": "j",
+            "from": {
+              "Literal": {
+                "Number": 0.0
+              }
+            },
+            "to": {
+              "Literal": {
+                "Number": 3.0
+              }
+            },
+            "body": [
+              {
+                "Assignment": {
+                  "name": "sum",
+                  "value": {
+                    "Binary": {
+                      "left": {
+                        "Variable": "sum"
+                      },
+                      "op": "Add",
+                      "right": {
+                        "Binary": {
+                          "left": {
+                            "Variable": "i"
+                          },
+                          "op": "Mul",
+                          "right": {
+                            "Variable": "j"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+]

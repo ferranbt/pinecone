@@ -1,0 +1,27 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "na",
+          "args": [
+            {
+              "Index": {
+                "expr": {
+                  "Variable": "close"
+                },
+                "index": {
+                  "Literal": {
+                    "Number": 1.0
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

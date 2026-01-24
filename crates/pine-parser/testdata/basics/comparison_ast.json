@@ -1,0 +1,76 @@
+[
+  {
+    "Expression": {
+      "Binary": {
+        "left": {
+          "Variable": "close"
+        },
+        "op": "Greater",
+        "right": {
+          "Variable": "open"
+        }
+      }
+    }
+  },
+  {
+    "Expression": {
+      "Binary": {
+        "left": {
+          "Variable": "rsi"
+        },
+        "op": "Less",
+        "right": {
+          "Literal": {
+            "Number": 30.0
+          }
+        }
+      }
+    }
+  },
+  {
+    "Expression": {
+      "Binary": {
+        "left": {
+          "Variable": "x"
+        },
+        "op": "Eq",
+        "right": {
+          "Literal": {
+            "Number": 5.0
+          }
+        }
+      }
+    }
+  },
+  {
+    "Expression": {
+      "Binary": {
+        "left": {
+          "Index": {
+            "expr": {
+              "Variable": "close"
+            },
+            "index": {
+              "Literal": {
+                "Number": 1.0
+              }
+            }
+          }
+        },
+        "op": "Greater",
+        "right": {
+          "Index": {
+            "expr": {
+              "Variable": "close"
+            },
+            "index": {
+              "Literal": {
+                "Number": 2.0
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]

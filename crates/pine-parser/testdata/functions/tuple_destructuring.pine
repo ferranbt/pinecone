@@ -1,0 +1,12 @@
+//@version=4
+
+// Tuple destructuring
+[a, b] = macd(close, 12, 26, 9)
+
+// Multiple values
+[x, y, z] = func(1, 2, 3)
+
+// In function body
+getValue() =>
+    [first, second] = calculate()
+    first + second

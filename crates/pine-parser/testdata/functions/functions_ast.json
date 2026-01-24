@@ -1,0 +1,54 @@
+[
+  {
+    "VarDecl": {
+      "name": "sma14",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "sma",
+          "args": [
+            {
+              "Variable": "close"
+            },
+            {
+              "Literal": {
+                "Number": 14.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "max_val",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "max",
+          "args": [
+            {
+              "Variable": "high"
+            },
+            {
+              "Variable": "low"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "foo",
+          "args": []
+        }
+      }
+    }
+  }
+]

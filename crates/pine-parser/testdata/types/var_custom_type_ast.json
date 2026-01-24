@@ -1,0 +1,21 @@
+[
+  {
+    "VarDecl": {
+      "name": "l",
+      "type_annotation": "label",
+      "initializer": {
+        "Call": {
+          "callee": "label.new",
+          "args": [
+            {
+              "Variable": "bar_index"
+            },
+            {
+              "Variable": "na"
+            }
+          ]
+        }
+      }
+    }
+  }
+]

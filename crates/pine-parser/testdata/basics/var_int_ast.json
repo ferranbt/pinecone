@@ -1,0 +1,29 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": "int",
+      "initializer": {
+        "Unary": {
+          "op": "Neg",
+          "expr": {
+            "Literal": {
+              "Number": 1.0
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "y",
+      "type_annotation": "float",
+      "initializer": {
+        "Literal": {
+          "Number": 3.14
+        }
+      }
+    }
+  }
+]

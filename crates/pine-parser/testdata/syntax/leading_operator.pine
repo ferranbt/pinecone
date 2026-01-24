@@ -1,0 +1,14 @@
+//@version=4
+
+// Multiline with leading operator (operator at start of continuation line)
+result = "Hello"
+     + " World"
+     + " Test"
+
+value = 10
+     + 20
+     + 30
+
+text = "Line 1"
+     + "\nLine 2"
+     + "\nLine 3"

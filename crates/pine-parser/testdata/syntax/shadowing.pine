@@ -1,0 +1,4 @@
+//@version=4
+
+max = max(open, close)
+min = min(open, close)

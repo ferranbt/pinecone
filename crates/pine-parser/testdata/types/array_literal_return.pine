@@ -1,0 +1,11 @@
+//@version=4
+
+// Function returning array literal
+getValue() =>
+    x = 10
+    y = 20
+    [x, y, 30]
+
+// Array literal as statement
+result = getValue()
+[a, b, c] = getValue()

@@ -1,0 +1,106 @@
+[
+  {
+    "TupleAssignment": {
+      "names": [
+        "a",
+        "b"
+      ],
+      "value": {
+        "Call": {
+          "callee": "macd",
+          "args": [
+            {
+              "Variable": "close"
+            },
+            {
+              "Literal": {
+                "Number": 12.0
+              }
+            },
+            {
+              "Literal": {
+                "Number": 26.0
+              }
+            },
+            {
+              "Literal": {
+                "Number": 9.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "TupleAssignment": {
+      "names": [
+        "x",
+        "y",
+        "z"
+      ],
+      "value": {
+        "Call": {
+          "callee": "func",
+          "args": [
+            {
+              "Literal": {
+                "Number": 1.0
+              }
+            },
+            {
+              "Literal": {
+                "Number": 2.0
+              }
+            },
+            {
+              "Literal": {
+                "Number": 3.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "getValue",
+      "type_annotation": null,
+      "initializer": {
+        "Function": {
+          "params": [],
+          "body": [
+            {
+              "TupleAssignment": {
+                "names": [
+                  "first",
+                  "second"
+                ],
+                "value": {
+                  "Call": {
+                    "callee": "calculate",
+                    "args": []
+                  }
+                }
+              }
+            },
+            {
+              "Expression": {
+                "Binary": {
+                  "left": {
+                    "Variable": "first"
+                  },
+                  "op": "Add",
+                  "right": {
+                    "Variable": "second"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+]

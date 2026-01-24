@@ -1,0 +1,12 @@
+//@version=4
+
+x = 10
+y = 5
+
+if x > y
+    z = 1
+
+if x == 10
+    a = 100
+else
+    a = 200

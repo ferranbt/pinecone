@@ -1,0 +1,3 @@
+var price = (high + low) / 2
+var diff = close - open
+var mult = close * 2

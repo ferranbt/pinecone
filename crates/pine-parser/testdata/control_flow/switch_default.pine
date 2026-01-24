@@ -1,0 +1,11 @@
+//@version=4
+
+// Switch with default case
+result = switch mode
+    'option1' => 10
+    'option2' => 20
+    => 30
+
+// Switch with only default
+value = switch x
+    => 0

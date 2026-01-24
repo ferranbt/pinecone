@@ -1,0 +1,11 @@
+//@version=4
+
+// Assignment with expression starting on next line
+x =
+    10 + 20
+
+// More complex
+result =
+    close > open
+    ? 1
+    : 0

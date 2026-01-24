@@ -1,0 +1,81 @@
+[
+  {
+    "VarDecl": {
+      "name": "getValue",
+      "type_annotation": null,
+      "initializer": {
+        "Function": {
+          "params": [],
+          "body": [
+            {
+              "VarDecl": {
+                "name": "x",
+                "type_annotation": null,
+                "initializer": {
+                  "Literal": {
+                    "Number": 10.0
+                  }
+                }
+              }
+            },
+            {
+              "VarDecl": {
+                "name": "y",
+                "type_annotation": null,
+                "initializer": {
+                  "Literal": {
+                    "Number": 20.0
+                  }
+                }
+              }
+            },
+            {
+              "Expression": {
+                "Array": [
+                  {
+                    "Variable": "x"
+                  },
+                  {
+                    "Variable": "y"
+                  },
+                  {
+                    "Literal": {
+                      "Number": 30.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "getValue",
+          "args": []
+        }
+      }
+    }
+  },
+  {
+    "TupleAssignment": {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "value": {
+        "Call": {
+          "callee": "getValue",
+          "args": []
+        }
+      }
+    }
+  }
+]

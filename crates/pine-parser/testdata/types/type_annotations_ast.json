@@ -1,0 +1,35 @@
+[
+  {
+    "VarDecl": {
+      "name": "length",
+      "type_annotation": "int",
+      "initializer": {
+        "Literal": {
+          "Number": 10.0
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "price",
+      "type_annotation": "float",
+      "initializer": {
+        "Literal": {
+          "Number": 100.5
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "something",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 42.0
+        }
+      }
+    }
+  }
+]

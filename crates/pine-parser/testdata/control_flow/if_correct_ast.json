@@ -1,0 +1,96 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 10.0
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "y",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 5.0
+        }
+      }
+    }
+  },
+  {
+    "If": {
+      "condition": {
+        "Binary": {
+          "left": {
+            "Variable": "x"
+          },
+          "op": "Greater",
+          "right": {
+            "Variable": "y"
+          }
+        }
+      },
+      "then_branch": [
+        {
+          "VarDecl": {
+            "name": "z",
+            "type_annotation": null,
+            "initializer": {
+              "Literal": {
+                "Number": 1.0
+              }
+            }
+          }
+        },
+        {
+          "If": {
+            "condition": {
+              "Binary": {
+                "left": {
+                  "Variable": "x"
+                },
+                "op": "Eq",
+                "right": {
+                  "Literal": {
+                    "Number": 10.0
+                  }
+                }
+              }
+            },
+            "then_branch": [
+              {
+                "VarDecl": {
+                  "name": "a",
+                  "type_annotation": null,
+                  "initializer": {
+                    "Literal": {
+                      "Number": 100.0
+                    }
+                  }
+                }
+              }
+            ],
+            "else_branch": [
+              {
+                "VarDecl": {
+                  "name": "a",
+                  "type_annotation": null,
+                  "initializer": {
+                    "Literal": {
+                      "Number": 200.0
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "else_branch": null
+    }
+  }
+]

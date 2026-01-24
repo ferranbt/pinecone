@@ -1,0 +1,40 @@
+[
+  {
+    "VarDecl": {
+      "name": "max",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "max",
+          "args": [
+            {
+              "Variable": "open"
+            },
+            {
+              "Variable": "close"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "min",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "min",
+          "args": [
+            {
+              "Variable": "open"
+            },
+            {
+              "Variable": "close"
+            }
+          ]
+        }
+      }
+    }
+  }
+]

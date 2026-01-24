@@ -1,0 +1,129 @@
+[
+  {
+    "VarDecl": {
+      "name": "lengthInput",
+      "type_annotation": "int",
+      "initializer": {
+        "Call": {
+          "callee": "input.int",
+          "args": [
+            {
+              "Literal": {
+                "Number": 10.0
+              }
+            },
+            {
+              "Literal": {
+                "String": "Length"
+              }
+            },
+            {
+              "Literal": {
+                "Number": 1.0
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "stochastic",
+      "type_annotation": "float",
+      "initializer": {
+        "Call": {
+          "callee": "ta.stoch",
+          "args": [
+            {
+              "Variable": "close"
+            },
+            {
+              "Variable": "high"
+            },
+            {
+              "Variable": "low"
+            },
+            {
+              "Variable": "lengthInput"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "Expression": {
+      "Call": {
+        "callee": "plot",
+        "args": [
+          {
+            "Variable": "stochastic"
+          },
+          {
+            "Literal": {
+              "String": "Stochastic %K"
+            }
+          },
+          {
+            "MemberAccess": {
+              "object": {
+                "Variable": "color"
+              },
+              "member": "teal"
+            }
+          },
+          {
+            "Literal": {
+              "Number": 3.0
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "Expression": {
+      "Call": {
+        "callee": "bgcolor",
+        "args": [
+          {
+            "Ternary": {
+              "condition": {
+                "MemberAccess": {
+                  "object": {
+                    "Variable": "barstate"
+                  },
+                  "member": "isrealtime"
+                }
+              },
+              "then_expr": {
+                "Call": {
+                  "callee": "color.new",
+                  "args": [
+                    {
+                      "MemberAccess": {
+                        "object": {
+                          "Variable": "color"
+                        },
+                        "member": "purple"
+                      }
+                    },
+                    {
+                      "Literal": {
+                        "Number": 80.0
+                      }
+                    }
+                  ]
+                }
+              },
+              "else_expr": {
+                "Variable": "na"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+]
