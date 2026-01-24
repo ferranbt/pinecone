@@ -1,5 +1,7 @@
-use pine_ast::{BinOp, Expr, Literal, Program, Stmt, UnOp};
+use pine_ast::{Argument, BinOp, Expr, Literal, Program, Stmt, UnOp};
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -31,14 +33,31 @@ pub struct Bar {
 }
 
 /// Value types in the interpreter
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Number(f64),
     String(String),
     Bool(bool),
     Na, // PineScript's N/A value
-    Array(Vec<Value>),
+    Array(Rc<RefCell<Vec<Value>>>), // Mutable shared array reference
 }
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Number(a), Value::Number(b)) => (a - b).abs() < f64::EPSILON,
+            (Value::String(a), Value::String(b)) => a == b,
+            (Value::Bool(a), Value::Bool(b)) => a == b,
+            (Value::Na, Value::Na) => true,
+            // Arrays compare by reference (Rc pointer equality)
+            (Value::Array(a), Value::Array(b)) => Rc::ptr_eq(a, b),
+            _ => false,
+        }
+    }
+}
+
+/// Type signature for builtin functions
+type BuiltinFn = fn(&mut Interpreter, Vec<Value>) -> Result<Value, RuntimeError>;
 
 impl Value {
     fn as_number(&self) -> Result<f64, RuntimeError> {
@@ -81,21 +100,43 @@ impl Value {
 pub struct Interpreter {
     /// Local variables in the current scope
     variables: HashMap<String, Value>,
+    /// Builtin function registry
+    builtins: HashMap<String, BuiltinFn>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self {
+        let mut interp = Self {
             variables: HashMap::new(),
-        }
+            builtins: HashMap::new(),
+        };
+        interp.register_builtins();
+        interp
     }
 
     /// Execute a program with a single bar
-    pub fn execute(&mut self, program: &Program, _bar: &Bar) -> Result<(), RuntimeError> {
+    pub fn execute(&mut self, program: &Program, bar: &Bar) -> Result<(), RuntimeError> {
+        // Initialize builtin variables from bar
+        self.variables.insert("open".to_string(), Value::Number(bar.open));
+        self.variables.insert("high".to_string(), Value::Number(bar.high));
+        self.variables.insert("low".to_string(), Value::Number(bar.low));
+        self.variables.insert("close".to_string(), Value::Number(bar.close));
+        self.variables.insert("volume".to_string(), Value::Number(bar.volume));
+
         for stmt in &program.statements {
             self.execute_stmt(stmt)?;
         }
         Ok(())
+    }
+
+    /// Register all builtin functions
+    fn register_builtins(&mut self) {
+        // Array functions
+        self.builtins.insert("array.new_float".to_string(), builtin_array_new_float as BuiltinFn);
+        self.builtins.insert("array.clear".to_string(), builtin_array_clear as BuiltinFn);
+        self.builtins.insert("array.push".to_string(), builtin_array_push as BuiltinFn);
+        self.builtins.insert("array.get".to_string(), builtin_array_get as BuiltinFn);
+        self.builtins.insert("array.size".to_string(), builtin_array_size as BuiltinFn);
     }
 
     /// Get a variable value
@@ -127,12 +168,10 @@ impl Interpreter {
 
             Stmt::TupleAssignment { names, value } => {
                 let val = self.eval_expr(value)?;
-                if let Value::Array(elements) = val {
+                if let Value::Array(arr_ref) = val {
+                    let arr = arr_ref.borrow();
                     for (i, name) in names.iter().enumerate() {
-                        let element_val = elements
-                            .get(i)
-                            .cloned()
-                            .unwrap_or(Value::Na);
+                        let element_val = arr.get(i).cloned().unwrap_or(Value::Na);
                         self.variables.insert(name.clone(), element_val);
                     }
                     Ok(None)
@@ -235,16 +274,16 @@ impl Interpreter {
             Expr::Array(elements) => {
                 let values: Result<Vec<_>, _> =
                     elements.iter().map(|e| self.eval_expr(e)).collect();
-                Ok(Value::Array(values?))
+                Ok(Value::Array(Rc::new(RefCell::new(values?))))
             }
 
             Expr::Index { expr, index } => {
                 let array_val = self.eval_expr(expr)?;
                 let index_val = self.eval_expr(index)?.as_number()? as usize;
 
-                if let Value::Array(elements) = array_val {
-                    elements
-                        .get(index_val)
+                if let Value::Array(arr_ref) = array_val {
+                    let arr = arr_ref.borrow();
+                    arr.get(index_val)
                         .cloned()
                         .ok_or(RuntimeError::IndexOutOfBounds(index_val))
                 } else {
@@ -278,10 +317,22 @@ impl Interpreter {
                 Ok(Value::Na)
             }
 
-            // Not yet implemented - will be added later
-            Expr::Call { .. } => Err(RuntimeError::TypeError(
-                "Function calls not yet implemented".to_string(),
-            )),
+            Expr::Call { callee, args } => {
+                // Evaluate arguments
+                let arg_values: Result<Vec<_>, _> =
+                    args.iter().map(|arg| self.eval_expr(arg)).collect();
+                let arg_values = arg_values?;
+
+                // Look up builtin function
+                if let Some(&builtin_fn) = self.builtins.get(callee) {
+                    builtin_fn(self, arg_values)
+                } else {
+                    Err(RuntimeError::UndefinedVariable(format!(
+                        "Unknown function: {}",
+                        callee
+                    )))
+                }
+            }
 
             Expr::MemberAccess { .. } => Err(RuntimeError::TypeError(
                 "Member access not yet implemented".to_string(),
@@ -385,6 +436,109 @@ impl Default for Interpreter {
     }
 }
 
+// ============================================================================
+// Builtin Functions
+// ============================================================================
+
+/// array.new_float(size, initial_value) - Create a new float array
+fn builtin_array_new_float(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::TypeError(format!(
+            "array.new_float expects 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    let size = args[0].as_number()? as usize;
+    let initial_value = args[1].clone();
+
+    let arr = vec![initial_value; size];
+    Ok(Value::Array(Rc::new(RefCell::new(arr))))
+}
+
+/// array.clear(array) - Remove all elements from the array
+fn builtin_array_clear(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        return Err(RuntimeError::TypeError(format!(
+            "array.clear expects 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    match &args[0] {
+        Value::Array(arr_ref) => {
+            arr_ref.borrow_mut().clear();
+            Ok(Value::Na)
+        }
+        _ => Err(RuntimeError::TypeError(
+            "array.clear expects an array".to_string(),
+        )),
+    }
+}
+
+/// array.push(array, value) - Append a value to the end of the array
+fn builtin_array_push(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::TypeError(format!(
+            "array.push expects 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    match &args[0] {
+        Value::Array(arr_ref) => {
+            arr_ref.borrow_mut().push(args[1].clone());
+            Ok(Value::Na)
+        }
+        _ => Err(RuntimeError::TypeError(
+            "array.push expects an array as first argument".to_string(),
+        )),
+    }
+}
+
+/// array.get(array, index) - Get element at index
+fn builtin_array_get(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+    if args.len() != 2 {
+        return Err(RuntimeError::TypeError(format!(
+            "array.get expects 2 arguments, got {}",
+            args.len()
+        )));
+    }
+
+    match &args[0] {
+        Value::Array(arr_ref) => {
+            let index = args[1].as_number()? as usize;
+            let arr = arr_ref.borrow();
+            arr.get(index)
+                .cloned()
+                .ok_or(RuntimeError::IndexOutOfBounds(index))
+        }
+        _ => Err(RuntimeError::TypeError(
+            "array.get expects an array as first argument".to_string(),
+        )),
+    }
+}
+
+/// array.size(array) - Get the number of elements in the array
+fn builtin_array_size(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        return Err(RuntimeError::TypeError(format!(
+            "array.size expects 1 argument, got {}",
+            args.len()
+        )));
+    }
+
+    match &args[0] {
+        Value::Array(arr_ref) => {
+            let size = arr_ref.borrow().len();
+            Ok(Value::Number(size as f64))
+        }
+        _ => Err(RuntimeError::TypeError(
+            "array.size expects an array".to_string(),
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -463,6 +617,39 @@ mod tests {
         interp.execute(&program, &Bar::default())?;
         // Sum of 1+2+3+4+5 = 15
         assert_eq!(interp.get_variable("sum"), Some(&Value::Number(15.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_array_operations() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            a = array.new_float(5, high)
+            array.clear(a)
+            array.push(a, close)
+            var size = array.size(a)
+            var val = array.get(a, 0)
+            "#,
+        )?;
+
+        let bar = Bar {
+            open: 100.0,
+            high: 105.0,
+            low: 99.0,
+            close: 103.0,
+            volume: 1000.0,
+        };
+
+        interp.execute(&program, &bar)?;
+
+        // After clear and push, size should be 1
+        assert_eq!(interp.get_variable("size"), Some(&Value::Number(1.0)));
+
+        // The only element should be 'close' value
+        assert_eq!(interp.get_variable("val"), Some(&Value::Number(103.0)));
+
         Ok(())
     }
 }

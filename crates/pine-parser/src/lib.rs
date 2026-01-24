@@ -1,4 +1,4 @@
-pub use pine_ast::{BinOp, Expr, Literal, Program, Stmt, UnOp};
+pub use pine_ast::{Argument, BinOp, Expr, Literal, Program, Stmt, UnOp};
 use pine_lexer::{Token, TokenType};
 use thiserror::Error;
 
@@ -847,7 +847,7 @@ impl Parser {
         }
     }
 
-    fn arguments(&mut self) -> Result<Vec<Expr>, ParserError> {
+    fn arguments(&mut self) -> Result<Vec<Argument>, ParserError> {
         let mut args = vec![];
 
         // Skip leading newlines in argument list
@@ -859,22 +859,25 @@ impl Parser {
             loop {
                 // Check for named argument: name=value
                 // In PineScript, function calls can have named arguments like plot(x, title="foo", color=red)
-                if let TokenType::Ident(_) = &self.peek().typ {
+                if let TokenType::Ident(name) = &self.peek().typ {
+                    let name = name.clone();
                     let saved_pos = self.current;
                     self.advance(); // consume identifier
 
                     if self.check(&TokenType::Assign) {
-                        // This is a named argument, skip the name and = for now
-                        // (We don't use the name in our AST yet)
+                        // This is a named argument
                         self.advance(); // consume =
-                        args.push(self.expression()?);
+                        let value = self.expression()?;
+                        args.push(Argument::Named { name, value });
                     } else {
                         // Not a named argument, backtrack and parse as expression
                         self.current = saved_pos;
-                        args.push(self.expression()?);
+                        let expr = self.expression()?;
+                        args.push(Argument::Positional(expr));
                     }
                 } else {
-                    args.push(self.expression()?);
+                    let expr = self.expression()?;
+                    args.push(Argument::Positional(expr));
                 }
 
                 // Skip newlines after each argument

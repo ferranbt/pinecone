@@ -1,5 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+/// Function argument - can be positional or named
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Argument {
+    Positional(Expr),
+    Named { name: String, value: Expr },
+}
+
 // AST nodes
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Expr {
@@ -16,7 +23,7 @@ pub enum Expr {
     },
     Call {
         callee: String,
-        args: Vec<Expr>,
+        args: Vec<Argument>,
     },
     Index {
         expr: Box<Expr>,
