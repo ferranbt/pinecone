@@ -56,8 +56,15 @@ impl PartialEq for Value {
     }
 }
 
+/// Evaluated function argument
+#[derive(Debug, Clone)]
+pub enum EvaluatedArg {
+    Positional(Value),
+    Named { name: String, value: Value },
+}
+
 /// Type signature for builtin functions
-type BuiltinFn = fn(&mut Interpreter, Vec<Value>) -> Result<Value, RuntimeError>;
+type BuiltinFn = fn(&mut Interpreter, Vec<EvaluatedArg>) -> Result<Value, RuntimeError>;
 
 impl Value {
     fn as_number(&self) -> Result<f64, RuntimeError> {
@@ -137,6 +144,9 @@ impl Interpreter {
         self.builtins.insert("array.push".to_string(), builtin_array_push as BuiltinFn);
         self.builtins.insert("array.get".to_string(), builtin_array_get as BuiltinFn);
         self.builtins.insert("array.size".to_string(), builtin_array_size as BuiltinFn);
+
+        // Example function with named/optional arguments
+        self.builtins.insert("greet".to_string(), builtin_greet as BuiltinFn);
     }
 
     /// Get a variable value
@@ -318,14 +328,35 @@ impl Interpreter {
             }
 
             Expr::Call { callee, args } => {
-                // Evaluate arguments
-                let arg_values: Result<Vec<_>, _> =
-                    args.iter().map(|arg| self.eval_expr(arg)).collect();
-                let arg_values = arg_values?;
+                // Evaluate arguments and validate positional-before-named rule
+                let mut evaluated_args = Vec::new();
+                let mut seen_named = false;
+
+                for arg in args {
+                    match arg {
+                        Argument::Positional(expr) => {
+                            if seen_named {
+                                return Err(RuntimeError::TypeError(
+                                    "Positional arguments cannot follow named arguments".to_string(),
+                                ));
+                            }
+                            let value = self.eval_expr(expr)?;
+                            evaluated_args.push(EvaluatedArg::Positional(value));
+                        }
+                        Argument::Named { name, value: expr } => {
+                            seen_named = true;
+                            let value = self.eval_expr(expr)?;
+                            evaluated_args.push(EvaluatedArg::Named {
+                                name: name.clone(),
+                                value,
+                            });
+                        }
+                    }
+                }
 
                 // Look up builtin function
                 if let Some(&builtin_fn) = self.builtins.get(callee) {
-                    builtin_fn(self, arg_values)
+                    builtin_fn(self, evaluated_args)
                 } else {
                     Err(RuntimeError::UndefinedVariable(format!(
                         "Unknown function: {}",
@@ -440,8 +471,25 @@ impl Default for Interpreter {
 // Builtin Functions
 // ============================================================================
 
+/// Helper to extract positional arguments from evaluated args
+fn extract_positional_args(args: Vec<EvaluatedArg>) -> Result<Vec<Value>, RuntimeError> {
+    let mut positional = Vec::new();
+    for arg in args {
+        match arg {
+            EvaluatedArg::Positional(value) => positional.push(value),
+            EvaluatedArg::Named { .. } => {
+                return Err(RuntimeError::TypeError(
+                    "This function does not support named arguments yet".to_string(),
+                ))
+            }
+        }
+    }
+    Ok(positional)
+}
+
 /// array.new_float(size, initial_value) - Create a new float array
-fn builtin_array_new_float(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+fn builtin_array_new_float(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
+    let args = extract_positional_args(args)?;
     if args.len() != 2 {
         return Err(RuntimeError::TypeError(format!(
             "array.new_float expects 2 arguments, got {}",
@@ -457,7 +505,8 @@ fn builtin_array_new_float(_interp: &mut Interpreter, args: Vec<Value>) -> Resul
 }
 
 /// array.clear(array) - Remove all elements from the array
-fn builtin_array_clear(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+fn builtin_array_clear(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
+    let args = extract_positional_args(args)?;
     if args.len() != 1 {
         return Err(RuntimeError::TypeError(format!(
             "array.clear expects 1 argument, got {}",
@@ -477,7 +526,8 @@ fn builtin_array_clear(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Va
 }
 
 /// array.push(array, value) - Append a value to the end of the array
-fn builtin_array_push(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+fn builtin_array_push(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
+    let args = extract_positional_args(args)?;
     if args.len() != 2 {
         return Err(RuntimeError::TypeError(format!(
             "array.push expects 2 arguments, got {}",
@@ -497,7 +547,8 @@ fn builtin_array_push(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Val
 }
 
 /// array.get(array, index) - Get element at index
-fn builtin_array_get(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+fn builtin_array_get(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
+    let args = extract_positional_args(args)?;
     if args.len() != 2 {
         return Err(RuntimeError::TypeError(format!(
             "array.get expects 2 arguments, got {}",
@@ -520,7 +571,8 @@ fn builtin_array_get(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Valu
 }
 
 /// array.size(array) - Get the number of elements in the array
-fn builtin_array_size(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+fn builtin_array_size(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
+    let args = extract_positional_args(args)?;
     if args.len() != 1 {
         return Err(RuntimeError::TypeError(format!(
             "array.size expects 1 argument, got {}",
@@ -537,6 +589,49 @@ fn builtin_array_size(_interp: &mut Interpreter, args: Vec<Value>) -> Result<Val
             "array.size expects an array".to_string(),
         )),
     }
+}
+
+/// greet(name, greeting="Hello") - Example function with named/optional arguments
+/// Returns a greeting string like "Hello, Alice"
+fn builtin_greet(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
+    // Extract required positional arg (name)
+    let mut name: Option<String> = None;
+    let mut greeting = "Hello".to_string(); // Default value
+
+    let mut positional_idx = 0;
+    for arg in args {
+        match arg {
+            EvaluatedArg::Positional(value) => {
+                if positional_idx == 0 {
+                    name = Some(value.as_string()?);
+                } else if positional_idx == 1 {
+                    greeting = value.as_string()?;
+                } else {
+                    return Err(RuntimeError::TypeError(
+                        "greet expects at most 2 arguments".to_string(),
+                    ));
+                }
+                positional_idx += 1;
+            }
+            EvaluatedArg::Named { name: param_name, value } => {
+                match param_name.as_str() {
+                    "greeting" => greeting = value.as_string()?,
+                    _ => {
+                        return Err(RuntimeError::TypeError(format!(
+                            "Unknown parameter: {}",
+                            param_name
+                        )))
+                    }
+                }
+            }
+        }
+    }
+
+    let name = name.ok_or_else(|| {
+        RuntimeError::TypeError("greet requires a 'name' argument".to_string())
+    })?;
+
+    Ok(Value::String(format!("{}, {}", greeting, name)))
 }
 
 #[cfg(test)]
@@ -649,6 +744,54 @@ mod tests {
 
         // The only element should be 'close' value
         assert_eq!(interp.get_variable("val"), Some(&Value::Number(103.0)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_named_arguments() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Test positional arguments only (uses default greeting)
+        let program1 = parse_str(r#"var msg1 = greet("Alice")"#)?;
+        interp.execute(&program1, &Bar::default())?;
+        assert_eq!(
+            interp.get_variable("msg1"),
+            Some(&Value::String("Hello, Alice".to_string()))
+        );
+
+        // Test positional argument with named parameter
+        let program2 = parse_str(r#"var msg2 = greet("Bob", greeting="Hi")"#)?;
+        interp.execute(&program2, &Bar::default())?;
+        assert_eq!(
+            interp.get_variable("msg2"),
+            Some(&Value::String("Hi, Bob".to_string()))
+        );
+
+        // Test both positional arguments
+        let program3 = parse_str(r#"var msg3 = greet("Charlie", "Hey")"#)?;
+        interp.execute(&program3, &Bar::default())?;
+        assert_eq!(
+            interp.get_variable("msg3"),
+            Some(&Value::String("Hey, Charlie".to_string()))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_invalid_named_argument_order() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // This should fail: positional arg after named arg
+        let program = parse_str(r#"var msg = greet(greeting="Hi", "Alice")"#)?;
+        let result = interp.execute(&program, &Bar::default());
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Positional arguments cannot follow named arguments"));
 
         Ok(())
     }
