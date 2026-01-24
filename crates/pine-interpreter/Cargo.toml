@@ -1,0 +1,13 @@
+[package]
+name = "pine-interpreter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pine-ast = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+pine-lexer = { workspace = true }
+pine-parser = { workspace = true }
+eyre = { workspace = true }

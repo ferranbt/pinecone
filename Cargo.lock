@@ -158,6 +158,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pine-interpreter"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "pine-ast",
+ "pine-lexer",
+ "pine-parser",
+ "thiserror",
+]
+
+[[package]]
 name = "pine-lexer"
 version = "0.1.0"
 dependencies = [
@@ -177,14 +188,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "walkdir",
-]
-
-[[package]]
-name = "pinevm"
-version = "0.1.0"
-dependencies = [
- "pine-lexer",
- "pine-parser",
 ]
 
 [[package]]

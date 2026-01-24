@@ -1,5 +1,10 @@
 [workspace]
-members = ["crates/pine-lexer", "crates/pine-ast", "crates/pine-parser"]
+members = [
+    "crates/pine-lexer",
+    "crates/pine-ast",
+    "crates/pine-parser",
+    "crates/pine-interpreter",
+]
 resolver = "2"
 
 [workspace.dependencies]

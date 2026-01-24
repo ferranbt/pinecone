@@ -1,4 +1,4 @@
-pub use pine_ast::{BinOp, Expr, Literal, Stmt, UnOp};
+pub use pine_ast::{BinOp, Expr, Literal, Program, Stmt, UnOp};
 use pine_lexer::{Token, TokenType};
 use thiserror::Error;
 

@@ -102,3 +102,15 @@ pub enum Stmt {
         body: Vec<Stmt>,
     },
 }
+
+/// A program is a collection of statements
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Program {
+    pub statements: Vec<Stmt>,
+}
+
+impl Program {
+    pub fn new(statements: Vec<Stmt>) -> Self {
+        Self { statements }
+    }
+}
