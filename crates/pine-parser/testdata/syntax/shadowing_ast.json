@@ -8,10 +8,14 @@
           "callee": "max",
           "args": [
             {
-              "Variable": "open"
+              "Positional": {
+                "Variable": "open"
+              }
             },
             {
-              "Variable": "close"
+              "Positional": {
+                "Variable": "close"
+              }
             }
           ]
         }
@@ -27,10 +31,14 @@
           "callee": "min",
           "args": [
             {
-              "Variable": "open"
+              "Positional": {
+                "Variable": "open"
+              }
             },
             {
-              "Variable": "close"
+              "Positional": {
+                "Variable": "close"
+              }
             }
           ]
         }

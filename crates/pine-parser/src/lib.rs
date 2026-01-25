@@ -1128,8 +1128,8 @@ mod tests {
         if let Expr::Call { callee, args } = expr {
             assert_eq!(callee, "sma");
             assert_eq!(args.len(), 2);
-            assert_eq!(args[0], Expr::Variable("close".to_string()));
-            assert_eq!(args[1], Expr::Literal(Literal::Number(14.0)));
+            assert_eq!(args[0], Argument::Positional(Expr::Variable("close".to_string())));
+            assert_eq!(args[1], Argument::Positional(Expr::Literal(Literal::Number(14.0))));
         } else {
             panic!("Expected function call");
         }
@@ -1358,7 +1358,11 @@ mod tests {
                 path.file_stem().unwrap().to_str().unwrap()
             ));
 
-            if json_path.exists() {
+            if generate_ast {
+                // Generate/overwrite AST JSON file
+                let json = serde_json::to_string_pretty(&ast)?;
+                fs::write(&json_path, &json)?;
+            } else if json_path.exists() {
                 // Compare with expected AST
                 let expected_json = fs::read_to_string(&json_path)?;
                 let expected_ast: Vec<Stmt> = serde_json::from_str(&expected_json)?;
@@ -1369,9 +1373,6 @@ mod tests {
                         json_path
                     ));
                 }
-            } else if generate_ast {
-                let json = serde_json::to_string_pretty(&ast)?;
-                fs::write(&json_path, &json)?;
             }
 
             Ok(())

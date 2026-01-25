@@ -8,8 +8,10 @@
           "callee": "array.new_int",
           "args": [
             {
-              "Literal": {
-                "Number": 0.0
+              "Positional": {
+                "Literal": {
+                  "Number": 0.0
+                }
               }
             }
           ]
@@ -26,8 +28,10 @@
           "callee": "array.new_float",
           "args": [
             {
-              "Literal": {
-                "Number": 5.0
+              "Positional": {
+                "Literal": {
+                  "Number": 5.0
+                }
               }
             }
           ]
@@ -44,8 +48,10 @@
           "callee": "array.new_string",
           "args": [
             {
-              "Literal": {
-                "Number": 10.0
+              "Positional": {
+                "Literal": {
+                  "Number": 10.0
+                }
               }
             }
           ]

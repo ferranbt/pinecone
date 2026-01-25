@@ -8,18 +8,24 @@
           "callee": "input.int",
           "args": [
             {
-              "Literal": {
-                "Number": 10.0
+              "Positional": {
+                "Literal": {
+                  "Number": 10.0
+                }
               }
             },
             {
-              "Literal": {
-                "String": "Length"
+              "Positional": {
+                "Literal": {
+                  "String": "Length"
+                }
               }
             },
             {
-              "Literal": {
-                "Number": 1.0
+              "Positional": {
+                "Literal": {
+                  "Number": 1.0
+                }
               }
             }
           ]
@@ -36,16 +42,24 @@
           "callee": "ta.stoch",
           "args": [
             {
-              "Variable": "close"
+              "Positional": {
+                "Variable": "close"
+              }
             },
             {
-              "Variable": "high"
+              "Positional": {
+                "Variable": "high"
+              }
             },
             {
-              "Variable": "low"
+              "Positional": {
+                "Variable": "low"
+              }
             },
             {
-              "Variable": "lengthInput"
+              "Positional": {
+                "Variable": "lengthInput"
+              }
             }
           ]
         }
@@ -58,24 +72,32 @@
         "callee": "plot",
         "args": [
           {
-            "Variable": "stochastic"
-          },
-          {
-            "Literal": {
-              "String": "Stochastic %K"
+            "Positional": {
+              "Variable": "stochastic"
             }
           },
           {
-            "MemberAccess": {
-              "object": {
-                "Variable": "color"
-              },
-              "member": "teal"
+            "Positional": {
+              "Literal": {
+                "String": "Stochastic %K"
+              }
             }
           },
           {
-            "Literal": {
-              "Number": 3.0
+            "Positional": {
+              "MemberAccess": {
+                "object": {
+                  "Variable": "color"
+                },
+                "member": "teal"
+              }
+            }
+          },
+          {
+            "Positional": {
+              "Literal": {
+                "Number": 3.0
+              }
             }
           }
         ]
@@ -88,37 +110,43 @@
         "callee": "bgcolor",
         "args": [
           {
-            "Ternary": {
-              "condition": {
-                "MemberAccess": {
-                  "object": {
-                    "Variable": "barstate"
-                  },
-                  "member": "isrealtime"
-                }
-              },
-              "then_expr": {
-                "Call": {
-                  "callee": "color.new",
-                  "args": [
-                    {
-                      "MemberAccess": {
-                        "object": {
-                          "Variable": "color"
-                        },
-                        "member": "purple"
-                      }
+            "Positional": {
+              "Ternary": {
+                "condition": {
+                  "MemberAccess": {
+                    "object": {
+                      "Variable": "barstate"
                     },
-                    {
-                      "Literal": {
-                        "Number": 80.0
+                    "member": "isrealtime"
+                  }
+                },
+                "then_expr": {
+                  "Call": {
+                    "callee": "color.new",
+                    "args": [
+                      {
+                        "Positional": {
+                          "MemberAccess": {
+                            "object": {
+                              "Variable": "color"
+                            },
+                            "member": "purple"
+                          }
+                        }
+                      },
+                      {
+                        "Positional": {
+                          "Literal": {
+                            "Number": 80.0
+                          }
+                        }
                       }
-                    }
-                  ]
+                    ]
+                  }
+                },
+                "else_expr": {
+                  "Variable": "na"
                 }
-              },
-              "else_expr": {
-                "Variable": "na"
               }
             }
           }

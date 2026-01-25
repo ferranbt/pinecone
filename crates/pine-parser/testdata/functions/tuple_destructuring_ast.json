@@ -10,21 +10,29 @@
           "callee": "macd",
           "args": [
             {
-              "Variable": "close"
-            },
-            {
-              "Literal": {
-                "Number": 12.0
+              "Positional": {
+                "Variable": "close"
               }
             },
             {
-              "Literal": {
-                "Number": 26.0
+              "Positional": {
+                "Literal": {
+                  "Number": 12.0
+                }
               }
             },
             {
-              "Literal": {
-                "Number": 9.0
+              "Positional": {
+                "Literal": {
+                  "Number": 26.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 9.0
+                }
               }
             }
           ]
@@ -44,18 +52,24 @@
           "callee": "func",
           "args": [
             {
-              "Literal": {
-                "Number": 1.0
+              "Positional": {
+                "Literal": {
+                  "Number": 1.0
+                }
               }
             },
             {
-              "Literal": {
-                "Number": 2.0
+              "Positional": {
+                "Literal": {
+                  "Number": 2.0
+                }
               }
             },
             {
-              "Literal": {
-                "Number": 3.0
+              "Positional": {
+                "Literal": {
+                  "Number": 3.0
+                }
               }
             }
           ]
