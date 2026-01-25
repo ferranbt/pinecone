@@ -64,10 +64,10 @@ pub enum EvaluatedArg {
 }
 
 /// Type signature for builtin functions
-type BuiltinFn = fn(&mut Interpreter, Vec<EvaluatedArg>) -> Result<Value, RuntimeError>;
+pub type BuiltinFn = fn(&mut Interpreter, Vec<EvaluatedArg>) -> Result<Value, RuntimeError>;
 
 impl Value {
-    fn as_number(&self) -> Result<f64, RuntimeError> {
+    pub fn as_number(&self) -> Result<f64, RuntimeError> {
         match self {
             Value::Number(n) => Ok(*n),
             Value::Bool(b) => Ok(if *b { 1.0 } else { 0.0 }),
@@ -78,7 +78,7 @@ impl Value {
         }
     }
 
-    fn as_bool(&self) -> Result<bool, RuntimeError> {
+    pub fn as_bool(&self) -> Result<bool, RuntimeError> {
         match self {
             Value::Bool(b) => Ok(*b),
             Value::Number(n) => Ok(*n != 0.0),
@@ -89,7 +89,7 @@ impl Value {
         }
     }
 
-    fn as_string(&self) -> Result<String, RuntimeError> {
+    pub fn as_string(&self) -> Result<String, RuntimeError> {
         match self {
             Value::String(s) => Ok(s.clone()),
             Value::Number(n) => Ok(n.to_string()),
@@ -97,6 +97,16 @@ impl Value {
             Value::Na => Ok("na".to_string()),
             _ => Err(RuntimeError::TypeError(format!(
                 "Cannot convert {:?} to string",
+                self
+            ))),
+        }
+    }
+
+    pub fn as_array(&self) -> Result<&Rc<RefCell<Vec<Value>>>, RuntimeError> {
+        match self {
+            Value::Array(arr) => Ok(arr),
+            _ => Err(RuntimeError::TypeError(format!(
+                "Expected array, got {:?}",
                 self
             ))),
         }
@@ -113,12 +123,18 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
-        let mut interp = Self {
+        Self {
             variables: HashMap::new(),
             builtins: HashMap::new(),
-        };
-        interp.register_builtins();
-        interp
+        }
+    }
+
+    /// Create interpreter with custom builtins
+    pub fn with_builtins(builtins: HashMap<String, BuiltinFn>) -> Self {
+        Self {
+            variables: HashMap::new(),
+            builtins,
+        }
     }
 
     /// Execute a program with a single bar
@@ -136,18 +152,6 @@ impl Interpreter {
         Ok(())
     }
 
-    /// Register all builtin functions
-    fn register_builtins(&mut self) {
-        // Array functions
-        self.builtins.insert("array.new_float".to_string(), builtin_array_new_float as BuiltinFn);
-        self.builtins.insert("array.clear".to_string(), builtin_array_clear as BuiltinFn);
-        self.builtins.insert("array.push".to_string(), builtin_array_push as BuiltinFn);
-        self.builtins.insert("array.get".to_string(), builtin_array_get as BuiltinFn);
-        self.builtins.insert("array.size".to_string(), builtin_array_size as BuiltinFn);
-
-        // Example function with named/optional arguments
-        self.builtins.insert("greet".to_string(), builtin_greet as BuiltinFn);
-    }
 
     /// Get a variable value
     pub fn get_variable(&self, name: &str) -> Option<&Value> {
@@ -467,176 +471,11 @@ impl Default for Interpreter {
     }
 }
 
-// ============================================================================
-// Builtin Functions
-// ============================================================================
-
-/// Helper to extract positional arguments from evaluated args
-fn extract_positional_args(args: Vec<EvaluatedArg>) -> Result<Vec<Value>, RuntimeError> {
-    let mut positional = Vec::new();
-    for arg in args {
-        match arg {
-            EvaluatedArg::Positional(value) => positional.push(value),
-            EvaluatedArg::Named { .. } => {
-                return Err(RuntimeError::TypeError(
-                    "This function does not support named arguments yet".to_string(),
-                ))
-            }
-        }
-    }
-    Ok(positional)
-}
-
-/// array.new_float(size, initial_value) - Create a new float array
-fn builtin_array_new_float(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
-    let args = extract_positional_args(args)?;
-    if args.len() != 2 {
-        return Err(RuntimeError::TypeError(format!(
-            "array.new_float expects 2 arguments, got {}",
-            args.len()
-        )));
-    }
-
-    let size = args[0].as_number()? as usize;
-    let initial_value = args[1].clone();
-
-    let arr = vec![initial_value; size];
-    Ok(Value::Array(Rc::new(RefCell::new(arr))))
-}
-
-/// array.clear(array) - Remove all elements from the array
-fn builtin_array_clear(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
-    let args = extract_positional_args(args)?;
-    if args.len() != 1 {
-        return Err(RuntimeError::TypeError(format!(
-            "array.clear expects 1 argument, got {}",
-            args.len()
-        )));
-    }
-
-    match &args[0] {
-        Value::Array(arr_ref) => {
-            arr_ref.borrow_mut().clear();
-            Ok(Value::Na)
-        }
-        _ => Err(RuntimeError::TypeError(
-            "array.clear expects an array".to_string(),
-        )),
-    }
-}
-
-/// array.push(array, value) - Append a value to the end of the array
-fn builtin_array_push(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
-    let args = extract_positional_args(args)?;
-    if args.len() != 2 {
-        return Err(RuntimeError::TypeError(format!(
-            "array.push expects 2 arguments, got {}",
-            args.len()
-        )));
-    }
-
-    match &args[0] {
-        Value::Array(arr_ref) => {
-            arr_ref.borrow_mut().push(args[1].clone());
-            Ok(Value::Na)
-        }
-        _ => Err(RuntimeError::TypeError(
-            "array.push expects an array as first argument".to_string(),
-        )),
-    }
-}
-
-/// array.get(array, index) - Get element at index
-fn builtin_array_get(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
-    let args = extract_positional_args(args)?;
-    if args.len() != 2 {
-        return Err(RuntimeError::TypeError(format!(
-            "array.get expects 2 arguments, got {}",
-            args.len()
-        )));
-    }
-
-    match &args[0] {
-        Value::Array(arr_ref) => {
-            let index = args[1].as_number()? as usize;
-            let arr = arr_ref.borrow();
-            arr.get(index)
-                .cloned()
-                .ok_or(RuntimeError::IndexOutOfBounds(index))
-        }
-        _ => Err(RuntimeError::TypeError(
-            "array.get expects an array as first argument".to_string(),
-        )),
-    }
-}
-
-/// array.size(array) - Get the number of elements in the array
-fn builtin_array_size(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
-    let args = extract_positional_args(args)?;
-    if args.len() != 1 {
-        return Err(RuntimeError::TypeError(format!(
-            "array.size expects 1 argument, got {}",
-            args.len()
-        )));
-    }
-
-    match &args[0] {
-        Value::Array(arr_ref) => {
-            let size = arr_ref.borrow().len();
-            Ok(Value::Number(size as f64))
-        }
-        _ => Err(RuntimeError::TypeError(
-            "array.size expects an array".to_string(),
-        )),
-    }
-}
-
-/// greet(name, greeting="Hello") - Example function with named/optional arguments
-/// Returns a greeting string like "Hello, Alice"
-fn builtin_greet(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
-    // Extract required positional arg (name)
-    let mut name: Option<String> = None;
-    let mut greeting = "Hello".to_string(); // Default value
-
-    let mut positional_idx = 0;
-    for arg in args {
-        match arg {
-            EvaluatedArg::Positional(value) => {
-                if positional_idx == 0 {
-                    name = Some(value.as_string()?);
-                } else if positional_idx == 1 {
-                    greeting = value.as_string()?;
-                } else {
-                    return Err(RuntimeError::TypeError(
-                        "greet expects at most 2 arguments".to_string(),
-                    ));
-                }
-                positional_idx += 1;
-            }
-            EvaluatedArg::Named { name: param_name, value } => {
-                match param_name.as_str() {
-                    "greeting" => greeting = value.as_string()?,
-                    _ => {
-                        return Err(RuntimeError::TypeError(format!(
-                            "Unknown parameter: {}",
-                            param_name
-                        )))
-                    }
-                }
-            }
-        }
-    }
-
-    let name = name.ok_or_else(|| {
-        RuntimeError::TypeError("greet requires a 'name' argument".to_string())
-    })?;
-
-    Ok(Value::String(format!("{}, {}", greeting, name)))
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     /// Helper function to parse PineScript source code into a Program
     fn parse_str(source: &str) -> eyre::Result<Program> {
@@ -648,6 +487,34 @@ mod tests {
         let mut parser = Parser::new(tokens);
         let statements = parser.parse()?;
         Ok(Program::new(statements))
+    }
+
+    /// Test builtin function: greet(name, greeting="Hello")
+    fn test_greet(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
+        let mut name: Option<String> = None;
+        let mut greeting = "Hello".to_string();
+
+        let mut positional_idx = 0;
+        for arg in args {
+            match arg {
+                EvaluatedArg::Positional(value) => {
+                    if positional_idx == 0 {
+                        name = Some(value.as_string()?);
+                    } else if positional_idx == 1 {
+                        greeting = value.as_string()?;
+                    }
+                    positional_idx += 1;
+                }
+                EvaluatedArg::Named { name: param_name, value } => {
+                    if param_name == "greeting" {
+                        greeting = value.as_string()?;
+                    }
+                }
+            }
+        }
+
+        let name = name.ok_or_else(|| RuntimeError::TypeError("Missing name".to_string()))?;
+        Ok(Value::String(format!("{}, {}", greeting, name)))
     }
 
     #[test]
@@ -716,41 +583,10 @@ mod tests {
     }
 
     #[test]
-    fn test_array_operations() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            a = array.new_float(5, high)
-            array.clear(a)
-            array.push(a, close)
-            var size = array.size(a)
-            var val = array.get(a, 0)
-            "#,
-        )?;
-
-        let bar = Bar {
-            open: 100.0,
-            high: 105.0,
-            low: 99.0,
-            close: 103.0,
-            volume: 1000.0,
-        };
-
-        interp.execute(&program, &bar)?;
-
-        // After clear and push, size should be 1
-        assert_eq!(interp.get_variable("size"), Some(&Value::Number(1.0)));
-
-        // The only element should be 'close' value
-        assert_eq!(interp.get_variable("val"), Some(&Value::Number(103.0)));
-
-        Ok(())
-    }
-
-    #[test]
     fn test_named_arguments() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
+        let mut builtins = HashMap::new();
+        builtins.insert("greet".to_string(), test_greet as BuiltinFn);
+        let mut interp = Interpreter::with_builtins(builtins);
 
         // Test positional arguments only (uses default greeting)
         let program1 = parse_str(r#"var msg1 = greet("Alice")"#)?;
@@ -781,7 +617,9 @@ mod tests {
 
     #[test]
     fn test_invalid_named_argument_order() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
+        let mut builtins = HashMap::new();
+        builtins.insert("greet".to_string(), test_greet as BuiltinFn);
+        let mut interp = Interpreter::with_builtins(builtins);
 
         // This should fail: positional arg after named arg
         let program = parse_str(r#"var msg = greet(greeting="Hi", "Alice")"#)?;

@@ -1,0 +1,119 @@
+// Re-export all public types from sub-crates
+pub use pine_ast as ast;
+pub use pine_builtins as builtins;
+pub use pine_interpreter as interpreter;
+pub use pine_lexer as lexer;
+pub use pine_parser as parser;
+
+use pine_ast::Program;
+use pine_interpreter::{Bar, Interpreter, RuntimeError};
+use pine_lexer::{Lexer, LexerError};
+use pine_parser::{Parser, ParserError};
+
+/// Error type for Pine operations
+#[derive(Debug)]
+pub enum Error {
+    Lexer(LexerError),
+    Parser(ParserError),
+    Runtime(RuntimeError),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Lexer(e) => write!(f, "Lexer error: {}", e),
+            Error::Parser(e) => write!(f, "Parser error: {}", e),
+            Error::Runtime(e) => write!(f, "Runtime error: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+impl From<RuntimeError> for Error {
+    fn from(e: RuntimeError) -> Self {
+        Error::Runtime(e)
+    }
+}
+
+impl From<LexerError> for Error {
+    fn from(e: LexerError) -> Self {
+        Error::Lexer(e)
+    }
+}
+
+impl From<ParserError> for Error {
+    fn from(e: ParserError) -> Self {
+        Error::Parser(e)
+    }
+}
+
+/// A compiled PineScript program that can be executed multiple times
+///
+/// This represents a parsed PineScript program that maintains state
+/// across multiple bar executions, just like in TradingView.
+pub struct Script {
+    program: Program,
+    interpreter: Interpreter,
+}
+
+impl Script {
+    /// Compile PineScript source code into a Script
+    pub fn compile(source: &str) -> Result<Self, Error> {
+        let mut lexer = Lexer::new(source);
+        let tokens = lexer.tokenize()?;
+
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse()?;
+        let program = Program::new(statements);
+
+        // Create interpreter with default builtins
+        let builtins = pine_builtins::register_all();
+        let interpreter = Interpreter::with_builtins(builtins);
+
+        Ok(Self {
+            program,
+            interpreter,
+        })
+    }
+
+    /// Execute the script with a single bar
+    ///
+    /// This maintains interpreter state across multiple calls,
+    /// allowing variables to persist between bars.
+    pub fn execute(&mut self, bar: &Bar) -> Result<(), Error> {
+        self.interpreter.execute(&self.program, bar)?;
+        Ok(())
+    }
+
+    /// Execute the script with multiple bars sequentially
+    ///
+    /// Each bar is processed in order, maintaining state between them.
+    pub fn execute_bars(&mut self, bars: &[Bar]) -> Result<(), Error> {
+        for bar in bars {
+            self.execute(bar)?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use interpreter::Value;
+
+    #[test]
+    fn test_builtin_array_operations() -> Result<(), Error> {
+        let source = r#"
+            var a = array.new_float(3, 10.0)
+            var size = array.size(a)
+        "#;
+
+        let mut script = Script::compile(source)?;
+        script.execute(&Bar::default())?;
+
+        assert_eq!(script.interpreter.get_variable("size"), Some(&Value::Number(3.0)));
+
+        Ok(())
+    }
+}

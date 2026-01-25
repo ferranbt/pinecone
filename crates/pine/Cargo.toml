@@ -1,0 +1,12 @@
+[package]
+name = "pine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pine-ast = { workspace = true }
+pine-lexer = { workspace = true }
+pine-parser = { workspace = true }
+pine-interpreter = { workspace = true }
+pine-builtins = { workspace = true }
+eyre = { workspace = true }

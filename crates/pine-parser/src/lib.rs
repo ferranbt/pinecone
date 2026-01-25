@@ -36,7 +36,6 @@ impl From<ParserError> for String {
 /// Helper trait to convert TokenType to operators
 trait TokenTypeExt {
     fn to_binop(&self) -> Option<BinOp>;
-    fn to_unop(&self) -> Option<UnOp>;
 }
 
 impl TokenTypeExt for TokenType {
@@ -60,15 +59,6 @@ impl TokenTypeExt for TokenType {
             TokenType::MinusAssign => Some(BinOp::Sub),
             TokenType::StarAssign => Some(BinOp::Mul),
             TokenType::SlashAssign => Some(BinOp::Div),
-            _ => None,
-        }
-    }
-
-    /// Convert token type to unary operator, if applicable
-    fn to_unop(&self) -> Option<UnOp> {
-        match self {
-            TokenType::Minus => Some(UnOp::Neg),
-            TokenType::Not => Some(UnOp::Not),
             _ => None,
         }
     }
