@@ -8,13 +8,15 @@
           "callee": "na",
           "args": [
             {
-              "Index": {
-                "expr": {
-                  "Variable": "close"
-                },
-                "index": {
-                  "Literal": {
-                    "Number": 1.0
+              "Positional": {
+                "Index": {
+                  "expr": {
+                    "Variable": "close"
+                  },
+                  "index": {
+                    "Literal": {
+                      "Number": 1.0
+                    }
                   }
                 }
               }

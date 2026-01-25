@@ -8,8 +8,10 @@
           "callee": "input.int",
           "args": [
             {
-              "Literal": {
-                "Number": 10.0
+              "Positional": {
+                "Literal": {
+                  "Number": 10.0
+                }
               }
             }
           ]
@@ -26,16 +28,24 @@
           "callee": "ta.stoch",
           "args": [
             {
-              "Variable": "close"
+              "Positional": {
+                "Variable": "close"
+              }
             },
             {
-              "Variable": "high"
+              "Positional": {
+                "Variable": "high"
+              }
             },
             {
-              "Variable": "low"
+              "Positional": {
+                "Variable": "low"
+              }
             },
             {
-              "Variable": "lengthInput"
+              "Positional": {
+                "Variable": "lengthInput"
+              }
             }
           ]
         }

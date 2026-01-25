@@ -67,8 +67,10 @@
           "callee": "double",
           "args": [
             {
-              "Literal": {
-                "Number": 5.0
+              "Positional": {
+                "Literal": {
+                  "Number": 5.0
+                }
               }
             }
           ]
@@ -85,13 +87,17 @@
           "callee": "add",
           "args": [
             {
-              "Literal": {
-                "Number": 3.0
+              "Positional": {
+                "Literal": {
+                  "Number": 3.0
+                }
               }
             },
             {
-              "Literal": {
-                "Number": 4.0
+              "Positional": {
+                "Literal": {
+                  "Number": 4.0
+                }
               }
             }
           ]

@@ -85,8 +85,10 @@
           "callee": "add",
           "args": [
             {
-              "Literal": {
-                "Number": 5.0
+              "Positional": {
+                "Literal": {
+                  "Number": 5.0
+                }
               }
             }
           ]
@@ -103,8 +105,10 @@
           "callee": "greet",
           "args": [
             {
-              "Literal": {
-                "String": "World"
+              "Positional": {
+                "Literal": {
+                  "String": "World"
+                }
               }
             }
           ]

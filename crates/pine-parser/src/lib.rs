@@ -1,4 +1,4 @@
-pub use pine_ast::{BinOp, Expr, Literal, Stmt, UnOp};
+pub use pine_ast::{Argument, BinOp, Expr, Literal, Program, Stmt, UnOp};
 use pine_lexer::{Token, TokenType};
 use thiserror::Error;
 
@@ -36,7 +36,6 @@ impl From<ParserError> for String {
 /// Helper trait to convert TokenType to operators
 trait TokenTypeExt {
     fn to_binop(&self) -> Option<BinOp>;
-    fn to_unop(&self) -> Option<UnOp>;
 }
 
 impl TokenTypeExt for TokenType {
@@ -60,15 +59,6 @@ impl TokenTypeExt for TokenType {
             TokenType::MinusAssign => Some(BinOp::Sub),
             TokenType::StarAssign => Some(BinOp::Mul),
             TokenType::SlashAssign => Some(BinOp::Div),
-            _ => None,
-        }
-    }
-
-    /// Convert token type to unary operator, if applicable
-    fn to_unop(&self) -> Option<UnOp> {
-        match self {
-            TokenType::Minus => Some(UnOp::Neg),
-            TokenType::Not => Some(UnOp::Not),
             _ => None,
         }
     }
@@ -847,7 +837,7 @@ impl Parser {
         }
     }
 
-    fn arguments(&mut self) -> Result<Vec<Expr>, ParserError> {
+    fn arguments(&mut self) -> Result<Vec<Argument>, ParserError> {
         let mut args = vec![];
 
         // Skip leading newlines in argument list
@@ -859,22 +849,25 @@ impl Parser {
             loop {
                 // Check for named argument: name=value
                 // In PineScript, function calls can have named arguments like plot(x, title="foo", color=red)
-                if let TokenType::Ident(_) = &self.peek().typ {
+                if let TokenType::Ident(name) = &self.peek().typ {
+                    let name = name.clone();
                     let saved_pos = self.current;
                     self.advance(); // consume identifier
 
                     if self.check(&TokenType::Assign) {
-                        // This is a named argument, skip the name and = for now
-                        // (We don't use the name in our AST yet)
+                        // This is a named argument
                         self.advance(); // consume =
-                        args.push(self.expression()?);
+                        let value = self.expression()?;
+                        args.push(Argument::Named { name, value });
                     } else {
                         // Not a named argument, backtrack and parse as expression
                         self.current = saved_pos;
-                        args.push(self.expression()?);
+                        let expr = self.expression()?;
+                        args.push(Argument::Positional(expr));
                     }
                 } else {
-                    args.push(self.expression()?);
+                    let expr = self.expression()?;
+                    args.push(Argument::Positional(expr));
                 }
 
                 // Skip newlines after each argument
@@ -1135,8 +1128,8 @@ mod tests {
         if let Expr::Call { callee, args } = expr {
             assert_eq!(callee, "sma");
             assert_eq!(args.len(), 2);
-            assert_eq!(args[0], Expr::Variable("close".to_string()));
-            assert_eq!(args[1], Expr::Literal(Literal::Number(14.0)));
+            assert_eq!(args[0], Argument::Positional(Expr::Variable("close".to_string())));
+            assert_eq!(args[1], Argument::Positional(Expr::Literal(Literal::Number(14.0))));
         } else {
             panic!("Expected function call");
         }
@@ -1365,7 +1358,11 @@ mod tests {
                 path.file_stem().unwrap().to_str().unwrap()
             ));
 
-            if json_path.exists() {
+            if generate_ast {
+                // Generate/overwrite AST JSON file
+                let json = serde_json::to_string_pretty(&ast)?;
+                fs::write(&json_path, &json)?;
+            } else if json_path.exists() {
                 // Compare with expected AST
                 let expected_json = fs::read_to_string(&json_path)?;
                 let expected_ast: Vec<Stmt> = serde_json::from_str(&expected_json)?;
@@ -1376,9 +1373,6 @@ mod tests {
                         json_path
                     ));
                 }
-            } else if generate_ast {
-                let json = serde_json::to_string_pretty(&ast)?;
-                fs::write(&json_path, &json)?;
             }
 
             Ok(())

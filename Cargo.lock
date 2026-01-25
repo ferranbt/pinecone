@@ -151,10 +151,50 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
+name = "pine"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "pine-ast",
+ "pine-builtins",
+ "pine-interpreter",
+ "pine-lexer",
+ "pine-parser",
+]
+
+[[package]]
 name = "pine-ast"
 version = "0.1.0"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "pine-builtin-macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "pine-builtins"
+version = "0.1.0"
+dependencies = [
+ "pine-builtin-macro",
+ "pine-interpreter",
+]
+
+[[package]]
+name = "pine-interpreter"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "pine-ast",
+ "pine-lexer",
+ "pine-parser",
+ "thiserror",
 ]
 
 [[package]]
@@ -177,14 +217,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "walkdir",
-]
-
-[[package]]
-name = "pinevm"
-version = "0.1.0"
-dependencies = [
- "pine-lexer",
- "pine-parser",
 ]
 
 [[package]]

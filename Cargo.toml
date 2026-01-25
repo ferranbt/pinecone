@@ -1,11 +1,23 @@
 [workspace]
-members = ["crates/pine-lexer", "crates/pine-ast", "crates/pine-parser"]
+members = [
+    "crates/pine-lexer",
+    "crates/pine-ast",
+    "crates/pine-parser",
+    "crates/pine-interpreter",
+    "crates/pine-builtin-macro",
+    "crates/pine-builtins",
+    "crates/pine",
+]
 resolver = "2"
 
 [workspace.dependencies]
 pine-lexer = { path = "crates/pine-lexer" }
 pine-parser = { path = "crates/pine-parser" }
 pine-ast = { path = "crates/pine-ast" }
+pine-interpreter = { path = "crates/pine-interpreter" }
+pine-builtin-macro = { path = "crates/pine-builtin-macro" }
+pine-builtins = { path = "crates/pine-builtins" }
+pine = { path = "crates/pine" }
 eyre = "0.6"
 thiserror = "2.0"
 clap = { version = "4.5", features = ["derive"] }

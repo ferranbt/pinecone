@@ -8,11 +8,15 @@
           "callee": "sma",
           "args": [
             {
-              "Variable": "close"
+              "Positional": {
+                "Variable": "close"
+              }
             },
             {
-              "Literal": {
-                "Number": 14.0
+              "Positional": {
+                "Literal": {
+                  "Number": 14.0
+                }
               }
             }
           ]
@@ -29,10 +33,14 @@
           "callee": "max",
           "args": [
             {
-              "Variable": "high"
+              "Positional": {
+                "Variable": "high"
+              }
             },
             {
-              "Variable": "low"
+              "Positional": {
+                "Variable": "low"
+              }
             }
           ]
         }

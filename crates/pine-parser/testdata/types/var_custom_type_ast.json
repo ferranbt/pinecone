@@ -8,10 +8,20 @@
           "callee": "label.new",
           "args": [
             {
-              "Variable": "bar_index"
+              "Named": {
+                "name": "x",
+                "value": {
+                  "Variable": "bar_index"
+                }
+              }
             },
             {
-              "Variable": "na"
+              "Named": {
+                "name": "y",
+                "value": {
+                  "Variable": "na"
+                }
+              }
             }
           ]
         }
