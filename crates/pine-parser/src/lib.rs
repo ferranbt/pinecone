@@ -689,28 +689,32 @@ impl Parser {
             }
         }
 
-        // Parse final else branch (required for if expressions)
+        // Parse final else branch (optional - if not present, returns na)
         self.skip_newlines();
-        self.consume(TokenType::Else, "If expression must have an else branch")?;
+        let else_expr = if self.match_token(&[TokenType::Else]) {
+            // Skip optional newline after else
+            self.match_token(&[TokenType::Newline]);
 
-        // Skip optional newline after else
-        self.match_token(&[TokenType::Newline]);
+            // Skip optional indent
+            self.match_token(&[TokenType::Indent]);
 
-        // Skip optional indent
-        self.match_token(&[TokenType::Indent]);
+            // Parse else expression
+            let expr = self.expression()?;
 
-        // Parse else expression
-        let else_expr = self.expression()?;
+            // Skip newlines and optional dedent
+            self.skip_newlines();
+            self.match_token(&[TokenType::Dedent]);
 
-        // Skip newlines and optional dedent
-        self.skip_newlines();
-        self.match_token(&[TokenType::Dedent]);
+            Some(Box::new(expr))
+        } else {
+            None // Will return na if no branch matches
+        };
 
         Ok(Expr::IfExpr {
             condition: Box::new(condition),
             then_expr: Box::new(then_expr),
             else_if_branches,
-            else_expr: Box::new(else_expr),
+            else_expr,
         })
     }
 

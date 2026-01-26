@@ -1,0 +1,7 @@
+//@version=4
+
+var close = 10
+var open = 5
+
+x = if close > open
+    close

@@ -51,7 +51,7 @@ pub enum Expr {
         condition: Box<Expr>,
         then_expr: Box<Expr>,
         else_if_branches: Vec<(Expr, Expr)>, // Vec of (condition, expression) for else if
-        else_expr: Box<Expr>,
+        else_expr: Option<Box<Expr>>, // None means return na if no branch matches
     },
 }
 

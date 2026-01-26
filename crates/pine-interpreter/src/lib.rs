@@ -471,8 +471,12 @@ impl Interpreter {
                             return self.eval_expr(else_if_expr);
                         }
                     }
-                    // No else if matched, evaluate else branch
-                    self.eval_expr(else_expr)
+                    // No else if matched, evaluate else branch or return na
+                    if let Some(expr) = else_expr {
+                        self.eval_expr(expr)
+                    } else {
+                        Ok(Value::Na)
+                    }
                 }
             }
 
@@ -1449,6 +1453,40 @@ mod tests {
 
         interp2.execute(&program2, &Bar::default())?;
         assert_eq!(interp2.get_variable("result"), Some(&Value::String("non-positive".to_string())));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_if_expression_no_else() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Test if expression without else - should return value when condition is true
+        let program = parse_str(
+            r#"
+            var close = 10
+            var open = 5
+            x = if close > open
+                close
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("x"), Some(&Value::Number(10.0)));
+
+        // Test if expression without else - should return na when condition is false
+        let mut interp2 = Interpreter::new();
+        let program2 = parse_str(
+            r#"
+            var close = 5
+            var open = 10
+            x = if close > open
+                close
+            "#,
+        )?;
+
+        interp2.execute(&program2, &Bar::default())?;
+        assert_eq!(interp2.get_variable("x"), Some(&Value::Na));
 
         Ok(())
     }

@@ -1,0 +1,53 @@
+[
+  {
+    "VarDecl": {
+      "name": "close",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 10.0
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "open",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 5.0
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "IfExpr": {
+          "condition": {
+            "Binary": {
+              "left": {
+                "Variable": "close"
+              },
+              "op": "Greater",
+              "right": {
+                "Variable": "open"
+              }
+            }
+          },
+          "then_expr": {
+            "Variable": "close"
+          },
+          "else_if_branches": [],
+          "else_expr": null
+        }
+      },
+      "is_varip": false
+    }
+  }
+]
