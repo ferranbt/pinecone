@@ -233,6 +233,11 @@ impl Parser {
             return self.type_declaration();
         }
 
+        // Check for enum declaration: enum EnumName
+        if self.match_token(&[TokenType::Enum]) {
+            return self.enum_declaration();
+        }
+
         // Check for method declaration: method methodName(params) =>
         if self.match_token(&[TokenType::Method]) {
             return self.method_declaration();
@@ -340,6 +345,75 @@ impl Parser {
 
         Ok(Stmt::TypeDecl {
             name: type_name,
+            fields,
+        })
+    }
+
+    fn enum_declaration(&mut self) -> Result<Stmt, ParserError> {
+        // Parse enum name
+        let enum_name = if let TokenType::Ident(name) = &self.peek().typ {
+            let name = name.clone();
+            self.advance();
+            name
+        } else {
+            return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+        };
+
+        // Expect newline before fields
+        self.consume(TokenType::Newline, "Expected newline after enum name")?;
+
+        // Expect indent to start field block
+        self.consume(TokenType::Indent, "Expected indent for enum fields")?;
+
+        // Parse fields
+        let mut fields = Vec::new();
+
+        loop {
+            // Skip newlines between fields
+            self.skip_newlines();
+
+            // Check for dedent (end of enum declaration)
+            if self.check(&TokenType::Dedent) {
+                self.advance();
+                break;
+            }
+
+            // Check for end of file
+            if self.is_at_end() {
+                break;
+            }
+
+            // Parse field: field_name [= "title"]
+            let field_name = if let TokenType::Ident(name) = &self.peek().typ {
+                let name = name.clone();
+                self.advance();
+                name
+            } else {
+                return Err(ParserError::ExpectedVariableName(self.peek().line));
+            };
+
+            // Parse optional title
+            let title = if self.match_token(&[TokenType::Assign]) {
+                // Expect a string literal for the title
+                if let TokenType::String(s) = &self.peek().typ {
+                    let s = s.clone();
+                    self.advance();
+                    Some(s)
+                } else {
+                    return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+                }
+            } else {
+                None
+            };
+
+            fields.push(pine_ast::EnumField {
+                name: field_name,
+                title,
+            });
+        }
+
+        Ok(Stmt::EnumDecl {
+            name: enum_name,
             fields,
         })
     }

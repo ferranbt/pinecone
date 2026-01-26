@@ -1,0 +1,4 @@
+enum Signal
+    buy = "Buy signal"
+    sell = "Sell signal"
+    neutral

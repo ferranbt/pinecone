@@ -67,6 +67,11 @@ pub enum Value {
         name: String,
         fields: Vec<TypeField>,
     }, // User-defined type
+    Enum {
+        enum_name: String,  // The enum type name (e.g., "Signal")
+        field_name: String, // The specific field/member name (e.g., "buy")
+        title: String,      // The title of this enum member
+    }, // Enum member value
 }
 
 // Manual Debug impl since function pointers don't implement Debug
@@ -82,6 +87,7 @@ impl std::fmt::Debug for Value {
             Value::Function { params, .. } => write!(f, "Function({} params)", params.len()),
             Value::BuiltinFunction(_) => write!(f, "BuiltinFunction"),
             Value::Type { name, .. } => write!(f, "Type({})", name),
+            Value::Enum { enum_name, field_name, .. } => write!(f, "Enum({}::{})", enum_name, field_name),
         }
     }
 }
@@ -101,6 +107,11 @@ impl PartialEq for Value {
             (Value::BuiltinFunction(_), Value::BuiltinFunction(_)) => false,
             // Types compare by name
             (Value::Type { name: a, .. }, Value::Type { name: b, .. }) => a == b,
+            // Enums compare by enum name and field name (ensuring type safety)
+            (Value::Enum { enum_name: a_enum, field_name: a_field, .. },
+             Value::Enum { enum_name: b_enum, field_name: b_field, .. }) => {
+                a_enum == b_enum && a_field == b_field
+            },
             _ => false,
         }
     }
@@ -417,6 +428,28 @@ impl Interpreter {
                     fields: fields.clone(),
                 };
                 self.variables.insert(name.clone(), type_value);
+                Ok(None)
+            }
+
+            Stmt::EnumDecl { name, fields } => {
+                // Create an Object that contains all enum members as fields
+                let mut enum_fields = HashMap::new();
+
+                for field in fields {
+                    let title = field.title.clone().unwrap_or_else(|| field.name.clone());
+                    let enum_value = Value::Enum {
+                        enum_name: name.clone(),
+                        field_name: field.name.clone(),
+                        title,
+                    };
+                    enum_fields.insert(field.name.clone(), enum_value);
+                }
+
+                let enum_object = Value::Object {
+                    type_name: name.clone(),
+                    fields: Rc::new(RefCell::new(enum_fields)),
+                };
+                self.variables.insert(name.clone(), enum_object);
                 Ok(None)
             }
 
@@ -830,6 +863,10 @@ impl Interpreter {
             (Value::String(l), Value::String(r)) => Ok(l == r),
             (Value::Bool(l), Value::Bool(r)) => Ok(l == r),
             (Value::Na, Value::Na) => Ok(true),
+            (Value::Enum { enum_name: a_enum, field_name: a_field, .. },
+             Value::Enum { enum_name: b_enum, field_name: b_field, .. }) => {
+                Ok(a_enum == b_enum && a_field == b_field)
+            },
             _ => Ok(false),
         }
     }
@@ -1998,6 +2035,66 @@ mod tests {
 
         assert_eq!(interp.get_variable("finalX"), Some(&Value::Number(100.0)));
         assert_eq!(interp.get_variable("finalY"), Some(&Value::Number(200.0)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_enum_simple() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            enum Signal
+                buy = "Buy signal"
+                sell = "Sell signal"
+                neutral
+
+            x = Signal.buy
+            y = Signal.sell
+            z = Signal.neutral
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        let x = interp.get_variable("x").unwrap();
+        let y = interp.get_variable("y").unwrap();
+        let z = interp.get_variable("z").unwrap();
+
+        assert!(matches!(x, Value::Enum { enum_name, field_name, title }
+            if enum_name == "Signal" && field_name == "buy" && title == "Buy signal"));
+        assert!(matches!(y, Value::Enum { enum_name, field_name, title }
+            if enum_name == "Signal" && field_name == "sell" && title == "Sell signal"));
+        assert!(matches!(z, Value::Enum { enum_name, field_name, title }
+            if enum_name == "Signal" && field_name == "neutral" && title == "neutral"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_enum_comparison() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            enum Signal
+                buy
+                sell
+
+            x = Signal.buy
+            y = Signal.buy
+            z = Signal.sell
+
+            same = x == y
+            different = x == z
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        assert_eq!(interp.get_variable("same"), Some(&Value::Bool(true)));
+        assert_eq!(interp.get_variable("different"), Some(&Value::Bool(false)));
 
         Ok(())
     }

@@ -1,0 +1,21 @@
+[
+  {
+    "EnumDecl": {
+      "name": "Signal",
+      "fields": [
+        {
+          "name": "buy",
+          "title": "Buy signal"
+        },
+        {
+          "name": "sell",
+          "title": "Sell signal"
+        },
+        {
+          "name": "neutral",
+          "title": null
+        }
+      ]
+    }
+  }
+]

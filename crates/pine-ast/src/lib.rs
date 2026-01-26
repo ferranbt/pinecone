@@ -139,6 +139,17 @@ pub enum Stmt {
         params: Vec<MethodParam>,
         body: Vec<Stmt>,
     },
+    EnumDecl {
+        name: String,
+        fields: Vec<EnumField>,
+    },
+}
+
+/// A field in an enum declaration
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EnumField {
+    pub name: String,
+    pub title: Option<String>, // Optional title for the enum field
 }
 
 /// A parameter in a method declaration
