@@ -966,4 +966,28 @@ mod tests {
             .contains("Continue statement outside of loop"));
         Ok(())
     }
+
+    #[test]
+    fn test_compound_assignment() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var x = 10
+            x += 5
+            var y = 20
+            y -= 3
+            var z = 4
+            z *= 2
+            var w = 20
+            w /= 4
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("x"), Some(&Value::Number(15.0)));
+        assert_eq!(interp.get_variable("y"), Some(&Value::Number(17.0)));
+        assert_eq!(interp.get_variable("z"), Some(&Value::Number(8.0)));
+        assert_eq!(interp.get_variable("w"), Some(&Value::Number(5.0)));
+        Ok(())
+    }
 }
