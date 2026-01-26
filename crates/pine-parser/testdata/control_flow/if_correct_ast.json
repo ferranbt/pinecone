@@ -78,6 +78,7 @@
                 }
               }
             ],
+            "else_if_branches": [],
             "else_branch": [
               {
                 "VarDecl": {
@@ -95,6 +96,7 @@
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": null
     }
   }

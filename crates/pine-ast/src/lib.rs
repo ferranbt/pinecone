@@ -101,6 +101,7 @@ pub enum Stmt {
     If {
         condition: Expr,
         then_branch: Vec<Stmt>,
+        else_if_branches: Vec<(Expr, Vec<Stmt>)>, // Vec of (condition, statements) for else if
         else_branch: Option<Vec<Stmt>>,
     },
     For {

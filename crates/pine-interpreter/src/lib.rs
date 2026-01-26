@@ -254,6 +254,7 @@ impl Interpreter {
             Stmt::If {
                 condition,
                 then_branch,
+                else_if_branches,
                 else_branch,
             } => {
                 let cond_value = self.eval_expr(condition)?;
@@ -261,9 +262,27 @@ impl Interpreter {
                     for stmt in then_branch {
                         self.execute_stmt(stmt)?;
                     }
-                } else if let Some(else_stmts) = else_branch {
-                    for stmt in else_stmts {
-                        self.execute_stmt(stmt)?;
+                } else {
+                    // Try each else if branch in order
+                    let mut executed = false;
+                    for (else_if_cond, else_if_body) in else_if_branches {
+                        let else_if_value = self.eval_expr(else_if_cond)?;
+                        if else_if_value.as_bool()? {
+                            for stmt in else_if_body {
+                                self.execute_stmt(stmt)?;
+                            }
+                            executed = true;
+                            break;
+                        }
+                    }
+
+                    // If no else if matched, try else branch
+                    if !executed {
+                        if let Some(else_stmts) = else_branch {
+                            for stmt in else_stmts {
+                                self.execute_stmt(stmt)?;
+                            }
+                        }
                     }
                 }
                 Ok(None)
@@ -358,15 +377,30 @@ impl Interpreter {
                 Stmt::If {
                     condition,
                     then_branch,
+                    else_if_branches,
                     else_branch,
                 } => {
                     let cond_value = self.eval_expr(condition)?;
                     let branch = if cond_value.as_bool()? {
                         then_branch
-                    } else if let Some(else_stmts) = else_branch {
-                        else_stmts
                     } else {
-                        continue;
+                        // Try each else if branch
+                        let mut matched_branch = None;
+                        for (else_if_cond, else_if_body) in else_if_branches {
+                            let else_if_value = self.eval_expr(else_if_cond)?;
+                            if else_if_value.as_bool()? {
+                                matched_branch = Some(else_if_body);
+                                break;
+                            }
+                        }
+
+                        if let Some(branch) = matched_branch {
+                            branch
+                        } else if let Some(else_stmts) = else_branch {
+                            else_stmts
+                        } else {
+                            continue;
+                        }
                     };
 
                     let control = self.execute_loop_body(branch)?;
@@ -1245,6 +1279,75 @@ mod tests {
         let result = interp.execute(&program, &Bar::default());
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("has no member 'bar'"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_else_if() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Test first else if branch matches
+        let program = parse_str(
+            r#"
+            var x = 5
+            var result = 0
+
+            if x < 0
+                result := -1
+            else if x == 0
+                result := 0
+            else if x < 10
+                result := 1
+            else
+                result := 2
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("result"), Some(&Value::Number(1.0)));
+
+        // Test else branch when no condition matches
+        let mut interp2 = Interpreter::new();
+        let program2 = parse_str(
+            r#"
+            var x = 100
+            var result = 0
+
+            if x < 0
+                result := -1
+            else if x == 0
+                result := 0
+            else if x < 10
+                result := 1
+            else
+                result := 2
+            "#,
+        )?;
+
+        interp2.execute(&program2, &Bar::default())?;
+        assert_eq!(interp2.get_variable("result"), Some(&Value::Number(2.0)));
+
+        // Test first condition matches (skips else if)
+        let mut interp3 = Interpreter::new();
+        let program3 = parse_str(
+            r#"
+            var x = -5
+            var result = 0
+
+            if x < 0
+                result := -1
+            else if x == 0
+                result := 0
+            else if x < 10
+                result := 1
+            else
+                result := 2
+            "#,
+        )?;
+
+        interp3.execute(&program3, &Bar::default())?;
+        assert_eq!(interp3.get_variable("result"), Some(&Value::Number(-1.0)));
+
         Ok(())
     }
 }

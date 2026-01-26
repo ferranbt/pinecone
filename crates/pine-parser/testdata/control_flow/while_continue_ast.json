@@ -85,6 +85,7 @@
             "then_branch": [
               "Continue"
             ],
+            "else_if_branches": [],
             "else_branch": null
           }
         },

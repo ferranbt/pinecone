@@ -83,6 +83,7 @@
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": null
     }
   },
@@ -152,6 +153,7 @@
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": null
     }
   },
@@ -191,6 +193,7 @@
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": null
     }
   }

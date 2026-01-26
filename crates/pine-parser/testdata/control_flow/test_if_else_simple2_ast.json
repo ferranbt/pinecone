@@ -20,6 +20,7 @@
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": [
         {
           "VarDecl": {

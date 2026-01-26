@@ -588,8 +588,36 @@ impl Parser {
         // Parse the then branch - multiple statements until we hit 'else', dedent, or certain keywords
         let then_branch = self.parse_block()?;
 
-        // Check for else branch
-        // Skip any newlines before else
+        // Parse else if branches
+        let mut else_if_branches = Vec::new();
+
+        loop {
+            // Skip any newlines before else
+            self.skip_newlines();
+
+            // Check if we have "else if"
+            if self.check(&TokenType::Else) {
+                let saved_pos = self.current;
+                self.advance(); // consume 'else'
+
+                // Check if next token is 'if'
+                if self.match_token(&[TokenType::If]) {
+                    // This is an else if
+                    let else_if_condition = self.expression()?;
+                    self.match_token(&[TokenType::Newline]);
+                    let else_if_body = self.parse_block()?;
+                    else_if_branches.push((else_if_condition, else_if_body));
+                } else {
+                    // This is just 'else', restore position to before 'else'
+                    self.current = saved_pos;
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        // Check for final else branch
         self.skip_newlines();
 
         let else_branch = if self.match_token(&[TokenType::Else]) {
@@ -604,6 +632,7 @@ impl Parser {
         Ok(Stmt::If {
             condition,
             then_branch,
+            else_if_branches,
             else_branch,
         })
     }
