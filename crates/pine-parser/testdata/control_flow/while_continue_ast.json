@@ -1,0 +1,108 @@
+[
+  {
+    "VarDecl": {
+      "name": "i",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "sum",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      }
+    }
+  },
+  {
+    "While": {
+      "condition": {
+        "Binary": {
+          "left": {
+            "Variable": "i"
+          },
+          "op": "Less",
+          "right": {
+            "Literal": {
+              "Number": 10.0
+            }
+          }
+        }
+      },
+      "body": [
+        {
+          "Assignment": {
+            "name": "i",
+            "value": {
+              "Binary": {
+                "left": {
+                  "Variable": "i"
+                },
+                "op": "Add",
+                "right": {
+                  "Literal": {
+                    "Number": 1.0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "If": {
+            "condition": {
+              "Binary": {
+                "left": {
+                  "Binary": {
+                    "left": {
+                      "Variable": "i"
+                    },
+                    "op": "Mod",
+                    "right": {
+                      "Literal": {
+                        "Number": 2.0
+                      }
+                    }
+                  }
+                },
+                "op": "Eq",
+                "right": {
+                  "Literal": {
+                    "Number": 0.0
+                  }
+                }
+              }
+            },
+            "then_branch": [
+              "Continue"
+            ],
+            "else_branch": null
+          }
+        },
+        {
+          "Assignment": {
+            "name": "sum",
+            "value": {
+              "Binary": {
+                "left": {
+                  "Variable": "sum"
+                },
+                "op": "Add",
+                "right": {
+                  "Variable": "i"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

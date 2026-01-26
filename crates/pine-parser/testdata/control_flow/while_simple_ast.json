@@ -1,0 +1,50 @@
+[
+  {
+    "VarDecl": {
+      "name": "i",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      }
+    }
+  },
+  {
+    "While": {
+      "condition": {
+        "Binary": {
+          "left": {
+            "Variable": "i"
+          },
+          "op": "Less",
+          "right": {
+            "Literal": {
+              "Number": 5.0
+            }
+          }
+        }
+      },
+      "body": [
+        {
+          "Assignment": {
+            "name": "i",
+            "value": {
+              "Binary": {
+                "left": {
+                  "Variable": "i"
+                },
+                "op": "Add",
+                "right": {
+                  "Literal": {
+                    "Number": 1.0
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

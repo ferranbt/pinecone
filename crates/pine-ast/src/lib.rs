@@ -108,6 +108,12 @@ pub enum Stmt {
         to: Expr,
         body: Vec<Stmt>,
     },
+    While {
+        condition: Expr,
+        body: Vec<Stmt>,
+    },
+    Break,
+    Continue,
 }
 
 /// A program is a collection of statements

@@ -286,6 +286,21 @@ impl Parser {
             return self.for_statement();
         }
 
+        // Check for while loop
+        if self.match_token(&[TokenType::While]) {
+            return self.while_statement();
+        }
+
+        // Check for break
+        if self.match_token(&[TokenType::Break]) {
+            return Ok(Stmt::Break);
+        }
+
+        // Check for continue
+        if self.match_token(&[TokenType::Continue]) {
+            return Ok(Stmt::Continue);
+        }
+
         // Check for tuple destructuring: [a, b, c] = func()
         // But only if followed by = (otherwise it's an array literal)
         if self.check(&TokenType::LBracket) {
@@ -474,6 +489,19 @@ impl Parser {
             to,
             body,
         })
+    }
+
+    fn while_statement(&mut self) -> Result<Stmt, ParserError> {
+        // Parse: while condition
+        let condition = self.expression()?;
+
+        // Skip optional newline after condition
+        self.match_token(&[TokenType::Newline]);
+
+        // Parse the body - multiple statements
+        let body = self.parse_block()?;
+
+        Ok(Stmt::While { condition, body })
     }
 
     fn if_statement(&mut self) -> Result<Stmt, ParserError> {

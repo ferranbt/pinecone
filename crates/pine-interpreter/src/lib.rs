@@ -20,6 +20,20 @@ pub enum RuntimeError {
 
     #[error("Cannot iterate: from={0}, to={1}")]
     InvalidForLoop(f64, f64),
+
+    #[error("Break statement outside of loop")]
+    BreakOutsideLoop,
+
+    #[error("Continue statement outside of loop")]
+    ContinueOutsideLoop,
+}
+
+/// Control flow signals for loops
+#[derive(Debug, Clone, PartialEq)]
+enum LoopControl {
+    None,
+    Break,
+    Continue,
 }
 
 /// Represents a single bar/candle of market data
@@ -249,8 +263,9 @@ impl Interpreter {
                     self.variables
                         .insert(var_name.clone(), Value::Number(i as f64));
 
-                    for stmt in body {
-                        self.execute_stmt(stmt)?;
+                    let control = self.execute_loop_body(body)?;
+                    if control == LoopControl::Break {
+                        break;
                     }
 
                     i += 1;
@@ -258,7 +273,62 @@ impl Interpreter {
 
                 Ok(None)
             }
+
+            Stmt::While { condition, body } => {
+                loop {
+                    let cond_value = self.eval_expr(condition)?;
+                    if !cond_value.as_bool()? {
+                        break;
+                    }
+
+                    let control = self.execute_loop_body(body)?;
+                    if control == LoopControl::Break {
+                        break;
+                    }
+                }
+                Ok(None)
+            }
+
+            Stmt::Break => Err(RuntimeError::BreakOutsideLoop),
+            Stmt::Continue => Err(RuntimeError::ContinueOutsideLoop),
         }
+    }
+
+    /// Execute loop body, handling break/continue
+    fn execute_loop_body(&mut self, body: &[Stmt]) -> Result<LoopControl, RuntimeError> {
+        for stmt in body {
+            match stmt {
+                Stmt::Break => return Ok(LoopControl::Break),
+                Stmt::Continue => return Ok(LoopControl::Continue),
+                Stmt::If {
+                    condition,
+                    then_branch,
+                    else_branch,
+                } => {
+                    let cond_value = self.eval_expr(condition)?;
+                    let branch = if cond_value.as_bool()? {
+                        then_branch
+                    } else if let Some(else_stmts) = else_branch {
+                        else_stmts
+                    } else {
+                        continue;
+                    };
+
+                    let control = self.execute_loop_body(branch)?;
+                    if control != LoopControl::None {
+                        return Ok(control);
+                    }
+                }
+                Stmt::For { .. } | Stmt::While { .. } => {
+                    // Nested loops handle their own break/continue
+                    self.execute_stmt(stmt)?;
+                }
+                _ => {
+                    self.execute_stmt(stmt)?;
+                }
+            }
+        }
+        Ok(LoopControl::None)
     }
 
     fn eval_expr(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
@@ -766,6 +836,134 @@ mod tests {
 
         interp.execute(&program, &Bar::default())?;
         assert_eq!(interp.get_variable("result"), Some(&Value::Number(20.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_while_simple() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var i = 0
+            while i < 5
+                i := i + 1
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("i"), Some(&Value::Number(5.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_while_break() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var i = 0
+            while i < 10
+                if i == 5
+                    break
+                i := i + 1
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("i"), Some(&Value::Number(5.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_while_continue() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var i = 0
+            var sum = 0
+            while i < 10
+                i := i + 1
+                if i % 2 == 0
+                    continue
+                sum := sum + i
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        // sum = 1 + 3 + 5 + 7 + 9 = 25
+        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(25.0)));
+        assert_eq!(interp.get_variable("i"), Some(&Value::Number(10.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_while_break_continue() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var i = 0
+            var sum = 0
+            while i < 20
+                i := i + 1
+                if i > 10
+                    break
+                if i % 2 == 0
+                    continue
+                sum := sum + i
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        // sum = 1 + 3 + 5 + 7 + 9 = 25 (stops at i=11)
+        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(25.0)));
+        assert_eq!(interp.get_variable("i"), Some(&Value::Number(11.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_while_nested() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var i = 0
+            var sum = 0
+            while i < 3
+                var j = 0
+                while j < 2
+                    sum := sum + i * j
+                    j := j + 1
+                i := i + 1
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        // sum = (0*0 + 0*1) + (1*0 + 1*1) + (2*0 + 2*1) = 0 + 1 + 2 = 3
+        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(3.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_break_outside_loop() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str("break")?;
+        let result = interp.execute(&program, &Bar::default());
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Break statement outside of loop"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_continue_outside_loop() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str("continue")?;
+        let result = interp.execute(&program, &Bar::default());
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Continue statement outside of loop"));
         Ok(())
     }
 }

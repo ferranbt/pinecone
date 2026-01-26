@@ -34,6 +34,8 @@ pub enum TokenType {
     Else,
     For,
     While,
+    Break,
+    Continue,
     To,
     Switch, // keywords
     Int,
@@ -202,6 +204,8 @@ impl Lexer {
             "false" => TokenType::Bool(false),
             "for" => TokenType::For,
             "while" => TokenType::While,
+            "break" => TokenType::Break,
+            "continue" => TokenType::Continue,
             "to" => TokenType::To,
             "switch" => TokenType::Switch,
             "int" => TokenType::Int,
