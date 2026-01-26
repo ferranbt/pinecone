@@ -37,6 +37,7 @@ pub enum TokenType {
     Break,
     Continue,
     To,
+    In,
     Switch, // keywords
     Int,
     Float, // type keywords
@@ -207,6 +208,7 @@ impl Lexer {
             "break" => TokenType::Break,
             "continue" => TokenType::Continue,
             "to" => TokenType::To,
+            "in" => TokenType::In,
             "switch" => TokenType::Switch,
             "int" => TokenType::Int,
             "float" => TokenType::Float,

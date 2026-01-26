@@ -463,7 +463,47 @@ impl Parser {
     }
 
     fn for_statement(&mut self) -> Result<Stmt, ParserError> {
-        // Parse: for i = 1 to length
+        // Check if it's a tuple form: for [index, item] in collection
+        if self.check(&TokenType::LBracket) {
+            self.advance(); // consume [
+
+            let index_var = if let TokenType::Ident(name) = &self.peek().typ {
+                let name = name.clone();
+                self.advance();
+                name
+            } else {
+                return Err(ParserError::ExpectedVariableName(self.peek().line));
+            };
+
+            self.consume(TokenType::Comma, "Expected ',' in for...in tuple")?;
+
+            let item_var = if let TokenType::Ident(name) = &self.peek().typ {
+                let name = name.clone();
+                self.advance();
+                name
+            } else {
+                return Err(ParserError::ExpectedVariableName(self.peek().line));
+            };
+
+            self.consume(TokenType::RBracket, "Expected ']' after for...in tuple")?;
+            self.consume(TokenType::In, "Expected 'in' in for...in loop")?;
+
+            let collection = self.expression()?;
+
+            // Skip optional newline
+            self.match_token(&[TokenType::Newline]);
+
+            let body = self.parse_block()?;
+
+            return Ok(Stmt::ForIn {
+                index_var: Some(index_var),
+                item_var,
+                collection,
+                body,
+            });
+        }
+
+        // Parse variable name
         let var_name = if let TokenType::Ident(name) = &self.peek().typ {
             let name = name.clone();
             self.advance();
@@ -472,23 +512,43 @@ impl Parser {
             return Err(ParserError::ExpectedVariableName(self.peek().line));
         };
 
-        self.consume(TokenType::Assign, "Expected '=' in for loop")?;
-        let from = self.expression()?;
-        self.consume(TokenType::To, "Expected 'to' in for loop")?;
-        let to = self.expression()?;
+        // Check if it's for...in (simple form) or for...to
+        if self.check(&TokenType::In) {
+            self.advance(); // consume 'in'
 
-        // Skip optional newline after to
-        self.match_token(&[TokenType::Newline]);
+            let collection = self.expression()?;
 
-        // Parse the body - multiple statements
-        let body = self.parse_block()?;
+            // Skip optional newline
+            self.match_token(&[TokenType::Newline]);
 
-        Ok(Stmt::For {
-            var_name,
-            from,
-            to,
-            body,
-        })
+            let body = self.parse_block()?;
+
+            Ok(Stmt::ForIn {
+                index_var: None,
+                item_var: var_name,
+                collection,
+                body,
+            })
+        } else {
+            // Traditional for...to loop
+            self.consume(TokenType::Assign, "Expected '=' in for loop")?;
+            let from = self.expression()?;
+            self.consume(TokenType::To, "Expected 'to' in for loop")?;
+            let to = self.expression()?;
+
+            // Skip optional newline after to
+            self.match_token(&[TokenType::Newline]);
+
+            // Parse the body - multiple statements
+            let body = self.parse_block()?;
+
+            Ok(Stmt::For {
+                var_name,
+                from,
+                to,
+                body,
+            })
+        }
     }
 
     fn while_statement(&mut self) -> Result<Stmt, ParserError> {

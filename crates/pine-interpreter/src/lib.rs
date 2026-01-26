@@ -274,6 +274,35 @@ impl Interpreter {
                 Ok(None)
             }
 
+            Stmt::ForIn {
+                index_var,
+                item_var,
+                collection,
+                body,
+            } => {
+                let collection_value = self.eval_expr(collection)?;
+                let arr = collection_value.as_array()?;
+                let arr_borrowed = arr.borrow();
+
+                for (index, item) in arr_borrowed.iter().enumerate() {
+                    // Set index variable if tuple form
+                    if let Some(idx_var) = index_var {
+                        self.variables
+                            .insert(idx_var.clone(), Value::Number(index as f64));
+                    }
+
+                    // Set item variable
+                    self.variables.insert(item_var.clone(), item.clone());
+
+                    let control = self.execute_loop_body(body)?;
+                    if control == LoopControl::Break {
+                        break;
+                    }
+                }
+
+                Ok(None)
+            }
+
             Stmt::While { condition, body } => {
                 loop {
                     let cond_value = self.eval_expr(condition)?;
@@ -319,7 +348,7 @@ impl Interpreter {
                         return Ok(control);
                     }
                 }
-                Stmt::For { .. } | Stmt::While { .. } => {
+                Stmt::For { .. } | Stmt::ForIn { .. } | Stmt::While { .. } => {
                     // Nested loops handle their own break/continue
                     self.execute_stmt(stmt)?;
                 }
@@ -988,6 +1017,82 @@ mod tests {
         assert_eq!(interp.get_variable("y"), Some(&Value::Number(17.0)));
         assert_eq!(interp.get_variable("z"), Some(&Value::Number(8.0)));
         assert_eq!(interp.get_variable("w"), Some(&Value::Number(5.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_for_in_simple() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var arr = [1, 2, 3, 4, 5]
+            var sum = 0
+            for item in arr
+                sum := sum + item
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        // sum = 1 + 2 + 3 + 4 + 5 = 15
+        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(15.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_for_in_tuple() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var arr = [10, 20, 30]
+            var sum = 0
+            for [i, value] in arr
+                sum := sum + i * value
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        // sum = 0*10 + 1*20 + 2*30 = 0 + 20 + 60 = 80
+        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(80.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_for_in_break() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var arr = [1, 2, 3, 4, 5]
+            var sum = 0
+            for item in arr
+                if item == 3
+                    break
+                sum := sum + item
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        // sum = 1 + 2 = 3 (stops at item=3)
+        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(3.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_for_in_continue() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var arr = [1, 2, 3, 4, 5]
+            var sum = 0
+            for item in arr
+                if item % 2 == 0
+                    continue
+                sum := sum + item
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        // sum = 1 + 3 + 5 = 9 (skips even numbers)
+        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(9.0)));
         Ok(())
     }
 }

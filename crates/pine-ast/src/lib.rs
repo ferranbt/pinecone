@@ -108,6 +108,14 @@ pub enum Stmt {
         to: Expr,
         body: Vec<Stmt>,
     },
+    ForIn {
+        // For single item: for item in collection
+        // For tuple: for [index, item] in collection
+        index_var: Option<String>, // None for simple form, Some(name) for tuple form
+        item_var: String,
+        collection: Expr,
+        body: Vec<Stmt>,
+    },
     While {
         condition: Expr,
         body: Vec<Stmt>,

@@ -1,0 +1,7 @@
+//@version=6
+
+// For...in loop with tuple (index and item)
+var arr = array.from(10, 20, 30)
+var sum = 0
+for [i, value] in arr
+    sum := sum + i * value

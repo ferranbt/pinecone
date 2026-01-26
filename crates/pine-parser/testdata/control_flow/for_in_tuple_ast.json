@@ -1,0 +1,82 @@
+[
+  {
+    "VarDecl": {
+      "name": "arr",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "array.from",
+          "args": [
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 10.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 20.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 30.0
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "sum",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      }
+    }
+  },
+  {
+    "ForIn": {
+      "index_var": "i",
+      "item_var": "value",
+      "collection": {
+        "Variable": "arr"
+      },
+      "body": [
+        {
+          "Assignment": {
+            "name": "sum",
+            "value": {
+              "Binary": {
+                "left": {
+                  "Variable": "sum"
+                },
+                "op": "Add",
+                "right": {
+                  "Binary": {
+                    "left": {
+                      "Variable": "i"
+                    },
+                    "op": "Mul",
+                    "right": {
+                      "Variable": "value"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,109 @@
+[
+  {
+    "VarDecl": {
+      "name": "arr",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": "array.from",
+          "args": [
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 1.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 2.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 3.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 4.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 5.0
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "sum",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      }
+    }
+  },
+  {
+    "ForIn": {
+      "index_var": null,
+      "item_var": "item",
+      "collection": {
+        "Variable": "arr"
+      },
+      "body": [
+        {
+          "If": {
+            "condition": {
+              "Binary": {
+                "left": {
+                  "Variable": "item"
+                },
+                "op": "Eq",
+                "right": {
+                  "Literal": {
+                    "Number": 3.0
+                  }
+                }
+              }
+            },
+            "then_branch": [
+              "Break"
+            ],
+            "else_branch": null
+          }
+        },
+        {
+          "Assignment": {
+            "name": "sum",
+            "value": {
+              "Binary": {
+                "left": {
+                  "Variable": "sum"
+                },
+                "op": "Add",
+                "right": {
+                  "Variable": "item"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]
