@@ -1,4 +1,4 @@
-use pine_ast::{Argument, BinOp, Expr, Literal, Program, Stmt, TypeField, UnOp};
+use pine_ast::{Argument, BinOp, Expr, Literal, MethodParam, Program, Stmt, TypeField, UnOp};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -54,7 +54,10 @@ pub enum Value {
     Bool(bool),
     Na,                             // PineScript's N/A value
     Array(Rc<RefCell<Vec<Value>>>), // Mutable shared array reference
-    Object(Rc<RefCell<HashMap<String, Value>>>), // Dictionary/Object with string keys
+    Object {
+        type_name: String, // The type name of this object (e.g., "InfoLabel")
+        fields: Rc<RefCell<HashMap<String, Value>>>, // Dictionary/Object with string keys
+    },
     Function {
         params: Vec<String>,
         body: Vec<Stmt>,
@@ -75,7 +78,7 @@ impl std::fmt::Debug for Value {
             Value::Bool(b) => write!(f, "Bool({:?})", b),
             Value::Na => write!(f, "Na"),
             Value::Array(a) => write!(f, "Array({:?})", a),
-            Value::Object(o) => write!(f, "Object({:?})", o),
+            Value::Object { type_name, fields } => write!(f, "Object({}:{:?})", type_name, fields),
             Value::Function { params, .. } => write!(f, "Function({} params)", params.len()),
             Value::BuiltinFunction(_) => write!(f, "BuiltinFunction"),
             Value::Type { name, .. } => write!(f, "Type({})", name),
@@ -92,7 +95,7 @@ impl PartialEq for Value {
             (Value::Na, Value::Na) => true,
             // Arrays and Objects compare by reference (Rc pointer equality)
             (Value::Array(a), Value::Array(b)) => Rc::ptr_eq(a, b),
-            (Value::Object(a), Value::Object(b)) => Rc::ptr_eq(a, b),
+            (Value::Object { fields: a, .. }, Value::Object { fields: b, .. }) => Rc::ptr_eq(a, b),
             // Functions never equal (can't compare closures or function pointers)
             (Value::Function { .. }, Value::Function { .. }) => false,
             (Value::BuiltinFunction(_), Value::BuiltinFunction(_)) => false,
@@ -160,18 +163,29 @@ impl Value {
     }
 }
 
+/// Method definition stored in the interpreter
+#[derive(Clone)]
+struct MethodDef {
+    type_name: String, // The type this method belongs to (from first param's type annotation)
+    params: Vec<pine_ast::MethodParam>,
+    body: Vec<Stmt>,
+}
+
 /// The interpreter executes a program with a given bar
 pub struct Interpreter {
     /// Local variables in the current scope
     variables: HashMap<String, Value>,
     /// Builtin function registry
     builtins: HashMap<String, BuiltinFn>,
+    /// Method registry (method_name -> Vec<MethodDef>) - can have multiple methods with same name for different types
+    methods: HashMap<String, Vec<MethodDef>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self {
             variables: HashMap::new(),
+            methods: HashMap::new(),
             builtins: HashMap::new(),
         }
     }
@@ -180,6 +194,7 @@ impl Interpreter {
     pub fn with_builtins(builtins: HashMap<String, BuiltinFn>) -> Self {
         Self {
             variables: HashMap::new(),
+            methods: HashMap::new(),
             builtins,
         }
     }
@@ -243,8 +258,8 @@ impl Interpreter {
                         // Get the object
                         let obj_value = self.eval_expr(object)?;
 
-                        if let Value::Object(obj_ref) = obj_value {
-                            let mut obj = obj_ref.borrow_mut();
+                        if let Value::Object { fields, .. } = obj_value {
+                            let mut obj = fields.borrow_mut();
                             obj.insert(member.clone(), val);
                             Ok(None)
                         } else {
@@ -402,6 +417,35 @@ impl Interpreter {
                     fields: fields.clone(),
                 };
                 self.variables.insert(name.clone(), type_value);
+                Ok(None)
+            }
+
+            Stmt::MethodDecl { name, params, body } => {
+                // Extract the type name from the first parameter's type annotation
+                let type_name = if let Some(first_param) = params.first() {
+                    first_param.type_annotation.clone().ok_or_else(|| {
+                        RuntimeError::TypeError(
+                            "Method's first parameter must have a type annotation".to_string()
+                        )
+                    })?
+                } else {
+                    return Err(RuntimeError::TypeError(
+                        "Method must have at least one parameter (this)".to_string()
+                    ));
+                };
+
+                // Store the method definition
+                let method_def = MethodDef {
+                    type_name,
+                    params: params.clone(),
+                    body: body.clone(),
+                };
+
+                self.methods
+                    .entry(name.clone())
+                    .or_insert_with(Vec::new)
+                    .push(method_def);
+
                 Ok(None)
             }
         }
@@ -572,6 +616,51 @@ impl Interpreter {
             }
 
             Expr::Call { callee, args } => {
+                // Check if this is a method call (object.method())
+                if let Expr::MemberAccess { object, member } = callee.as_ref() {
+                    // Try to find a method with this name
+                    if let Some(method_defs) = self.methods.get(member).cloned() {
+                        // Evaluate the object (this will be the first parameter)
+                        let obj_value = self.eval_expr(object)?;
+
+                        // Find the method that matches the object's type
+                        let obj_type = self.get_object_type_name(&obj_value)?;
+
+                        if let Some(method_def) = method_defs.iter().find(|m| m.type_name == obj_type) {
+                            // Evaluate the other arguments
+                            let mut evaluated_args = vec![EvaluatedArg::Positional(obj_value)];
+                            let mut seen_named = false;
+
+                            for arg in args {
+                                match arg {
+                                    Argument::Positional(expr) => {
+                                        if seen_named {
+                                            return Err(RuntimeError::TypeError(
+                                                "Positional arguments cannot follow named arguments"
+                                                    .to_string(),
+                                            ));
+                                        }
+                                        let value = self.eval_expr(expr)?;
+                                        evaluated_args.push(EvaluatedArg::Positional(value));
+                                    }
+                                    Argument::Named { name, value: expr } => {
+                                        seen_named = true;
+                                        let value = self.eval_expr(expr)?;
+                                        evaluated_args.push(EvaluatedArg::Named {
+                                            name: name.clone(),
+                                            value,
+                                        });
+                                    }
+                                }
+                            }
+
+                            // Call the method (treating it like a function)
+                            return self.call_method(&method_def.params, &method_def.body, evaluated_args);
+                        }
+                    }
+                }
+
+                // Not a method call, proceed with regular function call
                 // Evaluate arguments and validate positional-before-named rule
                 let mut evaluated_args = Vec::new();
                 let mut seen_named = false;
@@ -619,8 +708,8 @@ impl Interpreter {
             Expr::MemberAccess { object, member } => {
                 let obj_value = self.eval_expr(object)?;
                 match obj_value {
-                    Value::Object(obj_ref) => {
-                        let obj = obj_ref.borrow();
+                    Value::Object { fields, .. } => {
+                        let obj = fields.borrow();
                         obj.get(member)
                             .cloned()
                             .ok_or_else(|| RuntimeError::TypeError(format!(
@@ -797,6 +886,73 @@ impl Interpreter {
 
         Ok(result)
     }
+
+    /// Get the type name for an object value
+    fn get_object_type_name(&self, value: &Value) -> Result<String, RuntimeError> {
+        match value {
+            Value::Object { type_name, .. } => Ok(type_name.clone()),
+            _ => Err(RuntimeError::TypeError(
+                "Cannot determine type of non-object value".to_string()
+            ))
+        }
+    }
+
+    /// Call a method (similar to call_user_function but handles MethodParam with defaults)
+    fn call_method(
+        &mut self,
+        params: &[MethodParam],
+        body: &[Stmt],
+        args: Vec<EvaluatedArg>,
+    ) -> Result<Value, RuntimeError> {
+        // Save current variable state (for method scope)
+        let saved_vars = self.variables.clone();
+
+        // Bind parameters to arguments
+        let mut positional_idx = 0;
+
+        for param in params {
+            let param_value = if positional_idx < args.len() {
+                match &args[positional_idx] {
+                    EvaluatedArg::Positional(value) => {
+                        positional_idx += 1;
+                        value.clone()
+                    }
+                    EvaluatedArg::Named { name, value } => {
+                        if name == &param.name {
+                            positional_idx += 1;
+                            value.clone()
+                        } else if let Some(default_expr) = &param.default_value {
+                            self.eval_expr(default_expr)?
+                        } else {
+                            Value::Na
+                        }
+                    }
+                }
+            } else if let Some(default_expr) = &param.default_value {
+                self.eval_expr(default_expr)?
+            } else {
+                Value::Na
+            };
+
+            self.variables.insert(param.name.clone(), param_value);
+        }
+
+        // Execute method body
+        let mut result = Value::Na;
+        for stmt in body {
+            if let Some(return_value) = self.execute_stmt(stmt)? {
+                result = return_value;
+            } else if let Stmt::Expression(expr) = stmt {
+                // Last expression is the return value
+                result = self.eval_expr(expr)?;
+            }
+        }
+
+        // Restore variable state
+        self.variables = saved_vars;
+
+        Ok(result)
+    }
 }
 
 impl Default for Interpreter {
@@ -857,7 +1013,10 @@ impl Interpreter {
                 }
             }
 
-            Ok(Value::Object(Rc::new(RefCell::new(instance_fields))))
+            Ok(Value::Object {
+                type_name: type_name.clone(),
+                fields: Rc::new(RefCell::new(instance_fields)),
+            })
         })
     }
 
@@ -873,11 +1032,14 @@ impl Interpreter {
 
             match &args[0] {
                 EvaluatedArg::Positional(value) => {
-                    if let Value::Object(obj_ref) = value {
+                    if let Value::Object { type_name, fields } = value {
                         // Create a shallow copy of the object's fields
-                        let obj = obj_ref.borrow();
+                        let obj = fields.borrow();
                         let copied_fields = obj.clone();
-                        Ok(Value::Object(Rc::new(RefCell::new(copied_fields))))
+                        Ok(Value::Object {
+                            type_name: type_name.clone(),
+                            fields: Rc::new(RefCell::new(copied_fields)),
+                        })
                     } else {
                         Err(RuntimeError::TypeError(
                             "copy() expects an object argument".to_string()
@@ -1353,7 +1515,10 @@ mod tests {
         color_obj.insert("green".to_string(), Value::String("#00FF00".to_string()));
 
         // Load the object into the interpreter
-        interp.set_variable("color", Value::Object(Rc::new(RefCell::new(color_obj))));
+        interp.set_variable("color", Value::Object {
+            type_name: "color".to_string(),
+            fields: Rc::new(RefCell::new(color_obj)),
+        });
 
         // Test member access
         let program = parse_str(
@@ -1379,7 +1544,10 @@ mod tests {
         barstate_obj.insert("islast".to_string(), Value::Bool(true));
         barstate_obj.insert("isrealtime".to_string(), Value::Bool(false));
 
-        interp.set_variable("barstate", Value::Object(Rc::new(RefCell::new(barstate_obj))));
+        interp.set_variable("barstate", Value::Object {
+            type_name: "barstate".to_string(),
+            fields: Rc::new(RefCell::new(barstate_obj)),
+        });
 
         let program = parse_str(
             r#"
@@ -1413,7 +1581,10 @@ mod tests {
         let mut math_ns = HashMap::new();
         math_ns.insert("add".to_string(), Value::BuiltinFunction(Rc::new(test_add)));
 
-        interp.set_variable("math", Value::Object(Rc::new(RefCell::new(math_ns))));
+        interp.set_variable("math", Value::Object {
+            type_name: "math".to_string(),
+            fields: Rc::new(RefCell::new(math_ns)),
+        });
 
         // Access the function and call it
         let program = parse_str(
@@ -1435,7 +1606,10 @@ mod tests {
         let mut obj = HashMap::new();
         obj.insert("foo".to_string(), Value::Number(42.0));
 
-        interp.set_variable("obj", Value::Object(Rc::new(RefCell::new(obj))));
+        interp.set_variable("obj", Value::Object {
+            type_name: "obj".to_string(),
+            fields: Rc::new(RefCell::new(obj)),
+        });
 
         let program = parse_str(
             r#"
@@ -1650,11 +1824,11 @@ mod tests {
 
         // Check that point is an object
         let point = interp.get_variable("point").unwrap();
-        assert!(matches!(point, Value::Object(_)));
+        assert!(matches!(point, Value::Object { .. }));
 
         // Check fields exist and are Na (no values provided)
-        if let Value::Object(obj) = point {
-            let obj_ref = obj.borrow();
+        if let Value::Object { fields, .. } = point {
+            let obj_ref = fields.borrow();
             assert_eq!(obj_ref.get("x"), Some(&Value::Na));
             assert_eq!(obj_ref.get("y"), Some(&Value::Na));
         }
@@ -1679,8 +1853,8 @@ mod tests {
         interp.execute(&program, &Bar::default())?;
 
         let point = interp.get_variable("point").unwrap();
-        if let Value::Object(obj) = point {
-            let obj_ref = obj.borrow();
+        if let Value::Object { fields, .. } = point {
+            let obj_ref = fields.borrow();
             assert_eq!(obj_ref.get("x"), Some(&Value::Number(100.0)));
             assert_eq!(obj_ref.get("y"), Some(&Value::Number(50.5)));
         } else {
@@ -1707,8 +1881,8 @@ mod tests {
         interp.execute(&program, &Bar::default())?;
 
         let bar = interp.get_variable("bar").unwrap();
-        if let Value::Object(obj) = bar {
-            let obj_ref = obj.borrow();
+        if let Value::Object { fields, .. } = bar {
+            let obj_ref = fields.borrow();
             assert_eq!(obj_ref.get("index"), Some(&Value::Number(0.0)));
             assert_eq!(obj_ref.get("price"), Some(&Value::Number(100.0)));
         } else {
@@ -1794,6 +1968,36 @@ mod tests {
         assert_eq!(interp.get_variable("x1"), Some(&Value::Number(1000.0)));
         // pivot2.x should be 2000 (modified)
         assert_eq!(interp.get_variable("x2"), Some(&Value::Number(2000.0)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_method_call() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            type InfoLabel
+                int x = 0
+                int y = 0
+
+            method set(InfoLabel this, int newX, int newY) =>
+                this.x := newX
+                this.y := newY
+
+            label = InfoLabel.new()
+            label.set(100, 200)
+
+            finalX = label.x
+            finalY = label.y
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        assert_eq!(interp.get_variable("finalX"), Some(&Value::Number(100.0)));
+        assert_eq!(interp.get_variable("finalY"), Some(&Value::Number(200.0)));
 
         Ok(())
     }

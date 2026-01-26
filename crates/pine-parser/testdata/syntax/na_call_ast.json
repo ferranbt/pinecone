@@ -6,7 +6,7 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "na"
+            "Literal": "Na"
           },
           "args": [
             {

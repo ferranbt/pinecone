@@ -40,7 +40,7 @@
       "name": "label",
       "type_annotation": "string",
       "initializer": {
-        "Variable": "na"
+        "Literal": "Na"
       },
       "is_varip": false
     }
@@ -50,7 +50,7 @@
       "name": "value",
       "type_annotation": "int",
       "initializer": {
-        "Variable": "na"
+        "Literal": "Na"
       },
       "is_varip": false
     }

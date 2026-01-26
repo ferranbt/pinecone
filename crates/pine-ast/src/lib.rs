@@ -134,6 +134,19 @@ pub enum Stmt {
         name: String,
         fields: Vec<TypeField>,
     },
+    MethodDecl {
+        name: String,
+        params: Vec<MethodParam>,
+        body: Vec<Stmt>,
+    },
+}
+
+/// A parameter in a method declaration
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MethodParam {
+    pub type_annotation: Option<String>, // e.g., "InfoLabel"
+    pub name: String,
+    pub default_value: Option<Expr>,
 }
 
 /// A field in a user-defined type

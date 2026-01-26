@@ -233,6 +233,11 @@ impl Parser {
             return self.type_declaration();
         }
 
+        // Check for method declaration: method methodName(params) =>
+        if self.match_token(&[TokenType::Method]) {
+            return self.method_declaration();
+        }
+
         // Check for type-annotated declaration without var: int x = ..., float y = ..., int[] x = ...
         if self.match_token(&[TokenType::Int, TokenType::Float]) {
             let type_name = self.tokens[self.current - 1].lexeme.clone();
@@ -336,6 +341,91 @@ impl Parser {
         Ok(Stmt::TypeDecl {
             name: type_name,
             fields,
+        })
+    }
+
+    fn method_declaration(&mut self) -> Result<Stmt, ParserError> {
+        // Parse method name
+        let method_name = if let TokenType::Ident(name) = &self.peek().typ {
+            let name = name.clone();
+            self.advance();
+            name
+        } else {
+            return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+        };
+
+        // Expect '('
+        self.consume(TokenType::LParen, "Expected '(' after method name")?;
+
+        // Parse parameters
+        let mut params = Vec::new();
+
+        if !self.check(&TokenType::RParen) {
+            loop {
+                // Parse optional type annotation
+                let type_annotation = if self.match_token(&[TokenType::Int, TokenType::Float]) {
+                    Some(self.tokens[self.current - 1].lexeme.clone())
+                } else if let TokenType::Ident(type_name) = &self.peek().typ {
+                    // Could be a type annotation or parameter name
+                    let saved_pos = self.current;
+                    let type_name = type_name.clone();
+                    self.advance();
+
+                    // Check if followed by another identifier (param name)
+                    if matches!(self.peek().typ, TokenType::Ident(_)) {
+                        Some(type_name)
+                    } else {
+                        // It's actually the parameter name, backtrack
+                        self.current = saved_pos;
+                        None
+                    }
+                } else {
+                    None
+                };
+
+                // Parse parameter name
+                let param_name = if let TokenType::Ident(name) = &self.peek().typ {
+                    let name = name.clone();
+                    self.advance();
+                    name
+                } else {
+                    return Err(ParserError::ExpectedParameterName(self.peek().line));
+                };
+
+                // Parse optional default value
+                let default_value = if self.match_token(&[TokenType::Assign]) {
+                    Some(self.expression()?)
+                } else {
+                    None
+                };
+
+                params.push(pine_ast::MethodParam {
+                    type_annotation,
+                    name: param_name,
+                    default_value,
+                });
+
+                if !self.match_token(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        self.consume(TokenType::RParen, "Expected ')' after parameters")?;
+
+        // Expect '=>'
+        self.consume(TokenType::Arrow, "Expected '=>' after method parameters")?;
+
+        // Skip optional newline after =>
+        self.match_token(&[TokenType::Newline]);
+
+        // Parse method body (can be a block or single expression)
+        let body = self.parse_block()?;
+
+        Ok(Stmt::MethodDecl {
+            name: method_name,
+            params,
+            body,
         })
     }
 
@@ -1196,9 +1286,14 @@ impl Parser {
             return Ok(Expr::Literal(Literal::HexColor(hex)));
         }
 
-        // Handle keywords that can be used as identifiers (int, float, na)
-        // These can be function names (e.g., int(), float(), na()) or standalone values
-        if self.match_token(&[TokenType::Int, TokenType::Float, TokenType::Na]) {
+        // Handle na as a literal
+        if self.match_token(&[TokenType::Na]) {
+            return Ok(Expr::Literal(Literal::Na));
+        }
+
+        // Handle keywords that can be used as identifiers (int, float)
+        // These can be function names (e.g., int(), float())
+        if self.match_token(&[TokenType::Int, TokenType::Float]) {
             let name = self.tokens[self.current - 1].lexeme.clone();
             return Ok(Expr::Variable(name));
         }

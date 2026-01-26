@@ -6,9 +6,12 @@ use std::rc::Rc;
 
 // Re-export for convenience
 pub use pine_interpreter::Bar;
+pub use pine_interpreter::BuiltinFn;
+pub use pine_interpreter::EvaluatedArg;
 
-/// Register all builtin namespaces as objects
+/// Register all builtin namespaces as objects and global functions
 /// Returns namespace objects to be loaded as variables (e.g., "array", "str", "ta")
+/// and global builtin functions (e.g., "na")
 /// Each member stores the builtin function pointer as Value::BuiltinFunction
 pub fn register_namespace_objects() -> HashMap<String, Value> {
     let mut namespaces = HashMap::new();
@@ -21,9 +24,28 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
     array_ns.insert("get".to_string(), Value::BuiltinFunction(Rc::new(ArrayGet::builtin_fn)));
     array_ns.insert("size".to_string(), Value::BuiltinFunction(Rc::new(ArraySize::builtin_fn)));
 
-    namespaces.insert("array".to_string(), Value::Object(Rc::new(RefCell::new(array_ns))));
+    namespaces.insert("array".to_string(), Value::Object {
+        type_name: "array".to_string(),
+        fields: Rc::new(RefCell::new(array_ns)),
+    });
+
+    // Register global builtin functions
+    namespaces.insert("na".to_string(), Value::BuiltinFunction(Rc::new(Na::builtin_fn) as BuiltinFn));
 
     namespaces
+}
+
+/// na(value) - Returns true if the value is na, false otherwise
+#[derive(BuiltinFunction)]
+#[builtin(name = "na")]
+struct Na {
+    value: Value,
+}
+
+impl Na {
+    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        Ok(Value::Bool(matches!(self.value, Value::Na)))
+    }
 }
 
 #[derive(BuiltinFunction)]
@@ -171,5 +193,30 @@ mod tests {
         ];
         let value = ArrayGet::builtin_fn(&mut ctx, get_args).unwrap();
         assert_eq!(value, Value::Number(42.0));
+    }
+
+    #[test]
+    fn test_na() {
+        let mut ctx = Interpreter::new();
+
+        // Test with na value
+        let args = vec![EvaluatedArg::Positional(Value::Na)];
+        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(true));
+
+        // Test with number
+        let args = vec![EvaluatedArg::Positional(Value::Number(42.0))];
+        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(false));
+
+        // Test with string
+        let args = vec![EvaluatedArg::Positional(Value::String("hello".to_string()))];
+        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(false));
+
+        // Test with bool
+        let args = vec![EvaluatedArg::Positional(Value::Bool(true))];
+        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(false));
     }
 }
