@@ -629,13 +629,16 @@ impl Interpreter {
                             )))
                     }
                     Value::Type { name, fields } => {
-                        // Types only have a 'new' method
+                        // Types have 'new' and 'copy' methods
                         if member == "new" {
                             // Return a constructor function
                             Ok(Value::BuiltinFunction(Self::create_constructor(name, fields)))
+                        } else if member == "copy" {
+                            // Return a copy function
+                            Ok(Value::BuiltinFunction(Self::create_copy_function()))
                         } else {
                             Err(RuntimeError::TypeError(format!(
-                                "Type '{}' has no member '{}' (only 'new' is supported)",
+                                "Type '{}' has no member '{}' (only 'new' and 'copy' are supported)",
                                 name, member
                             )))
                         }
@@ -855,6 +858,38 @@ impl Interpreter {
             }
 
             Ok(Value::Object(Rc::new(RefCell::new(instance_fields))))
+        })
+    }
+
+    /// Creates a copy function for types that takes an object and returns a shallow copy
+    fn create_copy_function() -> BuiltinFn {
+        Rc::new(|_interp: &mut Interpreter, args: Vec<EvaluatedArg>| {
+            // Expect exactly one positional argument (the object to copy)
+            if args.len() != 1 {
+                return Err(RuntimeError::TypeError(
+                    "copy() expects exactly one argument".to_string()
+                ));
+            }
+
+            match &args[0] {
+                EvaluatedArg::Positional(value) => {
+                    if let Value::Object(obj_ref) = value {
+                        // Create a shallow copy of the object's fields
+                        let obj = obj_ref.borrow();
+                        let copied_fields = obj.clone();
+                        Ok(Value::Object(Rc::new(RefCell::new(copied_fields))))
+                    } else {
+                        Err(RuntimeError::TypeError(
+                            "copy() expects an object argument".to_string()
+                        ))
+                    }
+                }
+                EvaluatedArg::Named { .. } => {
+                    Err(RuntimeError::TypeError(
+                        "copy() does not accept named arguments".to_string()
+                    ))
+                }
+            }
         })
     }
 }
@@ -1729,6 +1764,36 @@ mod tests {
 
         assert_eq!(interp.get_variable("newX"), Some(&Value::Number(200.0)));
         assert_eq!(interp.get_variable("newY"), Some(&Value::Number(75.25)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_udt_copy() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            type pivotPoint
+                int x
+                float y
+
+            pivot1 = pivotPoint.new()
+            pivot1.x := 1000
+            pivot2 = pivotPoint.copy(pivot1)
+            pivot2.x := 2000
+
+            x1 = pivot1.x
+            x2 = pivot2.x
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        // pivot1.x should be 1000 (unchanged by pivot2 modification)
+        assert_eq!(interp.get_variable("x1"), Some(&Value::Number(1000.0)));
+        // pivot2.x should be 2000 (modified)
+        assert_eq!(interp.get_variable("x2"), Some(&Value::Number(2000.0)));
 
         Ok(())
     }
