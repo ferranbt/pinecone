@@ -454,6 +454,28 @@ impl Interpreter {
                 }
             }
 
+            Expr::IfExpr {
+                condition,
+                then_expr,
+                else_if_branches,
+                else_expr,
+            } => {
+                let cond_val = self.eval_expr(condition)?;
+                if cond_val.as_bool()? {
+                    self.eval_expr(then_expr)
+                } else {
+                    // Try each else if branch
+                    for (else_if_cond, else_if_expr) in else_if_branches {
+                        let else_if_val = self.eval_expr(else_if_cond)?;
+                        if else_if_val.as_bool()? {
+                            return self.eval_expr(else_if_expr);
+                        }
+                    }
+                    // No else if matched, evaluate else branch
+                    self.eval_expr(else_expr)
+                }
+            }
+
             Expr::Array(elements) => {
                 let values: Result<Vec<_>, _> =
                     elements.iter().map(|e| self.eval_expr(e)).collect();
@@ -1347,6 +1369,86 @@ mod tests {
 
         interp3.execute(&program3, &Bar::default())?;
         assert_eq!(interp3.get_variable("result"), Some(&Value::Number(-1.0)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_if_expression() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Test if expression with else if
+        let program = parse_str(
+            r#"
+            var x = 5
+            string result = if x < 0
+                "negative"
+            else if x == 0
+                "zero"
+            else if x < 10
+                "small"
+            else
+                "large"
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("result"), Some(&Value::String("small".to_string())));
+
+        // Test with different values
+        let mut interp2 = Interpreter::new();
+        let program2 = parse_str(
+            r#"
+            var x = 100
+            string result = if x < 0
+                "negative"
+            else if x == 0
+                "zero"
+            else if x < 10
+                "small"
+            else
+                "large"
+            "#,
+        )?;
+
+        interp2.execute(&program2, &Bar::default())?;
+        assert_eq!(interp2.get_variable("result"), Some(&Value::String("large".to_string())));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_if_expression_simple() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Test simple if-else expression without else-if
+        let program = parse_str(
+            r#"
+            var x = 5
+            string result = if x > 0
+                "positive"
+            else
+                "non-positive"
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("result"), Some(&Value::String("positive".to_string())));
+
+        // Test else branch
+        let mut interp2 = Interpreter::new();
+        let program2 = parse_str(
+            r#"
+            var x = -5
+            string result = if x > 0
+                "positive"
+            else
+                "non-positive"
+            "#,
+        )?;
+
+        interp2.execute(&program2, &Bar::default())?;
+        assert_eq!(interp2.get_variable("result"), Some(&Value::String("non-positive".to_string())));
 
         Ok(())
     }

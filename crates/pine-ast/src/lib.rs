@@ -47,6 +47,12 @@ pub enum Expr {
         value: Box<Expr>,
         cases: Vec<(Expr, Expr)>, // (pattern, result)
     },
+    IfExpr {
+        condition: Box<Expr>,
+        then_expr: Box<Expr>,
+        else_if_branches: Vec<(Expr, Expr)>, // Vec of (condition, expression) for else if
+        else_expr: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

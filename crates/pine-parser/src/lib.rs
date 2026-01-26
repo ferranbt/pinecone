@@ -637,6 +637,83 @@ impl Parser {
         })
     }
 
+    fn if_expression(&mut self) -> Result<Expr, ParserError> {
+        // Consume 'if' token
+        self.consume(TokenType::If, "Expected 'if'")?;
+
+        // Parse the condition
+        let condition = self.expression()?;
+
+        // Skip optional newline after condition
+        self.match_token(&[TokenType::Newline]);
+
+        // Skip optional indent
+        self.match_token(&[TokenType::Indent]);
+
+        // Parse the then expression (single expression, not a block of statements)
+        let then_expr = self.expression()?;
+
+        // Skip newlines and dedent
+        self.skip_newlines();
+        self.match_token(&[TokenType::Dedent]);
+
+        // Parse else if branches
+        let mut else_if_branches = Vec::new();
+
+        loop {
+            // Skip any newlines before else
+            self.skip_newlines();
+
+            // Check if we have "else if"
+            if self.check(&TokenType::Else) {
+                let saved_pos = self.current;
+                self.advance(); // consume 'else'
+
+                // Check if next token is 'if'
+                if self.match_token(&[TokenType::If]) {
+                    // This is an else if
+                    let else_if_condition = self.expression()?;
+                    self.match_token(&[TokenType::Newline]);
+                    self.match_token(&[TokenType::Indent]);
+                    let else_if_expr = self.expression()?;
+                    self.skip_newlines();
+                    self.match_token(&[TokenType::Dedent]);
+                    else_if_branches.push((else_if_condition, else_if_expr));
+                } else {
+                    // This is just 'else', restore position to before 'else'
+                    self.current = saved_pos;
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        // Parse final else branch (required for if expressions)
+        self.skip_newlines();
+        self.consume(TokenType::Else, "If expression must have an else branch")?;
+
+        // Skip optional newline after else
+        self.match_token(&[TokenType::Newline]);
+
+        // Skip optional indent
+        self.match_token(&[TokenType::Indent]);
+
+        // Parse else expression
+        let else_expr = self.expression()?;
+
+        // Skip newlines and optional dedent
+        self.skip_newlines();
+        self.match_token(&[TokenType::Dedent]);
+
+        Ok(Expr::IfExpr {
+            condition: Box::new(condition),
+            then_expr: Box::new(then_expr),
+            else_if_branches,
+            else_expr: Box::new(else_expr),
+        })
+    }
+
     fn parse_block(&mut self) -> Result<Vec<Stmt>, ParserError> {
         let mut stmts = vec![];
 
@@ -737,6 +814,11 @@ impl Parser {
     }
 
     fn ternary(&mut self) -> Result<Expr, ParserError> {
+        // Check for if expression first
+        if self.check(&TokenType::If) {
+            return self.if_expression();
+        }
+
         let mut expr = self.logical_or()?;
 
         // Skip newlines before '?' for multi-line ternaries

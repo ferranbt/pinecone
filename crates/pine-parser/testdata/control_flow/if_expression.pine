@@ -1,0 +1,12 @@
+//@version=4
+
+var x = 5
+
+string result = if x < 0
+    "negative"
+else if x == 0
+    "zero"
+else if x < 10
+    "small"
+else
+    "large"
