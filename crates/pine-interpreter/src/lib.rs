@@ -54,6 +54,7 @@ pub enum Value {
     Bool(bool),
     Na,                             // PineScript's N/A value
     Array(Rc<RefCell<Vec<Value>>>), // Mutable shared array reference
+    Object(Rc<RefCell<HashMap<String, Value>>>), // Dictionary/Object with string keys
     Function {
         params: Vec<String>,
         body: Vec<Stmt>,
@@ -67,8 +68,9 @@ impl PartialEq for Value {
             (Value::String(a), Value::String(b)) => a == b,
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::Na, Value::Na) => true,
-            // Arrays compare by reference (Rc pointer equality)
+            // Arrays and Objects compare by reference (Rc pointer equality)
             (Value::Array(a), Value::Array(b)) => Rc::ptr_eq(a, b),
+            (Value::Object(a), Value::Object(b)) => Rc::ptr_eq(a, b),
             // Functions never equal (can't compare closures)
             (Value::Function { .. }, Value::Function { .. }) => false,
             _ => false,
@@ -180,6 +182,11 @@ impl Interpreter {
     /// Get a variable value
     pub fn get_variable(&self, name: &str) -> Option<&Value> {
         self.variables.get(name)
+    }
+
+    /// Set a variable value (useful for loading objects and test setup)
+    pub fn set_variable(&mut self, name: &str, value: Value) {
+        self.variables.insert(name.to_string(), value);
     }
 
     fn execute_stmt(&mut self, stmt: &Stmt) -> Result<Option<Value>, RuntimeError> {
@@ -490,9 +497,24 @@ impl Interpreter {
                 }
             }
 
-            Expr::MemberAccess { .. } => Err(RuntimeError::TypeError(
-                "Member access not yet implemented".to_string(),
-            )),
+            Expr::MemberAccess { object, member } => {
+                let obj_value = self.eval_expr(object)?;
+                match obj_value {
+                    Value::Object(obj_ref) => {
+                        let obj = obj_ref.borrow();
+                        obj.get(member)
+                            .cloned()
+                            .ok_or_else(|| RuntimeError::TypeError(format!(
+                                "Object has no member '{}'",
+                                member
+                            )))
+                    }
+                    _ => Err(RuntimeError::TypeError(format!(
+                        "Cannot access member '{}' on non-object value",
+                        member
+                    ))),
+                }
+            }
 
             Expr::Function { params, body } => {
                 // Create a function value
@@ -1094,6 +1116,79 @@ mod tests {
         interp.execute(&program, &Bar::default())?;
         // sum = 1 + 3 + 5 = 9 (skips even numbers)
         assert_eq!(interp.get_variable("sum"), Some(&Value::Number(9.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_member_access() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Create an object with some properties
+        let mut color_obj = HashMap::new();
+        color_obj.insert("red".to_string(), Value::String("#FF0000".to_string()));
+        color_obj.insert("blue".to_string(), Value::String("#0000FF".to_string()));
+        color_obj.insert("green".to_string(), Value::String("#00FF00".to_string()));
+
+        // Load the object into the interpreter
+        interp.set_variable("color", Value::Object(Rc::new(RefCell::new(color_obj))));
+
+        // Test member access
+        let program = parse_str(
+            r#"
+            var myColor = color.red
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(
+            interp.get_variable("myColor"),
+            Some(&Value::String("#FF0000".to_string()))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_member_access_nested() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Create a nested object structure
+        let mut barstate_obj = HashMap::new();
+        barstate_obj.insert("islast".to_string(), Value::Bool(true));
+        barstate_obj.insert("isrealtime".to_string(), Value::Bool(false));
+
+        interp.set_variable("barstate", Value::Object(Rc::new(RefCell::new(barstate_obj))));
+
+        let program = parse_str(
+            r#"
+            var isLast = barstate.islast
+            var isRealtime = barstate.isrealtime
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("isLast"), Some(&Value::Bool(true)));
+        assert_eq!(interp.get_variable("isRealtime"), Some(&Value::Bool(false)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_member_access_nonexistent() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let mut obj = HashMap::new();
+        obj.insert("foo".to_string(), Value::Number(42.0));
+
+        interp.set_variable("obj", Value::Object(Rc::new(RefCell::new(obj))));
+
+        let program = parse_str(
+            r#"
+            var x = obj.bar
+            "#,
+        )?;
+
+        let result = interp.execute(&program, &Bar::default());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("has no member 'bar'"));
         Ok(())
     }
 }
