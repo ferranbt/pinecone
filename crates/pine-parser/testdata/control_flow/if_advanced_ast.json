@@ -12,7 +12,8 @@
             }
           }
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -98,7 +99,8 @@
             }
           }
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -161,7 +163,8 @@
         "Literal": {
           "Bool": true
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -183,7 +186,8 @@
               "Literal": {
                 "Number": 100.0
               }
-            }
+            },
+            "is_varip": false
           }
         }
       ],

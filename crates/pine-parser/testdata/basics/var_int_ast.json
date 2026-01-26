@@ -12,7 +12,8 @@
             }
           }
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -23,7 +24,8 @@
         "Literal": {
           "Number": 3.14
         }
-      }
+      },
+      "is_varip": false
     }
   }
 ]

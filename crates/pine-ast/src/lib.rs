@@ -87,6 +87,7 @@ pub enum Stmt {
         name: String,
         type_annotation: Option<String>,
         initializer: Option<Expr>,
+        is_varip: bool, // true for varip, false for var
     },
     Assignment {
         name: String,

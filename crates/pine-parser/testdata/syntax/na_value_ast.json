@@ -5,7 +5,8 @@
       "type_annotation": null,
       "initializer": {
         "Variable": "na"
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -26,7 +27,8 @@
             }
           }
         }
-      }
+      },
+      "is_varip": false
     }
   }
 ]

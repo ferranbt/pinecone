@@ -190,41 +190,51 @@ impl Parser {
 
     // Declarations (var declarations, assignments, etc.)
     fn declaration(&mut self) -> Result<Stmt, ParserError> {
-        // Check for var keyword (can be followed by type annotation)
-        if self.match_token(&[TokenType::Var]) {
-            // Check if followed by type annotation: var int x = ..., var float y = ..., var label l = ...
-            let type_annotation = if self.match_token(&[TokenType::Int, TokenType::Float]) {
-                let type_name = self.tokens[self.current - 1].lexeme.clone();
-                // Check for array type: var int[] or var float[]
-                Some(self.parse_array_suffix(type_name)?)
-            } else if let TokenType::Ident(type_name) = &self.peek().typ {
-                // Check if this is a type annotation by looking ahead for another identifier or []
-                let type_name = type_name.clone();
-                self.try_parse(|p| {
-                    p.advance(); // consume potential type name
+        // Check for var or varip keyword (can be followed by type annotation)
+        let is_varip = if self.match_token(&[TokenType::Varip]) {
+            true
+        } else if self.match_token(&[TokenType::Var]) {
+            false
+        } else {
+            // Not a var/varip declaration, continue to other statement types
+            return self.check_type_annotated_declaration();
+        };
 
-                    // Check for array type: var string[] or var label[]
-                    let final_type = p.parse_array_suffix(type_name.clone())?;
+        // Check if followed by type annotation: var int x = ..., var float y = ..., var label l = ...
+        let type_annotation = if self.match_token(&[TokenType::Int, TokenType::Float]) {
+            let type_name = self.tokens[self.current - 1].lexeme.clone();
+            // Check for array type: var int[] or var float[]
+            Some(self.parse_array_suffix(type_name)?)
+        } else if let TokenType::Ident(type_name) = &self.peek().typ {
+            // Check if this is a type annotation by looking ahead for another identifier or []
+            let type_name = type_name.clone();
+            self.try_parse(|p| {
+                p.advance(); // consume potential type name
 
-                    // Must be followed by identifier to be a type annotation
-                    if !matches!(p.peek().typ, TokenType::Ident(_)) {
-                        return Err(ParserError::ExpectedVariableName(p.peek().line));
-                    }
+                // Check for array type: var string[] or var label[]
+                let final_type = p.parse_array_suffix(type_name.clone())?;
 
-                    Ok(final_type)
-                })
-            } else {
-                None
-            };
-            return self.typed_var_declaration(type_annotation);
-        }
+                // Must be followed by identifier to be a type annotation
+                if !matches!(p.peek().typ, TokenType::Ident(_)) {
+                    return Err(ParserError::ExpectedVariableName(p.peek().line));
+                }
+
+                Ok(final_type)
+            })
+        } else {
+            None
+        };
+        return self.typed_var_declaration(type_annotation, is_varip);
+    }
+
+    fn check_type_annotated_declaration(&mut self) -> Result<Stmt, ParserError> {
 
         // Check for type-annotated declaration without var: int x = ..., float y = ..., int[] x = ...
         if self.match_token(&[TokenType::Int, TokenType::Float]) {
             let type_name = self.tokens[self.current - 1].lexeme.clone();
             // Check for array type: int[] or float[]
             let type_name = self.parse_array_suffix(type_name)?;
-            return self.typed_var_declaration(Some(type_name));
+            return self.typed_var_declaration(Some(type_name), false);
         }
 
         // Check for identifier type with optional []: string x = ..., string[] x = ...
@@ -243,7 +253,7 @@ impl Parser {
 
                 Ok(final_type)
             }) {
-                return self.typed_var_declaration(Some(final_type));
+                return self.typed_var_declaration(Some(final_type), false);
             }
         }
 
@@ -253,6 +263,7 @@ impl Parser {
     fn typed_var_declaration(
         &mut self,
         type_annotation: Option<String>,
+        is_varip: bool,
     ) -> Result<Stmt, ParserError> {
         let name = if let TokenType::Ident(n) = &self.peek().typ {
             let name = n.clone();
@@ -272,6 +283,7 @@ impl Parser {
             name,
             type_annotation,
             initializer,
+            is_varip,
         })
     }
 
@@ -369,6 +381,7 @@ impl Parser {
                     name,
                     type_annotation: None,
                     initializer,
+                    is_varip: false,
                 });
             }
 
@@ -384,6 +397,7 @@ impl Parser {
                         name: name.clone(),
                         type_annotation: None,
                         initializer,
+                        is_varip: false,
                     });
                 } else if p.match_token(&[TokenType::ColonAssign]) {
                     // This is a reassignment with :=
@@ -1338,6 +1352,7 @@ mod tests {
             name,
             type_annotation,
             initializer,
+            is_varip,
         } = &stmts[0]
         {
             assert_eq!(name, "x");
@@ -1346,6 +1361,7 @@ mod tests {
                 initializer.as_ref().unwrap(),
                 &Expr::Literal(Literal::Number(10.0))
             );
+            assert_eq!(*is_varip, false);
         } else {
             panic!("Expected VarDecl");
         }

@@ -188,6 +188,7 @@ impl Interpreter {
                 name,
                 type_annotation: _,
                 initializer,
+                is_varip: _,  // TODO: implement varip behavior (requires stateful execution)
             } => {
                 let value = if let Some(init_expr) = initializer {
                     self.eval_expr(init_expr)?

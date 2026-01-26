@@ -1,0 +1,32 @@
+[
+  {
+    "VarDecl": {
+      "name": "counter",
+      "type_annotation": "int",
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      },
+      "is_varip": true
+    }
+  },
+  {
+    "Assignment": {
+      "name": "counter",
+      "value": {
+        "Binary": {
+          "left": {
+            "Variable": "counter"
+          },
+          "op": "Add",
+          "right": {
+            "Literal": {
+              "Number": 1.0
+            }
+          }
+        }
+      }
+    }
+  }
+]
