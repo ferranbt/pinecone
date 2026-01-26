@@ -47,7 +47,7 @@ pub struct Bar {
 }
 
 /// Value types in the interpreter
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Value {
     Number(f64),
     String(String),
@@ -59,6 +59,23 @@ pub enum Value {
         params: Vec<String>,
         body: Vec<Stmt>,
     },
+    BuiltinFunction(BuiltinFn), // Builtin function pointer
+}
+
+// Manual Debug impl since function pointers don't implement Debug
+impl std::fmt::Debug for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Number(n) => write!(f, "Number({:?})", n),
+            Value::String(s) => write!(f, "String({:?})", s),
+            Value::Bool(b) => write!(f, "Bool({:?})", b),
+            Value::Na => write!(f, "Na"),
+            Value::Array(a) => write!(f, "Array({:?})", a),
+            Value::Object(o) => write!(f, "Object({:?})", o),
+            Value::Function { params, .. } => write!(f, "Function({} params)", params.len()),
+            Value::BuiltinFunction(_) => write!(f, "BuiltinFunction"),
+        }
+    }
 }
 
 impl PartialEq for Value {
@@ -71,8 +88,9 @@ impl PartialEq for Value {
             // Arrays and Objects compare by reference (Rc pointer equality)
             (Value::Array(a), Value::Array(b)) => Rc::ptr_eq(a, b),
             (Value::Object(a), Value::Object(b)) => Rc::ptr_eq(a, b),
-            // Functions never equal (can't compare closures)
+            // Functions never equal (can't compare closures or function pointers)
             (Value::Function { .. }, Value::Function { .. }) => false,
+            (Value::BuiltinFunction(_), Value::BuiltinFunction(_)) => false,
             _ => false,
         }
     }
@@ -480,11 +498,15 @@ impl Interpreter {
                 if let Some(&builtin_fn) = self.builtins.get(callee) {
                     builtin_fn(self, evaluated_args)
                 } else if let Some(func_value) = self.variables.get(callee).cloned() {
-                    // Check if it's a user-defined function
-                    if let Value::Function { params, body } = func_value {
-                        self.call_user_function(&params, &body, evaluated_args)
-                    } else {
-                        Err(RuntimeError::TypeError(format!(
+                    // Check what type of function it is
+                    match func_value {
+                        Value::Function { params, body } => {
+                            self.call_user_function(&params, &body, evaluated_args)
+                        }
+                        Value::BuiltinFunction(builtin_fn) => {
+                            builtin_fn(self, evaluated_args)
+                        }
+                        _ => Err(RuntimeError::TypeError(format!(
                             "'{}' is not a function",
                             callee
                         )))
@@ -1168,6 +1190,40 @@ mod tests {
         interp.execute(&program, &Bar::default())?;
         assert_eq!(interp.get_variable("isLast"), Some(&Value::Bool(true)));
         assert_eq!(interp.get_variable("isRealtime"), Some(&Value::Bool(false)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_builtin_function_in_object() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Create a test builtin function
+        fn test_add(_ctx: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
+            let mut sum = 0.0;
+            for arg in args {
+                if let EvaluatedArg::Positional(Value::Number(n)) = arg {
+                    sum += n;
+                }
+            }
+            Ok(Value::Number(sum))
+        }
+
+        // Create a namespace object with a builtin function
+        let mut math_ns = HashMap::new();
+        math_ns.insert("add".to_string(), Value::BuiltinFunction(test_add));
+
+        interp.set_variable("math", Value::Object(Rc::new(RefCell::new(math_ns))));
+
+        // Access the function and call it
+        let program = parse_str(
+            r#"
+            var addFunc = math.add
+            var result = addFunc(1, 2, 3)
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("result"), Some(&Value::Number(6.0)));
         Ok(())
     }
 
