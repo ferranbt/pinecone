@@ -38,8 +38,12 @@ pub enum Value {
     Number(f64),
     String(String),
     Bool(bool),
-    Na, // PineScript's N/A value
+    Na,                             // PineScript's N/A value
     Array(Rc<RefCell<Vec<Value>>>), // Mutable shared array reference
+    Function {
+        params: Vec<String>,
+        body: Vec<Stmt>,
+    },
 }
 
 impl PartialEq for Value {
@@ -51,6 +55,8 @@ impl PartialEq for Value {
             (Value::Na, Value::Na) => true,
             // Arrays compare by reference (Rc pointer equality)
             (Value::Array(a), Value::Array(b)) => Rc::ptr_eq(a, b),
+            // Functions never equal (can't compare closures)
+            (Value::Function { .. }, Value::Function { .. }) => false,
             _ => false,
         }
     }
@@ -140,18 +146,22 @@ impl Interpreter {
     /// Execute a program with a single bar
     pub fn execute(&mut self, program: &Program, bar: &Bar) -> Result<(), RuntimeError> {
         // Initialize builtin variables from bar
-        self.variables.insert("open".to_string(), Value::Number(bar.open));
-        self.variables.insert("high".to_string(), Value::Number(bar.high));
-        self.variables.insert("low".to_string(), Value::Number(bar.low));
-        self.variables.insert("close".to_string(), Value::Number(bar.close));
-        self.variables.insert("volume".to_string(), Value::Number(bar.volume));
+        self.variables
+            .insert("open".to_string(), Value::Number(bar.open));
+        self.variables
+            .insert("high".to_string(), Value::Number(bar.high));
+        self.variables
+            .insert("low".to_string(), Value::Number(bar.low));
+        self.variables
+            .insert("close".to_string(), Value::Number(bar.close));
+        self.variables
+            .insert("volume".to_string(), Value::Number(bar.volume));
 
         for stmt in &program.statements {
             self.execute_stmt(stmt)?;
         }
         Ok(())
     }
-
 
     /// Get a variable value
     pub fn get_variable(&self, name: &str) -> Option<&Value> {
@@ -341,7 +351,8 @@ impl Interpreter {
                         Argument::Positional(expr) => {
                             if seen_named {
                                 return Err(RuntimeError::TypeError(
-                                    "Positional arguments cannot follow named arguments".to_string(),
+                                    "Positional arguments cannot follow named arguments"
+                                        .to_string(),
                                 ));
                             }
                             let value = self.eval_expr(expr)?;
@@ -358,9 +369,19 @@ impl Interpreter {
                     }
                 }
 
-                // Look up builtin function
+                // Look up builtin function first
                 if let Some(&builtin_fn) = self.builtins.get(callee) {
                     builtin_fn(self, evaluated_args)
+                } else if let Some(func_value) = self.variables.get(callee).cloned() {
+                    // Check if it's a user-defined function
+                    if let Value::Function { params, body } = func_value {
+                        self.call_user_function(&params, &body, evaluated_args)
+                    } else {
+                        Err(RuntimeError::TypeError(format!(
+                            "'{}' is not a function",
+                            callee
+                        )))
+                    }
                 } else {
                     Err(RuntimeError::UndefinedVariable(format!(
                         "Unknown function: {}",
@@ -373,9 +394,13 @@ impl Interpreter {
                 "Member access not yet implemented".to_string(),
             )),
 
-            Expr::Function { .. } => Err(RuntimeError::TypeError(
-                "Function definitions not yet implemented".to_string(),
-            )),
+            Expr::Function { params, body } => {
+                // Create a function value
+                Ok(Value::Function {
+                    params: params.clone(),
+                    body: body.clone(),
+                })
+            }
         }
     }
 
@@ -463,6 +488,59 @@ impl Interpreter {
             _ => Ok(false),
         }
     }
+
+    fn call_user_function(
+        &mut self,
+        params: &[String],
+        body: &[Stmt],
+        args: Vec<EvaluatedArg>,
+    ) -> Result<Value, RuntimeError> {
+        // Extract positional arguments (user functions don't support named args yet)
+        let mut positional_values = Vec::new();
+        for arg in args {
+            match arg {
+                EvaluatedArg::Positional(value) => positional_values.push(value),
+                EvaluatedArg::Named { .. } => {
+                    return Err(RuntimeError::TypeError(
+                        "User-defined functions do not support named arguments yet".to_string(),
+                    ))
+                }
+            }
+        }
+
+        // Check argument count
+        if positional_values.len() != params.len() {
+            return Err(RuntimeError::TypeError(format!(
+                "Expected {} arguments, got {}",
+                params.len(),
+                positional_values.len()
+            )));
+        }
+
+        // Save current variable state (for function scope)
+        let saved_vars = self.variables.clone();
+
+        // Bind parameters to arguments
+        for (param, value) in params.iter().zip(positional_values.iter()) {
+            self.variables.insert(param.clone(), value.clone());
+        }
+
+        // Execute function body
+        let mut result = Value::Na;
+        for stmt in body {
+            if let Some(return_value) = self.execute_stmt(stmt)? {
+                result = return_value;
+            } else if let Stmt::Expression(expr) = stmt {
+                // Last expression is the return value
+                result = self.eval_expr(expr)?;
+            }
+        }
+
+        // Restore variable state
+        self.variables = saved_vars;
+
+        Ok(result)
+    }
 }
 
 impl Default for Interpreter {
@@ -470,7 +548,6 @@ impl Default for Interpreter {
         Self::new()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -490,7 +567,10 @@ mod tests {
     }
 
     /// Test builtin function: greet(name, greeting="Hello")
-    fn test_greet(_interp: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
+    fn test_greet(
+        _interp: &mut Interpreter,
+        args: Vec<EvaluatedArg>,
+    ) -> Result<Value, RuntimeError> {
         let mut name: Option<String> = None;
         let mut greeting = "Hello".to_string();
 
@@ -505,7 +585,10 @@ mod tests {
                     }
                     positional_idx += 1;
                 }
-                EvaluatedArg::Named { name: param_name, value } => {
+                EvaluatedArg::Named {
+                    name: param_name,
+                    value,
+                } => {
                     if param_name == "greeting" {
                         greeting = value.as_string()?;
                     }
@@ -631,6 +714,58 @@ mod tests {
             .to_string()
             .contains("Positional arguments cannot follow named arguments"));
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_switch_expression() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            var x = 2
+            var result = switch x
+                1 => "one"
+                2 => "two"
+                3 => "three"
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(
+            interp.get_variable("result"),
+            Some(&Value::String("two".to_string()))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_user_defined_function() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            add(a, b) => a + b
+            var result = add(3, 5)
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("result"), Some(&Value::Number(8.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_user_function_with_variables() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+        let program = parse_str(
+            r#"
+            double(x) => x * 2
+            var value = 10
+            var result = double(value)
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+        assert_eq!(interp.get_variable("result"), Some(&Value::Number(20.0)));
         Ok(())
     }
 }
