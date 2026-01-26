@@ -5,7 +5,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "max",
+          "callee": {
+            "Variable": "max"
+          },
           "args": [
             {
               "Positional": {
@@ -29,7 +31,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "min",
+          "callee": {
+            "Variable": "min"
+          },
           "args": [
             {
               "Positional": {

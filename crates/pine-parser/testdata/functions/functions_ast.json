@@ -5,7 +5,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "sma",
+          "callee": {
+            "Variable": "sma"
+          },
           "args": [
             {
               "Positional": {
@@ -31,7 +33,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "max",
+          "callee": {
+            "Variable": "max"
+          },
           "args": [
             {
               "Positional": {
@@ -55,7 +59,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "foo",
+          "callee": {
+            "Variable": "foo"
+          },
           "args": []
         }
       },

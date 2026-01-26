@@ -41,7 +41,9 @@
       "then_branch": [
         {
           "Assignment": {
-            "name": "result",
+            "target": {
+              "Variable": "result"
+            },
             "value": {
               "Unary": {
                 "op": "Neg",
@@ -73,7 +75,9 @@
           [
             {
               "Assignment": {
-                "name": "result",
+                "target": {
+                  "Variable": "result"
+                },
                 "value": {
                   "Literal": {
                     "Number": 0.0
@@ -100,7 +104,9 @@
           [
             {
               "Assignment": {
-                "name": "result",
+                "target": {
+                  "Variable": "result"
+                },
                 "value": {
                   "Literal": {
                     "Number": 1.0
@@ -114,7 +120,9 @@
       "else_branch": [
         {
           "Assignment": {
-            "name": "result",
+            "target": {
+              "Variable": "result"
+            },
             "value": {
               "Literal": {
                 "Number": 2.0

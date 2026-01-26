@@ -29,7 +29,9 @@
       "body": [
         {
           "Assignment": {
-            "name": "i",
+            "target": {
+              "Variable": "i"
+            },
             "value": {
               "Binary": {
                 "left": {

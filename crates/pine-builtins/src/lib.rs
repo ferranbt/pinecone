@@ -15,11 +15,11 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
 
     // Create 'array' namespace object with builtin functions
     let mut array_ns = HashMap::new();
-    array_ns.insert("new_float".to_string(), Value::BuiltinFunction(ArrayNewFloat::builtin_fn));
-    array_ns.insert("clear".to_string(), Value::BuiltinFunction(ArrayClear::builtin_fn));
-    array_ns.insert("push".to_string(), Value::BuiltinFunction(ArrayPush::builtin_fn));
-    array_ns.insert("get".to_string(), Value::BuiltinFunction(ArrayGet::builtin_fn));
-    array_ns.insert("size".to_string(), Value::BuiltinFunction(ArraySize::builtin_fn));
+    array_ns.insert("new_float".to_string(), Value::BuiltinFunction(Rc::new(ArrayNewFloat::builtin_fn)));
+    array_ns.insert("clear".to_string(), Value::BuiltinFunction(Rc::new(ArrayClear::builtin_fn)));
+    array_ns.insert("push".to_string(), Value::BuiltinFunction(Rc::new(ArrayPush::builtin_fn)));
+    array_ns.insert("get".to_string(), Value::BuiltinFunction(Rc::new(ArrayGet::builtin_fn)));
+    array_ns.insert("size".to_string(), Value::BuiltinFunction(Rc::new(ArraySize::builtin_fn)));
 
     namespaces.insert("array".to_string(), Value::Object(Rc::new(RefCell::new(array_ns))));
 

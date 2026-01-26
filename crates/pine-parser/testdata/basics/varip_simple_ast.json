@@ -13,7 +13,9 @@
   },
   {
     "Assignment": {
-      "name": "counter",
+      "target": {
+        "Variable": "counter"
+      },
       "value": {
         "Binary": {
           "left": {

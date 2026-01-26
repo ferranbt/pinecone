@@ -41,7 +41,9 @@
       "body": [
         {
           "Assignment": {
-            "name": "i",
+            "target": {
+              "Variable": "i"
+            },
             "value": {
               "Binary": {
                 "left": {
@@ -91,7 +93,9 @@
         },
         {
           "Assignment": {
-            "name": "sum",
+            "target": {
+              "Variable": "sum"
+            },
             "value": {
               "Binary": {
                 "left": {

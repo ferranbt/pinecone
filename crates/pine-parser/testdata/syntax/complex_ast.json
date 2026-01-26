@@ -17,7 +17,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "stoch",
+          "callee": {
+            "Variable": "stoch"
+          },
           "args": [
             {
               "Positional": {
@@ -50,7 +52,9 @@
       "Binary": {
         "left": {
           "Call": {
-            "callee": "sma",
+            "callee": {
+              "Variable": "sma"
+            },
             "args": [
               {
                 "Positional": {
@@ -70,7 +74,9 @@
         "op": "Greater",
         "right": {
           "Call": {
-            "callee": "sma",
+            "callee": {
+              "Variable": "sma"
+            },
             "args": [
               {
                 "Positional": {

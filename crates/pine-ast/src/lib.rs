@@ -22,7 +22,7 @@ pub enum Expr {
         expr: Box<Expr>,
     },
     Call {
-        callee: String,
+        callee: Box<Expr>,
         args: Vec<Argument>,
     },
     Index {
@@ -96,7 +96,7 @@ pub enum Stmt {
         is_varip: bool, // true for varip, false for var
     },
     Assignment {
-        name: String,
+        target: Expr, // Can be Variable or MemberAccess
         value: Expr,
     },
     TupleAssignment {
@@ -130,6 +130,18 @@ pub enum Stmt {
     },
     Break,
     Continue,
+    TypeDecl {
+        name: String,
+        fields: Vec<TypeField>,
+    },
+}
+
+/// A field in a user-defined type
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeField {
+    pub name: String,
+    pub type_annotation: String,
+    pub default_value: Option<Expr>,
 }
 
 /// A program is a collection of statements

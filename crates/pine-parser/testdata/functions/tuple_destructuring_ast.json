@@ -7,7 +7,9 @@
       ],
       "value": {
         "Call": {
-          "callee": "macd",
+          "callee": {
+            "Variable": "macd"
+          },
           "args": [
             {
               "Positional": {
@@ -49,7 +51,9 @@
       ],
       "value": {
         "Call": {
-          "callee": "func",
+          "callee": {
+            "Variable": "func"
+          },
           "args": [
             {
               "Positional": {
@@ -93,7 +97,9 @@
                 ],
                 "value": {
                   "Call": {
-                    "callee": "calculate",
+                    "callee": {
+                      "Variable": "calculate"
+                    },
                     "args": []
                   }
                 }

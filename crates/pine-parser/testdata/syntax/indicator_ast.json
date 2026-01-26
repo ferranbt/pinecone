@@ -5,7 +5,14 @@
       "type_annotation": "int",
       "initializer": {
         "Call": {
-          "callee": "input.int",
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "input"
+              },
+              "member": "int"
+            }
+          },
           "args": [
             {
               "Positional": {
@@ -40,7 +47,14 @@
       "type_annotation": "float",
       "initializer": {
         "Call": {
-          "callee": "ta.stoch",
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "ta"
+              },
+              "member": "stoch"
+            }
+          },
           "args": [
             {
               "Positional": {
@@ -71,7 +85,9 @@
   {
     "Expression": {
       "Call": {
-        "callee": "plot",
+        "callee": {
+          "Variable": "plot"
+        },
         "args": [
           {
             "Positional": {
@@ -109,7 +125,9 @@
   {
     "Expression": {
       "Call": {
-        "callee": "bgcolor",
+        "callee": {
+          "Variable": "bgcolor"
+        },
         "args": [
           {
             "Positional": {
@@ -124,7 +142,14 @@
                 },
                 "then_expr": {
                   "Call": {
-                    "callee": "color.new",
+                    "callee": {
+                      "MemberAccess": {
+                        "object": {
+                          "Variable": "color"
+                        },
+                        "member": "new"
+                      }
+                    },
                     "args": [
                       {
                         "Positional": {

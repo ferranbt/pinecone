@@ -1,4 +1,4 @@
-use pine_ast::{Argument, BinOp, Expr, Literal, Program, Stmt, UnOp};
+use pine_ast::{Argument, BinOp, Expr, Literal, Program, Stmt, TypeField, UnOp};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -60,6 +60,10 @@ pub enum Value {
         body: Vec<Stmt>,
     },
     BuiltinFunction(BuiltinFn), // Builtin function pointer
+    Type {
+        name: String,
+        fields: Vec<TypeField>,
+    }, // User-defined type
 }
 
 // Manual Debug impl since function pointers don't implement Debug
@@ -74,6 +78,7 @@ impl std::fmt::Debug for Value {
             Value::Object(o) => write!(f, "Object({:?})", o),
             Value::Function { params, .. } => write!(f, "Function({} params)", params.len()),
             Value::BuiltinFunction(_) => write!(f, "BuiltinFunction"),
+            Value::Type { name, .. } => write!(f, "Type({})", name),
         }
     }
 }
@@ -91,6 +96,8 @@ impl PartialEq for Value {
             // Functions never equal (can't compare closures or function pointers)
             (Value::Function { .. }, Value::Function { .. }) => false,
             (Value::BuiltinFunction(_), Value::BuiltinFunction(_)) => false,
+            // Types compare by name
+            (Value::Type { name: a, .. }, Value::Type { name: b, .. }) => a == b,
             _ => false,
         }
     }
@@ -103,8 +110,8 @@ pub enum EvaluatedArg {
     Named { name: String, value: Value },
 }
 
-/// Type signature for builtin functions
-pub type BuiltinFn = fn(&mut Interpreter, Vec<EvaluatedArg>) -> Result<Value, RuntimeError>;
+/// Type signature for builtin functions (can be function pointers or closures)
+pub type BuiltinFn = Rc<dyn Fn(&mut Interpreter, Vec<EvaluatedArg>) -> Result<Value, RuntimeError>>;
 
 impl Value {
     pub fn as_number(&self) -> Result<f64, RuntimeError> {
@@ -224,10 +231,32 @@ impl Interpreter {
                 Ok(None)
             }
 
-            Stmt::Assignment { name, value } => {
+            Stmt::Assignment { target, value } => {
                 let val = self.eval_expr(value)?;
-                self.variables.insert(name.clone(), val);
-                Ok(None)
+
+                match target {
+                    Expr::Variable(name) => {
+                        self.variables.insert(name.clone(), val);
+                        Ok(None)
+                    }
+                    Expr::MemberAccess { object, member } => {
+                        // Get the object
+                        let obj_value = self.eval_expr(object)?;
+
+                        if let Value::Object(obj_ref) = obj_value {
+                            let mut obj = obj_ref.borrow_mut();
+                            obj.insert(member.clone(), val);
+                            Ok(None)
+                        } else {
+                            Err(RuntimeError::TypeError(
+                                "Cannot assign to member of non-object value".to_string()
+                            ))
+                        }
+                    }
+                    _ => Err(RuntimeError::TypeError(
+                        "Invalid assignment target".to_string()
+                    ))
+                }
             }
 
             Stmt::TupleAssignment { names, value } => {
@@ -365,6 +394,16 @@ impl Interpreter {
 
             Stmt::Break => Err(RuntimeError::BreakOutsideLoop),
             Stmt::Continue => Err(RuntimeError::ContinueOutsideLoop),
+
+            Stmt::TypeDecl { name, fields } => {
+                // Create a Type value and store it as a variable
+                let type_value = Value::Type {
+                    name: name.clone(),
+                    fields: fields.clone(),
+                };
+                self.variables.insert(name.clone(), type_value);
+                Ok(None)
+            }
         }
     }
 
@@ -424,11 +463,17 @@ impl Interpreter {
         match expr {
             Expr::Literal(lit) => Ok(self.eval_literal(lit)),
 
-            Expr::Variable(name) => self
-                .variables
-                .get(name)
-                .cloned()
-                .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone())),
+            Expr::Variable(name) => {
+                // Check builtins first, then variables
+                if let Some(builtin_fn) = self.builtins.get(name).cloned() {
+                    Ok(Value::BuiltinFunction(builtin_fn))
+                } else {
+                    self.variables
+                        .get(name)
+                        .cloned()
+                        .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone()))
+                }
+            }
 
             Expr::Binary { left, op, right } => {
                 let left_val = self.eval_expr(left)?;
@@ -554,28 +599,20 @@ impl Interpreter {
                     }
                 }
 
-                // Look up builtin function first
-                if let Some(&builtin_fn) = self.builtins.get(callee) {
-                    builtin_fn(self, evaluated_args)
-                } else if let Some(func_value) = self.variables.get(callee).cloned() {
-                    // Check what type of function it is
-                    match func_value {
-                        Value::Function { params, body } => {
-                            self.call_user_function(&params, &body, evaluated_args)
-                        }
-                        Value::BuiltinFunction(builtin_fn) => {
-                            builtin_fn(self, evaluated_args)
-                        }
-                        _ => Err(RuntimeError::TypeError(format!(
-                            "'{}' is not a function",
-                            callee
-                        )))
+                // Evaluate the callee expression to get the function
+                let callee_value = self.eval_expr(callee)?;
+
+                // Call the function based on its type
+                match callee_value {
+                    Value::Function { params, body } => {
+                        self.call_user_function(&params, &body, evaluated_args)
                     }
-                } else {
-                    Err(RuntimeError::UndefinedVariable(format!(
-                        "Unknown function: {}",
-                        callee
-                    )))
+                    Value::BuiltinFunction(builtin_fn) => {
+                        (builtin_fn)(self, evaluated_args)
+                    }
+                    _ => Err(RuntimeError::TypeError(
+                        "Attempted to call a non-function value".to_string()
+                    ))
                 }
             }
 
@@ -590,6 +627,18 @@ impl Interpreter {
                                 "Object has no member '{}'",
                                 member
                             )))
+                    }
+                    Value::Type { name, fields } => {
+                        // Types only have a 'new' method
+                        if member == "new" {
+                            // Return a constructor function
+                            Ok(Value::BuiltinFunction(Self::create_constructor(name, fields)))
+                        } else {
+                            Err(RuntimeError::TypeError(format!(
+                                "Type '{}' has no member '{}' (only 'new' is supported)",
+                                name, member
+                            )))
+                        }
                     }
                     _ => Err(RuntimeError::TypeError(format!(
                         "Cannot access member '{}' on non-object value",
@@ -753,6 +802,63 @@ impl Default for Interpreter {
     }
 }
 
+impl Interpreter {
+    /// Create a constructor function for a user-defined type
+    fn create_constructor(type_name: String, fields: Vec<TypeField>) -> BuiltinFn {
+        Rc::new(move |interp: &mut Interpreter, args: Vec<EvaluatedArg>| {
+            let mut instance_fields = HashMap::new();
+
+            // Match arguments to fields
+            let mut positional_idx = 0;
+
+            for arg in &args {
+                match arg {
+                    EvaluatedArg::Positional(value) => {
+                        // Assign to field by position
+                        if positional_idx < fields.len() {
+                            let field = &fields[positional_idx];
+                            instance_fields.insert(field.name.clone(), value.clone());
+                            positional_idx += 1;
+                        } else {
+                            return Err(RuntimeError::TypeError(format!(
+                                "Too many arguments for type '{}' (expected {} fields)",
+                                type_name,
+                                fields.len()
+                            )));
+                        }
+                    }
+                    EvaluatedArg::Named { name, value } => {
+                        // Find field by name
+                        if let Some(field) = fields.iter().find(|f| f.name == *name) {
+                            instance_fields.insert(field.name.clone(), value.clone());
+                        } else {
+                            return Err(RuntimeError::TypeError(format!(
+                                "Type '{}' has no field '{}'",
+                                type_name, name
+                            )));
+                        }
+                    }
+                }
+            }
+
+            // Fill in defaults for missing fields
+            for field in &fields {
+                if !instance_fields.contains_key(&field.name) {
+                    if let Some(default_expr) = &field.default_value {
+                        let default_val = interp.eval_expr(default_expr)?;
+                        instance_fields.insert(field.name.clone(), default_val);
+                    } else {
+                        // Field has no default and wasn't provided
+                        instance_fields.insert(field.name.clone(), Value::Na);
+                    }
+                }
+            }
+
+            Ok(Value::Object(Rc::new(RefCell::new(instance_fields))))
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -871,8 +977,8 @@ mod tests {
 
     #[test]
     fn test_named_arguments() -> eyre::Result<()> {
-        let mut builtins = HashMap::new();
-        builtins.insert("greet".to_string(), test_greet as BuiltinFn);
+        let mut builtins: HashMap<String, BuiltinFn> = HashMap::new();
+        builtins.insert("greet".to_string(), Rc::new(test_greet));
         let mut interp = Interpreter::with_builtins(builtins);
 
         // Test positional arguments only (uses default greeting)
@@ -904,8 +1010,8 @@ mod tests {
 
     #[test]
     fn test_invalid_named_argument_order() -> eyre::Result<()> {
-        let mut builtins = HashMap::new();
-        builtins.insert("greet".to_string(), test_greet as BuiltinFn);
+        let mut builtins: HashMap<String, BuiltinFn> = HashMap::new();
+        builtins.insert("greet".to_string(), Rc::new(test_greet));
         let mut interp = Interpreter::with_builtins(builtins);
 
         // This should fail: positional arg after named arg
@@ -1270,7 +1376,7 @@ mod tests {
 
         // Create a namespace object with a builtin function
         let mut math_ns = HashMap::new();
-        math_ns.insert("add".to_string(), Value::BuiltinFunction(test_add));
+        math_ns.insert("add".to_string(), Value::BuiltinFunction(Rc::new(test_add)));
 
         interp.set_variable("math", Value::Object(Rc::new(RefCell::new(math_ns))));
 
@@ -1487,6 +1593,142 @@ mod tests {
 
         interp2.execute(&program2, &Bar::default())?;
         assert_eq!(interp2.get_variable("x"), Some(&Value::Na));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_udt_simple() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            type pivotPoint
+                int x
+                float y
+
+            point = pivotPoint.new()
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        // Check that point is an object
+        let point = interp.get_variable("point").unwrap();
+        assert!(matches!(point, Value::Object(_)));
+
+        // Check fields exist and are Na (no values provided)
+        if let Value::Object(obj) = point {
+            let obj_ref = obj.borrow();
+            assert_eq!(obj_ref.get("x"), Some(&Value::Na));
+            assert_eq!(obj_ref.get("y"), Some(&Value::Na));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_udt_with_args() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            type pivotPoint
+                int x
+                float y
+
+            point = pivotPoint.new(100, 50.5)
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        let point = interp.get_variable("point").unwrap();
+        if let Value::Object(obj) = point {
+            let obj_ref = obj.borrow();
+            assert_eq!(obj_ref.get("x"), Some(&Value::Number(100.0)));
+            assert_eq!(obj_ref.get("y"), Some(&Value::Number(50.5)));
+        } else {
+            panic!("Expected Object value");
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_udt_with_defaults() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            type BarInfo
+                int index = 0
+                float price = 100.0
+
+            bar = BarInfo.new()
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        let bar = interp.get_variable("bar").unwrap();
+        if let Value::Object(obj) = bar {
+            let obj_ref = obj.borrow();
+            assert_eq!(obj_ref.get("index"), Some(&Value::Number(0.0)));
+            assert_eq!(obj_ref.get("price"), Some(&Value::Number(100.0)));
+        } else {
+            panic!("Expected Object value");
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_udt_field_access() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            type pivotPoint
+                int x
+                float y
+
+            point = pivotPoint.new(100, 50.5)
+            xValue = point.x
+            yValue = point.y
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        assert_eq!(interp.get_variable("xValue"), Some(&Value::Number(100.0)));
+        assert_eq!(interp.get_variable("yValue"), Some(&Value::Number(50.5)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_udt_field_modification() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            type pivotPoint
+                int x
+                float y
+
+            point = pivotPoint.new(100, 50.5)
+            point.x := 200
+            point.y := 75.25
+            newX = point.x
+            newY = point.y
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        assert_eq!(interp.get_variable("newX"), Some(&Value::Number(200.0)));
+        assert_eq!(interp.get_variable("newY"), Some(&Value::Number(75.25)));
 
         Ok(())
     }

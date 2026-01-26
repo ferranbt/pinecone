@@ -60,7 +60,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "getValue",
+          "callee": {
+            "Variable": "getValue"
+          },
           "args": []
         }
       },
@@ -76,7 +78,9 @@
       ],
       "value": {
         "Call": {
-          "callee": "getValue",
+          "callee": {
+            "Variable": "getValue"
+          },
           "args": []
         }
       }

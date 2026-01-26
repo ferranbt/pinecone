@@ -1,0 +1,9 @@
+//@version=4
+
+type pivotPoint
+    int x
+    float y
+
+foundPoint = pivotPoint.new(100, 50.5)
+xValue = foundPoint.x
+yValue = foundPoint.y

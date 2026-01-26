@@ -5,7 +5,14 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "array.from",
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "array"
+              },
+              "member": "from"
+            }
+          },
           "args": [
             {
               "Positional": {
@@ -70,7 +77,9 @@
       "body": [
         {
           "Assignment": {
-            "name": "sum",
+            "target": {
+              "Variable": "sum"
+            },
             "value": {
               "Binary": {
                 "left": {

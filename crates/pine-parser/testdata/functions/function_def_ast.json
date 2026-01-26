@@ -66,7 +66,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "double",
+          "callee": {
+            "Variable": "double"
+          },
           "args": [
             {
               "Positional": {
@@ -87,7 +89,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "add",
+          "callee": {
+            "Variable": "add"
+          },
           "args": [
             {
               "Positional": {

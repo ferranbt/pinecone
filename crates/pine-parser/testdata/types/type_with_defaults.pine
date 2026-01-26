@@ -1,0 +1,5 @@
+//@version=4
+
+type BarInfo
+    int index = 0
+    float price = 100.0

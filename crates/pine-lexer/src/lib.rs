@@ -31,6 +31,7 @@ pub enum TokenType {
     Ident(String),
     Var,
     Varip,
+    Type,
     If,
     Else,
     For,
@@ -201,6 +202,7 @@ impl Lexer {
         let typ = match ident.as_str() {
             "var" => TokenType::Var,
             "varip" => TokenType::Varip,
+            "type" => TokenType::Type,
             "if" => TokenType::If,
             "else" => TokenType::Else,
             "true" => TokenType::Bool(true),

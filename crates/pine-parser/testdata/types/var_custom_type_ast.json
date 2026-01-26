@@ -5,7 +5,14 @@
       "type_annotation": "label",
       "initializer": {
         "Call": {
-          "callee": "label.new",
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "label"
+              },
+              "member": "new"
+            }
+          },
           "args": [
             {
               "Named": {

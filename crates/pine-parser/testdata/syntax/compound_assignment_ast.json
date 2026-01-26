@@ -13,7 +13,9 @@
   },
   {
     "Assignment": {
-      "name": "x",
+      "target": {
+        "Variable": "x"
+      },
       "value": {
         "Binary": {
           "left": {
@@ -31,7 +33,9 @@
   },
   {
     "Assignment": {
-      "name": "x",
+      "target": {
+        "Variable": "x"
+      },
       "value": {
         "Binary": {
           "left": {
@@ -49,7 +53,9 @@
   },
   {
     "Assignment": {
-      "name": "x",
+      "target": {
+        "Variable": "x"
+      },
       "value": {
         "Binary": {
           "left": {
@@ -67,7 +73,9 @@
   },
   {
     "Assignment": {
-      "name": "x",
+      "target": {
+        "Variable": "x"
+      },
       "value": {
         "Binary": {
           "left": {
@@ -97,7 +105,9 @@
   },
   {
     "Assignment": {
-      "name": "count",
+      "target": {
+        "Variable": "count"
+      },
       "value": {
         "Binary": {
           "left": {
@@ -127,7 +137,9 @@
   },
   {
     "Assignment": {
-      "name": "total",
+      "target": {
+        "Variable": "total"
+      },
       "value": {
         "Binary": {
           "left": {

@@ -5,7 +5,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "na",
+          "callee": {
+            "Variable": "na"
+          },
           "args": [
             {
               "Positional": {

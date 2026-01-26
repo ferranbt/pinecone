@@ -1,0 +1,19 @@
+[
+  {
+    "TypeDecl": {
+      "name": "pivotPoint",
+      "fields": [
+        {
+          "name": "x",
+          "type_annotation": "int",
+          "default_value": null
+        },
+        {
+          "name": "y",
+          "type_annotation": "float",
+          "default_value": null
+        }
+      ]
+    }
+  }
+]

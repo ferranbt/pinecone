@@ -81,7 +81,9 @@
                   "then_branch": [
                     {
                       "Assignment": {
-                        "name": "total",
+                        "target": {
+                          "Variable": "total"
+                        },
                         "value": {
                           "Binary": {
                             "left": {
@@ -100,7 +102,9 @@
                   "else_branch": [
                     {
                       "Assignment": {
-                        "name": "total",
+                        "target": {
+                          "Variable": "total"
+                        },
                         "value": {
                           "Binary": {
                             "left": {
