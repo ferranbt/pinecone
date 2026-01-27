@@ -1,0 +1,6 @@
+//@version=6
+library("Point")
+
+export type point
+    int x
+    float y

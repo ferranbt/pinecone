@@ -7,7 +7,8 @@
         "Literal": {
           "Number": 10.0
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -16,7 +17,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "stoch",
+          "callee": {
+            "Variable": "stoch"
+          },
           "args": [
             {
               "Positional": {
@@ -40,7 +43,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -48,7 +52,9 @@
       "Binary": {
         "left": {
           "Call": {
-            "callee": "sma",
+            "callee": {
+              "Variable": "sma"
+            },
             "args": [
               {
                 "Positional": {
@@ -68,7 +74,9 @@
         "op": "Greater",
         "right": {
           "Call": {
-            "callee": "sma",
+            "callee": {
+              "Variable": "sma"
+            },
             "args": [
               {
                 "Positional": {

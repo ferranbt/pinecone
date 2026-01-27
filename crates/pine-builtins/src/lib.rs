@@ -1,23 +1,51 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{BuiltinFn, Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 // Re-export for convenience
 pub use pine_interpreter::Bar;
+pub use pine_interpreter::BuiltinFn;
+pub use pine_interpreter::EvaluatedArg;
 
-/// Register all builtin functions
-pub fn register_all() -> HashMap<String, BuiltinFn> {
-    let mut registry = HashMap::new();
+/// Register all builtin namespaces as objects and global functions
+/// Returns namespace objects to be loaded as variables (e.g., "array", "str", "ta")
+/// and global builtin functions (e.g., "na")
+/// Each member stores the builtin function pointer as Value::BuiltinFunction
+pub fn register_namespace_objects() -> HashMap<String, Value> {
+    let mut namespaces = HashMap::new();
 
-    registry.insert(ArrayNewFloat::name().to_string(), ArrayNewFloat::builtin_fn as BuiltinFn);
-    registry.insert(ArrayClear::name().to_string(), ArrayClear::builtin_fn as BuiltinFn);
-    registry.insert(ArrayPush::name().to_string(), ArrayPush::builtin_fn as BuiltinFn);
-    registry.insert(ArrayGet::name().to_string(), ArrayGet::builtin_fn as BuiltinFn);
-    registry.insert(ArraySize::name().to_string(), ArraySize::builtin_fn as BuiltinFn);
+    // Create 'array' namespace object with builtin functions
+    let mut array_ns = HashMap::new();
+    array_ns.insert("new_float".to_string(), Value::BuiltinFunction(Rc::new(ArrayNewFloat::builtin_fn)));
+    array_ns.insert("clear".to_string(), Value::BuiltinFunction(Rc::new(ArrayClear::builtin_fn)));
+    array_ns.insert("push".to_string(), Value::BuiltinFunction(Rc::new(ArrayPush::builtin_fn)));
+    array_ns.insert("get".to_string(), Value::BuiltinFunction(Rc::new(ArrayGet::builtin_fn)));
+    array_ns.insert("size".to_string(), Value::BuiltinFunction(Rc::new(ArraySize::builtin_fn)));
 
-    registry
+    namespaces.insert("array".to_string(), Value::Object {
+        type_name: "array".to_string(),
+        fields: Rc::new(RefCell::new(array_ns)),
+    });
+
+    // Register global builtin functions
+    namespaces.insert("na".to_string(), Value::BuiltinFunction(Rc::new(Na::builtin_fn) as BuiltinFn));
+
+    namespaces
+}
+
+/// na(value) - Returns true if the value is na, false otherwise
+#[derive(BuiltinFunction)]
+#[builtin(name = "na")]
+struct Na {
+    value: Value,
+}
+
+impl Na {
+    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        Ok(Value::Bool(matches!(self.value, Value::Na)))
+    }
 }
 
 #[derive(BuiltinFunction)]
@@ -165,5 +193,30 @@ mod tests {
         ];
         let value = ArrayGet::builtin_fn(&mut ctx, get_args).unwrap();
         assert_eq!(value, Value::Number(42.0));
+    }
+
+    #[test]
+    fn test_na() {
+        let mut ctx = Interpreter::new();
+
+        // Test with na value
+        let args = vec![EvaluatedArg::Positional(Value::Na)];
+        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(true));
+
+        // Test with number
+        let args = vec![EvaluatedArg::Positional(Value::Number(42.0))];
+        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(false));
+
+        // Test with string
+        let args = vec![EvaluatedArg::Positional(Value::String("hello".to_string()))];
+        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(false));
+
+        // Test with bool
+        let args = vec![EvaluatedArg::Positional(Value::Bool(true))];
+        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(false));
     }
 }

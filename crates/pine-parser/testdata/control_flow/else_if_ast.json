@@ -1,0 +1,136 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 5.0
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "If": {
+      "condition": {
+        "Binary": {
+          "left": {
+            "Variable": "x"
+          },
+          "op": "Less",
+          "right": {
+            "Literal": {
+              "Number": 0.0
+            }
+          }
+        }
+      },
+      "then_branch": [
+        {
+          "Assignment": {
+            "target": {
+              "Variable": "result"
+            },
+            "value": {
+              "Unary": {
+                "op": "Neg",
+                "expr": {
+                  "Literal": {
+                    "Number": 1.0
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "else_if_branches": [
+        [
+          {
+            "Binary": {
+              "left": {
+                "Variable": "x"
+              },
+              "op": "Eq",
+              "right": {
+                "Literal": {
+                  "Number": 0.0
+                }
+              }
+            }
+          },
+          [
+            {
+              "Assignment": {
+                "target": {
+                  "Variable": "result"
+                },
+                "value": {
+                  "Literal": {
+                    "Number": 0.0
+                  }
+                }
+              }
+            }
+          ]
+        ],
+        [
+          {
+            "Binary": {
+              "left": {
+                "Variable": "x"
+              },
+              "op": "Less",
+              "right": {
+                "Literal": {
+                  "Number": 10.0
+                }
+              }
+            }
+          },
+          [
+            {
+              "Assignment": {
+                "target": {
+                  "Variable": "result"
+                },
+                "value": {
+                  "Literal": {
+                    "Number": 1.0
+                  }
+                }
+              }
+            }
+          ]
+        ]
+      ],
+      "else_branch": [
+        {
+          "Assignment": {
+            "target": {
+              "Variable": "result"
+            },
+            "value": {
+              "Literal": {
+                "Number": 2.0
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

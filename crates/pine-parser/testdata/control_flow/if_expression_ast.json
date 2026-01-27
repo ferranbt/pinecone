@@ -1,0 +1,90 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 5.0
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": "string",
+      "initializer": {
+        "IfExpr": {
+          "condition": {
+            "Binary": {
+              "left": {
+                "Variable": "x"
+              },
+              "op": "Less",
+              "right": {
+                "Literal": {
+                  "Number": 0.0
+                }
+              }
+            }
+          },
+          "then_expr": {
+            "Literal": {
+              "String": "negative"
+            }
+          },
+          "else_if_branches": [
+            [
+              {
+                "Binary": {
+                  "left": {
+                    "Variable": "x"
+                  },
+                  "op": "Eq",
+                  "right": {
+                    "Literal": {
+                      "Number": 0.0
+                    }
+                  }
+                }
+              },
+              {
+                "Literal": {
+                  "String": "zero"
+                }
+              }
+            ],
+            [
+              {
+                "Binary": {
+                  "left": {
+                    "Variable": "x"
+                  },
+                  "op": "Less",
+                  "right": {
+                    "Literal": {
+                      "Number": 10.0
+                    }
+                  }
+                }
+              },
+              {
+                "Literal": {
+                  "String": "small"
+                }
+              }
+            ]
+          ],
+          "else_expr": {
+            "Literal": {
+              "String": "large"
+            }
+          }
+        }
+      },
+      "is_varip": false
+    }
+  }
+]

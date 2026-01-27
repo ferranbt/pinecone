@@ -5,7 +5,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "na",
+          "callee": {
+            "Literal": "Na"
+          },
           "args": [
             {
               "Positional": {
@@ -23,7 +25,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   }
 ]

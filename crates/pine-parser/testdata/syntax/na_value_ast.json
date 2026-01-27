@@ -4,8 +4,9 @@
       "name": "myValue",
       "type_annotation": null,
       "initializer": {
-        "Variable": "na"
-      }
+        "Literal": "Na"
+      },
+      "is_varip": false
     }
   },
   {
@@ -18,7 +19,7 @@
             "Variable": "someCondition"
           },
           "then_expr": {
-            "Variable": "na"
+            "Literal": "Na"
           },
           "else_expr": {
             "Literal": {
@@ -26,7 +27,8 @@
             }
           }
         }
-      }
+      },
+      "is_varip": false
     }
   }
 ]

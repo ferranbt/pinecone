@@ -1,0 +1,43 @@
+[
+  {
+    "Expression": {
+      "Call": {
+        "callee": {
+          "Variable": "library"
+        },
+        "args": [
+          {
+            "Positional": {
+              "Literal": {
+                "String": "Point"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "Export": {
+      "item": {
+        "Type": "point"
+      }
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": "int",
+      "initializer": null,
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "y",
+      "type_annotation": "float",
+      "initializer": null,
+      "is_varip": false
+    }
+  }
+]

@@ -5,7 +5,14 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "input.int",
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "input"
+              },
+              "member": "int"
+            }
+          },
           "args": [
             {
               "Positional": {
@@ -16,7 +23,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -25,7 +33,14 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "ta.stoch",
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "ta"
+              },
+              "member": "stoch"
+            }
+          },
           "args": [
             {
               "Positional": {
@@ -49,7 +64,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   }
 ]

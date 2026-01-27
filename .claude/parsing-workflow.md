@@ -11,14 +11,17 @@ This repository contains a parser for PineScript. When encountering syntax parsi
 ## Available Tools
 
 ### 1. Test Suite: `test_parse_testdata_files`
+
 Main test that validates parser against all testdata cases.
 
 **Environment Variables:**
+
 - `DEBUG=1` - Output tokens and AST JSON during test execution
 - `TEST_FILE=<filename>` - Filter to run only a specific test file
 - `GENERATE_AST=1` - Update/regenerate the `_ast.json` files
 
 **Examples:**
+
 ```bash
 # Run all tests
 cargo test test_parse_testdata_files
@@ -34,6 +37,7 @@ GENERATE_AST=1 cargo test test_parse_testdata_files
 ```
 
 ### 2. Test Suite: `test_parse_external_pinescript_indicators`
+
 Corpus tests that validate parsing works on real-world indicators. These tests don't have AST files - they only verify that parsing completes without errors.
 
 ```bash
@@ -41,6 +45,7 @@ cargo test test_parse_external_pinescript_indicators
 ```
 
 ### 3. Binary: `pine-parser`
+
 Standalone binary for manual testing.
 
 ```bash
@@ -56,6 +61,7 @@ cargo run --bin pine-parser -- path/to/file.pine
 When you encounter a syntax parsing error, follow these steps:
 
 ### Step 1: Create a Minimal Reproduction
+
 1. Use the `pine-parser` binary to verify the error exists:
    ```bash
    echo "your_problematic_code" | cargo run --bin pine-parser -- --stdin
@@ -63,6 +69,7 @@ When you encounter a syntax parsing error, follow these steps:
 2. Reduce the failing code to the smallest possible reproduction case
 
 ### Step 2: Create a Test Case
+
 1. Create a new file in `testdata/` with a descriptive name (e.g., `testdata/function_call_with_trailing_comma.pine`)
 2. Put your minimal reproduction case in this file
 3. Manually create the corresponding `_ast.json` file showing the expected/correct AST structure
@@ -70,12 +77,15 @@ When you encounter a syntax parsing error, follow these steps:
    - Or use `GENERATE_AST=1` after fixing the parser to generate it
 
 ### Step 3: Verify Test Fails
+
 Run the specific test to confirm it fails:
+
 ```bash
 TEST_FILE=your_test_name cargo test test_parse_testdata_files
 ```
 
 ### Step 4: Fix the Parser
+
 1. Make changes to the parser code to handle the syntax pattern
 2. Iterate using the filtered test:
    ```bash
@@ -85,7 +95,9 @@ TEST_FILE=your_test_name cargo test test_parse_testdata_files
 3. Continue until your specific test passes
 
 ### Step 5: Validate Against Full Suite
+
 Once your test passes, run the full test suite:
+
 ```bash
 # Run all testdata tests
 cargo test test_parse_testdata_files
@@ -95,7 +107,9 @@ cargo test test_parse_external_pinescript_indicators
 ```
 
 ### Step 6: Fix Any Regressions
+
 If `test_parse_external_pinescript_indicators` fails:
+
 1. Identify which indicator file broke
 2. Extract the problematic syntax from that indicator
 3. Go back to Step 1 and create a new focused test case

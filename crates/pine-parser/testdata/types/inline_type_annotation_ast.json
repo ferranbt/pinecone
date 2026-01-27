@@ -7,7 +7,8 @@
         "Literal": {
           "String": "test"
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -18,7 +19,8 @@
         "Literal": {
           "Number": 10.0
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -29,7 +31,8 @@
         "Literal": {
           "Number": 99.99
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -37,8 +40,9 @@
       "name": "label",
       "type_annotation": "string",
       "initializer": {
-        "Variable": "na"
-      }
+        "Literal": "Na"
+      },
+      "is_varip": false
     }
   },
   {
@@ -46,8 +50,9 @@
       "name": "value",
       "type_annotation": "int",
       "initializer": {
-        "Variable": "na"
-      }
+        "Literal": "Na"
+      },
+      "is_varip": false
     }
   }
 ]

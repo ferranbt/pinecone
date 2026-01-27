@@ -22,7 +22,7 @@ pub enum Expr {
         expr: Box<Expr>,
     },
     Call {
-        callee: String,
+        callee: Box<Expr>,
         args: Vec<Argument>,
     },
     Index {
@@ -46,6 +46,12 @@ pub enum Expr {
     Switch {
         value: Box<Expr>,
         cases: Vec<(Expr, Expr)>, // (pattern, result)
+    },
+    IfExpr {
+        condition: Box<Expr>,
+        then_expr: Box<Expr>,
+        else_if_branches: Vec<(Expr, Expr)>, // Vec of (condition, expression) for else if
+        else_expr: Option<Box<Expr>>, // None means return na if no branch matches
     },
 }
 
@@ -87,9 +93,10 @@ pub enum Stmt {
         name: String,
         type_annotation: Option<String>,
         initializer: Option<Expr>,
+        is_varip: bool, // true for varip, false for var
     },
     Assignment {
-        name: String,
+        target: Expr, // Can be Variable or MemberAccess
         value: Expr,
     },
     TupleAssignment {
@@ -100,6 +107,7 @@ pub enum Stmt {
     If {
         condition: Expr,
         then_branch: Vec<Stmt>,
+        else_if_branches: Vec<(Expr, Vec<Stmt>)>, // Vec of (condition, statements) for else if
         else_branch: Option<Vec<Stmt>>,
     },
     For {
@@ -108,6 +116,70 @@ pub enum Stmt {
         to: Expr,
         body: Vec<Stmt>,
     },
+    ForIn {
+        // For single item: for item in collection
+        // For tuple: for [index, item] in collection
+        index_var: Option<String>, // None for simple form, Some(name) for tuple form
+        item_var: String,
+        collection: Expr,
+        body: Vec<Stmt>,
+    },
+    While {
+        condition: Expr,
+        body: Vec<Stmt>,
+    },
+    Break,
+    Continue,
+    TypeDecl {
+        name: String,
+        fields: Vec<TypeField>,
+    },
+    MethodDecl {
+        name: String,
+        params: Vec<MethodParam>,
+        body: Vec<Stmt>,
+    },
+    EnumDecl {
+        name: String,
+        fields: Vec<EnumField>,
+    },
+    Export {
+        item: ExportItem,
+    },
+    Import {
+        path: String,       // e.g., "userName/Point/1"
+        alias: String,      // e.g., "pt"
+    },
+}
+
+/// An item that can be exported from a library
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ExportItem {
+    Type(String),     // export type typename
+    Function(String), // export functionname
+}
+
+/// A field in an enum declaration
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EnumField {
+    pub name: String,
+    pub title: Option<String>, // Optional title for the enum field
+}
+
+/// A parameter in a method declaration
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MethodParam {
+    pub type_annotation: Option<String>, // e.g., "InfoLabel"
+    pub name: String,
+    pub default_value: Option<Expr>,
+}
+
+/// A field in a user-defined type
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeField {
+    pub name: String,
+    pub type_annotation: String,
+    pub default_value: Option<Expr>,
 }
 
 /// A program is a collection of statements

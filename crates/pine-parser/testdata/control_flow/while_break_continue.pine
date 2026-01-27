@@ -1,0 +1,12 @@
+//@version=6
+
+// While loop with both break and continue
+var i = 0
+var sum = 0
+while i < 20
+    i := i + 1
+    if i > 10
+        break
+    if i % 2 == 0
+        continue
+    sum := sum + i

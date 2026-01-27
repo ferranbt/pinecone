@@ -12,7 +12,8 @@
             }
           }
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -65,7 +66,9 @@
       "then_branch": [
         {
           "Assignment": {
-            "name": "ocCount",
+            "target": {
+              "Variable": "ocCount"
+            },
             "value": {
               "Binary": {
                 "left": {
@@ -82,6 +85,7 @@
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": null
     }
   },
@@ -98,7 +102,8 @@
             }
           }
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -133,7 +138,9 @@
       "then_branch": [
         {
           "Assignment": {
-            "name": "hCount",
+            "target": {
+              "Variable": "hCount"
+            },
             "value": {
               "Binary": {
                 "left": {
@@ -150,6 +157,7 @@
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": null
     }
   },
@@ -161,7 +169,8 @@
         "Literal": {
           "Bool": true
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -183,10 +192,12 @@
               "Literal": {
                 "Number": 100.0
               }
-            }
+            },
+            "is_varip": false
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": null
     }
   }

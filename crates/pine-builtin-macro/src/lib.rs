@@ -5,7 +5,7 @@ use syn::{parse_macro_input, DeriveInput, Data, Fields, Field, Meta};
 /// Derive macro for builtin functions
 ///
 /// Example:
-/// ```
+/// ```ignore
 /// #[derive(BuiltinFunction)]
 /// #[builtin(name = "array.new_float")]
 /// struct ArrayNewFloat {

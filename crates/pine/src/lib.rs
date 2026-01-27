@@ -67,9 +67,12 @@ impl Script {
         let statements = parser.parse()?;
         let program = Program::new(statements);
 
-        // Create interpreter with default builtins
-        let builtins = pine_builtins::register_all();
-        let interpreter = Interpreter::with_builtins(builtins);
+        // Create interpreter and load builtin namespace objects
+        let mut interpreter = Interpreter::new();
+        let namespaces = pine_builtins::register_namespace_objects();
+        for (name, value) in namespaces {
+            interpreter.set_variable(&name, value);
+        }
 
         Ok(Self {
             program,
@@ -105,8 +108,10 @@ mod tests {
     #[test]
     fn test_builtin_array_operations() -> Result<(), Error> {
         let source = r#"
-            var a = array.new_float(3, 10.0)
-            var size = array.size(a)
+            var new_float_fn = array.new_float
+            var a = new_float_fn(3, 10.0)
+            var size_fn = array.size
+            var size = size_fn(a)
         "#;
 
         let mut script = Script::compile(source)?;

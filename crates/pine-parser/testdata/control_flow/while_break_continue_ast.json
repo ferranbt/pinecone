@@ -1,0 +1,137 @@
+[
+  {
+    "VarDecl": {
+      "name": "i",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "sum",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 0.0
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "While": {
+      "condition": {
+        "Binary": {
+          "left": {
+            "Variable": "i"
+          },
+          "op": "Less",
+          "right": {
+            "Literal": {
+              "Number": 20.0
+            }
+          }
+        }
+      },
+      "body": [
+        {
+          "Assignment": {
+            "target": {
+              "Variable": "i"
+            },
+            "value": {
+              "Binary": {
+                "left": {
+                  "Variable": "i"
+                },
+                "op": "Add",
+                "right": {
+                  "Literal": {
+                    "Number": 1.0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "If": {
+            "condition": {
+              "Binary": {
+                "left": {
+                  "Variable": "i"
+                },
+                "op": "Greater",
+                "right": {
+                  "Literal": {
+                    "Number": 10.0
+                  }
+                }
+              }
+            },
+            "then_branch": [
+              "Break"
+            ],
+            "else_if_branches": [],
+            "else_branch": null
+          }
+        },
+        {
+          "If": {
+            "condition": {
+              "Binary": {
+                "left": {
+                  "Binary": {
+                    "left": {
+                      "Variable": "i"
+                    },
+                    "op": "Mod",
+                    "right": {
+                      "Literal": {
+                        "Number": 2.0
+                      }
+                    }
+                  }
+                },
+                "op": "Eq",
+                "right": {
+                  "Literal": {
+                    "Number": 0.0
+                  }
+                }
+              }
+            },
+            "then_branch": [
+              "Continue"
+            ],
+            "else_if_branches": [],
+            "else_branch": null
+          }
+        },
+        {
+          "Assignment": {
+            "target": {
+              "Variable": "sum"
+            },
+            "value": {
+              "Binary": {
+                "left": {
+                  "Variable": "sum"
+                },
+                "op": "Add",
+                "right": {
+                  "Variable": "i"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

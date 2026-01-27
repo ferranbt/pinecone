@@ -7,7 +7,8 @@
         "Literal": {
           "Number": 10.0
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -18,7 +19,8 @@
         "Literal": {
           "Number": 5.0
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -43,7 +45,8 @@
               "Literal": {
                 "Number": 1.0
               }
-            }
+            },
+            "is_varip": false
           }
         },
         {
@@ -70,10 +73,12 @@
                     "Literal": {
                       "Number": 100.0
                     }
-                  }
+                  },
+                  "is_varip": false
                 }
               }
             ],
+            "else_if_branches": [],
             "else_branch": [
               {
                 "VarDecl": {
@@ -83,13 +88,15 @@
                     "Literal": {
                       "Number": 200.0
                     }
-                  }
+                  },
+                  "is_varip": false
                 }
               }
             ]
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": null
     }
   }

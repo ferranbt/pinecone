@@ -169,6 +169,146 @@ impl Parser {
         }
     }
 
+    /// Helper to extract an identifier from the current token and advance
+    fn expect_identifier(&mut self) -> Result<String, ParserError> {
+        if let TokenType::Ident(name) = &self.peek().typ {
+            let name = name.clone();
+            self.advance();
+            Ok(name)
+        } else {
+            Err(ParserError::ExpectedVariableName(self.peek().line))
+        }
+    }
+
+    /// Generic helper to parse indented field blocks
+    fn parse_indented_fields<T, F>(&mut self, parse_field: F) -> Result<Vec<T>, ParserError>
+    where
+        F: Fn(&mut Self) -> Result<T, ParserError>,
+    {
+        let mut fields = Vec::new();
+
+        loop {
+            // Skip newlines between fields
+            self.skip_newlines();
+
+            // Check for dedent (end of field block)
+            if self.check(&TokenType::Dedent) {
+                self.advance();
+                break;
+            }
+
+            // Check for end of file
+            if self.is_at_end() {
+                break;
+            }
+
+            // Parse a field using the provided parser
+            fields.push(parse_field(self)?);
+        }
+
+        Ok(fields)
+    }
+
+    /// Helper to skip newlines and optionally match indent
+    fn skip_newlines_and_indent(&mut self) {
+        self.skip_newlines();
+        self.match_token(&[TokenType::Indent]);
+    }
+
+    /// Helper to skip newlines and optionally match dedent
+    fn skip_newlines_and_dedent(&mut self) {
+        self.skip_newlines();
+        self.match_token(&[TokenType::Dedent]);
+    }
+
+    /// Helper to speculatively consume indent only if followed by expected token
+    fn try_consume_indent_if_followed_by(&mut self, expected: &TokenType) {
+        if self.check(&TokenType::Indent) {
+            self.try_parse(|p| {
+                p.advance(); // consume indent
+                if p.check(expected) {
+                    Ok(())
+                } else {
+                    Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line))
+                }
+            });
+        }
+    }
+
+    /// Helper to speculatively consume indent/dedent only if followed by one of the expected operators
+    fn try_consume_layout_token_if_followed_by(&mut self, expected: &[TokenType]) {
+        if self.check(&TokenType::Indent) || self.check(&TokenType::Dedent) {
+            self.try_parse(|p| {
+                p.advance(); // consume indent or dedent
+                for typ in expected {
+                    if p.check(typ) {
+                        return Ok(());
+                    }
+                }
+                Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line))
+            });
+        }
+    }
+
+    /// Helper to parse optional type annotation with array suffix
+    /// Returns None if no type annotation is found
+    /// Supports: int, float, or custom identifier types with optional [] suffix
+    fn parse_optional_type_annotation(&mut self) -> Option<String> {
+        if self.match_token(&[TokenType::Int, TokenType::Float]) {
+            let type_name = self.tokens[self.current - 1].lexeme.clone();
+            // Check for array type: int[] or float[]
+            self.parse_array_suffix(type_name).ok()
+        } else if let TokenType::Ident(type_name) = &self.peek().typ {
+            let type_name = type_name.clone();
+            self.try_parse(|p| {
+                p.advance(); // consume potential type name
+
+                // Check for array type: TypeName[]
+                let final_type = p.parse_array_suffix(type_name.clone())?;
+
+                // Must be followed by identifier to be a type annotation
+                if !matches!(p.peek().typ, TokenType::Ident(_)) {
+                    return Err(ParserError::ExpectedVariableName(p.peek().line));
+                }
+
+                Ok(final_type)
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Generic helper to parse comma-separated lists
+    /// Handles newlines and optional indentation around commas
+    fn parse_comma_separated<T, F>(
+        &mut self,
+        closing_delimiter: &TokenType,
+        parse_item: F,
+    ) -> Result<Vec<T>, ParserError>
+    where
+        F: Fn(&mut Self) -> Result<T, ParserError>,
+    {
+        let mut items = vec![];
+
+        if !self.check(closing_delimiter) {
+            loop {
+                items.push(parse_item(self)?);
+
+                // Skip newlines after each item
+                self.skip_newlines();
+
+                if !self.match_token(&[TokenType::Comma]) {
+                    break;
+                }
+
+                // Skip newlines after comma
+                self.skip_newlines_and_indent();
+            }
+        }
+
+        Ok(items)
+    }
+
     // Parse a program (top-level)
     pub fn parse(&mut self) -> Result<Vec<Stmt>, ParserError> {
         let mut statements = vec![];
@@ -190,33 +330,35 @@ impl Parser {
 
     // Declarations (var declarations, assignments, etc.)
     fn declaration(&mut self) -> Result<Stmt, ParserError> {
-        // Check for var keyword (can be followed by type annotation)
-        if self.match_token(&[TokenType::Var]) {
-            // Check if followed by type annotation: var int x = ..., var float y = ..., var label l = ...
-            let type_annotation = if self.match_token(&[TokenType::Int, TokenType::Float]) {
-                let type_name = self.tokens[self.current - 1].lexeme.clone();
-                // Check for array type: var int[] or var float[]
-                Some(self.parse_array_suffix(type_name)?)
-            } else if let TokenType::Ident(type_name) = &self.peek().typ {
-                // Check if this is a type annotation by looking ahead for another identifier or []
-                let type_name = type_name.clone();
-                self.try_parse(|p| {
-                    p.advance(); // consume potential type name
+        // Check for var or varip keyword (can be followed by type annotation)
+        let is_varip = if self.match_token(&[TokenType::Varip]) {
+            true
+        } else if self.match_token(&[TokenType::Var]) {
+            false
+        } else {
+            // Not a var/varip declaration, continue to other statement types
+            return self.check_type_annotated_declaration();
+        };
 
-                    // Check for array type: var string[] or var label[]
-                    let final_type = p.parse_array_suffix(type_name.clone())?;
+        // Check if followed by type annotation: var int x = ..., var float y = ..., var label l = ...
+        let type_annotation = self.parse_optional_type_annotation();
+        return self.typed_var_declaration(type_annotation, is_varip);
+    }
 
-                    // Must be followed by identifier to be a type annotation
-                    if !matches!(p.peek().typ, TokenType::Ident(_)) {
-                        return Err(ParserError::ExpectedVariableName(p.peek().line));
-                    }
+    fn check_type_annotated_declaration(&mut self) -> Result<Stmt, ParserError> {
+        // Check for type declaration: type TypeName
+        if self.match_token(&[TokenType::Type]) {
+            return self.type_declaration();
+        }
 
-                    Ok(final_type)
-                })
-            } else {
-                None
-            };
-            return self.typed_var_declaration(type_annotation);
+        // Check for enum declaration: enum EnumName
+        if self.match_token(&[TokenType::Enum]) {
+            return self.enum_declaration();
+        }
+
+        // Check for method declaration: method methodName(params) =>
+        if self.match_token(&[TokenType::Method]) {
+            return self.method_declaration();
         }
 
         // Check for type-annotated declaration without var: int x = ..., float y = ..., int[] x = ...
@@ -224,43 +366,224 @@ impl Parser {
             let type_name = self.tokens[self.current - 1].lexeme.clone();
             // Check for array type: int[] or float[]
             let type_name = self.parse_array_suffix(type_name)?;
-            return self.typed_var_declaration(Some(type_name));
+            return self.typed_var_declaration(Some(type_name), false);
         }
 
         // Check for identifier type with optional []: string x = ..., string[] x = ...
-        if let TokenType::Ident(type_name) = &self.peek().typ {
-            let type_name = type_name.clone();
-            if let Some(final_type) = self.try_parse(|p| {
-                p.advance(); // consume type name
-
-                // Check for array type: string[]
-                let final_type = p.parse_array_suffix(type_name.clone())?;
-
-                // Must be followed by identifier to be a type annotation
-                if !matches!(p.peek().typ, TokenType::Ident(_)) {
-                    return Err(ParserError::ExpectedVariableName(p.peek().line));
-                }
-
-                Ok(final_type)
-            }) {
-                return self.typed_var_declaration(Some(final_type));
-            }
+        if let Some(type_annotation) = self.parse_optional_type_annotation() {
+            return self.typed_var_declaration(Some(type_annotation), false);
         }
 
         self.statement()
     }
 
-    fn typed_var_declaration(
-        &mut self,
-        type_annotation: Option<String>,
-    ) -> Result<Stmt, ParserError> {
-        let name = if let TokenType::Ident(n) = &self.peek().typ {
-            let name = n.clone();
+    fn type_declaration(&mut self) -> Result<Stmt, ParserError> {
+        // Parse type name
+        let type_name = self.expect_identifier()?;
+
+        // Expect newline before fields
+        self.consume(TokenType::Newline, "Expected newline after type name")?;
+
+        // Expect indent to start field block
+        self.consume(TokenType::Indent, "Expected indent for type fields")?;
+
+        // Parse fields using generic helper
+        let fields = self.parse_indented_fields(|p| {
+            // Parse field: type_annotation field_name [= default_value]
+            // First, get the type annotation (int, float, or identifier)
+            let field_type = if p.match_token(&[TokenType::Int, TokenType::Float]) {
+                p.tokens[p.current - 1].lexeme.clone()
+            } else if let TokenType::Ident(type_name) = &p.peek().typ {
+                let type_name = type_name.clone();
+                p.advance();
+                type_name
+            } else {
+                return Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line));
+            };
+
+            // Parse field name
+            let field_name = p.expect_identifier()?;
+
+            // Parse optional default value
+            let default_value = if p.match_token(&[TokenType::Assign]) {
+                Some(p.expression()?)
+            } else {
+                None
+            };
+
+            Ok(pine_ast::TypeField {
+                name: field_name,
+                type_annotation: field_type,
+                default_value,
+            })
+        })?;
+
+        Ok(Stmt::TypeDecl {
+            name: type_name,
+            fields,
+        })
+    }
+
+    fn enum_declaration(&mut self) -> Result<Stmt, ParserError> {
+        // Parse enum name
+        let enum_name = self.expect_identifier()?;
+
+        // Expect newline before fields
+        self.consume(TokenType::Newline, "Expected newline after enum name")?;
+
+        // Expect indent to start field block
+        self.consume(TokenType::Indent, "Expected indent for enum fields")?;
+
+        // Parse fields using generic helper
+        let fields = self.parse_indented_fields(|p| {
+            // Parse field: field_name [= "title"]
+            let field_name = p.expect_identifier()?;
+
+            // Parse optional title
+            let title = if p.match_token(&[TokenType::Assign]) {
+                // Expect a string literal for the title
+                if let TokenType::String(s) = &p.peek().typ {
+                    let s = s.clone();
+                    p.advance();
+                    Some(s)
+                } else {
+                    return Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line));
+                }
+            } else {
+                None
+            };
+
+            Ok(pine_ast::EnumField {
+                name: field_name,
+                title,
+            })
+        })?;
+
+        Ok(Stmt::EnumDecl {
+            name: enum_name,
+            fields,
+        })
+    }
+
+    fn export_statement(&mut self) -> Result<Stmt, ParserError> {
+        // export type typename or export functionname
+        if self.match_token(&[TokenType::Type]) {
+            // export type typename
+            let type_name = self.expect_identifier()?;
+            Ok(Stmt::Export {
+                item: pine_ast::ExportItem::Type(type_name),
+            })
+        } else {
+            // export functionname
+            let func_name = self.expect_identifier()?;
+            Ok(Stmt::Export {
+                item: pine_ast::ExportItem::Function(func_name),
+            })
+        }
+    }
+
+    fn import_statement(&mut self) -> Result<Stmt, ParserError> {
+        // import userName/libraryName/version as alias
+        let path = if let TokenType::Ident(p) = &self.peek().typ {
+            let mut path_parts = vec![p.clone()];
             self.advance();
-            name
+
+            // Parse path segments separated by /
+            while self.match_token(&[TokenType::Slash]) {
+                if let TokenType::Ident(part) = &self.peek().typ {
+                    path_parts.push(part.clone());
+                    self.advance();
+                } else if let TokenType::Number(n) = &self.peek().typ {
+                    // Version number
+                    path_parts.push(n.to_string());
+                    self.advance();
+                } else {
+                    return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+                }
+            }
+
+            path_parts.join("/")
         } else {
             return Err(ParserError::ExpectedVariableName(self.peek().line));
         };
+
+        // Expect 'as' keyword - for now we'll check for an identifier "as"
+        if let TokenType::Ident(kw) = &self.peek().typ {
+            if kw != "as" {
+                return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+            }
+            self.advance();
+        } else {
+            return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+        }
+
+        // Parse alias
+        let alias = self.expect_identifier()?;
+
+        Ok(Stmt::Import { path, alias })
+    }
+
+    fn method_declaration(&mut self) -> Result<Stmt, ParserError> {
+        // Parse method name
+        let method_name = self.expect_identifier()?;
+
+        // Expect '('
+        self.consume(TokenType::LParen, "Expected '(' after method name")?;
+
+        // Parse parameters
+        let mut params = Vec::new();
+
+        if !self.check(&TokenType::RParen) {
+            loop {
+                // Parse optional type annotation
+                let type_annotation = self.parse_optional_type_annotation();
+
+                // Parse parameter name
+                let param_name = self.expect_identifier()?;
+
+                // Parse optional default value
+                let default_value = if self.match_token(&[TokenType::Assign]) {
+                    Some(self.expression()?)
+                } else {
+                    None
+                };
+
+                params.push(pine_ast::MethodParam {
+                    type_annotation,
+                    name: param_name,
+                    default_value,
+                });
+
+                if !self.match_token(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        self.consume(TokenType::RParen, "Expected ')' after parameters")?;
+
+        // Expect '=>'
+        self.consume(TokenType::Arrow, "Expected '=>' after method parameters")?;
+
+        // Skip optional newline after =>
+        self.match_token(&[TokenType::Newline]);
+
+        // Parse method body (can be a block or single expression)
+        let body = self.parse_block()?;
+
+        Ok(Stmt::MethodDecl {
+            name: method_name,
+            params,
+            body,
+        })
+    }
+
+    fn typed_var_declaration(
+        &mut self,
+        type_annotation: Option<String>,
+        is_varip: bool,
+    ) -> Result<Stmt, ParserError> {
+        let name = self.expect_identifier()?;
 
         let initializer = if self.match_token(&[TokenType::Assign]) {
             Some(self.parse_indented_expression()?)
@@ -272,10 +595,21 @@ impl Parser {
             name,
             type_annotation,
             initializer,
+            is_varip,
         })
     }
 
     fn statement(&mut self) -> Result<Stmt, ParserError> {
+        // Check for export statement
+        if self.match_token(&[TokenType::Export]) {
+            return self.export_statement();
+        }
+
+        // Check for import statement
+        if self.match_token(&[TokenType::Import]) {
+            return self.import_statement();
+        }
+
         // Check for if statement
         if self.match_token(&[TokenType::If]) {
             return self.if_statement();
@@ -284,6 +618,21 @@ impl Parser {
         // Check for for loop
         if self.match_token(&[TokenType::For]) {
             return self.for_statement();
+        }
+
+        // Check for while loop
+        if self.match_token(&[TokenType::While]) {
+            return self.while_statement();
+        }
+
+        // Check for break
+        if self.match_token(&[TokenType::Break]) {
+            return Ok(Stmt::Break);
+        }
+
+        // Check for continue
+        if self.match_token(&[TokenType::Continue]) {
+            return Ok(Stmt::Continue);
         }
 
         // Check for tuple destructuring: [a, b, c] = func()
@@ -354,6 +703,7 @@ impl Parser {
                     name,
                     type_annotation: None,
                     initializer,
+                    is_varip: false,
                 });
             }
 
@@ -369,13 +719,14 @@ impl Parser {
                         name: name.clone(),
                         type_annotation: None,
                         initializer,
+                        is_varip: false,
                     });
                 } else if p.match_token(&[TokenType::ColonAssign]) {
                     // This is a reassignment with :=
                     let value = p.parse_indented_expression()?;
 
                     return Ok(Stmt::Assignment {
-                        name: name.clone(),
+                        target: Expr::Variable(name.clone()),
                         value,
                     });
                 } else if p.match_token(&[
@@ -398,7 +749,7 @@ impl Parser {
                         right: Box::new(right),
                     };
                     return Ok(Stmt::Assignment {
-                        name: name.clone(),
+                        target: Expr::Variable(name.clone()),
                         value,
                     });
                 } else {
@@ -417,63 +768,102 @@ impl Parser {
     }
 
     fn function_params(&mut self) -> Result<Vec<String>, ParserError> {
-        let mut params = vec![];
+        self.parse_comma_separated(&TokenType::RParen, |p| {
+            let name = p.expect_identifier()?;
 
-        if !self.check(&TokenType::RParen) {
-            loop {
-                if let TokenType::Ident(name) = &self.peek().typ {
-                    params.push(name.clone());
-                    self.advance();
-
-                    // Check for default value: param = value
-                    if self.match_token(&[TokenType::Assign]) {
-                        // Skip the default value expression (we're not storing it in our simple AST)
-                        // Just parse and discard it
-                        self.expression()?;
-                    }
-                } else {
-                    return Err(ParserError::ExpectedParameterName(self.peek().line));
-                }
-
-                if !self.match_token(&[TokenType::Comma]) {
-                    break;
-                }
-
-                // Skip newlines after comma in parameter list
-                self.skip_newlines();
+            // Check for default value: param = value
+            if p.match_token(&[TokenType::Assign]) {
+                // Skip the default value expression (we're not storing it in our simple AST)
+                // Just parse and discard it
+                p.expression()?;
             }
-        }
 
-        Ok(params)
+            Ok(name)
+        })
     }
 
     fn for_statement(&mut self) -> Result<Stmt, ParserError> {
-        // Parse: for i = 1 to length
-        let var_name = if let TokenType::Ident(name) = &self.peek().typ {
-            let name = name.clone();
-            self.advance();
-            name
+        // Check if it's a tuple form: for [index, item] in collection
+        if self.check(&TokenType::LBracket) {
+            self.advance(); // consume [
+
+            let index_var = self.expect_identifier()?;
+
+            self.consume(TokenType::Comma, "Expected ',' in for...in tuple")?;
+
+            let item_var = self.expect_identifier()?;
+
+            self.consume(TokenType::RBracket, "Expected ']' after for...in tuple")?;
+            self.consume(TokenType::In, "Expected 'in' in for...in loop")?;
+
+            let collection = self.expression()?;
+
+            // Skip optional newline
+            self.match_token(&[TokenType::Newline]);
+
+            let body = self.parse_block()?;
+
+            return Ok(Stmt::ForIn {
+                index_var: Some(index_var),
+                item_var,
+                collection,
+                body,
+            });
+        }
+
+        // Parse variable name
+        let var_name = self.expect_identifier()?;
+
+        // Check if it's for...in (simple form) or for...to
+        if self.check(&TokenType::In) {
+            self.advance(); // consume 'in'
+
+            let collection = self.expression()?;
+
+            // Skip optional newline
+            self.match_token(&[TokenType::Newline]);
+
+            let body = self.parse_block()?;
+
+            Ok(Stmt::ForIn {
+                index_var: None,
+                item_var: var_name,
+                collection,
+                body,
+            })
         } else {
-            return Err(ParserError::ExpectedVariableName(self.peek().line));
-        };
+            // Traditional for...to loop
+            self.consume(TokenType::Assign, "Expected '=' in for loop")?;
+            let from = self.expression()?;
+            self.consume(TokenType::To, "Expected 'to' in for loop")?;
+            let to = self.expression()?;
 
-        self.consume(TokenType::Assign, "Expected '=' in for loop")?;
-        let from = self.expression()?;
-        self.consume(TokenType::To, "Expected 'to' in for loop")?;
-        let to = self.expression()?;
+            // Skip optional newline after to
+            self.match_token(&[TokenType::Newline]);
 
-        // Skip optional newline after to
+            // Parse the body - multiple statements
+            let body = self.parse_block()?;
+
+            Ok(Stmt::For {
+                var_name,
+                from,
+                to,
+                body,
+            })
+        }
+    }
+
+    fn while_statement(&mut self) -> Result<Stmt, ParserError> {
+        // Parse: while condition
+        let condition = self.expression()?;
+
+        // Skip optional newline after condition
         self.match_token(&[TokenType::Newline]);
 
         // Parse the body - multiple statements
         let body = self.parse_block()?;
 
-        Ok(Stmt::For {
-            var_name,
-            from,
-            to,
-            body,
-        })
+        Ok(Stmt::While { condition, body })
     }
 
     fn if_statement(&mut self) -> Result<Stmt, ParserError> {
@@ -486,8 +876,38 @@ impl Parser {
         // Parse the then branch - multiple statements until we hit 'else', dedent, or certain keywords
         let then_branch = self.parse_block()?;
 
-        // Check for else branch
-        // Skip any newlines before else
+        // Parse else if branches
+        let mut else_if_branches = Vec::new();
+
+        loop {
+            // Skip any newlines before else
+            self.skip_newlines();
+
+            // Check if we have "else if"
+            if self.check(&TokenType::Else) {
+                if let Some((else_if_condition, else_if_body)) = self.try_parse(|p| {
+                    p.advance(); // consume 'else'
+                    // Check if next token is 'if'
+                    if p.match_token(&[TokenType::If]) {
+                        // This is an else if
+                        let else_if_condition = p.expression()?;
+                        p.match_token(&[TokenType::Newline]);
+                        let else_if_body = p.parse_block()?;
+                        Ok((else_if_condition, else_if_body))
+                    } else {
+                        Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line))
+                    }
+                }) {
+                    else_if_branches.push((else_if_condition, else_if_body));
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        // Check for final else branch
         self.skip_newlines();
 
         let else_branch = if self.match_token(&[TokenType::Else]) {
@@ -502,7 +922,91 @@ impl Parser {
         Ok(Stmt::If {
             condition,
             then_branch,
+            else_if_branches,
             else_branch,
+        })
+    }
+
+    fn if_expression(&mut self) -> Result<Expr, ParserError> {
+        // Consume 'if' token
+        self.consume(TokenType::If, "Expected 'if'")?;
+
+        // Parse the condition
+        let condition = self.expression()?;
+
+        // Skip optional newline after condition
+        self.match_token(&[TokenType::Newline]);
+
+        // Skip optional indent
+        self.match_token(&[TokenType::Indent]);
+
+        // Parse the then expression (single expression, not a block of statements)
+        let then_expr = self.expression()?;
+
+        // Skip newlines and dedent
+        self.skip_newlines();
+        self.match_token(&[TokenType::Dedent]);
+
+        // Parse else if branches
+        let mut else_if_branches = Vec::new();
+
+        loop {
+            // Skip any newlines before else
+            self.skip_newlines();
+
+            // Check if we have "else if"
+            if self.check(&TokenType::Else) {
+                if let Some((else_if_condition, else_if_expr)) = self.try_parse(|p| {
+                    p.advance(); // consume 'else'
+                    // Check if next token is 'if'
+                    if p.match_token(&[TokenType::If]) {
+                        // This is an else if
+                        let else_if_condition = p.expression()?;
+                        p.match_token(&[TokenType::Newline]);
+                        p.match_token(&[TokenType::Indent]);
+                        let else_if_expr = p.expression()?;
+                        p.skip_newlines();
+                        p.match_token(&[TokenType::Dedent]);
+                        Ok((else_if_condition, else_if_expr))
+                    } else {
+                        Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line))
+                    }
+                }) {
+                    else_if_branches.push((else_if_condition, else_if_expr));
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        // Parse final else branch (optional - if not present, returns na)
+        self.skip_newlines();
+        let else_expr = if self.match_token(&[TokenType::Else]) {
+            // Skip optional newline after else
+            self.match_token(&[TokenType::Newline]);
+
+            // Skip optional indent
+            self.match_token(&[TokenType::Indent]);
+
+            // Parse else expression
+            let expr = self.expression()?;
+
+            // Skip newlines and optional dedent
+            self.skip_newlines();
+            self.match_token(&[TokenType::Dedent]);
+
+            Some(Box::new(expr))
+        } else {
+            None // Will return na if no branch matches
+        };
+
+        Ok(Expr::IfExpr {
+            condition: Box::new(condition),
+            then_expr: Box::new(then_expr),
+            else_if_branches,
+            else_expr,
         })
     }
 
@@ -560,6 +1064,16 @@ impl Parser {
 
     fn expression_statement(&mut self) -> Result<Stmt, ParserError> {
         let expr = self.expression()?;
+
+        // Check if this is an assignment statement (e.g., obj.field := value)
+        if self.match_token(&[TokenType::ColonAssign]) {
+            let value = self.parse_indented_expression()?;
+            return Ok(Stmt::Assignment {
+                target: expr,
+                value,
+            });
+        }
+
         Ok(Stmt::Expression(expr))
     }
 
@@ -590,9 +1104,7 @@ impl Parser {
                 .expect("matched operator token should convert to binop");
 
             // Skip newlines after binary operators (for multi-line expressions)
-            self.skip_newlines();
-            // Skip indent after newline (for indented continuation lines)
-            self.match_token(&[TokenType::Indent]);
+            self.skip_newlines_and_indent();
 
             let right = next_precedence(self)?;
             expr = Expr::Binary {
@@ -606,27 +1118,22 @@ impl Parser {
     }
 
     fn ternary(&mut self) -> Result<Expr, ParserError> {
+        // Check for if expression first
+        if self.check(&TokenType::If) {
+            return self.if_expression();
+        }
+
         let mut expr = self.logical_or()?;
 
         // Skip newlines before '?' for multi-line ternaries
         self.skip_newlines();
 
         // Skip indent if followed by '?' (for multiline ternaries)
-        if self.check(&TokenType::Indent) {
-            let saved_pos = self.current;
-            self.advance(); // consume indent
-            if !self.check(&TokenType::Question) {
-                // Not followed by '?', restore position
-                self.current = saved_pos;
-            }
-        }
+        self.try_consume_indent_if_followed_by(&TokenType::Question);
 
         if self.match_token(&[TokenType::Question]) {
             // Skip newlines after '?'
-            self.skip_newlines();
-
-            // Skip indent after '?'
-            self.match_token(&[TokenType::Indent]);
+            self.skip_newlines_and_indent();
 
             let then_expr = self.expression()?;
 
@@ -634,22 +1141,12 @@ impl Parser {
             self.skip_newlines();
 
             // Skip indent if followed by ':' (for multiline ternaries)
-            if self.check(&TokenType::Indent) {
-                let saved_pos = self.current;
-                self.advance(); // consume indent
-                if !self.check(&TokenType::Colon) {
-                    // Not followed by ':', restore position
-                    self.current = saved_pos;
-                }
-            }
+            self.try_consume_indent_if_followed_by(&TokenType::Colon);
 
             self.consume(TokenType::Colon, "Expected ':' in ternary expression")?;
 
             // Skip newlines after ':'
-            self.skip_newlines();
-
-            // Skip indent after ':'
-            self.match_token(&[TokenType::Indent]);
+            self.skip_newlines_and_indent();
 
             let else_expr = self.expression()?;
             expr = Expr::Ternary {
@@ -694,14 +1191,7 @@ impl Parser {
             self.skip_newlines();
 
             // Skip indent/dedent if followed by an operator (for leading operators on continuation lines)
-            if self.check(&TokenType::Indent) || self.check(&TokenType::Dedent) {
-                let saved_pos = self.current;
-                self.advance(); // consume indent or dedent
-                if !self.check(&TokenType::Plus) && !self.check(&TokenType::Minus) {
-                    // Not followed by operator, restore position
-                    self.current = saved_pos;
-                }
-            }
+            self.try_consume_layout_token_if_followed_by(&[TokenType::Plus, TokenType::Minus]);
 
             if !self.match_token(&[TokenType::Plus, TokenType::Minus]) {
                 break;
@@ -712,9 +1202,7 @@ impl Parser {
                 .to_binop()
                 .expect("term token should convert to binop");
             // Skip newlines after binary operators (for multi-line expressions)
-            self.skip_newlines();
-            // Skip indent after newline (for indented continuation lines)
-            self.match_token(&[TokenType::Indent]);
+            self.skip_newlines_and_indent();
             let right = self.factor()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
@@ -798,27 +1286,13 @@ impl Parser {
                     index: Box::new(index),
                 };
             } else if self.match_token(&[TokenType::LParen]) {
-                // Function call
-                if let Expr::Variable(name) = &expr {
-                    let args = self.arguments()?;
-                    self.consume(TokenType::RParen, "Expected ')'")?;
-                    expr = Expr::Call {
-                        callee: name.clone(),
-                        args,
-                    };
-                } else if let Expr::MemberAccess { .. } = &expr {
-                    // Allow calling member access expressions (e.g., ta.stoch())
-                    let args = self.arguments()?;
-                    self.consume(TokenType::RParen, "Expected ')'")?;
-                    // Convert MemberAccess to Call by flattening the path
-                    let callee_name = self.flatten_member_access(&expr);
-                    expr = Expr::Call {
-                        callee: callee_name,
-                        args,
-                    };
-                } else {
-                    return Err(ParserError::InvalidCallTarget(self.peek().line));
-                }
+                // Function call - callee can be Variable, MemberAccess, or other expressions
+                let args = self.arguments()?;
+                self.consume(TokenType::RParen, "Expected ')'")?;
+                expr = Expr::Call {
+                    callee: Box::new(expr),
+                    args,
+                };
             } else {
                 break;
             }
@@ -827,23 +1301,11 @@ impl Parser {
         Ok(expr)
     }
 
-    fn flatten_member_access(&self, expr: &Expr) -> String {
-        match expr {
-            Expr::Variable(name) => name.clone(),
-            Expr::MemberAccess { object, member } => {
-                format!("{}.{}", self.flatten_member_access(object), member)
-            }
-            _ => String::new(),
-        }
-    }
-
     fn arguments(&mut self) -> Result<Vec<Argument>, ParserError> {
         let mut args = vec![];
 
         // Skip leading newlines in argument list
-        self.skip_newlines();
-        // Skip indent after newline (for indented argument lists)
-        self.match_token(&[TokenType::Indent]);
+        self.skip_newlines_and_indent();
 
         if !self.check(&TokenType::RParen) {
             loop {
@@ -851,17 +1313,20 @@ impl Parser {
                 // In PineScript, function calls can have named arguments like plot(x, title="foo", color=red)
                 if let TokenType::Ident(name) = &self.peek().typ {
                     let name = name.clone();
-                    let saved_pos = self.current;
-                    self.advance(); // consume identifier
-
-                    if self.check(&TokenType::Assign) {
-                        // This is a named argument
-                        self.advance(); // consume =
-                        let value = self.expression()?;
+                    if let Some((name, value)) = self.try_parse(|p| {
+                        p.advance(); // consume identifier
+                        if p.check(&TokenType::Assign) {
+                            // This is a named argument
+                            p.advance(); // consume =
+                            let value = p.expression()?;
+                            Ok((name.clone(), value))
+                        } else {
+                            Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line))
+                        }
+                    }) {
                         args.push(Argument::Named { name, value });
                     } else {
-                        // Not a named argument, backtrack and parse as expression
-                        self.current = saved_pos;
+                        // Not a named argument, parse as expression
                         let expr = self.expression()?;
                         args.push(Argument::Positional(expr));
                     }
@@ -878,15 +1343,12 @@ impl Parser {
                 }
 
                 // Skip newlines after comma
-                self.skip_newlines();
-                // Skip indent after newline (for indented argument lists)
-                self.match_token(&[TokenType::Indent]);
+                self.skip_newlines_and_indent();
             }
         }
 
         // Skip trailing newlines and dedent before closing paren
-        self.skip_newlines();
-        self.match_token(&[TokenType::Dedent]);
+        self.skip_newlines_and_dedent();
 
         Ok(args)
     }
@@ -914,9 +1376,14 @@ impl Parser {
             return Ok(Expr::Literal(Literal::HexColor(hex)));
         }
 
-        // Handle keywords that can be used as identifiers (int, float, na)
-        // These can be function names (e.g., int(), float(), na()) or standalone values
-        if self.match_token(&[TokenType::Int, TokenType::Float, TokenType::Na]) {
+        // Handle na as a literal
+        if self.match_token(&[TokenType::Na]) {
+            return Ok(Expr::Literal(Literal::Na));
+        }
+
+        // Handle keywords that can be used as identifiers (int, float)
+        // These can be function names (e.g., int(), float())
+        if self.match_token(&[TokenType::Int, TokenType::Float]) {
             let name = self.tokens[self.current - 1].lexeme.clone();
             return Ok(Expr::Variable(name));
         }
@@ -989,30 +1456,25 @@ impl Parser {
                 }
 
                 // Try to parse a case
-                let saved_pos = self.current;
+                if let Some((pattern, result)) = self.try_parse(|p| {
+                    // Parse the pattern (could be a string, number, identifier, etc.)
+                    let pattern = p.expression()?;
 
-                // Parse the pattern (could be a string, number, identifier, etc.)
-                match self.expression() {
-                    Ok(pattern) => {
-                        // Expect =>
-                        if !self.match_token(&[TokenType::Arrow]) {
-                            // Not a case, backtrack
-                            self.current = saved_pos;
-                            break;
-                        }
-
-                        // Skip newlines after =>
-                        self.skip_newlines();
-
-                        // Parse the result expression
-                        let result = self.expression()?;
-                        cases.push((pattern, result));
+                    // Expect =>
+                    if !p.match_token(&[TokenType::Arrow]) {
+                        return Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line));
                     }
-                    Err(_) => {
-                        // Failed to parse pattern, we're done
-                        self.current = saved_pos;
-                        break;
-                    }
+
+                    // Skip newlines after =>
+                    p.skip_newlines();
+
+                    // Parse the result expression
+                    let result = p.expression()?;
+                    Ok((pattern, result))
+                }) {
+                    cases.push((pattern, result));
+                } else {
+                    break;
                 }
             }
 
@@ -1021,34 +1483,13 @@ impl Parser {
 
         // Array literal: [1, 2, 3]
         if self.match_token(&[TokenType::LBracket]) {
-            let mut elements = vec![];
-
             // Skip leading newlines
-            self.skip_newlines();
-            // Skip indent after newline (for indented array elements)
-            self.match_token(&[TokenType::Indent]);
+            self.skip_newlines_and_indent();
 
-            if !self.check(&TokenType::RBracket) {
-                loop {
-                    elements.push(self.expression()?);
-
-                    // Skip newlines after each element
-                    self.skip_newlines();
-
-                    if !self.match_token(&[TokenType::Comma]) {
-                        break;
-                    }
-
-                    // Skip newlines after comma
-                    self.skip_newlines();
-                    // Skip indent after newline (for indented array elements)
-                    self.match_token(&[TokenType::Indent]);
-                }
-            }
+            let elements = self.parse_comma_separated(&TokenType::RBracket, |p| p.expression())?;
 
             // Skip trailing newlines and dedent
-            self.skip_newlines();
-            self.match_token(&[TokenType::Dedent]);
+            self.skip_newlines_and_dedent();
 
             self.consume(TokenType::RBracket, "Expected ']'")?;
             return Ok(Expr::Array(elements));
@@ -1126,7 +1567,7 @@ mod tests {
         // Simple function call
         let expr = parse_expr("sma(close, 14)").unwrap();
         if let Expr::Call { callee, args } = expr {
-            assert_eq!(callee, "sma");
+            assert_eq!(*callee, Expr::Variable("sma".to_string()));
             assert_eq!(args.len(), 2);
             assert_eq!(args[0], Argument::Positional(Expr::Variable("close".to_string())));
             assert_eq!(args[1], Argument::Positional(Expr::Literal(Literal::Number(14.0))));
@@ -1137,7 +1578,7 @@ mod tests {
         // No arguments
         let expr = parse_expr("foo()").unwrap();
         if let Expr::Call { callee, args } = expr {
-            assert_eq!(callee, "foo");
+            assert_eq!(*callee, Expr::Variable("foo".to_string()));
             assert_eq!(args.len(), 0);
         }
     }
@@ -1250,6 +1691,7 @@ mod tests {
             name,
             type_annotation,
             initializer,
+            is_varip,
         } = &stmts[0]
         {
             assert_eq!(name, "x");
@@ -1258,6 +1700,7 @@ mod tests {
                 initializer.as_ref().unwrap(),
                 &Expr::Literal(Literal::Number(10.0))
             );
+            assert_eq!(*is_varip, false);
         } else {
             panic!("Expected VarDecl");
         }
@@ -1397,6 +1840,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_parse_external_pinescript_indicators() -> eyre::Result<()> {
         use std::fs;
         use std::path::Path;

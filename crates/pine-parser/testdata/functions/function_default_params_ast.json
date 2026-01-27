@@ -25,7 +25,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -73,7 +74,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -82,7 +84,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "add",
+          "callee": {
+            "Variable": "add"
+          },
           "args": [
             {
               "Positional": {
@@ -93,7 +97,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -102,7 +107,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "greet",
+          "callee": {
+            "Variable": "greet"
+          },
           "args": [
             {
               "Positional": {
@@ -113,7 +120,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   }
 ]

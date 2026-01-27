@@ -1,0 +1,7 @@
+//@version=4
+
+type pivotPoint
+    int x
+    float y
+
+foundPoint = pivotPoint.new()

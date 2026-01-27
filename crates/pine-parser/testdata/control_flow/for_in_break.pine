@@ -1,0 +1,9 @@
+//@version=6
+
+// For...in loop with break
+var arr = array.from(1, 2, 3, 4, 5)
+var sum = 0
+for item in arr
+    if item == 3
+        break
+    sum := sum + item

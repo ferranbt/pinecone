@@ -5,7 +5,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "sma",
+          "callee": {
+            "Variable": "sma"
+          },
           "args": [
             {
               "Positional": {
@@ -21,7 +23,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -30,7 +33,9 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "max",
+          "callee": {
+            "Variable": "max"
+          },
           "args": [
             {
               "Positional": {
@@ -44,7 +49,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -53,10 +59,13 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "foo",
+          "callee": {
+            "Variable": "foo"
+          },
           "args": []
         }
-      }
+      },
+      "is_varip": false
     }
   }
 ]

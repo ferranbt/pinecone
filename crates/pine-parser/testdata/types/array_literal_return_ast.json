@@ -15,7 +15,8 @@
                   "Literal": {
                     "Number": 10.0
                   }
-                }
+                },
+                "is_varip": false
               }
             },
             {
@@ -26,7 +27,8 @@
                   "Literal": {
                     "Number": 20.0
                   }
-                }
+                },
+                "is_varip": false
               }
             },
             {
@@ -48,7 +50,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -57,10 +60,13 @@
       "type_annotation": null,
       "initializer": {
         "Call": {
-          "callee": "getValue",
+          "callee": {
+            "Variable": "getValue"
+          },
           "args": []
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -72,7 +78,9 @@
       ],
       "value": {
         "Call": {
-          "callee": "getValue",
+          "callee": {
+            "Variable": "getValue"
+          },
           "args": []
         }
       }

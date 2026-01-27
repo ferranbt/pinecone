@@ -1,0 +1,131 @@
+[
+  {
+    "TypeDecl": {
+      "name": "InfoLabel",
+      "fields": [
+        {
+          "name": "x",
+          "type_annotation": "int",
+          "default_value": null
+        },
+        {
+          "name": "y",
+          "type_annotation": "int",
+          "default_value": null
+        }
+      ]
+    }
+  },
+  {
+    "MethodDecl": {
+      "name": "set",
+      "params": [
+        {
+          "type_annotation": "InfoLabel",
+          "name": "this",
+          "default_value": null
+        },
+        {
+          "type_annotation": "int",
+          "name": "x",
+          "default_value": {
+            "Literal": "Na"
+          }
+        },
+        {
+          "type_annotation": "int",
+          "name": "y",
+          "default_value": {
+            "Literal": "Na"
+          }
+        }
+      ],
+      "body": [
+        {
+          "If": {
+            "condition": {
+              "Unary": {
+                "op": "Not",
+                "expr": {
+                  "Call": {
+                    "callee": {
+                      "Literal": "Na"
+                    },
+                    "args": [
+                      {
+                        "Positional": {
+                          "Variable": "x"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "then_branch": [
+              {
+                "Assignment": {
+                  "target": {
+                    "MemberAccess": {
+                      "object": {
+                        "Variable": "this"
+                      },
+                      "member": "x"
+                    }
+                  },
+                  "value": {
+                    "Variable": "x"
+                  }
+                }
+              }
+            ],
+            "else_if_branches": [],
+            "else_branch": null
+          }
+        },
+        {
+          "If": {
+            "condition": {
+              "Unary": {
+                "op": "Not",
+                "expr": {
+                  "Call": {
+                    "callee": {
+                      "Literal": "Na"
+                    },
+                    "args": [
+                      {
+                        "Positional": {
+                          "Variable": "y"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "then_branch": [
+              {
+                "Assignment": {
+                  "target": {
+                    "MemberAccess": {
+                      "object": {
+                        "Variable": "this"
+                      },
+                      "member": "y"
+                    }
+                  },
+                  "value": {
+                    "Variable": "y"
+                  }
+                }
+              }
+            ],
+            "else_if_branches": [],
+            "else_branch": null
+          }
+        }
+      ]
+    }
+  }
+]

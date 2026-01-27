@@ -21,7 +21,8 @@
               "Literal": {
                 "Number": 1.0
               }
-            }
+            },
+            "is_varip": false
           }
         },
         {
@@ -32,7 +33,8 @@
               "Literal": {
                 "Number": 2.0
               }
-            }
+            },
+            "is_varip": false
           }
         },
         {
@@ -43,10 +45,12 @@
               "Literal": {
                 "Number": 3.0
               }
-            }
+            },
+            "is_varip": false
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": null
     }
   },
@@ -72,7 +76,8 @@
               "Literal": {
                 "Number": 1.0
               }
-            }
+            },
+            "is_varip": false
           }
         },
         {
@@ -83,10 +88,12 @@
               "Literal": {
                 "Number": 2.0
               }
-            }
+            },
+            "is_varip": false
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": [
         {
           "VarDecl": {
@@ -101,7 +108,8 @@
                   }
                 }
               }
-            }
+            },
+            "is_varip": false
           }
         },
         {
@@ -117,7 +125,8 @@
                   }
                 }
               }
-            }
+            },
+            "is_varip": false
           }
         }
       ]
@@ -139,7 +148,9 @@
       "body": [
         {
           "Assignment": {
-            "name": "sum",
+            "target": {
+              "Variable": "sum"
+            },
             "value": {
               "Binary": {
                 "left": {
@@ -155,7 +166,9 @@
         },
         {
           "Assignment": {
-            "name": "count",
+            "target": {
+              "Variable": "count"
+            },
             "value": {
               "Binary": {
                 "left": {

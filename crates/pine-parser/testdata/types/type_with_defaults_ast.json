@@ -1,0 +1,27 @@
+[
+  {
+    "TypeDecl": {
+      "name": "BarInfo",
+      "fields": [
+        {
+          "name": "index",
+          "type_annotation": "int",
+          "default_value": {
+            "Literal": {
+              "Number": 0.0
+            }
+          }
+        },
+        {
+          "name": "price",
+          "type_annotation": "float",
+          "default_value": {
+            "Literal": {
+              "Number": 100.0
+            }
+          }
+        }
+      ]
+    }
+  }
+]

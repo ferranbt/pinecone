@@ -1,0 +1,9 @@
+type InfoLabel
+    int x
+    int y
+
+method set(InfoLabel this, int x = na, int y = na) =>
+    if not na(x)
+        this.x := x
+    if not na(y)
+        this.y := y

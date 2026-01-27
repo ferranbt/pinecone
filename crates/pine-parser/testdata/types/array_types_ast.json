@@ -5,7 +5,14 @@
       "type_annotation": "int[]",
       "initializer": {
         "Call": {
-          "callee": "array.new_int",
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "array"
+              },
+              "member": "new_int"
+            }
+          },
           "args": [
             {
               "Positional": {
@@ -16,7 +23,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -25,7 +33,14 @@
       "type_annotation": "float[]",
       "initializer": {
         "Call": {
-          "callee": "array.new_float",
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "array"
+              },
+              "member": "new_float"
+            }
+          },
           "args": [
             {
               "Positional": {
@@ -36,7 +51,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -45,7 +61,14 @@
       "type_annotation": "string[]",
       "initializer": {
         "Call": {
-          "callee": "array.new_string",
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "array"
+              },
+              "member": "new_string"
+            }
+          },
           "args": [
             {
               "Positional": {
@@ -56,7 +79,8 @@
             }
           ]
         }
-      }
+      },
+      "is_varip": false
     }
   }
 ]

@@ -1,0 +1,33 @@
+[
+  {
+    "Import": {
+      "path": "userName/Point/1",
+      "alias": "pt"
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "MemberAccess": {
+                  "object": {
+                    "Variable": "pt"
+                  },
+                  "member": "point"
+                }
+              },
+              "member": "new"
+            }
+          },
+          "args": []
+        }
+      },
+      "is_varip": false
+    }
+  }
+]

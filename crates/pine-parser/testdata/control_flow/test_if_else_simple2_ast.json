@@ -15,10 +15,12 @@
               "Literal": {
                 "Number": 1.0
               }
-            }
+            },
+            "is_varip": false
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": [
         {
           "VarDecl": {
@@ -28,7 +30,8 @@
               "Literal": {
                 "Number": 2.0
               }
-            }
+            },
+            "is_varip": false
           }
         }
       ]

@@ -7,7 +7,8 @@
         "Literal": {
           "Number": 10.0
         }
-      }
+      },
+      "is_varip": false
     }
   },
   {
@@ -34,7 +35,8 @@
               "Literal": {
                 "Number": 0.0
               }
-            }
+            },
+            "is_varip": false
           }
         },
         {
@@ -79,7 +81,9 @@
                   "then_branch": [
                     {
                       "Assignment": {
-                        "name": "total",
+                        "target": {
+                          "Variable": "total"
+                        },
                         "value": {
                           "Binary": {
                             "left": {
@@ -94,10 +98,13 @@
                       }
                     }
                   ],
+                  "else_if_branches": [],
                   "else_branch": [
                     {
                       "Assignment": {
-                        "name": "total",
+                        "target": {
+                          "Variable": "total"
+                        },
                         "value": {
                           "Binary": {
                             "left": {
@@ -123,10 +130,12 @@
             "type_annotation": null,
             "initializer": {
               "Variable": "total"
-            }
+            },
+            "is_varip": false
           }
         }
       ],
+      "else_if_branches": [],
       "else_branch": null
     }
   }
