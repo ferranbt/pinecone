@@ -284,6 +284,36 @@ impl Interpreter {
         self.variables.insert(name.to_string(), value);
     }
 
+    /// Helper to evaluate arguments and validate positional-before-named rule
+    fn evaluate_arguments(&mut self, args: &[Argument]) -> Result<Vec<EvaluatedArg>, RuntimeError> {
+        let mut evaluated_args = Vec::new();
+        let mut seen_named = false;
+
+        for arg in args {
+            match arg {
+                Argument::Positional(expr) => {
+                    if seen_named {
+                        return Err(RuntimeError::TypeError(
+                            "Positional arguments cannot follow named arguments".to_string(),
+                        ));
+                    }
+                    let value = self.eval_expr(expr)?;
+                    evaluated_args.push(EvaluatedArg::Positional(value));
+                }
+                Argument::Named { name, value: expr } => {
+                    seen_named = true;
+                    let value = self.eval_expr(expr)?;
+                    evaluated_args.push(EvaluatedArg::Named {
+                        name: name.clone(),
+                        value,
+                    });
+                }
+            }
+        }
+
+        Ok(evaluated_args)
+    }
+
     fn execute_stmt(&mut self, stmt: &Stmt) -> Result<Option<Value>, RuntimeError> {
         match stmt {
             Stmt::VarDecl {
@@ -761,30 +791,7 @@ impl Interpreter {
                         if let Some(method_def) = method_defs.iter().find(|m| m.type_name == obj_type) {
                             // Evaluate the other arguments
                             let mut evaluated_args = vec![EvaluatedArg::Positional(obj_value)];
-                            let mut seen_named = false;
-
-                            for arg in args {
-                                match arg {
-                                    Argument::Positional(expr) => {
-                                        if seen_named {
-                                            return Err(RuntimeError::TypeError(
-                                                "Positional arguments cannot follow named arguments"
-                                                    .to_string(),
-                                            ));
-                                        }
-                                        let value = self.eval_expr(expr)?;
-                                        evaluated_args.push(EvaluatedArg::Positional(value));
-                                    }
-                                    Argument::Named { name, value: expr } => {
-                                        seen_named = true;
-                                        let value = self.eval_expr(expr)?;
-                                        evaluated_args.push(EvaluatedArg::Named {
-                                            name: name.clone(),
-                                            value,
-                                        });
-                                    }
-                                }
-                            }
+                            evaluated_args.extend(self.evaluate_arguments(args)?);
 
                             // Call the method (treating it like a function)
                             return self.call_method(&method_def.params, &method_def.body, evaluated_args);
@@ -794,31 +801,7 @@ impl Interpreter {
 
                 // Not a method call, proceed with regular function call
                 // Evaluate arguments and validate positional-before-named rule
-                let mut evaluated_args = Vec::new();
-                let mut seen_named = false;
-
-                for arg in args {
-                    match arg {
-                        Argument::Positional(expr) => {
-                            if seen_named {
-                                return Err(RuntimeError::TypeError(
-                                    "Positional arguments cannot follow named arguments"
-                                        .to_string(),
-                                ));
-                            }
-                            let value = self.eval_expr(expr)?;
-                            evaluated_args.push(EvaluatedArg::Positional(value));
-                        }
-                        Argument::Named { name, value: expr } => {
-                            seen_named = true;
-                            let value = self.eval_expr(expr)?;
-                            evaluated_args.push(EvaluatedArg::Named {
-                                name: name.clone(),
-                                value,
-                            });
-                        }
-                    }
-                }
+                let evaluated_args = self.evaluate_arguments(args)?;
 
                 // Evaluate the callee expression to get the function
                 let callee_value = self.eval_expr(callee)?;
