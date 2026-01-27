@@ -418,6 +418,79 @@ impl Parser {
         })
     }
 
+    fn export_statement(&mut self) -> Result<Stmt, ParserError> {
+        // export type typename or export functionname
+        if self.match_token(&[TokenType::Type]) {
+            // export type typename
+            let type_name = if let TokenType::Ident(name) = &self.peek().typ {
+                let name = name.clone();
+                self.advance();
+                name
+            } else {
+                return Err(ParserError::ExpectedVariableName(self.peek().line));
+            };
+            Ok(Stmt::Export {
+                item: pine_ast::ExportItem::Type(type_name),
+            })
+        } else if let TokenType::Ident(name) = &self.peek().typ {
+            // export functionname
+            let func_name = name.clone();
+            self.advance();
+            Ok(Stmt::Export {
+                item: pine_ast::ExportItem::Function(func_name),
+            })
+        } else {
+            Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line))
+        }
+    }
+
+    fn import_statement(&mut self) -> Result<Stmt, ParserError> {
+        // import userName/libraryName/version as alias
+        let path = if let TokenType::Ident(p) = &self.peek().typ {
+            let mut path_parts = vec![p.clone()];
+            self.advance();
+
+            // Parse path segments separated by /
+            while self.match_token(&[TokenType::Slash]) {
+                if let TokenType::Ident(part) = &self.peek().typ {
+                    path_parts.push(part.clone());
+                    self.advance();
+                } else if let TokenType::Number(n) = &self.peek().typ {
+                    // Version number
+                    path_parts.push(n.to_string());
+                    self.advance();
+                } else {
+                    return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+                }
+            }
+
+            path_parts.join("/")
+        } else {
+            return Err(ParserError::ExpectedVariableName(self.peek().line));
+        };
+
+        // Expect 'as' keyword - for now we'll check for an identifier "as"
+        if let TokenType::Ident(kw) = &self.peek().typ {
+            if kw != "as" {
+                return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+            }
+            self.advance();
+        } else {
+            return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+        }
+
+        // Parse alias
+        let alias = if let TokenType::Ident(a) = &self.peek().typ {
+            let a = a.clone();
+            self.advance();
+            a
+        } else {
+            return Err(ParserError::ExpectedVariableName(self.peek().line));
+        };
+
+        Ok(Stmt::Import { path, alias })
+    }
+
     fn method_declaration(&mut self) -> Result<Stmt, ParserError> {
         // Parse method name
         let method_name = if let TokenType::Ident(name) = &self.peek().typ {
@@ -531,6 +604,16 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, ParserError> {
+        // Check for export statement
+        if self.match_token(&[TokenType::Export]) {
+            return self.export_statement();
+        }
+
+        // Check for import statement
+        if self.match_token(&[TokenType::Import]) {
+            return self.import_statement();
+        }
+
         // Check for if statement
         if self.match_token(&[TokenType::If]) {
             return self.if_statement();

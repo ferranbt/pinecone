@@ -4,6 +4,12 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use thiserror::Error;
 
+/// Trait for loading external libraries
+pub trait LibraryLoader {
+    /// Load a library from the given path and return its Program AST
+    fn load_library(&self, path: &str) -> Result<Program, String>;
+}
+
 #[derive(Error, Debug)]
 pub enum RuntimeError {
     #[error("Variable '{0}' not found")]
@@ -26,6 +32,9 @@ pub enum RuntimeError {
 
     #[error("Continue statement outside of loop")]
     ContinueOutsideLoop,
+
+    #[error("Library error: {0}")]
+    LibraryError(String),
 }
 
 /// Control flow signals for loops
@@ -190,6 +199,10 @@ pub struct Interpreter {
     builtins: HashMap<String, BuiltinFn>,
     /// Method registry (method_name -> Vec<MethodDef>) - can have multiple methods with same name for different types
     methods: HashMap<String, Vec<MethodDef>>,
+    /// Library loader for importing external libraries
+    library_loader: Option<Box<dyn LibraryLoader>>,
+    /// Exported items from this module (for library mode)
+    exports: HashMap<String, Value>,
 }
 
 impl Interpreter {
@@ -198,6 +211,8 @@ impl Interpreter {
             variables: HashMap::new(),
             methods: HashMap::new(),
             builtins: HashMap::new(),
+            library_loader: None,
+            exports: HashMap::new(),
         }
     }
 
@@ -207,7 +222,36 @@ impl Interpreter {
             variables: HashMap::new(),
             methods: HashMap::new(),
             builtins,
+            library_loader: None,
+            exports: HashMap::new(),
         }
+    }
+
+    /// Create interpreter with a library loader
+    pub fn with_loader(loader: Box<dyn LibraryLoader>) -> Self {
+        Self {
+            variables: HashMap::new(),
+            methods: HashMap::new(),
+            builtins: HashMap::new(),
+            library_loader: Some(loader),
+            exports: HashMap::new(),
+        }
+    }
+
+    /// Create interpreter with custom builtins and library loader
+    pub fn with_builtins_and_loader(builtins: HashMap<String, BuiltinFn>, loader: Box<dyn LibraryLoader>) -> Self {
+        Self {
+            variables: HashMap::new(),
+            methods: HashMap::new(),
+            builtins,
+            library_loader: Some(loader),
+            exports: HashMap::new(),
+        }
+    }
+
+    /// Get the exported items from this interpreter (for library mode)
+    pub fn exports(&self) -> &HashMap<String, Value> {
+        &self.exports
     }
 
     /// Execute a program with a single bar
@@ -450,6 +494,61 @@ impl Interpreter {
                     fields: Rc::new(RefCell::new(enum_fields)),
                 };
                 self.variables.insert(name.clone(), enum_object);
+                Ok(None)
+            }
+
+            Stmt::Export { item } => {
+                // Mark the item for export
+                match item {
+                    pine_ast::ExportItem::Type(type_name) => {
+                        // Export the type - it should already be in variables
+                        if let Some(value) = self.variables.get(type_name) {
+                            self.exports.insert(type_name.clone(), value.clone());
+                        }
+                    }
+                    pine_ast::ExportItem::Function(func_name) => {
+                        // Export the function - it should already be in variables
+                        if let Some(value) = self.variables.get(func_name) {
+                            self.exports.insert(func_name.clone(), value.clone());
+                        }
+                    }
+                }
+                Ok(None)
+            }
+
+            Stmt::Import { path, alias } => {
+                // Try to load the library - fail if no loader is available
+                if let Some(ref loader) = self.library_loader {
+                    match loader.load_library(path) {
+                        Ok(library_program) => {
+                            // Create a new interpreter for the library
+                            let mut library_interp = Interpreter::new();
+
+                            // Execute the library program (without a bar context for simplicity)
+                            library_interp.execute(&library_program, &Bar::default())?;
+
+                            // Get the exports from the library
+                            let library_exports = library_interp.exports();
+
+                            // Create a namespace object containing the exported items
+                            let namespace = Value::Object {
+                                type_name: alias.clone(),
+                                fields: Rc::new(RefCell::new(library_exports.clone())),
+                            };
+                            self.variables.insert(alias.clone(), namespace);
+                        }
+                        Err(e) => {
+                            return Err(RuntimeError::LibraryError(format!(
+                                "Failed to load library '{}': {}",
+                                path, e
+                            )));
+                        }
+                    }
+                } else {
+                    return Err(RuntimeError::LibraryError(
+                        "Cannot import library: no library loader configured".to_string()
+                    ));
+                }
                 Ok(None)
             }
 
@@ -2095,6 +2194,95 @@ mod tests {
 
         assert_eq!(interp.get_variable("same"), Some(&Value::Bool(true)));
         assert_eq!(interp.get_variable("different"), Some(&Value::Bool(false)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_export() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            type Point
+                float x
+                float y
+
+            export type Point
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        // Check that Point type was exported
+        let exports = interp.exports();
+        assert!(exports.contains_key("Point"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_import_with_library_loader() -> eyre::Result<()> {
+        // Mock library loader
+        struct MockLoader;
+        impl LibraryLoader for MockLoader {
+            fn load_library(&self, path: &str) -> Result<Program, String> {
+                // Return a simple library that exports a Point type
+                if path == "user/shapes/1" {
+                    let source = r#"
+                        type Point
+                            float x = 0.0
+                            float y = 0.0
+
+                        export type Point
+                    "#;
+
+                    use pine_lexer::Lexer;
+                    use pine_parser::Parser;
+
+                    let mut lexer = Lexer::new(source);
+                    let tokens = lexer.tokenize().map_err(|e| format!("{:?}", e))?;
+                    let mut parser = Parser::new(tokens);
+                    let statements = parser.parse().map_err(|e| format!("{:?}", e))?;
+                    Ok(Program::new(statements))
+                } else {
+                    Err(format!("Library not found: {}", path))
+                }
+            }
+        }
+
+        let mut interp = Interpreter::with_loader(Box::new(MockLoader));
+
+        let program = parse_str(
+            r#"
+            import user/shapes/1 as shapes
+
+            p = shapes.Point.new(10.0, 20.0)
+            "#,
+        )?;
+
+        interp.execute(&program, &Bar::default())?;
+
+        // Check that we can access the imported Point type
+        assert!(interp.get_variable("p").is_some());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_import_without_loader_fails() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        let program = parse_str(
+            r#"
+            import user/shapes/1 as shapes
+            "#,
+        )?;
+
+        // Should fail because no library loader is configured
+        let result = interp.execute(&program, &Bar::default());
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RuntimeError::LibraryError(_)));
 
         Ok(())
     }

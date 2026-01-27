@@ -1,0 +1,3 @@
+import userName/Point/1 as pt
+
+x = pt.point.new()

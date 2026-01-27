@@ -143,6 +143,20 @@ pub enum Stmt {
         name: String,
         fields: Vec<EnumField>,
     },
+    Export {
+        item: ExportItem,
+    },
+    Import {
+        path: String,       // e.g., "userName/Point/1"
+        alias: String,      // e.g., "pt"
+    },
+}
+
+/// An item that can be exported from a library
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ExportItem {
+    Type(String),     // export type typename
+    Function(String), // export functionname
 }
 
 /// A field in an enum declaration
