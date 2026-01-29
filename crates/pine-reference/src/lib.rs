@@ -157,17 +157,17 @@ pub fn query(path: Option<&str>) -> eyre::Result<QueryResult> {
                 return Ok(QueryResult::List(Vec::new()));
             }
 
-            // Try exact match first
-            if parts.len() == 2 {
+            // Try exact match first (for any length > 1)
+            if parts.len() >= 2 {
                 let section_name = parts[0];
-                let item_name = parts[1];
+                let item_name = parts[1..].join(".");
                 let mut in_target_section = false;
 
                 for section in &sections {
                     if section.level == 2 {
                         in_target_section = section.title.eq_ignore_ascii_case(section_name);
                     } else if section.level == 3 && in_target_section {
-                        if section.title.eq_ignore_ascii_case(item_name) {
+                        if section.title.eq_ignore_ascii_case(&item_name) {
                             return Ok(QueryResult::Content(section.content.clone()));
                         }
                     }
