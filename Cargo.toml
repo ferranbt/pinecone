@@ -7,6 +7,7 @@ members = [
     "crates/pine-builtin-macro",
     "crates/pine-builtins",
     "crates/pine",
+    "crates/pine-reference",
 ]
 resolver = "2"
 
@@ -18,6 +19,7 @@ pine-interpreter = { path = "crates/pine-interpreter" }
 pine-builtin-macro = { path = "crates/pine-builtin-macro" }
 pine-builtins = { path = "crates/pine-builtins" }
 pine = { path = "crates/pine" }
+pine-reference = { path = "crates/pine-reference" }
 eyre = "0.6"
 thiserror = "2.0"
 clap = { version = "4.5", features = ["derive"] }
