@@ -1,8 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_interpreter::{Interpreter, RuntimeError, Value};
-use std::f64::consts::PI;
-
-// Single-argument functions
 
 /// math.abs(number) - Returns absolute value
 #[derive(BuiltinFunction)]
@@ -58,7 +55,9 @@ impl MathRound {
             Ok(Value::Number(self.number.round()))
         } else {
             let multiplier = 10_f64.powf(self.precision);
-            Ok(Value::Number((self.number * multiplier).round() / multiplier))
+            Ok(Value::Number(
+                (self.number * multiplier).round() / multiplier,
+            ))
         }
     }
 }
@@ -350,44 +349,114 @@ impl MathRandom {
     }
 }
 
-/// Register all math namespace functions
-pub fn register_math_namespace() -> std::collections::HashMap<String, Value> {
+/// Register all math namespace functions and return the namespace object
+pub fn register() -> Value {
     use std::rc::Rc;
+    use std::cell::RefCell;
 
     let mut math_ns = std::collections::HashMap::new();
 
     // Single-argument functions
-    math_ns.insert("abs".to_string(), Value::BuiltinFunction(Rc::new(MathAbs::builtin_fn)));
-    math_ns.insert("ceil".to_string(), Value::BuiltinFunction(Rc::new(MathCeil::builtin_fn)));
-    math_ns.insert("floor".to_string(), Value::BuiltinFunction(Rc::new(MathFloor::builtin_fn)));
-    math_ns.insert("round".to_string(), Value::BuiltinFunction(Rc::new(MathRound::builtin_fn)));
-    math_ns.insert("sign".to_string(), Value::BuiltinFunction(Rc::new(MathSign::builtin_fn)));
-    math_ns.insert("sqrt".to_string(), Value::BuiltinFunction(Rc::new(MathSqrt::builtin_fn)));
-    math_ns.insert("exp".to_string(), Value::BuiltinFunction(Rc::new(MathExp::builtin_fn)));
-    math_ns.insert("log".to_string(), Value::BuiltinFunction(Rc::new(MathLog::builtin_fn)));
-    math_ns.insert("log10".to_string(), Value::BuiltinFunction(Rc::new(MathLog10::builtin_fn)));
+    math_ns.insert(
+        "abs".to_string(),
+        Value::BuiltinFunction(Rc::new(MathAbs::builtin_fn)),
+    );
+    math_ns.insert(
+        "ceil".to_string(),
+        Value::BuiltinFunction(Rc::new(MathCeil::builtin_fn)),
+    );
+    math_ns.insert(
+        "floor".to_string(),
+        Value::BuiltinFunction(Rc::new(MathFloor::builtin_fn)),
+    );
+    math_ns.insert(
+        "round".to_string(),
+        Value::BuiltinFunction(Rc::new(MathRound::builtin_fn)),
+    );
+    math_ns.insert(
+        "sign".to_string(),
+        Value::BuiltinFunction(Rc::new(MathSign::builtin_fn)),
+    );
+    math_ns.insert(
+        "sqrt".to_string(),
+        Value::BuiltinFunction(Rc::new(MathSqrt::builtin_fn)),
+    );
+    math_ns.insert(
+        "exp".to_string(),
+        Value::BuiltinFunction(Rc::new(MathExp::builtin_fn)),
+    );
+    math_ns.insert(
+        "log".to_string(),
+        Value::BuiltinFunction(Rc::new(MathLog::builtin_fn)),
+    );
+    math_ns.insert(
+        "log10".to_string(),
+        Value::BuiltinFunction(Rc::new(MathLog10::builtin_fn)),
+    );
 
     // Trigonometric functions
-    math_ns.insert("sin".to_string(), Value::BuiltinFunction(Rc::new(MathSin::builtin_fn)));
-    math_ns.insert("cos".to_string(), Value::BuiltinFunction(Rc::new(MathCos::builtin_fn)));
-    math_ns.insert("tan".to_string(), Value::BuiltinFunction(Rc::new(MathTan::builtin_fn)));
-    math_ns.insert("asin".to_string(), Value::BuiltinFunction(Rc::new(MathAsin::builtin_fn)));
-    math_ns.insert("acos".to_string(), Value::BuiltinFunction(Rc::new(MathAcos::builtin_fn)));
-    math_ns.insert("atan".to_string(), Value::BuiltinFunction(Rc::new(MathAtan::builtin_fn)));
-    math_ns.insert("toradians".to_string(), Value::BuiltinFunction(Rc::new(MathToRadians::builtin_fn)));
-    math_ns.insert("todegrees".to_string(), Value::BuiltinFunction(Rc::new(MathToDegrees::builtin_fn)));
+    math_ns.insert(
+        "sin".to_string(),
+        Value::BuiltinFunction(Rc::new(MathSin::builtin_fn)),
+    );
+    math_ns.insert(
+        "cos".to_string(),
+        Value::BuiltinFunction(Rc::new(MathCos::builtin_fn)),
+    );
+    math_ns.insert(
+        "tan".to_string(),
+        Value::BuiltinFunction(Rc::new(MathTan::builtin_fn)),
+    );
+    math_ns.insert(
+        "asin".to_string(),
+        Value::BuiltinFunction(Rc::new(MathAsin::builtin_fn)),
+    );
+    math_ns.insert(
+        "acos".to_string(),
+        Value::BuiltinFunction(Rc::new(MathAcos::builtin_fn)),
+    );
+    math_ns.insert(
+        "atan".to_string(),
+        Value::BuiltinFunction(Rc::new(MathAtan::builtin_fn)),
+    );
+    math_ns.insert(
+        "toradians".to_string(),
+        Value::BuiltinFunction(Rc::new(MathToRadians::builtin_fn)),
+    );
+    math_ns.insert(
+        "todegrees".to_string(),
+        Value::BuiltinFunction(Rc::new(MathToDegrees::builtin_fn)),
+    );
 
     // Two-argument functions
-    math_ns.insert("pow".to_string(), Value::BuiltinFunction(Rc::new(MathPow::builtin_fn)));
+    math_ns.insert(
+        "pow".to_string(),
+        Value::BuiltinFunction(Rc::new(MathPow::builtin_fn)),
+    );
 
     // Variadic functions
-    math_ns.insert("min".to_string(), Value::BuiltinFunction(Rc::new(MathMin::builtin_fn)));
-    math_ns.insert("max".to_string(), Value::BuiltinFunction(Rc::new(MathMax::builtin_fn)));
-    math_ns.insert("avg".to_string(), Value::BuiltinFunction(Rc::new(MathAvg::builtin_fn)));
-    math_ns.insert("sum".to_string(), Value::BuiltinFunction(Rc::new(MathSum::builtin_fn)));
+    math_ns.insert(
+        "min".to_string(),
+        Value::BuiltinFunction(Rc::new(MathMin::builtin_fn)),
+    );
+    math_ns.insert(
+        "max".to_string(),
+        Value::BuiltinFunction(Rc::new(MathMax::builtin_fn)),
+    );
+    math_ns.insert(
+        "avg".to_string(),
+        Value::BuiltinFunction(Rc::new(MathAvg::builtin_fn)),
+    );
+    math_ns.insert(
+        "sum".to_string(),
+        Value::BuiltinFunction(Rc::new(MathSum::builtin_fn)),
+    );
 
     // Special functions
-    math_ns.insert("random".to_string(), Value::BuiltinFunction(Rc::new(MathRandom::builtin_fn)));
+    math_ns.insert(
+        "random".to_string(),
+        Value::BuiltinFunction(Rc::new(MathRandom::builtin_fn)),
+    );
 
     math_ns
 }
@@ -396,6 +465,7 @@ pub fn register_math_namespace() -> std::collections::HashMap<String, Value> {
 mod tests {
     use super::*;
     use pine_interpreter::EvaluatedArg;
+    use std::f64::consts::PI;
 
     fn create_mock_interpreter() -> Interpreter {
         Interpreter::new()
@@ -405,10 +475,16 @@ mod tests {
     fn test_math_abs() {
         let mut ctx = create_mock_interpreter();
 
-        let result = MathAbs::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(-5.5))]).unwrap();
+        let result = MathAbs::builtin_fn(
+            &mut ctx,
+            vec![EvaluatedArg::Positional(Value::Number(-5.5))],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(5.5));
 
-        let result = MathAbs::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(3.0))]).unwrap();
+        let result =
+            MathAbs::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(3.0))])
+                .unwrap();
         assert_eq!(result, Value::Number(3.0));
     }
 
@@ -416,10 +492,14 @@ mod tests {
     fn test_math_ceil_floor() {
         let mut ctx = create_mock_interpreter();
 
-        let result = MathCeil::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(4.2))]).unwrap();
+        let result =
+            MathCeil::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(4.2))])
+                .unwrap();
         assert_eq!(result, Value::Number(5.0));
 
-        let result = MathFloor::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(4.8))]).unwrap();
+        let result =
+            MathFloor::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(4.8))])
+                .unwrap();
         assert_eq!(result, Value::Number(4.0));
     }
 
@@ -427,10 +507,14 @@ mod tests {
     fn test_math_round() {
         let mut ctx = create_mock_interpreter();
 
-        let result = MathRound::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(4.5))]).unwrap();
+        let result =
+            MathRound::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(4.5))])
+                .unwrap();
         assert_eq!(result, Value::Number(5.0));
 
-        let result = MathRound::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(4.4))]).unwrap();
+        let result =
+            MathRound::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(4.4))])
+                .unwrap();
         assert_eq!(result, Value::Number(4.0));
     }
 
@@ -438,13 +522,21 @@ mod tests {
     fn test_math_sign() {
         let mut ctx = create_mock_interpreter();
 
-        let result = MathSign::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(5.0))]).unwrap();
+        let result =
+            MathSign::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(5.0))])
+                .unwrap();
         assert_eq!(result, Value::Number(1.0));
 
-        let result = MathSign::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(-5.0))]).unwrap();
+        let result = MathSign::builtin_fn(
+            &mut ctx,
+            vec![EvaluatedArg::Positional(Value::Number(-5.0))],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(-1.0));
 
-        let result = MathSign::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(0.0))]).unwrap();
+        let result =
+            MathSign::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(0.0))])
+                .unwrap();
         assert_eq!(result, Value::Number(0.0));
     }
 
@@ -452,7 +544,11 @@ mod tests {
     fn test_math_sqrt() {
         let mut ctx = create_mock_interpreter();
 
-        let result = MathSqrt::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(16.0))]).unwrap();
+        let result = MathSqrt::builtin_fn(
+            &mut ctx,
+            vec![EvaluatedArg::Positional(Value::Number(16.0))],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(4.0));
     }
 
@@ -460,10 +556,14 @@ mod tests {
     fn test_math_pow() {
         let mut ctx = create_mock_interpreter();
 
-        let result = MathPow::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(2.0)),
-            EvaluatedArg::Positional(Value::Number(3.0)),
-        ]).unwrap();
+        let result = MathPow::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(Value::Number(2.0)),
+                EvaluatedArg::Positional(Value::Number(3.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(8.0));
     }
 
@@ -471,16 +571,24 @@ mod tests {
     fn test_math_min_max() {
         let mut ctx = create_mock_interpreter();
 
-        let result = MathMin::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(5.0)),
-            EvaluatedArg::Positional(Value::Number(3.0)),
-        ]).unwrap();
+        let result = MathMin::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(Value::Number(5.0)),
+                EvaluatedArg::Positional(Value::Number(3.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(3.0));
 
-        let result = MathMax::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(5.0)),
-            EvaluatedArg::Positional(Value::Number(3.0)),
-        ]).unwrap();
+        let result = MathMax::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(Value::Number(5.0)),
+                EvaluatedArg::Positional(Value::Number(3.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(5.0));
     }
 
@@ -489,11 +597,15 @@ mod tests {
         let mut ctx = create_mock_interpreter();
 
         // Test sin(0) = 0
-        let result = MathSin::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(0.0))]).unwrap();
+        let result =
+            MathSin::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(0.0))])
+                .unwrap();
         assert_eq!(result, Value::Number(0.0));
 
         // Test cos(0) = 1
-        let result = MathCos::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(0.0))]).unwrap();
+        let result =
+            MathCos::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(0.0))])
+                .unwrap();
         assert_eq!(result, Value::Number(1.0));
     }
 
@@ -501,12 +613,18 @@ mod tests {
     fn test_math_degrees_radians() {
         let mut ctx = create_mock_interpreter();
 
-        let result = MathToRadians::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(180.0))]).unwrap();
+        let result = MathToRadians::builtin_fn(
+            &mut ctx,
+            vec![EvaluatedArg::Positional(Value::Number(180.0))],
+        )
+        .unwrap();
         if let Value::Number(n) = result {
             assert!((n - PI).abs() < 0.0001);
         }
 
-        let result = MathToDegrees::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(PI))]).unwrap();
+        let result =
+            MathToDegrees::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(PI))])
+                .unwrap();
         if let Value::Number(n) = result {
             assert!((n - 180.0).abs() < 0.0001);
         }
