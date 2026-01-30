@@ -9,6 +9,9 @@ pub use pine_interpreter::Bar;
 pub use pine_interpreter::BuiltinFn;
 pub use pine_interpreter::EvaluatedArg;
 
+// Module for math namespace
+mod math;
+
 /// Register all builtin namespaces as objects and global functions
 /// Returns namespace objects to be loaded as variables (e.g., "array", "str", "ta")
 /// and global builtin functions (e.g., "na")
