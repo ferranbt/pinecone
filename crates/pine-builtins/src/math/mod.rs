@@ -353,8 +353,9 @@ impl MathRandom {
 pub fn register() -> Value {
     use std::rc::Rc;
     use std::cell::RefCell;
+    use std::collections::HashMap;
 
-    let mut math_ns = std::collections::HashMap::new();
+    let mut math_ns = HashMap::new();
 
     // Single-argument functions
     math_ns.insert(
@@ -458,7 +459,10 @@ pub fn register() -> Value {
         Value::BuiltinFunction(Rc::new(MathRandom::builtin_fn)),
     );
 
-    math_ns
+    Value::Object {
+        type_name: "math".to_string(),
+        fields: Rc::new(RefCell::new(math_ns)),
+    }
 }
 
 #[cfg(test)]
