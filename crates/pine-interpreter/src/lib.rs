@@ -81,6 +81,12 @@ pub enum Value {
         field_name: String, // The specific field/member name (e.g., "buy")
         title: String,      // The title of this enum member
     }, // Enum member value
+    Color {
+        r: u8,     // Red component (0-255)
+        g: u8,     // Green component (0-255)
+        b: u8,     // Blue component (0-255)
+        t: u8,     // Transparency (0-100)
+    }, // Color value
 }
 
 // Manual Debug impl since function pointers don't implement Debug
@@ -97,6 +103,7 @@ impl std::fmt::Debug for Value {
             Value::BuiltinFunction(_) => write!(f, "BuiltinFunction"),
             Value::Type { name, .. } => write!(f, "Type({})", name),
             Value::Enum { enum_name, field_name, .. } => write!(f, "Enum({}::{})", enum_name, field_name),
+            Value::Color { r, g, b, t } => write!(f, "Color(rgba({}, {}, {}, {}))", r, g, b, t),
         }
     }
 }
@@ -120,6 +127,11 @@ impl PartialEq for Value {
             (Value::Enum { enum_name: a_enum, field_name: a_field, .. },
              Value::Enum { enum_name: b_enum, field_name: b_field, .. }) => {
                 a_enum == b_enum && a_field == b_field
+            },
+            // Colors compare by all components
+            (Value::Color { r: r1, g: g1, b: b1, t: t1 },
+             Value::Color { r: r2, g: g2, b: b2, t: t2 }) => {
+                r1 == r2 && g1 == g2 && b1 == b2 && t1 == t2
             },
             _ => false,
         }
@@ -177,6 +189,16 @@ impl Value {
             Value::Array(arr) => Ok(arr),
             _ => Err(RuntimeError::TypeError(format!(
                 "Expected array, got {:?}",
+                self
+            ))),
+        }
+    }
+
+    pub fn as_color(&self) -> Result<(u8, u8, u8, u8), RuntimeError> {
+        match self {
+            Value::Color { r, g, b, t } => Ok((*r, *g, *b, *t)),
+            _ => Err(RuntimeError::TypeError(format!(
+                "Expected color, got {:?}",
                 self
             ))),
         }

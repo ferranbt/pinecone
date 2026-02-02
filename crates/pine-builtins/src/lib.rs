@@ -1,6 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_interpreter::{Interpreter, RuntimeError, Value};
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -9,6 +8,12 @@ pub use pine_interpreter::Bar;
 pub use pine_interpreter::BuiltinFn;
 pub use pine_interpreter::EvaluatedArg;
 
+// Namespace modules
+mod array;
+mod color;
+mod math;
+mod str;
+
 /// Register all builtin namespaces as objects and global functions
 /// Returns namespace objects to be loaded as variables (e.g., "array", "str", "ta")
 /// and global builtin functions (e.g., "na")
@@ -16,24 +21,22 @@ pub use pine_interpreter::EvaluatedArg;
 pub fn register_namespace_objects() -> HashMap<String, Value> {
     let mut namespaces = HashMap::new();
 
-    // Create 'array' namespace object with builtin functions
-    let mut array_ns = HashMap::new();
-    array_ns.insert("new_float".to_string(), Value::BuiltinFunction(Rc::new(ArrayNewFloat::builtin_fn)));
-    array_ns.insert("clear".to_string(), Value::BuiltinFunction(Rc::new(ArrayClear::builtin_fn)));
-    array_ns.insert("push".to_string(), Value::BuiltinFunction(Rc::new(ArrayPush::builtin_fn)));
-    array_ns.insert("get".to_string(), Value::BuiltinFunction(Rc::new(ArrayGet::builtin_fn)));
-    array_ns.insert("size".to_string(), Value::BuiltinFunction(Rc::new(ArraySize::builtin_fn)));
-
-    namespaces.insert("array".to_string(), Value::Object {
-        type_name: "array".to_string(),
-        fields: Rc::new(RefCell::new(array_ns)),
-    });
+    // Register namespace objects
+    namespaces.insert("array".to_string(), array::register());
+    namespaces.insert("color".to_string(), color::register());
+    namespaces.insert("math".to_string(), math::register());
+    namespaces.insert("str".to_string(), str::register());
 
     // Register global builtin functions
     namespaces.insert("na".to_string(), Value::BuiltinFunction(Rc::new(Na::builtin_fn) as BuiltinFn));
+    namespaces.insert("bool".to_string(), Value::BuiltinFunction(Rc::new(Bool::builtin_fn) as BuiltinFn));
+    namespaces.insert("int".to_string(), Value::BuiltinFunction(Rc::new(Int::builtin_fn) as BuiltinFn));
+    namespaces.insert("float".to_string(), Value::BuiltinFunction(Rc::new(Float::builtin_fn) as BuiltinFn));
 
     namespaces
 }
+
+// Global utility functions
 
 /// na(value) - Returns true if the value is na, false otherwise
 #[derive(BuiltinFunction)]
@@ -48,79 +51,57 @@ impl Na {
     }
 }
 
+/// bool(x) - Converts value to bool
 #[derive(BuiltinFunction)]
-#[builtin(name = "array.new_float")]
-struct ArrayNewFloat {
-    size: f64,
-    initial_value: Value,
+#[builtin(name = "bool")]
+struct Bool {
+    x: Value,
 }
 
-impl ArrayNewFloat {
+impl Bool {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let size = self.size as usize;
-        let arr = vec![self.initial_value.clone(); size];
-        Ok(Value::Array(Rc::new(RefCell::new(arr))))
+        match &self.x {
+            Value::Bool(b) => Ok(Value::Bool(*b)),
+            Value::Number(n) => Ok(Value::Bool(*n != 0.0)),
+            Value::Na => Ok(Value::Bool(false)),
+            _ => Ok(Value::Bool(true)),
+        }
     }
 }
 
+/// int(x) - Converts value to int (truncates float)
 #[derive(BuiltinFunction)]
-#[builtin(name = "array.clear")]
-struct ArrayClear {
-    array: Value,
+#[builtin(name = "int")]
+struct Int {
+    x: Value,
 }
 
-impl ArrayClear {
+impl Int {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let arr = self.array.as_array()?;
-        arr.borrow_mut().clear();
-        Ok(Value::Na)
+        match &self.x {
+            Value::Number(n) => Ok(Value::Number(n.trunc())),
+            Value::Bool(b) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
+            Value::Na => Ok(Value::Na),
+            _ => Err(RuntimeError::TypeError(format!("Cannot convert {:?} to int", self.x))),
+        }
     }
 }
 
+/// float(x) - Converts value to float
 #[derive(BuiltinFunction)]
-#[builtin(name = "array.push")]
-struct ArrayPush {
-    array: Value,
-    value: Value,
+#[builtin(name = "float")]
+struct Float {
+    x: Value,
 }
 
-impl ArrayPush {
+impl Float {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let arr = self.array.as_array()?;
-        arr.borrow_mut().push(self.value.clone());
-        Ok(Value::Na)
-    }
-}
-
-#[derive(BuiltinFunction)]
-#[builtin(name = "array.get")]
-struct ArrayGet {
-    array: Value,
-    index: f64,
-}
-
-impl ArrayGet {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let arr = self.array.as_array()?;
-        let index = self.index as usize;
-        arr.borrow()
-            .get(index)
-            .cloned()
-            .ok_or(RuntimeError::IndexOutOfBounds(index))
-    }
-}
-
-#[derive(BuiltinFunction)]
-#[builtin(name = "array.size")]
-struct ArraySize {
-    array: Value,
-}
-
-impl ArraySize {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let arr = self.array.as_array()?;
-        let size = arr.borrow().len();
-        Ok(Value::Number(size as f64))
+        match &self.x {
+            Value::Number(n) => Ok(Value::Number(*n)),
+            Value::Bool(b) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
+            Value::Na => Ok(Value::Na),
+            _ => Err(RuntimeError::TypeError(format!("Cannot convert {:?} to float", self.x))),
+        }
     }
 }
 
@@ -128,72 +109,6 @@ impl ArraySize {
 mod tests {
     use super::*;
     use pine_interpreter::EvaluatedArg;
-
-    fn create_mock_interpreter() -> Interpreter {
-        Interpreter::new()
-    }
-
-    #[test]
-    fn test_array_new_float() {
-        let mut ctx = create_mock_interpreter();
-        let args = vec![
-            EvaluatedArg::Positional(Value::Number(3.0)),
-            EvaluatedArg::Positional(Value::Number(5.5)),
-        ];
-
-        let result = ArrayNewFloat::builtin_fn(&mut ctx, args).unwrap();
-
-        if let Value::Array(arr_ref) = result {
-            let arr = arr_ref.borrow();
-            assert_eq!(arr.len(), 3);
-            assert_eq!(arr[0], Value::Number(5.5));
-            assert_eq!(arr[1], Value::Number(5.5));
-            assert_eq!(arr[2], Value::Number(5.5));
-        } else {
-            panic!("Expected array");
-        }
-    }
-
-    #[test]
-    fn test_array_operations() {
-        let mut ctx = create_mock_interpreter();
-
-        // Create array
-        let create_args = vec![
-            EvaluatedArg::Positional(Value::Number(2.0)),
-            EvaluatedArg::Positional(Value::Number(10.0)),
-        ];
-        let array = ArrayNewFloat::builtin_fn(&mut ctx, create_args).unwrap();
-
-        // Clear array
-        let clear_args = vec![EvaluatedArg::Positional(array.clone())];
-        ArrayClear::builtin_fn(&mut ctx, clear_args).unwrap();
-
-        // Check size after clear
-        let size_args = vec![EvaluatedArg::Positional(array.clone())];
-        let size = ArraySize::builtin_fn(&mut ctx, size_args).unwrap();
-        assert_eq!(size, Value::Number(0.0));
-
-        // Push element
-        let push_args = vec![
-            EvaluatedArg::Positional(array.clone()),
-            EvaluatedArg::Positional(Value::Number(42.0)),
-        ];
-        ArrayPush::builtin_fn(&mut ctx, push_args).unwrap();
-
-        // Check size after push
-        let size_args = vec![EvaluatedArg::Positional(array.clone())];
-        let size = ArraySize::builtin_fn(&mut ctx, size_args).unwrap();
-        assert_eq!(size, Value::Number(1.0));
-
-        // Get element
-        let get_args = vec![
-            EvaluatedArg::Positional(array.clone()),
-            EvaluatedArg::Positional(Value::Number(0.0)),
-        ];
-        let value = ArrayGet::builtin_fn(&mut ctx, get_args).unwrap();
-        assert_eq!(value, Value::Number(42.0));
-    }
 
     #[test]
     fn test_na() {
@@ -218,5 +133,68 @@ mod tests {
         let args = vec![EvaluatedArg::Positional(Value::Bool(true))];
         let result = Na::builtin_fn(&mut ctx, args).unwrap();
         assert_eq!(result, Value::Bool(false));
+    }
+
+    #[test]
+    fn test_bool() {
+        let mut ctx = Interpreter::new();
+
+        // Test number to bool
+        let args = vec![EvaluatedArg::Positional(Value::Number(5.0))];
+        let result = Bool::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(true));
+
+        let args = vec![EvaluatedArg::Positional(Value::Number(0.0))];
+        let result = Bool::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(false));
+
+        // Test na to bool
+        let args = vec![EvaluatedArg::Positional(Value::Na)];
+        let result = Bool::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Bool(false));
+    }
+
+    #[test]
+    fn test_int() {
+        let mut ctx = Interpreter::new();
+
+        // Test float to int (truncate)
+        let args = vec![EvaluatedArg::Positional(Value::Number(5.7))];
+        let result = Int::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Number(5.0));
+
+        let args = vec![EvaluatedArg::Positional(Value::Number(-5.7))];
+        let result = Int::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Number(-5.0));
+
+        // Test bool to int
+        let args = vec![EvaluatedArg::Positional(Value::Bool(true))];
+        let result = Int::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Number(1.0));
+
+        // Test na to int
+        let args = vec![EvaluatedArg::Positional(Value::Na)];
+        let result = Int::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Na);
+    }
+
+    #[test]
+    fn test_float() {
+        let mut ctx = Interpreter::new();
+
+        // Test number to float
+        let args = vec![EvaluatedArg::Positional(Value::Number(5.0))];
+        let result = Float::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Number(5.0));
+
+        // Test bool to float
+        let args = vec![EvaluatedArg::Positional(Value::Bool(true))];
+        let result = Float::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Number(1.0));
+
+        // Test na to float
+        let args = vec![EvaluatedArg::Positional(Value::Na)];
+        let result = Float::builtin_fn(&mut ctx, args).unwrap();
+        assert_eq!(result, Value::Na);
     }
 }
