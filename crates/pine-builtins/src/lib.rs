@@ -144,7 +144,6 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
     // Register namespace objects
     namespaces.insert("array".to_string(), array::register());
     namespaces.insert("color".to_string(), color::register());
-    namespaces.insert("log".to_string(), log::register());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("str".to_string(), str::register());
 
