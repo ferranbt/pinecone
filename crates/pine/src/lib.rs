@@ -6,7 +6,7 @@ pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
 use pine_ast::Program;
-use pine_interpreter::{Bar, Interpreter, RuntimeError};
+use pine_interpreter::{Bar, Interpreter, RuntimeError, Value};
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
 
@@ -85,7 +85,14 @@ impl Script {
     /// This maintains interpreter state across multiple calls,
     /// allowing variables to persist between bars.
     pub fn execute(&mut self, bar: &Bar) -> Result<(), Error> {
-        self.interpreter.execute(&self.program, bar)?;
+        // Load bar data as variables in the interpreter context
+        self.interpreter.set_variable("open", Value::Number(bar.open));
+        self.interpreter.set_variable("high", Value::Number(bar.high));
+        self.interpreter.set_variable("low", Value::Number(bar.low));
+        self.interpreter.set_variable("close", Value::Number(bar.close));
+        self.interpreter.set_variable("volume", Value::Number(bar.volume));
+
+        self.interpreter.execute(&self.program)?;
         Ok(())
     }
 
