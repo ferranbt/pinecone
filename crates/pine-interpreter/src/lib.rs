@@ -63,6 +63,7 @@ pub enum Value {
     Bool(bool),
     Na,                             // PineScript's N/A value
     Array(Rc<RefCell<Vec<Value>>>), // Mutable shared array reference
+    Series(Rc<RefCell<Vec<Value>>>), // Time series - historical values stored with [0] = current
     Object {
         type_name: String, // The type name of this object (e.g., "InfoLabel")
         fields: Rc<RefCell<HashMap<String, Value>>>, // Dictionary/Object with string keys
@@ -98,6 +99,7 @@ impl std::fmt::Debug for Value {
             Value::Bool(b) => write!(f, "Bool({:?})", b),
             Value::Na => write!(f, "Na"),
             Value::Array(a) => write!(f, "Array({:?})", a),
+            Value::Series(s) => write!(f, "Series({:?})", s),
             Value::Object { type_name, fields } => write!(f, "Object({}:{:?})", type_name, fields),
             Value::Function { params, .. } => write!(f, "Function({} params)", params.len()),
             Value::BuiltinFunction(_) => write!(f, "BuiltinFunction"),
@@ -117,6 +119,7 @@ impl PartialEq for Value {
             (Value::Na, Value::Na) => true,
             // Arrays and Objects compare by reference (Rc pointer equality)
             (Value::Array(a), Value::Array(b)) => Rc::ptr_eq(a, b),
+            (Value::Series(a), Value::Series(b)) => Rc::ptr_eq(a, b),
             (Value::Object { fields: a, .. }, Value::Object { fields: b, .. }) => Rc::ptr_eq(a, b),
             // Functions never equal (can't compare closures or function pointers)
             (Value::Function { .. }, Value::Function { .. }) => false,
@@ -277,19 +280,7 @@ impl Interpreter {
     }
 
     /// Execute a program with a single bar
-    pub fn execute(&mut self, program: &Program, bar: &Bar) -> Result<(), RuntimeError> {
-        // Initialize builtin variables from bar
-        self.variables
-            .insert("open".to_string(), Value::Number(bar.open));
-        self.variables
-            .insert("high".to_string(), Value::Number(bar.high));
-        self.variables
-            .insert("low".to_string(), Value::Number(bar.low));
-        self.variables
-            .insert("close".to_string(), Value::Number(bar.close));
-        self.variables
-            .insert("volume".to_string(), Value::Number(bar.volume));
-
+    pub fn execute(&mut self, program: &Program) -> Result<(), RuntimeError> {
         for stmt in &program.statements {
             self.execute_stmt(stmt)?;
         }
@@ -577,7 +568,7 @@ impl Interpreter {
                             let mut library_interp = Interpreter::new();
 
                             // Execute the library program (without a bar context for simplicity)
-                            library_interp.execute(&library_program, &Bar::default())?;
+                            library_interp.execute(&library_program)?;
 
                             // Get the exports from the library
                             let library_exports = library_interp.exports();
@@ -760,17 +751,25 @@ impl Interpreter {
             }
 
             Expr::Index { expr, index } => {
-                let array_val = self.eval_expr(expr)?;
+                let val = self.eval_expr(expr)?;
                 let index_val = self.eval_expr(index)?.as_number()? as usize;
 
-                if let Value::Array(arr_ref) = array_val {
-                    let arr = arr_ref.borrow();
-                    arr.get(index_val)
-                        .cloned()
-                        .ok_or(RuntimeError::IndexOutOfBounds(index_val))
-                } else {
-                    Err(RuntimeError::TypeError(
-                        "Cannot index non-array value".to_string(),
+                match val {
+                    Value::Array(arr_ref) => {
+                        let arr = arr_ref.borrow();
+                        arr.get(index_val)
+                            .cloned()
+                            .ok_or(RuntimeError::IndexOutOfBounds(index_val))
+                    }
+                    Value::Series(series_ref) => {
+                        // For series, index 0 is current, 1 is previous, etc.
+                        let series = series_ref.borrow();
+                        series.get(index_val)
+                            .cloned()
+                            .ok_or(RuntimeError::IndexOutOfBounds(index_val))
+                    }
+                    ref v => Err(RuntimeError::TypeError(
+                        format!("Cannot index non-array/non-series value: {:?}", v),
                     ))
                 }
             }
@@ -1253,7 +1252,7 @@ mod tests {
         let mut interp = Interpreter::new();
         let program = parse_str("var x = 42")?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("x"), Some(&Value::Number(42.0)));
         Ok(())
     }
@@ -1269,7 +1268,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("a"), Some(&Value::Number(10.0)));
         assert_eq!(interp.get_variable("b"), Some(&Value::Number(5.0)));
         assert_eq!(interp.get_variable("result"), Some(&Value::Number(15.0)));
@@ -1287,7 +1286,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("x"), Some(&Value::Number(10.0)));
         assert_eq!(
             interp.get_variable("result"),
@@ -1307,7 +1306,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         // Sum of 1+2+3+4+5 = 15
         assert_eq!(interp.get_variable("sum"), Some(&Value::Number(15.0)));
         Ok(())
@@ -1321,7 +1320,7 @@ mod tests {
 
         // Test positional arguments only (uses default greeting)
         let program1 = parse_str(r#"var msg1 = greet("Alice")"#)?;
-        interp.execute(&program1, &Bar::default())?;
+        interp.execute(&program1)?;
         assert_eq!(
             interp.get_variable("msg1"),
             Some(&Value::String("Hello, Alice".to_string()))
@@ -1329,7 +1328,7 @@ mod tests {
 
         // Test positional argument with named parameter
         let program2 = parse_str(r#"var msg2 = greet("Bob", greeting="Hi")"#)?;
-        interp.execute(&program2, &Bar::default())?;
+        interp.execute(&program2)?;
         assert_eq!(
             interp.get_variable("msg2"),
             Some(&Value::String("Hi, Bob".to_string()))
@@ -1337,7 +1336,7 @@ mod tests {
 
         // Test both positional arguments
         let program3 = parse_str(r#"var msg3 = greet("Charlie", "Hey")"#)?;
-        interp.execute(&program3, &Bar::default())?;
+        interp.execute(&program3)?;
         assert_eq!(
             interp.get_variable("msg3"),
             Some(&Value::String("Hey, Charlie".to_string()))
@@ -1354,7 +1353,7 @@ mod tests {
 
         // This should fail: positional arg after named arg
         let program = parse_str(r#"var msg = greet(greeting="Hi", "Alice")"#)?;
-        let result = interp.execute(&program, &Bar::default());
+        let result = interp.execute(&program);
 
         assert!(result.is_err());
         assert!(result
@@ -1378,7 +1377,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(
             interp.get_variable("result"),
             Some(&Value::String("two".to_string()))
@@ -1396,7 +1395,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("result"), Some(&Value::Number(8.0)));
         Ok(())
     }
@@ -1412,7 +1411,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("result"), Some(&Value::Number(20.0)));
         Ok(())
     }
@@ -1428,7 +1427,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("i"), Some(&Value::Number(5.0)));
         Ok(())
     }
@@ -1446,7 +1445,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("i"), Some(&Value::Number(5.0)));
         Ok(())
     }
@@ -1466,7 +1465,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         // sum = 1 + 3 + 5 + 7 + 9 = 25
         assert_eq!(interp.get_variable("sum"), Some(&Value::Number(25.0)));
         assert_eq!(interp.get_variable("i"), Some(&Value::Number(10.0)));
@@ -1490,7 +1489,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         // sum = 1 + 3 + 5 + 7 + 9 = 25 (stops at i=11)
         assert_eq!(interp.get_variable("sum"), Some(&Value::Number(25.0)));
         assert_eq!(interp.get_variable("i"), Some(&Value::Number(11.0)));
@@ -1513,7 +1512,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         // sum = (0*0 + 0*1) + (1*0 + 1*1) + (2*0 + 2*1) = 0 + 1 + 2 = 3
         assert_eq!(interp.get_variable("sum"), Some(&Value::Number(3.0)));
         Ok(())
@@ -1523,7 +1522,7 @@ mod tests {
     fn test_break_outside_loop() -> eyre::Result<()> {
         let mut interp = Interpreter::new();
         let program = parse_str("break")?;
-        let result = interp.execute(&program, &Bar::default());
+        let result = interp.execute(&program);
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
@@ -1536,7 +1535,7 @@ mod tests {
     fn test_continue_outside_loop() -> eyre::Result<()> {
         let mut interp = Interpreter::new();
         let program = parse_str("continue")?;
-        let result = interp.execute(&program, &Bar::default());
+        let result = interp.execute(&program);
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
@@ -1561,7 +1560,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("x"), Some(&Value::Number(15.0)));
         assert_eq!(interp.get_variable("y"), Some(&Value::Number(17.0)));
         assert_eq!(interp.get_variable("z"), Some(&Value::Number(8.0)));
@@ -1581,7 +1580,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         // sum = 1 + 2 + 3 + 4 + 5 = 15
         assert_eq!(interp.get_variable("sum"), Some(&Value::Number(15.0)));
         Ok(())
@@ -1599,7 +1598,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         // sum = 0*10 + 1*20 + 2*30 = 0 + 20 + 60 = 80
         assert_eq!(interp.get_variable("sum"), Some(&Value::Number(80.0)));
         Ok(())
@@ -1619,7 +1618,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         // sum = 1 + 2 = 3 (stops at item=3)
         assert_eq!(interp.get_variable("sum"), Some(&Value::Number(3.0)));
         Ok(())
@@ -1639,7 +1638,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         // sum = 1 + 3 + 5 = 9 (skips even numbers)
         assert_eq!(interp.get_variable("sum"), Some(&Value::Number(9.0)));
         Ok(())
@@ -1668,7 +1667,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(
             interp.get_variable("myColor"),
             Some(&Value::String("#FF0000".to_string()))
@@ -1697,7 +1696,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("isLast"), Some(&Value::Bool(true)));
         assert_eq!(interp.get_variable("isRealtime"), Some(&Value::Bool(false)));
         Ok(())
@@ -1735,7 +1734,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("result"), Some(&Value::Number(6.0)));
         Ok(())
     }
@@ -1758,7 +1757,7 @@ mod tests {
             "#,
         )?;
 
-        let result = interp.execute(&program, &Bar::default());
+        let result = interp.execute(&program);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("has no member 'bar'"));
         Ok(())
@@ -1785,7 +1784,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("result"), Some(&Value::Number(1.0)));
 
         // Test else branch when no condition matches
@@ -1806,7 +1805,7 @@ mod tests {
             "#,
         )?;
 
-        interp2.execute(&program2, &Bar::default())?;
+        interp2.execute(&program2)?;
         assert_eq!(interp2.get_variable("result"), Some(&Value::Number(2.0)));
 
         // Test first condition matches (skips else if)
@@ -1827,7 +1826,7 @@ mod tests {
             "#,
         )?;
 
-        interp3.execute(&program3, &Bar::default())?;
+        interp3.execute(&program3)?;
         assert_eq!(interp3.get_variable("result"), Some(&Value::Number(-1.0)));
 
         Ok(())
@@ -1852,7 +1851,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("result"), Some(&Value::String("small".to_string())));
 
         // Test with different values
@@ -1871,7 +1870,7 @@ mod tests {
             "#,
         )?;
 
-        interp2.execute(&program2, &Bar::default())?;
+        interp2.execute(&program2)?;
         assert_eq!(interp2.get_variable("result"), Some(&Value::String("large".to_string())));
 
         Ok(())
@@ -1892,7 +1891,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("result"), Some(&Value::String("positive".to_string())));
 
         // Test else branch
@@ -1907,7 +1906,7 @@ mod tests {
             "#,
         )?;
 
-        interp2.execute(&program2, &Bar::default())?;
+        interp2.execute(&program2)?;
         assert_eq!(interp2.get_variable("result"), Some(&Value::String("non-positive".to_string())));
 
         Ok(())
@@ -1927,7 +1926,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
         assert_eq!(interp.get_variable("x"), Some(&Value::Number(10.0)));
 
         // Test if expression without else - should return na when condition is false
@@ -1941,7 +1940,7 @@ mod tests {
             "#,
         )?;
 
-        interp2.execute(&program2, &Bar::default())?;
+        interp2.execute(&program2)?;
         assert_eq!(interp2.get_variable("x"), Some(&Value::Na));
 
         Ok(())
@@ -1961,7 +1960,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         // Check that point is an object
         let point = interp.get_variable("point").unwrap();
@@ -1991,7 +1990,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         let point = interp.get_variable("point").unwrap();
         if let Value::Object { fields, .. } = point {
@@ -2019,7 +2018,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         let bar = interp.get_variable("bar").unwrap();
         if let Value::Object { fields, .. } = bar {
@@ -2049,7 +2048,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         assert_eq!(interp.get_variable("xValue"), Some(&Value::Number(100.0)));
         assert_eq!(interp.get_variable("yValue"), Some(&Value::Number(50.5)));
@@ -2075,7 +2074,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         assert_eq!(interp.get_variable("newX"), Some(&Value::Number(200.0)));
         assert_eq!(interp.get_variable("newY"), Some(&Value::Number(75.25)));
@@ -2103,7 +2102,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         // pivot1.x should be 1000 (unchanged by pivot2 modification)
         assert_eq!(interp.get_variable("x1"), Some(&Value::Number(1000.0)));
@@ -2135,7 +2134,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         assert_eq!(interp.get_variable("finalX"), Some(&Value::Number(100.0)));
         assert_eq!(interp.get_variable("finalY"), Some(&Value::Number(200.0)));
@@ -2160,7 +2159,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         let x = interp.get_variable("x").unwrap();
         let y = interp.get_variable("y").unwrap();
@@ -2195,7 +2194,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         assert_eq!(interp.get_variable("same"), Some(&Value::Bool(true)));
         assert_eq!(interp.get_variable("different"), Some(&Value::Bool(false)));
@@ -2217,7 +2216,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         // Check that Point type was exported
         let exports = interp.exports();
@@ -2266,7 +2265,7 @@ mod tests {
             "#,
         )?;
 
-        interp.execute(&program, &Bar::default())?;
+        interp.execute(&program)?;
 
         // Check that we can access the imported Point type
         assert!(interp.get_variable("p").is_some());
@@ -2285,9 +2284,104 @@ mod tests {
         )?;
 
         // Should fail because no library loader is configured
-        let result = interp.execute(&program, &Bar::default());
+        let result = interp.execute(&program);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), RuntimeError::LibraryError(_)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_series_indexing() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Create a series representing close prices
+        // Index 0 = current, 1 = previous, 2 = 2 bars ago
+        let close_series = Value::Series(Rc::new(RefCell::new(vec![
+            Value::Number(100.5), // close[0] - current
+            Value::Number(100.2), // close[1] - 1 bar ago
+            Value::Number(99.8),  // close[2] - 2 bars ago
+            Value::Number(99.5),  // close[3] - 3 bars ago
+        ])));
+
+        interp.set_variable("close", close_series);
+
+        let program = parse_str(
+            r#"
+            current = close[0]
+            prev1 = close[1]
+            prev2 = close[2]
+            prev3 = close[3]
+            "#,
+        )?;
+
+        interp.execute(&program)?;
+
+        assert_eq!(interp.get_variable("current"), Some(&Value::Number(100.5)));
+        assert_eq!(interp.get_variable("prev1"), Some(&Value::Number(100.2)));
+        assert_eq!(interp.get_variable("prev2"), Some(&Value::Number(99.8)));
+        assert_eq!(interp.get_variable("prev3"), Some(&Value::Number(99.5)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_series_out_of_bounds() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Create a series with only 3 values
+        let series = Value::Series(Rc::new(RefCell::new(vec![
+            Value::Number(100.0),
+            Value::Number(99.0),
+            Value::Number(98.0),
+        ])));
+
+        interp.set_variable("price", series);
+
+        let program = parse_str(
+            r#"
+            x = price[10]
+            "#,
+        )?;
+
+        // Should fail with index out of bounds
+        let result = interp.execute(&program);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RuntimeError::IndexOutOfBounds(_)));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_series_in_expression() -> eyre::Result<()> {
+        let mut interp = Interpreter::new();
+
+        // Create close price series
+        let close_series = Value::Series(Rc::new(RefCell::new(vec![
+            Value::Number(105.0), // current
+            Value::Number(100.0), // 1 bar ago
+            Value::Number(95.0),  // 2 bars ago
+        ])));
+
+        interp.set_variable("close", close_series);
+
+        let program = parse_str(
+            r#"
+            // Calculate simple moving average of last 3 bars
+            sma3 = (close[0] + close[1] + close[2]) / 3
+
+            // Calculate price change from previous bar
+            change = close[0] - close[1]
+            "#,
+        )?;
+
+        interp.execute(&program)?;
+
+        // SMA = (105 + 100 + 95) / 3 = 100
+        assert_eq!(interp.get_variable("sma3"), Some(&Value::Number(100.0)));
+
+        // Change = 105 - 100 = 5
+        assert_eq!(interp.get_variable("change"), Some(&Value::Number(5.0)));
 
         Ok(())
     }
