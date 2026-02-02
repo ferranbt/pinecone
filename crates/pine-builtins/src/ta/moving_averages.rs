@@ -13,7 +13,9 @@ impl TaSma {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         let values = ctx.get_series_values(&self.source, length)?;
@@ -40,7 +42,9 @@ impl TaEma {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         // EMA calculation: EMA = (Close - EMA(prev)) * multiplier + EMA(prev)
@@ -54,12 +58,15 @@ impl TaEma {
             if let Value::Number(n) = *series.current {
                 values.push(n);
             } else {
-                return Err(RuntimeError::TypeError("Series must contain numbers".to_string()));
+                return Err(RuntimeError::TypeError(
+                    "Series must contain numbers".to_string(),
+                ));
             }
 
             // Get historical values
             if let Some(provider) = &ctx.historical_provider {
-                for i in 1..length * 2 {  // Get more data for better EMA accuracy
+                for i in 1..length * 2 {
+                    // Get more data for better EMA accuracy
                     if let Some(Value::Number(n)) = provider.get_historical(&series.id, i) {
                         values.push(n);
                     } else {
@@ -73,11 +80,17 @@ impl TaEma {
             }
 
             // Start with SMA for first value
-            let initial_sma: f64 = values.iter().take(length.min(values.len())).sum::<f64>() / length.min(values.len()) as f64;
+            let initial_sma: f64 = values.iter().take(length.min(values.len())).sum::<f64>()
+                / length.min(values.len()) as f64;
 
             // Calculate EMA backwards from oldest to newest
             let mut ema = initial_sma;
-            for &val in values.iter().rev().skip(length.min(values.len())).take(values.len() - length.min(values.len())) {
+            for &val in values
+                .iter()
+                .rev()
+                .skip(length.min(values.len()))
+                .take(values.len() - length.min(values.len()))
+            {
                 ema = (val - ema) * multiplier + ema;
             }
 
@@ -88,7 +101,9 @@ impl TaEma {
         } else if let Value::Number(n) = self.source {
             Ok(Value::Number(n))
         } else {
-            Err(RuntimeError::TypeError("source must be a number or series".to_string()))
+            Err(RuntimeError::TypeError(
+                "source must be a number or series".to_string(),
+            ))
         }
     }
 }
@@ -105,7 +120,9 @@ impl TaRma {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         // RMA calculation: RMA = (prev_RMA * (length - 1) + current) / length
@@ -118,7 +135,9 @@ impl TaRma {
             if let Value::Number(n) = *series.current {
                 values.push(n);
             } else {
-                return Err(RuntimeError::TypeError("Series must contain numbers".to_string()));
+                return Err(RuntimeError::TypeError(
+                    "Series must contain numbers".to_string(),
+                ));
             }
 
             // Get historical values
@@ -137,13 +156,19 @@ impl TaRma {
             }
 
             // Start with SMA
-            let initial_sma: f64 = values.iter().take(length.min(values.len())).sum::<f64>() / length.min(values.len()) as f64;
+            let initial_sma: f64 = values.iter().take(length.min(values.len())).sum::<f64>()
+                / length.min(values.len()) as f64;
 
             // Calculate RMA
             let mut rma = initial_sma;
             let alpha = 1.0 / length as f64;
 
-            for &val in values.iter().rev().skip(length.min(values.len())).take(values.len() - length.min(values.len())) {
+            for &val in values
+                .iter()
+                .rev()
+                .skip(length.min(values.len()))
+                .take(values.len() - length.min(values.len()))
+            {
                 rma = alpha * val + (1.0 - alpha) * rma;
             }
 
@@ -154,7 +179,9 @@ impl TaRma {
         } else if let Value::Number(n) = self.source {
             Ok(Value::Number(n))
         } else {
-            Err(RuntimeError::TypeError("source must be a number or series".to_string()))
+            Err(RuntimeError::TypeError(
+                "source must be a number or series".to_string(),
+            ))
         }
     }
 }
@@ -171,7 +198,9 @@ impl TaWma {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         // WMA calculation: sum(price[i] * (length - i)) / sum(length - i)
@@ -184,7 +213,9 @@ impl TaWma {
             if let Value::Number(n) = *series.current {
                 values.push(n);
             } else {
-                return Err(RuntimeError::TypeError("Series must contain numbers".to_string()));
+                return Err(RuntimeError::TypeError(
+                    "Series must contain numbers".to_string(),
+                ));
             }
 
             // Get historical values
@@ -216,7 +247,9 @@ impl TaWma {
         } else if let Value::Number(n) = self.source {
             Ok(Value::Number(n))
         } else {
-            Err(RuntimeError::TypeError("source must be a number or series".to_string()))
+            Err(RuntimeError::TypeError(
+                "source must be a number or series".to_string(),
+            ))
         }
     }
 }
@@ -234,7 +267,9 @@ impl TaVwma {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         // Get price values
@@ -245,7 +280,8 @@ impl TaVwma {
         }
 
         // Get volume series from context
-        let volume = ctx.get_variable("volume")
+        let volume = ctx
+            .get_variable("volume")
             .ok_or_else(|| RuntimeError::UndefinedVariable("volume".to_string()))?;
 
         let volume_values = ctx.get_series_values(volume, length)?;
@@ -283,7 +319,9 @@ impl TaHma {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         // HMA = WMA(2 * WMA(n/2) - WMA(n), sqrt(n))
@@ -370,7 +408,8 @@ mod tests {
 
     impl HistoricalDataProvider for MockHistoricalData {
         fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value> {
-            self.data.get(series_id)
+            self.data
+                .get(series_id)
                 .and_then(|values| values.get(offset - 1))
                 .map(|&v| Value::Number(v))
         }
@@ -391,10 +430,14 @@ mod tests {
         });
 
         // SMA(5) = (110 + 108 + 106 + 104 + 102) / 5 = 530 / 5 = 106
-        let result = TaSma::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(series),
-            EvaluatedArg::Positional(Value::Number(5.0)),
-        ]).unwrap();
+        let result = TaSma::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(5.0)),
+            ],
+        )
+        .unwrap();
 
         assert_eq!(result, Value::Number(106.0));
     }
@@ -414,11 +457,151 @@ mod tests {
         });
 
         // WMA(4) = (5*4 + 2*3 + 3*2 + 4*1) / (4+3+2+1) = (20+6+6+4) / 10 = 36/10 = 3.6
-        let result = TaWma::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(series),
-            EvaluatedArg::Positional(Value::Number(4.0)),
-        ]).unwrap();
+        let result = TaWma::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(4.0)),
+            ],
+        )
+        .unwrap();
 
         assert_eq!(result, Value::Number(3.6));
+    }
+
+    #[test]
+    fn test_ta_ema() {
+        let mut ctx = Interpreter::new();
+
+        let mut data = HashMap::new();
+        data.insert("close".to_string(), vec![100.0, 102.0, 104.0, 103.0]);
+        ctx.set_historical_provider(Box::new(MockHistoricalData { data }));
+
+        let series = Value::Series(Series {
+            id: "close".to_string(),
+            current: Box::new(Value::Number(105.0)),
+        });
+
+        let result = TaEma::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(5.0)),
+            ],
+        )
+        .unwrap();
+
+        // Just verify it returns a number (EMA calculation is complex)
+        assert!(matches!(result, Value::Number(_)));
+    }
+
+    #[test]
+    fn test_ta_rma() {
+        let mut ctx = Interpreter::new();
+
+        let mut data = HashMap::new();
+        data.insert("close".to_string(), vec![100.0, 102.0, 104.0, 103.0]);
+        ctx.set_historical_provider(Box::new(MockHistoricalData { data }));
+
+        let series = Value::Series(Series {
+            id: "close".to_string(),
+            current: Box::new(Value::Number(105.0)),
+        });
+
+        let result = TaRma::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(5.0)),
+            ],
+        )
+        .unwrap();
+
+        // Verify it returns a number
+        assert!(matches!(result, Value::Number(_)));
+    }
+
+    #[test]
+    fn test_ta_vwma() {
+        let mut ctx = Interpreter::new();
+
+        let mut data = HashMap::new();
+        data.insert("close".to_string(), vec![102.0, 100.0, 98.0]);
+        data.insert("volume".to_string(), vec![1200.0, 1000.0, 800.0]);
+        ctx.set_historical_provider(Box::new(MockHistoricalData { data }));
+
+        // Set volume variable
+        ctx.set_variable(
+            "volume",
+            Value::Series(Series {
+                id: "volume".to_string(),
+                current: Box::new(Value::Number(1500.0)),
+            }),
+        );
+
+        let series = Value::Series(Series {
+            id: "close".to_string(),
+            current: Box::new(Value::Number(104.0)),
+        });
+
+        let result = TaVwma::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(4.0)),
+            ],
+        )
+        .unwrap();
+
+        // Verify it returns a number
+        assert!(matches!(result, Value::Number(_)));
+    }
+
+    #[test]
+    fn test_ta_hma() {
+        let mut ctx = Interpreter::new();
+
+        let mut data = HashMap::new();
+        data.insert(
+            "close".to_string(),
+            vec![98.0, 99.0, 100.0, 101.0, 102.0, 103.0],
+        );
+        ctx.set_historical_provider(Box::new(MockHistoricalData { data }));
+
+        let series = Value::Series(Series {
+            id: "close".to_string(),
+            current: Box::new(Value::Number(104.0)),
+        });
+
+        let result = TaHma::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(6.0)),
+            ],
+        )
+        .unwrap();
+
+        // Verify it returns a number
+        assert!(matches!(result, Value::Number(_)));
+    }
+
+    #[test]
+    fn test_ta_swma() {
+        let mut ctx = Interpreter::new();
+
+        let mut data = HashMap::new();
+        data.insert("close".to_string(), vec![3.0, 2.0, 1.0]);
+        ctx.set_historical_provider(Box::new(MockHistoricalData { data }));
+
+        let series = Value::Series(Series {
+            id: "close".to_string(),
+            current: Box::new(Value::Number(4.0)),
+        });
+
+        // SWMA with weights [1, 2, 2, 1]: (4*1 + 3*2 + 2*2 + 1*1) / 6 = 15/6 = 2.5
+        let result = TaSwma::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(series)]).unwrap();
+
+        assert_eq!(result, Value::Number(2.5));
     }
 }

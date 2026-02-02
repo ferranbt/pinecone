@@ -13,11 +13,14 @@ pub struct TaTr {
 impl TaTr {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         // Get high, low, close from context
-        let high = ctx.get_variable("high")
+        let high = ctx
+            .get_variable("high")
             .ok_or_else(|| RuntimeError::UndefinedVariable("high".to_string()))?;
-        let low = ctx.get_variable("low")
+        let low = ctx
+            .get_variable("low")
             .ok_or_else(|| RuntimeError::UndefinedVariable("low".to_string()))?;
-        let close = ctx.get_variable("close")
+        let close = ctx
+            .get_variable("close")
             .ok_or_else(|| RuntimeError::UndefinedVariable("close".to_string()))?;
 
         let high_val = if let Value::Series(s) = high {
@@ -29,7 +32,9 @@ impl TaTr {
         } else if let Value::Number(n) = high {
             *n
         } else {
-            return Err(RuntimeError::TypeError("high must be a number or series".to_string()));
+            return Err(RuntimeError::TypeError(
+                "high must be a number or series".to_string(),
+            ));
         };
 
         let low_val = if let Value::Series(s) = low {
@@ -41,7 +46,9 @@ impl TaTr {
         } else if let Value::Number(n) = low {
             *n
         } else {
-            return Err(RuntimeError::TypeError("low must be a number or series".to_string()));
+            return Err(RuntimeError::TypeError(
+                "low must be a number or series".to_string(),
+            ));
         };
 
         // Get previous close
@@ -89,15 +96,20 @@ impl TaAtr {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         // Get high, low, close series from context
-        let high = ctx.get_variable("high")
+        let high = ctx
+            .get_variable("high")
             .ok_or_else(|| RuntimeError::UndefinedVariable("high".to_string()))?;
-        let low = ctx.get_variable("low")
+        let low = ctx
+            .get_variable("low")
             .ok_or_else(|| RuntimeError::UndefinedVariable("low".to_string()))?;
-        let close = ctx.get_variable("close")
+        let close = ctx
+            .get_variable("close")
             .ok_or_else(|| RuntimeError::UndefinedVariable("close".to_string()))?;
 
         // We need to calculate TR for each bar and then RMA of those TRs
@@ -106,23 +118,35 @@ impl TaAtr {
         // Calculate current TR
         let current_tr = {
             let high_val = if let Value::Series(s) = high {
-                if let Value::Number(n) = *s.current { n } else {
-                    return Err(RuntimeError::TypeError("high must contain numbers".to_string()));
+                if let Value::Number(n) = *s.current {
+                    n
+                } else {
+                    return Err(RuntimeError::TypeError(
+                        "high must contain numbers".to_string(),
+                    ));
                 }
             } else if let Value::Number(n) = high {
                 *n
             } else {
-                return Err(RuntimeError::TypeError("high must be a number or series".to_string()));
+                return Err(RuntimeError::TypeError(
+                    "high must be a number or series".to_string(),
+                ));
             };
 
             let low_val = if let Value::Series(s) = low {
-                if let Value::Number(n) = *s.current { n } else {
-                    return Err(RuntimeError::TypeError("low must contain numbers".to_string()));
+                if let Value::Number(n) = *s.current {
+                    n
+                } else {
+                    return Err(RuntimeError::TypeError(
+                        "low must contain numbers".to_string(),
+                    ));
                 }
             } else if let Value::Number(n) = low {
                 *n
             } else {
-                return Err(RuntimeError::TypeError("low must be a number or series".to_string()));
+                return Err(RuntimeError::TypeError(
+                    "low must be a number or series".to_string(),
+                ));
             };
 
             let prev_close = if let Value::Series(s) = close {
@@ -152,7 +176,9 @@ impl TaAtr {
         tr_values.push(current_tr);
 
         // Get historical TR values
-        if let (Value::Series(high_s), Value::Series(low_s), Value::Series(close_s)) = (high, low, close) {
+        if let (Value::Series(high_s), Value::Series(low_s), Value::Series(close_s)) =
+            (high, low, close)
+        {
             if let Some(provider) = &ctx.historical_provider {
                 for i in 1..length * 2 {
                     let h = if let Some(Value::Number(n)) = provider.get_historical(&high_s.id, i) {
@@ -167,7 +193,9 @@ impl TaAtr {
                         break;
                     };
 
-                    let pc = if let Some(Value::Number(n)) = provider.get_historical(&close_s.id, i + 1) {
+                    let pc = if let Some(Value::Number(n)) =
+                        provider.get_historical(&close_s.id, i + 1)
+                    {
                         Some(n)
                     } else {
                         None
@@ -192,11 +220,20 @@ impl TaAtr {
         }
 
         // Calculate RMA of TR values
-        let initial_sma: f64 = tr_values.iter().take(length.min(tr_values.len())).sum::<f64>() / length.min(tr_values.len()) as f64;
+        let initial_sma: f64 = tr_values
+            .iter()
+            .take(length.min(tr_values.len()))
+            .sum::<f64>()
+            / length.min(tr_values.len()) as f64;
         let mut rma = initial_sma;
         let alpha = 1.0 / length as f64;
 
-        for &tr in tr_values.iter().rev().skip(length.min(tr_values.len())).take(tr_values.len() - length.min(tr_values.len())) {
+        for &tr in tr_values
+            .iter()
+            .rev()
+            .skip(length.min(tr_values.len()))
+            .take(tr_values.len() - length.min(tr_values.len()))
+        {
             rma = alpha * tr + (1.0 - alpha) * rma;
         }
 

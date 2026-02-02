@@ -18,7 +18,9 @@ impl TaChange {
             let current = if let Value::Number(n) = *series.current {
                 n
             } else {
-                return Err(RuntimeError::TypeError("Series must contain numbers".to_string()));
+                return Err(RuntimeError::TypeError(
+                    "Series must contain numbers".to_string(),
+                ));
             };
 
             if length == 0 {
@@ -38,7 +40,9 @@ impl TaChange {
             // Single number has no change
             Ok(Value::Number(0.0))
         } else {
-            Err(RuntimeError::TypeError("source must be a number or series".to_string()))
+            Err(RuntimeError::TypeError(
+                "source must be a number or series".to_string(),
+            ))
         }
     }
 }
@@ -55,7 +59,9 @@ impl TaHighest {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         let values = ctx.get_series_values(&self.source, length)?;
@@ -81,7 +87,9 @@ impl TaLowest {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         let values = ctx.get_series_values(&self.source, length)?;
@@ -113,8 +121,8 @@ impl TaCross {
         }
 
         // Cross happens when (prev1 < prev2 && curr1 > curr2) || (prev1 > prev2 && curr1 < curr2)
-        let crossed = (vals1[1] < vals2[1] && vals1[0] > vals2[0]) ||
-                     (vals1[1] > vals2[1] && vals1[0] < vals2[0]);
+        let crossed = (vals1[1] < vals2[1] && vals1[0] > vals2[0])
+            || (vals1[1] > vals2[1] && vals1[0] < vals2[0]);
 
         Ok(Value::Bool(crossed))
     }
@@ -246,7 +254,9 @@ impl TaHighestbars {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         let values = ctx.get_series_values(&self.source, length)?;
@@ -283,7 +293,9 @@ impl TaLowestbars {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError("length must be greater than 0".to_string()));
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
         }
 
         let values = ctx.get_series_values(&self.source, length)?;
@@ -320,7 +332,8 @@ mod tests {
 
     impl HistoricalDataProvider for MockHistoricalData {
         fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value> {
-            self.data.get(series_id)
+            self.data
+                .get(series_id)
                 .and_then(|values| values.get(offset - 1))
                 .map(|&v| Value::Number(v))
         }
@@ -340,17 +353,25 @@ mod tests {
         });
 
         // change(close, 1) = 105 - 100 = 5
-        let result = TaChange::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(series.clone()),
-            EvaluatedArg::Positional(Value::Number(1.0)),
-        ]).unwrap();
+        let result = TaChange::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series.clone()),
+                EvaluatedArg::Positional(Value::Number(1.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(5.0));
 
         // change(close, 2) = 105 - 95 = 10
-        let result = TaChange::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(series),
-            EvaluatedArg::Positional(Value::Number(2.0)),
-        ]).unwrap();
+        let result = TaChange::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(2.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(10.0));
     }
 
@@ -368,17 +389,25 @@ mod tests {
         });
 
         // highest over 5 bars: max(103, 102, 98, 105, 100) = 105
-        let result = TaHighest::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(series.clone()),
-            EvaluatedArg::Positional(Value::Number(5.0)),
-        ]).unwrap();
+        let result = TaHighest::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series.clone()),
+                EvaluatedArg::Positional(Value::Number(5.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(105.0));
 
         // lowest over 5 bars: min(103, 102, 98, 105, 100) = 98
-        let result = TaLowest::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(series),
-            EvaluatedArg::Positional(Value::Number(5.0)),
-        ]).unwrap();
+        let result = TaLowest::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(5.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(98.0));
     }
 
@@ -402,10 +431,14 @@ mod tests {
         });
 
         // fast crossed slow: prev fast(95) < prev slow(105), curr fast(110) > curr slow(100)
-        let result = TaCross::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(fast),
-            EvaluatedArg::Positional(slow),
-        ]).unwrap();
+        let result = TaCross::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(fast),
+                EvaluatedArg::Positional(slow),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Bool(true));
     }
 
@@ -429,10 +462,14 @@ mod tests {
         });
 
         // Crossover: prev fast(95) <= prev slow(100), curr fast(105) > curr slow(100)
-        let result = TaCrossover::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(fast),
-            EvaluatedArg::Positional(slow),
-        ]).unwrap();
+        let result = TaCrossover::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(fast),
+                EvaluatedArg::Positional(slow),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Bool(true));
     }
 
@@ -456,10 +493,14 @@ mod tests {
         });
 
         // Crossunder: prev fast(105) >= prev slow(100), curr fast(95) < curr slow(100)
-        let result = TaCrossunder::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(fast),
-            EvaluatedArg::Positional(slow),
-        ]).unwrap();
+        let result = TaCrossunder::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(fast),
+                EvaluatedArg::Positional(slow),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Bool(true));
     }
 
@@ -477,10 +518,14 @@ mod tests {
         });
 
         // rising(3): 95 > 92 > 90 > 85 = true
-        let result = TaRising::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(series),
-            EvaluatedArg::Positional(Value::Number(3.0)),
-        ]).unwrap();
+        let result = TaRising::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(3.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Bool(true));
     }
 
@@ -498,10 +543,14 @@ mod tests {
         });
 
         // falling(3): 90 < 92 < 95 < 98 = true
-        let result = TaFalling::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(series),
-            EvaluatedArg::Positional(Value::Number(3.0)),
-        ]).unwrap();
+        let result = TaFalling::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(3.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Bool(true));
     }
 
@@ -519,10 +568,14 @@ mod tests {
         });
 
         // Values: [103, 102, 110, 105, 100] - highest is 110 at index 2 (2 bars ago)
-        let result = TaHighestbars::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(series),
-            EvaluatedArg::Positional(Value::Number(5.0)),
-        ]).unwrap();
+        let result = TaHighestbars::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(5.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(-2.0));
     }
 
@@ -540,10 +593,14 @@ mod tests {
         });
 
         // Values: [103, 102, 95, 105, 100] - lowest is 95 at index 2 (2 bars ago)
-        let result = TaLowestbars::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(series),
-            EvaluatedArg::Positional(Value::Number(5.0)),
-        ]).unwrap();
+        let result = TaLowestbars::builtin_fn(
+            &mut ctx,
+            vec![
+                EvaluatedArg::Positional(series),
+                EvaluatedArg::Positional(Value::Number(5.0)),
+            ],
+        )
+        .unwrap();
         assert_eq!(result, Value::Number(-2.0));
     }
 }
