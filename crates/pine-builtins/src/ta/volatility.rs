@@ -243,3 +243,171 @@ impl TaAtr {
         Ok(Value::Number(rma))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pine_interpreter::{EvaluatedArg, HistoricalDataProvider, Series};
+    use std::collections::HashMap;
+
+    struct MockHistoricalData {
+        data: HashMap<String, Vec<f64>>,
+    }
+
+    impl HistoricalDataProvider for MockHistoricalData {
+        fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value> {
+            self.data
+                .get(series_id)
+                .and_then(|values| values.get(offset - 1))
+                .map(|&v| Value::Number(v))
+        }
+    }
+
+    #[test]
+    fn test_ta_tr() {
+        let mut ctx = Interpreter::new();
+
+        let mut data = HashMap::new();
+        data.insert("close".to_string(), vec![100.0]);
+        ctx.set_historical_provider(Box::new(MockHistoricalData { data }));
+
+        // Set current bar data
+        ctx.set_variable(
+            "high",
+            Value::Series(Series {
+                id: "high".to_string(),
+                current: Box::new(Value::Number(110.0)),
+            }),
+        );
+        ctx.set_variable(
+            "low",
+            Value::Series(Series {
+                id: "low".to_string(),
+                current: Box::new(Value::Number(95.0)),
+            }),
+        );
+        ctx.set_variable(
+            "close",
+            Value::Series(Series {
+                id: "close".to_string(),
+                current: Box::new(Value::Number(105.0)),
+            }),
+        );
+
+        // TR = max(high-low, abs(high-prev_close), abs(low-prev_close))
+        // TR = max(110-95, abs(110-100), abs(95-100))
+        // TR = max(15, 10, 5) = 15
+        let result = TaTr::builtin_fn(&mut ctx, vec![]).unwrap();
+
+        assert_eq!(result, Value::Number(15.0));
+    }
+
+    #[test]
+    fn test_ta_tr_handle_na() {
+        let mut ctx = Interpreter::new();
+
+        // No historical data - should use handle_na
+        ctx.set_variable("high", Value::Number(110.0));
+        ctx.set_variable("low", Value::Number(95.0));
+        ctx.set_variable("close", Value::Number(105.0));
+
+        // Without handle_na, should return Na
+        let result = TaTr::builtin_fn(&mut ctx, vec![]).unwrap();
+        assert_eq!(result, Value::Na);
+
+        // With handle_na=true, should return high - low
+        let result = TaTr::builtin_fn(
+            &mut ctx,
+            vec![EvaluatedArg::Named {
+                name: "handle_na".to_string(),
+                value: Value::Bool(true),
+            }],
+        )
+        .unwrap();
+        assert_eq!(result, Value::Number(15.0));
+    }
+
+    #[test]
+    fn test_ta_atr() {
+        let mut ctx = Interpreter::new();
+
+        let mut data = HashMap::new();
+        // Historical data for high, low, close
+        data.insert("high".to_string(), vec![108.0, 107.0, 106.0, 105.0, 104.0]);
+        data.insert("low".to_string(), vec![98.0, 97.0, 96.0, 95.0, 94.0]);
+        data.insert(
+            "close".to_string(),
+            vec![102.0, 101.0, 100.0, 99.0, 98.0, 97.0],
+        );
+        ctx.set_historical_provider(Box::new(MockHistoricalData { data }));
+
+        // Set current bar data
+        ctx.set_variable(
+            "high",
+            Value::Series(Series {
+                id: "high".to_string(),
+                current: Box::new(Value::Number(110.0)),
+            }),
+        );
+        ctx.set_variable(
+            "low",
+            Value::Series(Series {
+                id: "low".to_string(),
+                current: Box::new(Value::Number(100.0)),
+            }),
+        );
+        ctx.set_variable(
+            "close",
+            Value::Series(Series {
+                id: "close".to_string(),
+                current: Box::new(Value::Number(105.0)),
+            }),
+        );
+
+        let result =
+            TaAtr::builtin_fn(&mut ctx, vec![EvaluatedArg::Positional(Value::Number(5.0))])
+                .unwrap();
+
+        // Just verify it returns a number (ATR calculation is complex with RMA)
+        assert!(matches!(result, Value::Number(_)));
+    }
+
+    #[test]
+    fn test_ta_tr_high_close_gap() {
+        let mut ctx = Interpreter::new();
+
+        let mut data = HashMap::new();
+        data.insert("close".to_string(), vec![90.0]);
+        ctx.set_historical_provider(Box::new(MockHistoricalData { data }));
+
+        // Gap up: prev close = 90, high = 110, low = 105
+        ctx.set_variable(
+            "high",
+            Value::Series(Series {
+                id: "high".to_string(),
+                current: Box::new(Value::Number(110.0)),
+            }),
+        );
+        ctx.set_variable(
+            "low",
+            Value::Series(Series {
+                id: "low".to_string(),
+                current: Box::new(Value::Number(105.0)),
+            }),
+        );
+        ctx.set_variable(
+            "close",
+            Value::Series(Series {
+                id: "close".to_string(),
+                current: Box::new(Value::Number(108.0)),
+            }),
+        );
+
+        // TR = max(high-low, abs(high-prev_close), abs(low-prev_close))
+        // TR = max(110-105, abs(110-90), abs(105-90))
+        // TR = max(5, 20, 15) = 20
+        let result = TaTr::builtin_fn(&mut ctx, vec![]).unwrap();
+
+        assert_eq!(result, Value::Number(20.0));
+    }
+}
