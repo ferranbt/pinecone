@@ -1,4 +1,4 @@
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::Value;
 use std::cell::RefCell;
 use std::rc::Rc;
 

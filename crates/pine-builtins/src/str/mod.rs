@@ -203,6 +203,7 @@ impl StrToString {
             Value::Na => "NaN".to_string(),
             Value::Color { r, g, b, t } => format!("rgba({}, {}, {}, {})", r, g, b, t),
             Value::Array(_) => "[Array]".to_string(),
+            Value::Series(series) => format!("[Series:{}]", series.id),
             Value::Object { type_name, .. } => format!("[Object:{}]", type_name),
             Value::Function { .. } => "[Function]".to_string(),
             Value::BuiltinFunction(_) => "[BuiltinFunction]".to_string(),

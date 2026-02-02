@@ -10,6 +10,12 @@ pub trait LibraryLoader {
     fn load_library(&self, path: &str) -> Result<Program, String>;
 }
 
+/// Trait for providing historical data for series
+pub trait HistoricalDataProvider {
+    /// Get historical value for a series at a given offset (0 = current, 1 = previous bar, etc.)
+    fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value>;
+}
+
 #[derive(Error, Debug)]
 pub enum RuntimeError {
     #[error("Variable '{0}' not found")]
@@ -55,6 +61,13 @@ pub struct Bar {
     pub volume: f64,
 }
 
+/// Represents a time series with an identifier and current value
+#[derive(Clone, Debug)]
+pub struct Series {
+    pub id: String,
+    pub current: Box<Value>,
+}
+
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value {
@@ -63,7 +76,7 @@ pub enum Value {
     Bool(bool),
     Na,                             // PineScript's N/A value
     Array(Rc<RefCell<Vec<Value>>>), // Mutable shared array reference
-    Series(Rc<RefCell<Vec<Value>>>), // Time series - historical values stored with [0] = current
+    Series(Series),                  // Time series - ID and current value only
     Object {
         type_name: String, // The type name of this object (e.g., "InfoLabel")
         fields: Rc<RefCell<HashMap<String, Value>>>, // Dictionary/Object with string keys
@@ -117,9 +130,10 @@ impl PartialEq for Value {
             (Value::String(a), Value::String(b)) => a == b,
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::Na, Value::Na) => true,
-            // Arrays and Objects compare by reference (Rc pointer equality)
+            // Arrays compare by reference (Rc pointer equality)
             (Value::Array(a), Value::Array(b)) => Rc::ptr_eq(a, b),
-            (Value::Series(a), Value::Series(b)) => Rc::ptr_eq(a, b),
+            // Series compare by ID and current value
+            (Value::Series(a), Value::Series(b)) => a.id == b.id && *a.current == *b.current,
             (Value::Object { fields: a, .. }, Value::Object { fields: b, .. }) => Rc::ptr_eq(a, b),
             // Functions never equal (can't compare closures or function pointers)
             (Value::Function { .. }, Value::Function { .. }) => false,
@@ -226,6 +240,8 @@ pub struct Interpreter {
     methods: HashMap<String, Vec<MethodDef>>,
     /// Library loader for importing external libraries
     library_loader: Option<Box<dyn LibraryLoader>>,
+    /// Historical data provider for series lookback
+    historical_provider: Option<Box<dyn HistoricalDataProvider>>,
     /// Exported items from this module (for library mode)
     exports: HashMap<String, Value>,
 }
@@ -237,6 +253,7 @@ impl Interpreter {
             methods: HashMap::new(),
             builtins: HashMap::new(),
             library_loader: None,
+            historical_provider: None,
             exports: HashMap::new(),
         }
     }
@@ -248,6 +265,7 @@ impl Interpreter {
             methods: HashMap::new(),
             builtins,
             library_loader: None,
+            historical_provider: None,
             exports: HashMap::new(),
         }
     }
@@ -259,6 +277,7 @@ impl Interpreter {
             methods: HashMap::new(),
             builtins: HashMap::new(),
             library_loader: Some(loader),
+            historical_provider: None,
             exports: HashMap::new(),
         }
     }
@@ -270,8 +289,14 @@ impl Interpreter {
             methods: HashMap::new(),
             builtins,
             library_loader: Some(loader),
+            historical_provider: None,
             exports: HashMap::new(),
         }
+    }
+
+    /// Set the historical data provider
+    pub fn set_historical_provider(&mut self, provider: Box<dyn HistoricalDataProvider>) {
+        self.historical_provider = Some(provider);
     }
 
     /// Get the exported items from this interpreter (for library mode)
@@ -761,12 +786,16 @@ impl Interpreter {
                             .cloned()
                             .ok_or(RuntimeError::IndexOutOfBounds(index_val))
                     }
-                    Value::Series(series_ref) => {
-                        // For series, index 0 is current, 1 is previous, etc.
-                        let series = series_ref.borrow();
-                        series.get(index_val)
-                            .cloned()
-                            .ok_or(RuntimeError::IndexOutOfBounds(index_val))
+                    Value::Series(series) => {
+                        // For series, index 0 is current value, index > 0 queries historical provider
+                        if index_val == 0 {
+                            Ok((*series.current).clone())
+                        } else {
+                            self.historical_provider
+                                .as_ref()
+                                .and_then(|p| p.get_historical(&series.id, index_val))
+                                .ok_or(RuntimeError::IndexOutOfBounds(index_val))
+                        }
                     }
                     ref v => Err(RuntimeError::TypeError(
                         format!("Cannot index non-array/non-series value: {:?}", v),
@@ -2293,16 +2322,30 @@ mod tests {
 
     #[test]
     fn test_series_indexing() -> eyre::Result<()> {
+        // Mock historical data provider
+        struct MockHistoricalData {
+            data: HashMap<String, Vec<f64>>,
+        }
+        impl HistoricalDataProvider for MockHistoricalData {
+            fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value> {
+                self.data.get(series_id)
+                    .and_then(|values| values.get(offset - 1))
+                    .map(|&v| Value::Number(v))
+            }
+        }
+
         let mut interp = Interpreter::new();
 
-        // Create a series representing close prices
-        // Index 0 = current, 1 = previous, 2 = 2 bars ago
-        let close_series = Value::Series(Rc::new(RefCell::new(vec![
-            Value::Number(100.5), // close[0] - current
-            Value::Number(100.2), // close[1] - 1 bar ago
-            Value::Number(99.8),  // close[2] - 2 bars ago
-            Value::Number(99.5),  // close[3] - 3 bars ago
-        ])));
+        // Set up historical data provider with close prices
+        let mut data = HashMap::new();
+        data.insert("close".to_string(), vec![100.2, 99.8, 99.5]); // [1], [2], [3]
+        interp.set_historical_provider(Box::new(MockHistoricalData { data }));
+
+        // Create a series representing current close price
+        let close_series = Value::Series(Series {
+            id: "close".to_string(),
+            current: Box::new(Value::Number(100.5)),
+        });
 
         interp.set_variable("close", close_series);
 
@@ -2327,14 +2370,27 @@ mod tests {
 
     #[test]
     fn test_series_out_of_bounds() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
+        // Mock historical data provider with limited history
+        struct MockHistoricalData;
+        impl HistoricalDataProvider for MockHistoricalData {
+            fn get_historical(&self, _series_id: &str, offset: usize) -> Option<Value> {
+                // Only have data for offsets 1 and 2
+                match offset {
+                    1 => Some(Value::Number(99.0)),
+                    2 => Some(Value::Number(98.0)),
+                    _ => None,
+                }
+            }
+        }
 
-        // Create a series with only 3 values
-        let series = Value::Series(Rc::new(RefCell::new(vec![
-            Value::Number(100.0),
-            Value::Number(99.0),
-            Value::Number(98.0),
-        ])));
+        let mut interp = Interpreter::new();
+        interp.set_historical_provider(Box::new(MockHistoricalData));
+
+        // Create a series with current value
+        let series = Value::Series(Series {
+            id: "price".to_string(),
+            current: Box::new(Value::Number(100.0)),
+        });
 
         interp.set_variable("price", series);
 
@@ -2354,14 +2410,30 @@ mod tests {
 
     #[test]
     fn test_series_in_expression() -> eyre::Result<()> {
+        // Mock historical data provider
+        struct MockHistoricalData {
+            data: HashMap<String, Vec<f64>>,
+        }
+        impl HistoricalDataProvider for MockHistoricalData {
+            fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value> {
+                self.data.get(series_id)
+                    .and_then(|values| values.get(offset - 1))
+                    .map(|&v| Value::Number(v))
+            }
+        }
+
         let mut interp = Interpreter::new();
 
-        // Create close price series
-        let close_series = Value::Series(Rc::new(RefCell::new(vec![
-            Value::Number(105.0), // current
-            Value::Number(100.0), // 1 bar ago
-            Value::Number(95.0),  // 2 bars ago
-        ])));
+        // Set up historical data provider
+        let mut data = HashMap::new();
+        data.insert("close".to_string(), vec![100.0, 95.0]); // [1], [2]
+        interp.set_historical_provider(Box::new(MockHistoricalData { data }));
+
+        // Create close price series with current value
+        let close_series = Value::Series(Series {
+            id: "close".to_string(),
+            current: Box::new(Value::Number(105.0)),
+        });
 
         interp.set_variable("close", close_series);
 
