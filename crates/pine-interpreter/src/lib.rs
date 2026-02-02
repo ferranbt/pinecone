@@ -241,7 +241,7 @@ pub struct Interpreter {
     /// Library loader for importing external libraries
     library_loader: Option<Box<dyn LibraryLoader>>,
     /// Historical data provider for series lookback
-    historical_provider: Option<Box<dyn HistoricalDataProvider>>,
+    pub historical_provider: Option<Box<dyn HistoricalDataProvider>>,
     /// Exported items from this module (for library mode)
     exports: HashMap<String, Value>,
 }
@@ -320,6 +320,42 @@ impl Interpreter {
     /// Set a variable value (useful for loading objects and test setup)
     pub fn set_variable(&mut self, name: &str, value: Value) {
         self.variables.insert(name.to_string(), value);
+    }
+
+    /// Helper to get series values as a Vec<f64> for the given length
+    /// Returns current value + historical values up to length-1
+    pub fn get_series_values(&self, source: &Value, length: usize) -> Result<Vec<f64>, RuntimeError> {
+        let mut values = Vec::new();
+
+        match source {
+            Value::Series(series) => {
+                // Get current value
+                if let Value::Number(n) = *series.current {
+                    values.push(n);
+                } else {
+                    return Err(RuntimeError::TypeError("Series must contain numbers".to_string()));
+                }
+
+                // Get historical values
+                if let Some(provider) = &self.historical_provider {
+                    for i in 1..length {
+                        if let Some(Value::Number(n)) = provider.get_historical(&series.id, i) {
+                            values.push(n);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            Value::Number(n) => {
+                values.push(*n);
+            }
+            _ => {
+                return Err(RuntimeError::TypeError("source must be a number or series".to_string()));
+            }
+        }
+
+        Ok(values)
     }
 
     /// Helper to evaluate arguments and validate positional-before-named rule

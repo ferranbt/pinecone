@@ -14,6 +14,7 @@ mod color;
 mod log;
 mod math;
 mod str;
+mod ta;
 mod time;
 
 // Global utility functions - defined first so they can be referenced in register function
@@ -146,6 +147,7 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
     namespaces.insert("color".to_string(), color::register());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("str".to_string(), str::register());
+    namespaces.insert("ta".to_string(), ta::register());
 
     // Register global builtin functions
     namespaces.insert("na".to_string(), Value::BuiltinFunction(Rc::new(Na::builtin_fn) as BuiltinFn));
