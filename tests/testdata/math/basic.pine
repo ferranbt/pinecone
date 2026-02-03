@@ -1,0 +1,36 @@
+// Test basic math functions
+
+// abs
+abs1 = math.abs(-5.5)
+abs2 = math.abs(3.2)
+
+// ceil
+ceil1 = math.ceil(4.2)
+ceil2 = math.ceil(-4.8)
+
+// floor
+floor1 = math.floor(4.8)
+floor2 = math.floor(-4.2)
+
+// round
+round1 = math.round(4.5)
+round2 = math.round(4.4)
+
+log.info(abs1)
+log.info(abs2)
+log.info(ceil1)
+log.info(ceil2)
+log.info(floor1)
+log.info(floor2)
+log.info(round1)
+log.info(round2)
+
+// Expected output:
+// 5.5
+// 3.2
+// 5
+// -4
+// 4
+// -5
+// 5
+// 4

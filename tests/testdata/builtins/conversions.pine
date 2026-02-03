@@ -1,0 +1,37 @@
+// Test bool(), int(), float() conversions
+
+// bool() tests
+bool1 = bool(5.0)
+bool2 = bool(0.0)
+bool3 = bool(na)
+
+// int() tests
+int1 = int(5.7)
+int2 = int(-5.7)
+int3 = int(true)
+int4 = int(false)
+
+// float() tests
+float1 = float(5)
+float2 = float(true)
+
+log.info(bool1)
+log.info(bool2)
+log.info(bool3)
+log.info(int1)
+log.info(int2)
+log.info(int3)
+log.info(int4)
+log.info(float1)
+log.info(float2)
+
+// Expected output:
+// true
+// false
+// false
+// 5
+// -5
+// 1
+// 0
+// 5
+// 1

@@ -121,28 +121,3 @@ impl Script {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use interpreter::Value;
-
-    #[test]
-    fn test_builtin_array_operations() -> Result<(), Error> {
-        let source = r#"
-            var new_float_fn = array.new_float
-            var a = new_float_fn(3, 10.0)
-            var size_fn = array.size
-            var size = size_fn(a)
-        "#;
-
-        let mut script = Script::compile(source, None::<builtins::DefaultLogger>)?;
-        script.execute(&Bar::default())?;
-
-        assert_eq!(
-            script.interpreter.get_variable("size"),
-            Some(&Value::Number(3.0))
-        );
-
-        Ok(())
-    }
-}

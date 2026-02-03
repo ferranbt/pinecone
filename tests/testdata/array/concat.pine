@@ -1,0 +1,31 @@
+// Test array.concat
+
+a = array.new_float(0)
+array.push(a, 1.0)
+array.push(a, 2.0)
+
+b = array.new_float(0)
+array.push(b, 3.0)
+array.push(b, 4.0)
+
+array.concat(a, b)
+
+size = array.size(a)
+log.info(size)
+
+val1 = array.get(a, 0)
+val2 = array.get(a, 1)
+val3 = array.get(a, 2)
+val4 = array.get(a, 3)
+
+log.info(val1)
+log.info(val2)
+log.info(val3)
+log.info(val4)
+
+// Expected output:
+// 4
+// 1
+// 2
+// 3
+// 4

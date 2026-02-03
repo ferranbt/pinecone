@@ -1,0 +1,20 @@
+// Test array.new_* and array.size
+
+// Create arrays
+a_float = array.new_float(3, 10.0)
+a_int = array.new_int(2, 5)
+a_bool = array.new_bool(4, true)
+
+// Get sizes
+size1 = array.size(a_float)
+size2 = array.size(a_int)
+size3 = array.size(a_bool)
+
+log.info(size1)
+log.info(size2)
+log.info(size3)
+
+// Expected output:
+// 3
+// 2
+// 4
