@@ -90,11 +90,27 @@ fn generate_field_parsing(fields: &syn::punctuated::Punctuated<Field, syn::token
     let mut field_decls = Vec::new();
     let mut positional_matches = Vec::new();
     let mut named_matches = Vec::new();
+    let mut variadic_field: Option<&syn::Ident> = None;
+    let mut non_variadic_count = 0;
 
     for (idx, field) in fields.iter().enumerate() {
         let field_name = field.ident.as_ref().unwrap();
         let field_name_str = field_name.to_string();
         let field_type = &field.ty;
+
+        // Check if this is a variadic field
+        let is_variadic = is_field_variadic(field);
+
+        if is_variadic {
+            // Variadic field should be Vec<Value>
+            field_decls.push(quote! {
+                let mut #field_name: Vec<Value> = Vec::new();
+            });
+            variadic_field = Some(field_name);
+            continue;
+        }
+
+        non_variadic_count += 1;
 
         // Parse attributes
         let (has_default, default_value) = parse_field_default(field);
@@ -130,27 +146,60 @@ fn generate_field_parsing(fields: &syn::punctuated::Punctuated<Field, syn::token
         });
     }
 
-    quote! {
-        #(#field_decls)*
-
-        let mut positional_idx = 0;
-        for arg in args {
-            match arg {
-                EvaluatedArg::Positional(arg_value) => {
-                    match positional_idx {
-                        #(#positional_matches)*
-                        _ => return Err(RuntimeError::TypeError("Too many positional arguments".into()))
+    // Generate the argument parsing loop
+    let arg_parsing = if let Some(variadic_name) = variadic_field {
+        quote! {
+            let mut positional_idx = 0;
+            for arg in args {
+                match arg {
+                    EvaluatedArg::Positional(arg_value) => {
+                        if positional_idx < #non_variadic_count {
+                            match positional_idx {
+                                #(#positional_matches)*
+                                _ => {}
+                            }
+                        } else {
+                            // Collect remaining args as variadic
+                            #variadic_name.push(arg_value);
+                        }
+                        positional_idx += 1;
                     }
-                    positional_idx += 1;
-                }
-                EvaluatedArg::Named { name: param_name, value: arg_value } => {
-                    match param_name.as_str() {
-                        #(#named_matches)*
-                        _ => return Err(RuntimeError::TypeError(format!("Unknown parameter: {}", param_name)))
+                    EvaluatedArg::Named { name: param_name, value: arg_value } => {
+                        match param_name.as_str() {
+                            #(#named_matches)*
+                            _ => return Err(RuntimeError::TypeError(format!("Unknown parameter: {}", param_name)))
+                        }
                     }
                 }
             }
         }
+    } else {
+        quote! {
+            let mut positional_idx = 0;
+            for arg in args {
+                match arg {
+                    EvaluatedArg::Positional(arg_value) => {
+                        match positional_idx {
+                            #(#positional_matches)*
+                            _ => return Err(RuntimeError::TypeError("Too many positional arguments".into()))
+                        }
+                        positional_idx += 1;
+                    }
+                    EvaluatedArg::Named { name: param_name, value: arg_value } => {
+                        match param_name.as_str() {
+                            #(#named_matches)*
+                            _ => return Err(RuntimeError::TypeError(format!("Unknown parameter: {}", param_name)))
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    quote! {
+        #(#field_decls)*
+
+        #arg_parsing
     }
 }
 
@@ -179,6 +228,20 @@ fn parse_field_default(field: &Field) -> (bool, Option<proc_macro2::TokenStream>
         }
     }
     (false, None)
+}
+
+fn is_field_variadic(field: &Field) -> bool {
+    for attr in &field.attrs {
+        if let Meta::List(meta_list) = &attr.meta {
+            if meta_list.path.is_ident("arg") {
+                let tokens_str = meta_list.tokens.to_string();
+                if tokens_str.contains("variadic") {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 fn generate_value_conversion(
@@ -218,6 +281,11 @@ fn generate_field_validation(fields: &syn::punctuated::Punctuated<Field, syn::to
     for field in fields {
         let field_name = field.ident.as_ref().unwrap();
         let field_name_str = field_name.to_string();
+
+        // Skip variadic fields - they don't need validation
+        if is_field_variadic(field) {
+            continue;
+        }
 
         // Check if field has a default
         let has_default = field.attrs.iter().any(|attr| {
