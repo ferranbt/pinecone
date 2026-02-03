@@ -1,0 +1,7 @@
+//@version=5
+sma20 = ta.sma(close, 20)
+sma50 = ta.sma(close, 50)
+ema12 = ta.ema(close, 12)
+ema26 = ta.ema(close, 26)
+wma10 = ta.wma(close, 10)
+hma9 = ta.hma(close, 9)

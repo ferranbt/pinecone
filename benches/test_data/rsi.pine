@@ -1,0 +1,5 @@
+length = 14
+rsi_value = ta.rsi(close, length)
+
+overbought = 70
+oversold = 30
