@@ -1,0 +1,13 @@
+[package]
+name = "pine-integration-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+pine.workspace = true
+pine-interpreter.workspace = true
+walkdir = "2"

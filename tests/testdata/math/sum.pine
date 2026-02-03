@@ -1,0 +1,13 @@
+// Test math.sum with variadic arguments
+result1 = math.sum(5, 3)
+result2 = math.sum(10, 5, 3, 8)
+result3 = math.sum(1, 2, 3, 4, 5)
+
+log.info(result1)
+log.info(result2)
+log.info(result3)
+
+// Expected output:
+// 8
+// 26
+// 15

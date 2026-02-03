@@ -1,0 +1,13 @@
+// Test math.max with variadic arguments
+result1 = math.max(5, 3)
+result2 = math.max(10, 5, 3, 8)
+result3 = math.max(1.5, 2.5, 0.5, 3.0, 1.0)
+
+log.info(result1)
+log.info(result2)
+log.info(result3)
+
+// Expected output:
+// 5
+// 10
+// 3

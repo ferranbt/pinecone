@@ -58,8 +58,11 @@ pub struct Script {
 }
 
 impl Script {
-    /// Compile PineScript source code into a Script
-    pub fn compile(source: &str) -> Result<Self, Error> {
+    /// Compile PineScript source code into a Script with an optional custom logger
+    pub fn compile<L: pine_builtins::Logger + 'static>(
+        source: &str,
+        logger: Option<L>,
+    ) -> Result<Self, Error> {
         let mut lexer = Lexer::new(source);
         let tokens = lexer.tokenize()?;
 
@@ -69,7 +72,14 @@ impl Script {
 
         // Create interpreter and load builtin namespace objects
         let mut interpreter = Interpreter::new();
-        let namespaces = pine_builtins::register_namespace_objects();
+        let mut namespaces = pine_builtins::register_namespace_objects();
+
+        // If a custom logger is provided, create log namespace with it
+        if let Some(custom_logger) = logger {
+            let log_namespace = pine_builtins::Log::new(custom_logger).register();
+            namespaces.insert("log".to_string(), log_namespace);
+        }
+
         for (name, value) in namespaces {
             interpreter.set_variable(&name, value);
         }
@@ -86,11 +96,15 @@ impl Script {
     /// allowing variables to persist between bars.
     pub fn execute(&mut self, bar: &Bar) -> Result<(), Error> {
         // Load bar data as variables in the interpreter context
-        self.interpreter.set_variable("open", Value::Number(bar.open));
-        self.interpreter.set_variable("high", Value::Number(bar.high));
+        self.interpreter
+            .set_variable("open", Value::Number(bar.open));
+        self.interpreter
+            .set_variable("high", Value::Number(bar.high));
         self.interpreter.set_variable("low", Value::Number(bar.low));
-        self.interpreter.set_variable("close", Value::Number(bar.close));
-        self.interpreter.set_variable("volume", Value::Number(bar.volume));
+        self.interpreter
+            .set_variable("close", Value::Number(bar.close));
+        self.interpreter
+            .set_variable("volume", Value::Number(bar.volume));
 
         self.interpreter.execute(&self.program)?;
         Ok(())
@@ -121,10 +135,13 @@ mod tests {
             var size = size_fn(a)
         "#;
 
-        let mut script = Script::compile(source)?;
+        let mut script = Script::compile(source, None::<builtins::DefaultLogger>)?;
         script.execute(&Bar::default())?;
 
-        assert_eq!(script.interpreter.get_variable("size"), Some(&Value::Number(3.0)));
+        assert_eq!(
+            script.interpreter.get_variable("size"),
+            Some(&Value::Number(3.0))
+        );
 
         Ok(())
     }

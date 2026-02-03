@@ -1197,6 +1197,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pine-integration-tests"
+version = "0.1.0"
+dependencies = [
+ "pine",
+ "pine-interpreter",
+ "walkdir",
+]
+
+[[package]]
 name = "pine-interpreter"
 version = "0.1.0"
 dependencies = [
