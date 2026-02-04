@@ -1,0 +1,15 @@
+// Test ta.stdev (Standard Deviation)
+// Last 5 closes: 301, 300, 299, 298, 297
+// Mean = 299, StdDev = sqrt(((2^2 + 1^2 + 0 + 1^2 + 2^2) / 5)) = sqrt(2) ≈ 1.414
+
+// Standard deviation of last 5 closes
+stdev5 = ta.stdev(close, 5)
+log.info(stdev5)
+
+// Standard deviation of last 10 closes
+stdev10 = ta.stdev(close, 10)
+log.info(stdev10)
+
+// Expected output:
+// 1.4142135623730951
+// 2.8722813232690143

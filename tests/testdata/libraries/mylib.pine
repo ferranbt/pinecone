@@ -1,0 +1,7 @@
+// Library with exported types and functions
+
+type Point
+    float x = 0.0
+    float y = 0.0
+
+export type Point

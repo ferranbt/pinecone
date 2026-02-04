@@ -76,7 +76,7 @@ pub enum Value {
     Bool(bool),
     Na,                             // PineScript's N/A value
     Array(Rc<RefCell<Vec<Value>>>), // Mutable shared array reference
-    Series(Series),                  // Time series - ID and current value only
+    Series(Series),                 // Time series - ID and current value only
     Object {
         type_name: String, // The type name of this object (e.g., "InfoLabel")
         fields: Rc<RefCell<HashMap<String, Value>>>, // Dictionary/Object with string keys
@@ -96,11 +96,17 @@ pub enum Value {
         title: String,      // The title of this enum member
     }, // Enum member value
     Color {
-        r: u8,     // Red component (0-255)
-        g: u8,     // Green component (0-255)
-        b: u8,     // Blue component (0-255)
-        t: u8,     // Transparency (0-100)
+        r: u8, // Red component (0-255)
+        g: u8, // Green component (0-255)
+        b: u8, // Blue component (0-255)
+        t: u8, // Transparency (0-100)
     }, // Color value
+}
+
+impl Value {
+    pub fn new_color(r: u8, g: u8, b: u8, t: u8) -> Value {
+        Value::Color { r, g, b, t }
+    }
 }
 
 // Manual Debug impl since function pointers don't implement Debug
@@ -117,7 +123,11 @@ impl std::fmt::Debug for Value {
             Value::Function { params, .. } => write!(f, "Function({} params)", params.len()),
             Value::BuiltinFunction(_) => write!(f, "BuiltinFunction"),
             Value::Type { name, .. } => write!(f, "Type({})", name),
-            Value::Enum { enum_name, field_name, .. } => write!(f, "Enum({}::{})", enum_name, field_name),
+            Value::Enum {
+                enum_name,
+                field_name,
+                ..
+            } => write!(f, "Enum({}::{})", enum_name, field_name),
             Value::Color { r, g, b, t } => write!(f, "Color(rgba({}, {}, {}, {}))", r, g, b, t),
         }
     }
@@ -141,15 +151,33 @@ impl PartialEq for Value {
             // Types compare by name
             (Value::Type { name: a, .. }, Value::Type { name: b, .. }) => a == b,
             // Enums compare by enum name and field name (ensuring type safety)
-            (Value::Enum { enum_name: a_enum, field_name: a_field, .. },
-             Value::Enum { enum_name: b_enum, field_name: b_field, .. }) => {
-                a_enum == b_enum && a_field == b_field
-            },
+            (
+                Value::Enum {
+                    enum_name: a_enum,
+                    field_name: a_field,
+                    ..
+                },
+                Value::Enum {
+                    enum_name: b_enum,
+                    field_name: b_field,
+                    ..
+                },
+            ) => a_enum == b_enum && a_field == b_field,
             // Colors compare by all components
-            (Value::Color { r: r1, g: g1, b: b1, t: t1 },
-             Value::Color { r: r2, g: g2, b: b2, t: t2 }) => {
-                r1 == r2 && g1 == g2 && b1 == b2 && t1 == t2
-            },
+            (
+                Value::Color {
+                    r: r1,
+                    g: g1,
+                    b: b1,
+                    t: t1,
+                },
+                Value::Color {
+                    r: r2,
+                    g: g2,
+                    b: b2,
+                    t: t2,
+                },
+            ) => r1 == r2 && g1 == g2 && b1 == b2 && t1 == t2,
             _ => false,
         }
     }
@@ -283,7 +311,10 @@ impl Interpreter {
     }
 
     /// Create interpreter with custom builtins and library loader
-    pub fn with_builtins_and_loader(builtins: HashMap<String, BuiltinFn>, loader: Box<dyn LibraryLoader>) -> Self {
+    pub fn with_builtins_and_loader(
+        builtins: HashMap<String, BuiltinFn>,
+        loader: Box<dyn LibraryLoader>,
+    ) -> Self {
         Self {
             variables: HashMap::new(),
             methods: HashMap::new(),
@@ -297,6 +328,11 @@ impl Interpreter {
     /// Set the historical data provider
     pub fn set_historical_provider(&mut self, provider: Box<dyn HistoricalDataProvider>) {
         self.historical_provider = Some(provider);
+    }
+
+    /// Set the library loader
+    pub fn set_library_loader(&mut self, library_loader: Box<dyn LibraryLoader>) {
+        self.library_loader = Some(library_loader);
     }
 
     /// Get the exported items from this interpreter (for library mode)
@@ -324,7 +360,11 @@ impl Interpreter {
 
     /// Helper to get series values as a Vec<f64> for the given length
     /// Returns current value + historical values up to length-1
-    pub fn get_series_values(&self, source: &Value, length: usize) -> Result<Vec<f64>, RuntimeError> {
+    pub fn get_series_values(
+        &self,
+        source: &Value,
+        length: usize,
+    ) -> Result<Vec<f64>, RuntimeError> {
         let mut values = Vec::new();
 
         match source {
@@ -333,7 +373,9 @@ impl Interpreter {
                 if let Value::Number(n) = *series.current {
                     values.push(n);
                 } else {
-                    return Err(RuntimeError::TypeError("Series must contain numbers".to_string()));
+                    return Err(RuntimeError::TypeError(
+                        "Series must contain numbers".to_string(),
+                    ));
                 }
 
                 // Get historical values
@@ -351,7 +393,9 @@ impl Interpreter {
                 values.push(*n);
             }
             _ => {
-                return Err(RuntimeError::TypeError("source must be a number or series".to_string()));
+                return Err(RuntimeError::TypeError(
+                    "source must be a number or series".to_string(),
+                ));
             }
         }
 
@@ -394,7 +438,7 @@ impl Interpreter {
                 name,
                 type_annotation: _,
                 initializer,
-                is_varip: _,  // TODO: implement varip behavior (requires stateful execution)
+                is_varip: _, // TODO: implement varip behavior (requires stateful execution)
             } => {
                 let value = if let Some(init_expr) = initializer {
                     self.eval_expr(init_expr)?
@@ -423,13 +467,13 @@ impl Interpreter {
                             Ok(None)
                         } else {
                             Err(RuntimeError::TypeError(
-                                "Cannot assign to member of non-object value".to_string()
+                                "Cannot assign to member of non-object value".to_string(),
                             ))
                         }
                     }
                     _ => Err(RuntimeError::TypeError(
-                        "Invalid assignment target".to_string()
-                    ))
+                        "Invalid assignment target".to_string(),
+                    )),
                 }
             }
 
@@ -650,7 +694,7 @@ impl Interpreter {
                     }
                 } else {
                     return Err(RuntimeError::LibraryError(
-                        "Cannot import library: no library loader configured".to_string()
+                        "Cannot import library: no library loader configured".to_string(),
                     ));
                 }
                 Ok(None)
@@ -661,12 +705,12 @@ impl Interpreter {
                 let type_name = if let Some(first_param) = params.first() {
                     first_param.type_annotation.clone().ok_or_else(|| {
                         RuntimeError::TypeError(
-                            "Method's first parameter must have a type annotation".to_string()
+                            "Method's first parameter must have a type annotation".to_string(),
                         )
                     })?
                 } else {
                     return Err(RuntimeError::TypeError(
-                        "Method must have at least one parameter (this)".to_string()
+                        "Method must have at least one parameter (this)".to_string(),
                     ));
                 };
 
@@ -833,9 +877,10 @@ impl Interpreter {
                                 .ok_or(RuntimeError::IndexOutOfBounds(index_val))
                         }
                     }
-                    ref v => Err(RuntimeError::TypeError(
-                        format!("Cannot index non-array/non-series value: {:?}", v),
-                    ))
+                    ref v => Err(RuntimeError::TypeError(format!(
+                        "Cannot index non-array/non-series value: {:?}",
+                        v
+                    ))),
                 }
             }
 
@@ -874,13 +919,19 @@ impl Interpreter {
                         // Find the method that matches the object's type
                         let obj_type = self.get_object_type_name(&obj_value)?;
 
-                        if let Some(method_def) = method_defs.iter().find(|m| m.type_name == obj_type) {
+                        if let Some(method_def) =
+                            method_defs.iter().find(|m| m.type_name == obj_type)
+                        {
                             // Evaluate the other arguments
                             let mut evaluated_args = vec![EvaluatedArg::Positional(obj_value)];
                             evaluated_args.extend(self.evaluate_arguments(args)?);
 
                             // Call the method (treating it like a function)
-                            return self.call_method(&method_def.params, &method_def.body, evaluated_args);
+                            return self.call_method(
+                                &method_def.params,
+                                &method_def.body,
+                                evaluated_args,
+                            );
                         }
                     }
                 }
@@ -897,12 +948,10 @@ impl Interpreter {
                     Value::Function { params, body } => {
                         self.call_user_function(&params, &body, evaluated_args)
                     }
-                    Value::BuiltinFunction(builtin_fn) => {
-                        (builtin_fn)(self, evaluated_args)
-                    }
+                    Value::BuiltinFunction(builtin_fn) => (builtin_fn)(self, evaluated_args),
                     _ => Err(RuntimeError::TypeError(
-                        "Attempted to call a non-function value".to_string()
-                    ))
+                        "Attempted to call a non-function value".to_string(),
+                    )),
                 }
             }
 
@@ -911,18 +960,17 @@ impl Interpreter {
                 match obj_value {
                     Value::Object { fields, .. } => {
                         let obj = fields.borrow();
-                        obj.get(member)
-                            .cloned()
-                            .ok_or_else(|| RuntimeError::TypeError(format!(
-                                "Object has no member '{}'",
-                                member
-                            )))
+                        obj.get(member).cloned().ok_or_else(|| {
+                            RuntimeError::TypeError(format!("Object has no member '{}'", member))
+                        })
                     }
                     Value::Type { name, fields } => {
                         // Types have 'new' and 'copy' methods
                         if member == "new" {
                             // Return a constructor function
-                            Ok(Value::BuiltinFunction(Self::create_constructor(name, fields)))
+                            Ok(Value::BuiltinFunction(Self::create_constructor(
+                                name, fields,
+                            )))
                         } else if member == "copy" {
                             // Return a copy function
                             Ok(Value::BuiltinFunction(Self::create_copy_function()))
@@ -1031,10 +1079,18 @@ impl Interpreter {
             (Value::String(l), Value::String(r)) => Ok(l == r),
             (Value::Bool(l), Value::Bool(r)) => Ok(l == r),
             (Value::Na, Value::Na) => Ok(true),
-            (Value::Enum { enum_name: a_enum, field_name: a_field, .. },
-             Value::Enum { enum_name: b_enum, field_name: b_field, .. }) => {
-                Ok(a_enum == b_enum && a_field == b_field)
-            },
+            (
+                Value::Enum {
+                    enum_name: a_enum,
+                    field_name: a_field,
+                    ..
+                },
+                Value::Enum {
+                    enum_name: b_enum,
+                    field_name: b_field,
+                    ..
+                },
+            ) => Ok(a_enum == b_enum && a_field == b_field),
             _ => Ok(false),
         }
     }
@@ -1097,8 +1153,8 @@ impl Interpreter {
         match value {
             Value::Object { type_name, .. } => Ok(type_name.clone()),
             _ => Err(RuntimeError::TypeError(
-                "Cannot determine type of non-object value".to_string()
-            ))
+                "Cannot determine type of non-object value".to_string(),
+            )),
         }
     }
 
@@ -1231,7 +1287,7 @@ impl Interpreter {
             // Expect exactly one positional argument (the object to copy)
             if args.len() != 1 {
                 return Err(RuntimeError::TypeError(
-                    "copy() expects exactly one argument".to_string()
+                    "copy() expects exactly one argument".to_string(),
                 ));
             }
 
@@ -1247,1250 +1303,14 @@ impl Interpreter {
                         })
                     } else {
                         Err(RuntimeError::TypeError(
-                            "copy() expects an object argument".to_string()
+                            "copy() expects an object argument".to_string(),
                         ))
                     }
                 }
-                EvaluatedArg::Named { .. } => {
-                    Err(RuntimeError::TypeError(
-                        "copy() does not accept named arguments".to_string()
-                    ))
-                }
+                EvaluatedArg::Named { .. } => Err(RuntimeError::TypeError(
+                    "copy() does not accept named arguments".to_string(),
+                )),
             }
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashMap;
-
-    /// Helper function to parse PineScript source code into a Program
-    fn parse_str(source: &str) -> eyre::Result<Program> {
-        use pine_lexer::Lexer;
-        use pine_parser::Parser;
-
-        let mut lexer = Lexer::new(source);
-        let tokens = lexer.tokenize()?;
-        let mut parser = Parser::new(tokens);
-        let statements = parser.parse()?;
-        Ok(Program::new(statements))
-    }
-
-    /// Test builtin function: greet(name, greeting="Hello")
-    fn test_greet(
-        _interp: &mut Interpreter,
-        args: Vec<EvaluatedArg>,
-    ) -> Result<Value, RuntimeError> {
-        let mut name: Option<String> = None;
-        let mut greeting = "Hello".to_string();
-
-        let mut positional_idx = 0;
-        for arg in args {
-            match arg {
-                EvaluatedArg::Positional(value) => {
-                    if positional_idx == 0 {
-                        name = Some(value.as_string()?);
-                    } else if positional_idx == 1 {
-                        greeting = value.as_string()?;
-                    }
-                    positional_idx += 1;
-                }
-                EvaluatedArg::Named {
-                    name: param_name,
-                    value,
-                } => {
-                    if param_name == "greeting" {
-                        greeting = value.as_string()?;
-                    }
-                }
-            }
-        }
-
-        let name = name.ok_or_else(|| RuntimeError::TypeError("Missing name".to_string()))?;
-        Ok(Value::String(format!("{}, {}", greeting, name)))
-    }
-
-    #[test]
-    fn test_variable_declaration() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str("var x = 42")?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("x"), Some(&Value::Number(42.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_arithmetic() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var a = 10
-            var b = 5
-            var result = a + b
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("a"), Some(&Value::Number(10.0)));
-        assert_eq!(interp.get_variable("b"), Some(&Value::Number(5.0)));
-        assert_eq!(interp.get_variable("result"), Some(&Value::Number(15.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_if_statement() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var x = 10
-            if x > 5
-                var result = "greater"
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("x"), Some(&Value::Number(10.0)));
-        assert_eq!(
-            interp.get_variable("result"),
-            Some(&Value::String("greater".to_string()))
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn test_for_loop() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var sum = 0
-            for i = 1 to 5
-                sum := sum + i
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        // Sum of 1+2+3+4+5 = 15
-        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(15.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_named_arguments() -> eyre::Result<()> {
-        let mut builtins: HashMap<String, BuiltinFn> = HashMap::new();
-        builtins.insert("greet".to_string(), Rc::new(test_greet));
-        let mut interp = Interpreter::with_builtins(builtins);
-
-        // Test positional arguments only (uses default greeting)
-        let program1 = parse_str(r#"var msg1 = greet("Alice")"#)?;
-        interp.execute(&program1)?;
-        assert_eq!(
-            interp.get_variable("msg1"),
-            Some(&Value::String("Hello, Alice".to_string()))
-        );
-
-        // Test positional argument with named parameter
-        let program2 = parse_str(r#"var msg2 = greet("Bob", greeting="Hi")"#)?;
-        interp.execute(&program2)?;
-        assert_eq!(
-            interp.get_variable("msg2"),
-            Some(&Value::String("Hi, Bob".to_string()))
-        );
-
-        // Test both positional arguments
-        let program3 = parse_str(r#"var msg3 = greet("Charlie", "Hey")"#)?;
-        interp.execute(&program3)?;
-        assert_eq!(
-            interp.get_variable("msg3"),
-            Some(&Value::String("Hey, Charlie".to_string()))
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_invalid_named_argument_order() -> eyre::Result<()> {
-        let mut builtins: HashMap<String, BuiltinFn> = HashMap::new();
-        builtins.insert("greet".to_string(), Rc::new(test_greet));
-        let mut interp = Interpreter::with_builtins(builtins);
-
-        // This should fail: positional arg after named arg
-        let program = parse_str(r#"var msg = greet(greeting="Hi", "Alice")"#)?;
-        let result = interp.execute(&program);
-
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Positional arguments cannot follow named arguments"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_switch_expression() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var x = 2
-            var result = switch x
-                1 => "one"
-                2 => "two"
-                3 => "three"
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(
-            interp.get_variable("result"),
-            Some(&Value::String("two".to_string()))
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn test_user_defined_function() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            add(a, b) => a + b
-            var result = add(3, 5)
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("result"), Some(&Value::Number(8.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_user_function_with_variables() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            double(x) => x * 2
-            var value = 10
-            var result = double(value)
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("result"), Some(&Value::Number(20.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_while_simple() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var i = 0
-            while i < 5
-                i := i + 1
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("i"), Some(&Value::Number(5.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_while_break() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var i = 0
-            while i < 10
-                if i == 5
-                    break
-                i := i + 1
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("i"), Some(&Value::Number(5.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_while_continue() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var i = 0
-            var sum = 0
-            while i < 10
-                i := i + 1
-                if i % 2 == 0
-                    continue
-                sum := sum + i
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        // sum = 1 + 3 + 5 + 7 + 9 = 25
-        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(25.0)));
-        assert_eq!(interp.get_variable("i"), Some(&Value::Number(10.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_while_break_continue() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var i = 0
-            var sum = 0
-            while i < 20
-                i := i + 1
-                if i > 10
-                    break
-                if i % 2 == 0
-                    continue
-                sum := sum + i
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        // sum = 1 + 3 + 5 + 7 + 9 = 25 (stops at i=11)
-        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(25.0)));
-        assert_eq!(interp.get_variable("i"), Some(&Value::Number(11.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_while_nested() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var i = 0
-            var sum = 0
-            while i < 3
-                var j = 0
-                while j < 2
-                    sum := sum + i * j
-                    j := j + 1
-                i := i + 1
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        // sum = (0*0 + 0*1) + (1*0 + 1*1) + (2*0 + 2*1) = 0 + 1 + 2 = 3
-        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(3.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_break_outside_loop() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str("break")?;
-        let result = interp.execute(&program);
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Break statement outside of loop"));
-        Ok(())
-    }
-
-    #[test]
-    fn test_continue_outside_loop() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str("continue")?;
-        let result = interp.execute(&program);
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Continue statement outside of loop"));
-        Ok(())
-    }
-
-    #[test]
-    fn test_compound_assignment() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var x = 10
-            x += 5
-            var y = 20
-            y -= 3
-            var z = 4
-            z *= 2
-            var w = 20
-            w /= 4
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("x"), Some(&Value::Number(15.0)));
-        assert_eq!(interp.get_variable("y"), Some(&Value::Number(17.0)));
-        assert_eq!(interp.get_variable("z"), Some(&Value::Number(8.0)));
-        assert_eq!(interp.get_variable("w"), Some(&Value::Number(5.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_for_in_simple() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var arr = [1, 2, 3, 4, 5]
-            var sum = 0
-            for item in arr
-                sum := sum + item
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        // sum = 1 + 2 + 3 + 4 + 5 = 15
-        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(15.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_for_in_tuple() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var arr = [10, 20, 30]
-            var sum = 0
-            for [i, value] in arr
-                sum := sum + i * value
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        // sum = 0*10 + 1*20 + 2*30 = 0 + 20 + 60 = 80
-        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(80.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_for_in_break() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var arr = [1, 2, 3, 4, 5]
-            var sum = 0
-            for item in arr
-                if item == 3
-                    break
-                sum := sum + item
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        // sum = 1 + 2 = 3 (stops at item=3)
-        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(3.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_for_in_continue() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-        let program = parse_str(
-            r#"
-            var arr = [1, 2, 3, 4, 5]
-            var sum = 0
-            for item in arr
-                if item % 2 == 0
-                    continue
-                sum := sum + item
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        // sum = 1 + 3 + 5 = 9 (skips even numbers)
-        assert_eq!(interp.get_variable("sum"), Some(&Value::Number(9.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_member_access() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        // Create an object with some properties
-        let mut color_obj = HashMap::new();
-        color_obj.insert("red".to_string(), Value::String("#FF0000".to_string()));
-        color_obj.insert("blue".to_string(), Value::String("#0000FF".to_string()));
-        color_obj.insert("green".to_string(), Value::String("#00FF00".to_string()));
-
-        // Load the object into the interpreter
-        interp.set_variable("color", Value::Object {
-            type_name: "color".to_string(),
-            fields: Rc::new(RefCell::new(color_obj)),
-        });
-
-        // Test member access
-        let program = parse_str(
-            r#"
-            var myColor = color.red
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(
-            interp.get_variable("myColor"),
-            Some(&Value::String("#FF0000".to_string()))
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn test_member_access_nested() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        // Create a nested object structure
-        let mut barstate_obj = HashMap::new();
-        barstate_obj.insert("islast".to_string(), Value::Bool(true));
-        barstate_obj.insert("isrealtime".to_string(), Value::Bool(false));
-
-        interp.set_variable("barstate", Value::Object {
-            type_name: "barstate".to_string(),
-            fields: Rc::new(RefCell::new(barstate_obj)),
-        });
-
-        let program = parse_str(
-            r#"
-            var isLast = barstate.islast
-            var isRealtime = barstate.isrealtime
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("isLast"), Some(&Value::Bool(true)));
-        assert_eq!(interp.get_variable("isRealtime"), Some(&Value::Bool(false)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_builtin_function_in_object() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        // Create a test builtin function
-        fn test_add(_ctx: &mut Interpreter, args: Vec<EvaluatedArg>) -> Result<Value, RuntimeError> {
-            let mut sum = 0.0;
-            for arg in args {
-                if let EvaluatedArg::Positional(Value::Number(n)) = arg {
-                    sum += n;
-                }
-            }
-            Ok(Value::Number(sum))
-        }
-
-        // Create a namespace object with a builtin function
-        let mut math_ns = HashMap::new();
-        math_ns.insert("add".to_string(), Value::BuiltinFunction(Rc::new(test_add)));
-
-        interp.set_variable("math", Value::Object {
-            type_name: "math".to_string(),
-            fields: Rc::new(RefCell::new(math_ns)),
-        });
-
-        // Access the function and call it
-        let program = parse_str(
-            r#"
-            var addFunc = math.add
-            var result = addFunc(1, 2, 3)
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("result"), Some(&Value::Number(6.0)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_member_access_nonexistent() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let mut obj = HashMap::new();
-        obj.insert("foo".to_string(), Value::Number(42.0));
-
-        interp.set_variable("obj", Value::Object {
-            type_name: "obj".to_string(),
-            fields: Rc::new(RefCell::new(obj)),
-        });
-
-        let program = parse_str(
-            r#"
-            var x = obj.bar
-            "#,
-        )?;
-
-        let result = interp.execute(&program);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("has no member 'bar'"));
-        Ok(())
-    }
-
-    #[test]
-    fn test_else_if() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        // Test first else if branch matches
-        let program = parse_str(
-            r#"
-            var x = 5
-            var result = 0
-
-            if x < 0
-                result := -1
-            else if x == 0
-                result := 0
-            else if x < 10
-                result := 1
-            else
-                result := 2
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("result"), Some(&Value::Number(1.0)));
-
-        // Test else branch when no condition matches
-        let mut interp2 = Interpreter::new();
-        let program2 = parse_str(
-            r#"
-            var x = 100
-            var result = 0
-
-            if x < 0
-                result := -1
-            else if x == 0
-                result := 0
-            else if x < 10
-                result := 1
-            else
-                result := 2
-            "#,
-        )?;
-
-        interp2.execute(&program2)?;
-        assert_eq!(interp2.get_variable("result"), Some(&Value::Number(2.0)));
-
-        // Test first condition matches (skips else if)
-        let mut interp3 = Interpreter::new();
-        let program3 = parse_str(
-            r#"
-            var x = -5
-            var result = 0
-
-            if x < 0
-                result := -1
-            else if x == 0
-                result := 0
-            else if x < 10
-                result := 1
-            else
-                result := 2
-            "#,
-        )?;
-
-        interp3.execute(&program3)?;
-        assert_eq!(interp3.get_variable("result"), Some(&Value::Number(-1.0)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_if_expression() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        // Test if expression with else if
-        let program = parse_str(
-            r#"
-            var x = 5
-            string result = if x < 0
-                "negative"
-            else if x == 0
-                "zero"
-            else if x < 10
-                "small"
-            else
-                "large"
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("result"), Some(&Value::String("small".to_string())));
-
-        // Test with different values
-        let mut interp2 = Interpreter::new();
-        let program2 = parse_str(
-            r#"
-            var x = 100
-            string result = if x < 0
-                "negative"
-            else if x == 0
-                "zero"
-            else if x < 10
-                "small"
-            else
-                "large"
-            "#,
-        )?;
-
-        interp2.execute(&program2)?;
-        assert_eq!(interp2.get_variable("result"), Some(&Value::String("large".to_string())));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_if_expression_simple() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        // Test simple if-else expression without else-if
-        let program = parse_str(
-            r#"
-            var x = 5
-            string result = if x > 0
-                "positive"
-            else
-                "non-positive"
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("result"), Some(&Value::String("positive".to_string())));
-
-        // Test else branch
-        let mut interp2 = Interpreter::new();
-        let program2 = parse_str(
-            r#"
-            var x = -5
-            string result = if x > 0
-                "positive"
-            else
-                "non-positive"
-            "#,
-        )?;
-
-        interp2.execute(&program2)?;
-        assert_eq!(interp2.get_variable("result"), Some(&Value::String("non-positive".to_string())));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_if_expression_no_else() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        // Test if expression without else - should return value when condition is true
-        let program = parse_str(
-            r#"
-            var close = 10
-            var open = 5
-            x = if close > open
-                close
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-        assert_eq!(interp.get_variable("x"), Some(&Value::Number(10.0)));
-
-        // Test if expression without else - should return na when condition is false
-        let mut interp2 = Interpreter::new();
-        let program2 = parse_str(
-            r#"
-            var close = 5
-            var open = 10
-            x = if close > open
-                close
-            "#,
-        )?;
-
-        interp2.execute(&program2)?;
-        assert_eq!(interp2.get_variable("x"), Some(&Value::Na));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_udt_simple() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            type pivotPoint
-                int x
-                float y
-
-            point = pivotPoint.new()
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        // Check that point is an object
-        let point = interp.get_variable("point").unwrap();
-        assert!(matches!(point, Value::Object { .. }));
-
-        // Check fields exist and are Na (no values provided)
-        if let Value::Object { fields, .. } = point {
-            let obj_ref = fields.borrow();
-            assert_eq!(obj_ref.get("x"), Some(&Value::Na));
-            assert_eq!(obj_ref.get("y"), Some(&Value::Na));
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_udt_with_args() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            type pivotPoint
-                int x
-                float y
-
-            point = pivotPoint.new(100, 50.5)
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        let point = interp.get_variable("point").unwrap();
-        if let Value::Object { fields, .. } = point {
-            let obj_ref = fields.borrow();
-            assert_eq!(obj_ref.get("x"), Some(&Value::Number(100.0)));
-            assert_eq!(obj_ref.get("y"), Some(&Value::Number(50.5)));
-        } else {
-            panic!("Expected Object value");
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_udt_with_defaults() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            type BarInfo
-                int index = 0
-                float price = 100.0
-
-            bar = BarInfo.new()
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        let bar = interp.get_variable("bar").unwrap();
-        if let Value::Object { fields, .. } = bar {
-            let obj_ref = fields.borrow();
-            assert_eq!(obj_ref.get("index"), Some(&Value::Number(0.0)));
-            assert_eq!(obj_ref.get("price"), Some(&Value::Number(100.0)));
-        } else {
-            panic!("Expected Object value");
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_udt_field_access() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            type pivotPoint
-                int x
-                float y
-
-            point = pivotPoint.new(100, 50.5)
-            xValue = point.x
-            yValue = point.y
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        assert_eq!(interp.get_variable("xValue"), Some(&Value::Number(100.0)));
-        assert_eq!(interp.get_variable("yValue"), Some(&Value::Number(50.5)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_udt_field_modification() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            type pivotPoint
-                int x
-                float y
-
-            point = pivotPoint.new(100, 50.5)
-            point.x := 200
-            point.y := 75.25
-            newX = point.x
-            newY = point.y
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        assert_eq!(interp.get_variable("newX"), Some(&Value::Number(200.0)));
-        assert_eq!(interp.get_variable("newY"), Some(&Value::Number(75.25)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_udt_copy() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            type pivotPoint
-                int x
-                float y
-
-            pivot1 = pivotPoint.new()
-            pivot1.x := 1000
-            pivot2 = pivotPoint.copy(pivot1)
-            pivot2.x := 2000
-
-            x1 = pivot1.x
-            x2 = pivot2.x
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        // pivot1.x should be 1000 (unchanged by pivot2 modification)
-        assert_eq!(interp.get_variable("x1"), Some(&Value::Number(1000.0)));
-        // pivot2.x should be 2000 (modified)
-        assert_eq!(interp.get_variable("x2"), Some(&Value::Number(2000.0)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_method_call() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            type InfoLabel
-                int x = 0
-                int y = 0
-
-            method set(InfoLabel this, int newX, int newY) =>
-                this.x := newX
-                this.y := newY
-
-            label = InfoLabel.new()
-            label.set(100, 200)
-
-            finalX = label.x
-            finalY = label.y
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        assert_eq!(interp.get_variable("finalX"), Some(&Value::Number(100.0)));
-        assert_eq!(interp.get_variable("finalY"), Some(&Value::Number(200.0)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_enum_simple() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            enum Signal
-                buy = "Buy signal"
-                sell = "Sell signal"
-                neutral
-
-            x = Signal.buy
-            y = Signal.sell
-            z = Signal.neutral
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        let x = interp.get_variable("x").unwrap();
-        let y = interp.get_variable("y").unwrap();
-        let z = interp.get_variable("z").unwrap();
-
-        assert!(matches!(x, Value::Enum { enum_name, field_name, title }
-            if enum_name == "Signal" && field_name == "buy" && title == "Buy signal"));
-        assert!(matches!(y, Value::Enum { enum_name, field_name, title }
-            if enum_name == "Signal" && field_name == "sell" && title == "Sell signal"));
-        assert!(matches!(z, Value::Enum { enum_name, field_name, title }
-            if enum_name == "Signal" && field_name == "neutral" && title == "neutral"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_enum_comparison() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            enum Signal
-                buy
-                sell
-
-            x = Signal.buy
-            y = Signal.buy
-            z = Signal.sell
-
-            same = x == y
-            different = x == z
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        assert_eq!(interp.get_variable("same"), Some(&Value::Bool(true)));
-        assert_eq!(interp.get_variable("different"), Some(&Value::Bool(false)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_export() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            type Point
-                float x
-                float y
-
-            export type Point
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        // Check that Point type was exported
-        let exports = interp.exports();
-        assert!(exports.contains_key("Point"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_import_with_library_loader() -> eyre::Result<()> {
-        // Mock library loader
-        struct MockLoader;
-        impl LibraryLoader for MockLoader {
-            fn load_library(&self, path: &str) -> Result<Program, String> {
-                // Return a simple library that exports a Point type
-                if path == "user/shapes/1" {
-                    let source = r#"
-                        type Point
-                            float x = 0.0
-                            float y = 0.0
-
-                        export type Point
-                    "#;
-
-                    use pine_lexer::Lexer;
-                    use pine_parser::Parser;
-
-                    let mut lexer = Lexer::new(source);
-                    let tokens = lexer.tokenize().map_err(|e| format!("{:?}", e))?;
-                    let mut parser = Parser::new(tokens);
-                    let statements = parser.parse().map_err(|e| format!("{:?}", e))?;
-                    Ok(Program::new(statements))
-                } else {
-                    Err(format!("Library not found: {}", path))
-                }
-            }
-        }
-
-        let mut interp = Interpreter::with_loader(Box::new(MockLoader));
-
-        let program = parse_str(
-            r#"
-            import user/shapes/1 as shapes
-
-            p = shapes.Point.new(10.0, 20.0)
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        // Check that we can access the imported Point type
-        assert!(interp.get_variable("p").is_some());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_import_without_loader_fails() -> eyre::Result<()> {
-        let mut interp = Interpreter::new();
-
-        let program = parse_str(
-            r#"
-            import user/shapes/1 as shapes
-            "#,
-        )?;
-
-        // Should fail because no library loader is configured
-        let result = interp.execute(&program);
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::LibraryError(_)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_series_indexing() -> eyre::Result<()> {
-        // Mock historical data provider
-        struct MockHistoricalData {
-            data: HashMap<String, Vec<f64>>,
-        }
-        impl HistoricalDataProvider for MockHistoricalData {
-            fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value> {
-                self.data.get(series_id)
-                    .and_then(|values| values.get(offset - 1))
-                    .map(|&v| Value::Number(v))
-            }
-        }
-
-        let mut interp = Interpreter::new();
-
-        // Set up historical data provider with close prices
-        let mut data = HashMap::new();
-        data.insert("close".to_string(), vec![100.2, 99.8, 99.5]); // [1], [2], [3]
-        interp.set_historical_provider(Box::new(MockHistoricalData { data }));
-
-        // Create a series representing current close price
-        let close_series = Value::Series(Series {
-            id: "close".to_string(),
-            current: Box::new(Value::Number(100.5)),
-        });
-
-        interp.set_variable("close", close_series);
-
-        let program = parse_str(
-            r#"
-            current = close[0]
-            prev1 = close[1]
-            prev2 = close[2]
-            prev3 = close[3]
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        assert_eq!(interp.get_variable("current"), Some(&Value::Number(100.5)));
-        assert_eq!(interp.get_variable("prev1"), Some(&Value::Number(100.2)));
-        assert_eq!(interp.get_variable("prev2"), Some(&Value::Number(99.8)));
-        assert_eq!(interp.get_variable("prev3"), Some(&Value::Number(99.5)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_series_out_of_bounds() -> eyre::Result<()> {
-        // Mock historical data provider with limited history
-        struct MockHistoricalData;
-        impl HistoricalDataProvider for MockHistoricalData {
-            fn get_historical(&self, _series_id: &str, offset: usize) -> Option<Value> {
-                // Only have data for offsets 1 and 2
-                match offset {
-                    1 => Some(Value::Number(99.0)),
-                    2 => Some(Value::Number(98.0)),
-                    _ => None,
-                }
-            }
-        }
-
-        let mut interp = Interpreter::new();
-        interp.set_historical_provider(Box::new(MockHistoricalData));
-
-        // Create a series with current value
-        let series = Value::Series(Series {
-            id: "price".to_string(),
-            current: Box::new(Value::Number(100.0)),
-        });
-
-        interp.set_variable("price", series);
-
-        let program = parse_str(
-            r#"
-            x = price[10]
-            "#,
-        )?;
-
-        // Should fail with index out of bounds
-        let result = interp.execute(&program);
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), RuntimeError::IndexOutOfBounds(_)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_series_in_expression() -> eyre::Result<()> {
-        // Mock historical data provider
-        struct MockHistoricalData {
-            data: HashMap<String, Vec<f64>>,
-        }
-        impl HistoricalDataProvider for MockHistoricalData {
-            fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value> {
-                self.data.get(series_id)
-                    .and_then(|values| values.get(offset - 1))
-                    .map(|&v| Value::Number(v))
-            }
-        }
-
-        let mut interp = Interpreter::new();
-
-        // Set up historical data provider
-        let mut data = HashMap::new();
-        data.insert("close".to_string(), vec![100.0, 95.0]); // [1], [2]
-        interp.set_historical_provider(Box::new(MockHistoricalData { data }));
-
-        // Create close price series with current value
-        let close_series = Value::Series(Series {
-            id: "close".to_string(),
-            current: Box::new(Value::Number(105.0)),
-        });
-
-        interp.set_variable("close", close_series);
-
-        let program = parse_str(
-            r#"
-            // Calculate simple moving average of last 3 bars
-            sma3 = (close[0] + close[1] + close[2]) / 3
-
-            // Calculate price change from previous bar
-            change = close[0] - close[1]
-            "#,
-        )?;
-
-        interp.execute(&program)?;
-
-        // SMA = (105 + 100 + 95) / 3 = 100
-        assert_eq!(interp.get_variable("sma3"), Some(&Value::Number(100.0)));
-
-        // Change = 105 - 100 = 5
-        assert_eq!(interp.get_variable("change"), Some(&Value::Number(5.0)));
-
-        Ok(())
     }
 }

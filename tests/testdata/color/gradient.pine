@@ -1,0 +1,24 @@
+// Test color.from_gradient
+
+// Create gradient endpoints
+black = color.rgb(0, 0, 0)
+white = color.rgb(100, 100, 100)
+
+// Get gradient at different positions
+bottom = color.from_gradient(0, 0, 100, black, white)
+middle = color.from_gradient(50, 0, 100, black, white)
+top = color.from_gradient(100, 0, 100, black, white)
+
+// Check bottom (should be black)
+log.info(bottom)
+
+// Check middle (should be gray ~50)
+log.info(middle)
+
+// Check top (should be white-ish 100)
+log.info(top)
+
+// Expected output:
+// Color(rgba(0, 0, 0, 0))
+// Color(rgba(50, 50, 50, 0))
+// Color(rgba(100, 100, 100, 0))

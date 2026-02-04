@@ -1,0 +1,17 @@
+// Test ta.roc (Rate of Change)
+// ROC = ((current - previous) / previous) * 100
+// Current close = 301 (bar 199)
+// 5 bars ago = 296 (bar 194)
+// roc(5) = ((301 - 296) / 296) * 100 = 1.689...
+
+// Rate of Change over 5 bars
+roc5 = ta.roc(close, 5)
+log.info(roc5)
+
+// Rate of Change over 10 bars
+roc10 = ta.roc(close, 10)
+log.info(roc10)
+
+// Expected output:
+// 1.6891891891891893
+// 3.436426116838488

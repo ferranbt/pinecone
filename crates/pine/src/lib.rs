@@ -6,7 +6,7 @@ pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
 use pine_ast::Program;
-use pine_interpreter::{Bar, Interpreter, RuntimeError, Value};
+use pine_interpreter::{Bar, Interpreter, RuntimeError};
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
 
@@ -58,8 +58,11 @@ pub struct Script {
 }
 
 impl Script {
-    /// Compile PineScript source code into a Script
-    pub fn compile(source: &str) -> Result<Self, Error> {
+    /// Compile PineScript source code into a Script with an optional custom logger
+    pub fn compile<L: pine_builtins::Logger + 'static>(
+        source: &str,
+        logger: Option<L>,
+    ) -> Result<Self, Error> {
         let mut lexer = Lexer::new(source);
         let tokens = lexer.tokenize()?;
 
@@ -69,7 +72,14 @@ impl Script {
 
         // Create interpreter and load builtin namespace objects
         let mut interpreter = Interpreter::new();
-        let namespaces = pine_builtins::register_namespace_objects();
+        let mut namespaces = pine_builtins::register_namespace_objects();
+
+        // If a custom logger is provided, create log namespace with it
+        if let Some(custom_logger) = logger {
+            let log_namespace = pine_builtins::Log::new(custom_logger).register();
+            namespaces.insert("log".to_string(), log_namespace);
+        }
+
         for (name, value) in namespaces {
             interpreter.set_variable(&name, value);
         }
@@ -85,12 +95,44 @@ impl Script {
     /// This maintains interpreter state across multiple calls,
     /// allowing variables to persist between bars.
     pub fn execute(&mut self, bar: &Bar) -> Result<(), Error> {
-        // Load bar data as variables in the interpreter context
-        self.interpreter.set_variable("open", Value::Number(bar.open));
-        self.interpreter.set_variable("high", Value::Number(bar.high));
-        self.interpreter.set_variable("low", Value::Number(bar.low));
-        self.interpreter.set_variable("close", Value::Number(bar.close));
-        self.interpreter.set_variable("volume", Value::Number(bar.volume));
+        // Load bar data as Series variables so TA functions can access historical data
+        use interpreter::{Series, Value};
+
+        self.interpreter.set_variable(
+            "open",
+            Value::Series(Series {
+                id: "open".to_string(),
+                current: Box::new(Value::Number(bar.open)),
+            }),
+        );
+        self.interpreter.set_variable(
+            "high",
+            Value::Series(Series {
+                id: "high".to_string(),
+                current: Box::new(Value::Number(bar.high)),
+            }),
+        );
+        self.interpreter.set_variable(
+            "low",
+            Value::Series(Series {
+                id: "low".to_string(),
+                current: Box::new(Value::Number(bar.low)),
+            }),
+        );
+        self.interpreter.set_variable(
+            "close",
+            Value::Series(Series {
+                id: "close".to_string(),
+                current: Box::new(Value::Number(bar.close)),
+            }),
+        );
+        self.interpreter.set_variable(
+            "volume",
+            Value::Series(Series {
+                id: "volume".to_string(),
+                current: Box::new(Value::Number(bar.volume)),
+            }),
+        );
 
         self.interpreter.execute(&self.program)?;
         Ok(())
@@ -109,8 +151,15 @@ impl Script {
     /// Set the historical data provider for accessing past bar data
     ///
     /// This is required for TA functions that need to look back at historical values.
-    pub fn set_historical_provider(&mut self, provider: Box<dyn pine_interpreter::HistoricalDataProvider>) {
+    pub fn set_historical_provider(
+        &mut self,
+        provider: Box<dyn pine_interpreter::HistoricalDataProvider>,
+    ) {
         self.interpreter.set_historical_provider(provider);
+    }
+
+    pub fn set_library_loader(&mut self, provider: Box<dyn pine_interpreter::LibraryLoader>) {
+        self.interpreter.set_library_loader(provider);
     }
 
     /// Get a mutable reference to the interpreter
@@ -119,28 +168,5 @@ impl Script {
     /// updating the historical provider state between bar executions.
     pub fn interpreter_mut(&mut self) -> &mut Interpreter {
         &mut self.interpreter
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use interpreter::Value;
-
-    #[test]
-    fn test_builtin_array_operations() -> Result<(), Error> {
-        let source = r#"
-            var new_float_fn = array.new_float
-            var a = new_float_fn(3, 10.0)
-            var size_fn = array.size
-            var size = size_fn(a)
-        "#;
-
-        let mut script = Script::compile(source)?;
-        script.execute(&Bar::default())?;
-
-        assert_eq!(script.interpreter.get_variable("size"), Some(&Value::Number(3.0)));
-
-        Ok(())
     }
 }

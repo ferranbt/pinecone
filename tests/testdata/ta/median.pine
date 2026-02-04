@@ -1,0 +1,18 @@
+// Test ta.median (Median value)
+// Median is the middle value when data is sorted
+// Last 5 closes: 297, 298, 299, 300, 301 (sorted)
+// Median = 299 (middle value)
+
+// Median of last 5 closes (odd number)
+med5 = ta.median(close, 5)
+log.info(med5)
+
+// Median of last 4 closes (even number)
+// Last 4 closes: 298, 299, 300, 301 (sorted)
+// Median = (299 + 300) / 2 = 299.5
+med4 = ta.median(close, 4)
+log.info(med4)
+
+// Expected output:
+// 299
+// 299.5

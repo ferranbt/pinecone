@@ -1,0 +1,14 @@
+// Test ta.ema (Exponential Moving Average)
+// EMA gives more weight to recent prices
+
+// EMA of last 10 closes
+ema10 = ta.ema(close, 10)
+log.info(ema10)
+
+// EMA of last 20 closes
+ema20 = ta.ema(close, 20)
+log.info(ema20)
+
+// Expected output:
+// 298.4180688134034
+// 294.8496018136784

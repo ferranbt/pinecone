@@ -1,0 +1,16 @@
+// Test ta.variance (Variance)
+// Variance measures the spread of values from their mean
+// Last 5 closes: 301, 300, 299, 298, 297 (bar 195-199)
+// Mean = 299, Variance = 2
+
+// Variance of last 5 closes
+var5 = ta.variance(close, 5)
+log.info(var5)
+
+// Variance of last 10 closes
+var10 = ta.variance(close, 10)
+log.info(var10)
+
+// Expected output:
+// 2
+// 8.25

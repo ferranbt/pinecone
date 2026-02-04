@@ -1,0 +1,45 @@
+// Test trigonometric functions
+
+// Convert to radians for testing
+rad90 = math.toradians(90)
+rad180 = math.toradians(180)
+
+// Sin, Cos, Tan of 0
+sin0 = math.sin(0)
+cos0 = math.cos(0)
+tan0 = math.tan(0)
+log.info(sin0)
+log.info(cos0)
+log.info(tan0)
+
+// Sign function
+sign1 = math.sign(5)
+sign2 = math.sign(-5)
+sign3 = math.sign(0)
+log.info(sign1)
+log.info(sign2)
+log.info(sign3)
+
+// Power
+pow1 = math.pow(2, 3)
+pow2 = math.pow(5, 2)
+log.info(pow1)
+log.info(pow2)
+
+// Square root
+sqrt1 = math.sqrt(16)
+sqrt2 = math.sqrt(25)
+log.info(sqrt1)
+log.info(sqrt2)
+
+// Expected output:
+// 0
+// 1
+// 0
+// 1
+// -1
+// 0
+// 8
+// 25
+// 4
+// 5

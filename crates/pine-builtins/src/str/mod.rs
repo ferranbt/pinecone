@@ -130,7 +130,12 @@ impl StrReplace {
         let occurrence = self.occurrence as usize;
         let mut result = self.source.clone();
 
-        if let Some(pos) = self.source.match_indices(&self.target).nth(occurrence).map(|(i, _)| i) {
+        if let Some(pos) = self
+            .source
+            .match_indices(&self.target)
+            .nth(occurrence)
+            .map(|(i, _)| i)
+        {
             result.replace_range(pos..pos + self.target.len(), &self.replacement);
         }
 
@@ -149,7 +154,9 @@ struct StrReplaceAll {
 
 impl StrReplaceAll {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        Ok(Value::String(self.source.replace(&self.target, &self.replacement)))
+        Ok(Value::String(
+            self.source.replace(&self.target, &self.replacement),
+        ))
     }
 }
 
@@ -163,7 +170,8 @@ struct StrSplit {
 
 impl StrSplit {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let parts: Vec<Value> = self.string
+        let parts: Vec<Value> = self
+            .string
             .split(&self.separator)
             .map(|s| Value::String(s.to_string()))
             .collect();
@@ -208,7 +216,11 @@ impl StrToString {
             Value::Function { .. } => "[Function]".to_string(),
             Value::BuiltinFunction(_) => "[BuiltinFunction]".to_string(),
             Value::Type { name, .. } => format!("[Type:{}]", name),
-            Value::Enum { enum_name, field_name, .. } => format!("{}::{}", enum_name, field_name),
+            Value::Enum {
+                enum_name,
+                field_name,
+                ..
+            } => format!("{}::{}", enum_name, field_name),
         };
         Ok(Value::String(result))
     }
@@ -252,193 +264,65 @@ pub fn register() -> Value {
 
     let mut str_ns = std::collections::HashMap::new();
 
-    str_ns.insert("length".to_string(), Value::BuiltinFunction(Rc::new(StrLength::builtin_fn)));
-    str_ns.insert("lower".to_string(), Value::BuiltinFunction(Rc::new(StrLower::builtin_fn)));
-    str_ns.insert("upper".to_string(), Value::BuiltinFunction(Rc::new(StrUpper::builtin_fn)));
-    str_ns.insert("contains".to_string(), Value::BuiltinFunction(Rc::new(StrContains::builtin_fn)));
-    str_ns.insert("startswith".to_string(), Value::BuiltinFunction(Rc::new(StrStartsWith::builtin_fn)));
-    str_ns.insert("endswith".to_string(), Value::BuiltinFunction(Rc::new(StrEndsWith::builtin_fn)));
-    str_ns.insert("substring".to_string(), Value::BuiltinFunction(Rc::new(StrSubstring::builtin_fn)));
-    str_ns.insert("replace".to_string(), Value::BuiltinFunction(Rc::new(StrReplace::builtin_fn)));
-    str_ns.insert("replace_all".to_string(), Value::BuiltinFunction(Rc::new(StrReplaceAll::builtin_fn)));
-    str_ns.insert("split".to_string(), Value::BuiltinFunction(Rc::new(StrSplit::builtin_fn)));
-    str_ns.insert("tonumber".to_string(), Value::BuiltinFunction(Rc::new(StrToNumber::builtin_fn)));
-    str_ns.insert("tostring".to_string(), Value::BuiltinFunction(Rc::new(StrToString::builtin_fn)));
-    str_ns.insert("pos".to_string(), Value::BuiltinFunction(Rc::new(StrPos::builtin_fn)));
-    str_ns.insert("repeat".to_string(), Value::BuiltinFunction(Rc::new(StrRepeat::builtin_fn)));
+    str_ns.insert(
+        "length".to_string(),
+        Value::BuiltinFunction(Rc::new(StrLength::builtin_fn)),
+    );
+    str_ns.insert(
+        "lower".to_string(),
+        Value::BuiltinFunction(Rc::new(StrLower::builtin_fn)),
+    );
+    str_ns.insert(
+        "upper".to_string(),
+        Value::BuiltinFunction(Rc::new(StrUpper::builtin_fn)),
+    );
+    str_ns.insert(
+        "contains".to_string(),
+        Value::BuiltinFunction(Rc::new(StrContains::builtin_fn)),
+    );
+    str_ns.insert(
+        "startswith".to_string(),
+        Value::BuiltinFunction(Rc::new(StrStartsWith::builtin_fn)),
+    );
+    str_ns.insert(
+        "endswith".to_string(),
+        Value::BuiltinFunction(Rc::new(StrEndsWith::builtin_fn)),
+    );
+    str_ns.insert(
+        "substring".to_string(),
+        Value::BuiltinFunction(Rc::new(StrSubstring::builtin_fn)),
+    );
+    str_ns.insert(
+        "replace".to_string(),
+        Value::BuiltinFunction(Rc::new(StrReplace::builtin_fn)),
+    );
+    str_ns.insert(
+        "replace_all".to_string(),
+        Value::BuiltinFunction(Rc::new(StrReplaceAll::builtin_fn)),
+    );
+    str_ns.insert(
+        "split".to_string(),
+        Value::BuiltinFunction(Rc::new(StrSplit::builtin_fn)),
+    );
+    str_ns.insert(
+        "tonumber".to_string(),
+        Value::BuiltinFunction(Rc::new(StrToNumber::builtin_fn)),
+    );
+    str_ns.insert(
+        "tostring".to_string(),
+        Value::BuiltinFunction(Rc::new(StrToString::builtin_fn)),
+    );
+    str_ns.insert(
+        "pos".to_string(),
+        Value::BuiltinFunction(Rc::new(StrPos::builtin_fn)),
+    );
+    str_ns.insert(
+        "repeat".to_string(),
+        Value::BuiltinFunction(Rc::new(StrRepeat::builtin_fn)),
+    );
 
     Value::Object {
         type_name: "str".to_string(),
         fields: Rc::new(RefCell::new(str_ns)),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use pine_interpreter::EvaluatedArg;
-
-    fn create_mock_interpreter() -> Interpreter {
-        Interpreter::new()
-    }
-
-    #[test]
-    fn test_str_length() {
-        let mut ctx = create_mock_interpreter();
-        let result = StrLength::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("hello".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::Number(5.0));
-    }
-
-    #[test]
-    fn test_str_lower_upper() {
-        let mut ctx = create_mock_interpreter();
-
-        let result = StrLower::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("HELLO".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::String("hello".to_string()));
-
-        let result = StrUpper::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("world".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::String("WORLD".to_string()));
-    }
-
-    #[test]
-    fn test_str_contains() {
-        let mut ctx = create_mock_interpreter();
-
-        let result = StrContains::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("hello world".to_string())),
-            EvaluatedArg::Positional(Value::String("world".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::Bool(true));
-
-        let result = StrContains::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("hello world".to_string())),
-            EvaluatedArg::Positional(Value::String("xyz".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::Bool(false));
-    }
-
-    #[test]
-    fn test_str_startswith_endswith() {
-        let mut ctx = create_mock_interpreter();
-
-        let result = StrStartsWith::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("hello world".to_string())),
-            EvaluatedArg::Positional(Value::String("hello".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::Bool(true));
-
-        let result = StrEndsWith::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("hello world".to_string())),
-            EvaluatedArg::Positional(Value::String("world".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::Bool(true));
-    }
-
-    #[test]
-    fn test_str_substring() {
-        let mut ctx = create_mock_interpreter();
-
-        let result = StrSubstring::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("hello world".to_string())),
-            EvaluatedArg::Positional(Value::Number(0.0)),
-            EvaluatedArg::Positional(Value::Number(5.0)),
-        ]).unwrap();
-        assert_eq!(result, Value::String("hello".to_string()));
-    }
-
-    #[test]
-    fn test_str_replace() {
-        let mut ctx = create_mock_interpreter();
-
-        let result = StrReplaceAll::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("hello world world".to_string())),
-            EvaluatedArg::Positional(Value::String("world".to_string())),
-            EvaluatedArg::Positional(Value::String("rust".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::String("hello rust rust".to_string()));
-    }
-
-    #[test]
-    fn test_str_split() {
-        let mut ctx = create_mock_interpreter();
-
-        let result = StrSplit::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("a,b,c".to_string())),
-            EvaluatedArg::Positional(Value::String(",".to_string())),
-        ]).unwrap();
-
-        if let Value::Array(arr) = result {
-            let arr_ref = arr.borrow();
-            assert_eq!(arr_ref.len(), 3);
-            assert_eq!(arr_ref[0], Value::String("a".to_string()));
-            assert_eq!(arr_ref[1], Value::String("b".to_string()));
-            assert_eq!(arr_ref[2], Value::String("c".to_string()));
-        } else {
-            panic!("Expected array");
-        }
-    }
-
-    #[test]
-    fn test_str_tonumber() {
-        let mut ctx = create_mock_interpreter();
-
-        let result = StrToNumber::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("123.45".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::Number(123.45));
-
-        let result = StrToNumber::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("invalid".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::Na);
-    }
-
-    #[test]
-    fn test_str_tostring() {
-        let mut ctx = create_mock_interpreter();
-
-        let result = StrToString::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(42.5)),
-        ]).unwrap();
-        assert_eq!(result, Value::String("42.5".to_string()));
-
-        let result = StrToString::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Bool(true)),
-        ]).unwrap();
-        assert_eq!(result, Value::String("true".to_string()));
-    }
-
-    #[test]
-    fn test_str_pos() {
-        let mut ctx = create_mock_interpreter();
-
-        let result = StrPos::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("hello world".to_string())),
-            EvaluatedArg::Positional(Value::String("world".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::Number(6.0));
-
-        let result = StrPos::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("hello world".to_string())),
-            EvaluatedArg::Positional(Value::String("xyz".to_string())),
-        ]).unwrap();
-        assert_eq!(result, Value::Number(-1.0));
-    }
-
-    #[test]
-    fn test_str_repeat() {
-        let mut ctx = create_mock_interpreter();
-
-        let result = StrRepeat::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::String("ab".to_string())),
-            EvaluatedArg::Positional(Value::Number(3.0)),
-        ]).unwrap();
-        assert_eq!(result, Value::String("ababab".to_string()));
     }
 }

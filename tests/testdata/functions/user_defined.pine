@@ -1,0 +1,33 @@
+// Test user-defined functions
+
+// Simple function
+add(a, b) => a + b
+result1 = add(5, 3)
+log.info(result1)
+
+// Function with multiple operations
+double(x) => x * 2
+result2 = double(7)
+log.info(result2)
+
+// Function calling another function
+quadruple(x) => double(double(x))
+result3 = quadruple(5)
+log.info(result3)
+
+// Function with conditional
+sign(x) => x > 0 ? 1 : x < 0 ? -1 : 0
+result4 = sign(10)
+result5 = sign(-5)
+result6 = sign(0)
+log.info(result4)
+log.info(result5)
+log.info(result6)
+
+// Expected output:
+// 8
+// 14
+// 20
+// 1
+// -1
+// 0

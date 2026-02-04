@@ -1,0 +1,73 @@
+// Test comparison operators
+
+// Greater than
+gt1 = 10 > 5
+gt2 = 3 > 7
+gt3 = 5 > 5
+
+// Less than
+lt1 = 3 < 7
+lt2 = 10 < 5
+lt3 = 5 < 5
+
+// Greater than or equal
+gte1 = 10 >= 5
+gte2 = 5 >= 5
+gte3 = 3 >= 7
+
+// Less than or equal
+lte1 = 3 <= 7
+lte2 = 5 <= 5
+lte3 = 10 <= 5
+
+// Equal
+eq1 = 5 == 5
+eq2 = 5 == 3
+eq3 = true == true
+eq4 = false == false
+
+// Not equal
+ne1 = 5 != 3
+ne2 = 5 != 5
+ne3 = true != false
+
+log.info(gt1)
+log.info(gt2)
+log.info(gt3)
+log.info(lt1)
+log.info(lt2)
+log.info(lt3)
+log.info(gte1)
+log.info(gte2)
+log.info(gte3)
+log.info(lte1)
+log.info(lte2)
+log.info(lte3)
+log.info(eq1)
+log.info(eq2)
+log.info(eq3)
+log.info(eq4)
+log.info(ne1)
+log.info(ne2)
+log.info(ne3)
+
+// Expected output:
+// true
+// false
+// false
+// true
+// false
+// false
+// true
+// true
+// false
+// true
+// true
+// false
+// true
+// false
+// true
+// true
+// true
+// false
+// true

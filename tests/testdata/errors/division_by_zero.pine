@@ -1,0 +1,5 @@
+// Test division by zero - should fail
+
+var x = 10 / 0
+
+// Expected error: Division by zero

@@ -1,0 +1,15 @@
+// Test ta.vwma (Volume Weighted Moving Average)
+// VWMA = sum(price * volume) / sum(volume)
+// Gives more weight to bars with higher volume
+
+// VWMA with period 5
+vwma5 = ta.vwma(close, 5)
+log.info(vwma5)
+
+// VWMA with period 10
+vwma10 = ta.vwma(close, 10)
+log.info(vwma10)
+
+// Expected output:
+// 299.006734006734
+// 296.52801358234296

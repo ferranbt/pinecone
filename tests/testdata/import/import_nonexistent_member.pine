@@ -1,0 +1,8 @@
+// Test accessing non-existent member from import - should fail
+
+import mylib as lib
+
+// Try to access something not exported
+x = lib.nonExistentFunction()
+
+// Expected error: Type error: Object has no member 'nonExistentFunction'

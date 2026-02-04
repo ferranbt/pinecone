@@ -1,0 +1,24 @@
+// Test ta.highest and ta.lowest
+// Last 10 closes: 301, 300, 299, 298, 297, 296, 295, 294, 293, 292
+
+// Highest of last 10 closes
+high10 = ta.highest(close, 10)
+log.info(high10)
+
+// Lowest of last 10 closes
+low10 = ta.lowest(close, 10)
+log.info(low10)
+
+// Highest of last 5 closes
+high5 = ta.highest(close, 5)
+log.info(high5)
+
+// Lowest of last 5 closes
+low5 = ta.lowest(close, 5)
+log.info(low5)
+
+// Expected output:
+// 301
+// 292
+// 301
+// 297

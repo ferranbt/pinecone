@@ -1,0 +1,11 @@
+// Test ta.swma (Symmetrically Weighted Moving Average)
+// SWMA uses fixed 4-bar window with weights [1, 2, 2, 1]
+// Last 4 closes: 301, 300, 299, 298
+// SWMA = (301*1 + 300*2 + 299*2 + 298*1) / 6 = 1799/6 = 299.833...
+
+// SWMA (no parameters - always 4 bars)
+swma_val = ta.swma(close)
+log.info(swma_val)
+
+// Expected output:
+// 299.5

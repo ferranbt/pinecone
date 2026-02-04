@@ -1,0 +1,30 @@
+// Test nested while loops
+
+// Nested while loop
+var i = 0
+var sum = 0
+while i < 3
+    var j = 0
+    while j < 2
+        sum := sum + i * j
+        j := j + 1
+    i := i + 1
+
+log.info(sum)
+
+// While with both break and continue
+var k = 0
+var sum2 = 0
+while k < 20
+    k := k + 1
+    if k > 10
+        break
+    if k % 2 == 0
+        continue
+    sum2 := sum2 + k
+
+log.info(sum2)
+
+// Expected output:
+// 3
+// 25

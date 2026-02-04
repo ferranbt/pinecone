@@ -1,0 +1,30 @@
+// Test switch expressions
+
+// Basic switch
+var x = 2
+var result1 = switch x
+    1 => "one"
+    2 => "two"
+    3 => "three"
+log.info(result1)
+
+// Switch with different value
+var y = 1
+var result2 = switch y
+    1 => "first"
+    2 => "second"
+    3 => "third"
+log.info(result2)
+
+// Switch with numbers as result
+var z = 3
+var result3 = switch z
+    1 => 10
+    2 => 20
+    3 => 30
+log.info(result3)
+
+// Expected output:
+// two
+// first
+// 30

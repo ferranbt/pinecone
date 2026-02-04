@@ -1,0 +1,51 @@
+// Test if statements with := reassignment
+
+// If-else if-else with reassignment (negative case)
+var x = -5
+var result = 0
+
+if x < 0
+    result := -1
+else if x == 0
+    result := 0
+else if x < 10
+    result := 1
+else
+    result := 2
+
+log.info(result)
+
+// If-else if-else with reassignment (large case)
+var y = 100
+var result2 = 0
+
+if y < 0
+    result2 := -1
+else if y == 0
+    result2 := 0
+else if y < 10
+    result2 := 1
+else
+    result2 := 2
+
+log.info(result2)
+
+// If-else if-else with reassignment (small case)
+var z = 5
+var result3 = 0
+
+if z < 0
+    result3 := -1
+else if z == 0
+    result3 := 0
+else if z < 10
+    result3 := 1
+else
+    result3 := 2
+
+log.info(result3)
+
+// Expected output:
+// -1
+// 2
+// 1

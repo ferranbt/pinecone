@@ -1,0 +1,69 @@
+// Test if expressions that return values
+
+// Simple if expression returning value
+var close = 10
+var open = 5
+x = if close > open
+    close
+
+log.info(x)
+
+// If expression returning value (false case)
+var close2 = 5
+var open2 = 10
+y = if close2 > open2
+    close2
+
+log.info(y)
+
+// If-else expression with string return type
+var val = 5
+string result = if val > 0
+    "positive"
+else
+    "non-positive"
+
+log.info(result)
+
+// If-else expression with string return type (negative case)
+var val2 = -5
+string result2 = if val2 > 0
+    "positive"
+else
+    "non-positive"
+
+log.info(result2)
+
+// If-else if-else expression
+var num = 5
+string label = if num < 0
+    "negative"
+else if num == 0
+    "zero"
+else if num < 10
+    "small"
+else
+    "large"
+
+log.info(label)
+
+// If-else if-else expression (large case)
+var num2 = 100
+string label2 = if num2 < 0
+    "negative"
+else if num2 == 0
+    "zero"
+else if num2 < 10
+    "small"
+else
+    "large"
+
+log.info(label2)
+
+// Expected output:
+// 10
+// na
+// positive
+// non-positive
+// small
+// large

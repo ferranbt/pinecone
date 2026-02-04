@@ -1,0 +1,45 @@
+// Test string manipulation functions
+
+// Substring
+sub1 = str.substring("hello world", 0, 5)
+sub2 = str.substring("hello world", 6, 11)
+log.info(sub1)
+log.info(sub2)
+
+// Replace
+rep1 = str.replace_all("hello world world", "world", "rust")
+log.info(rep1)
+
+// Position
+pos1 = str.pos("hello world", "world")
+pos2 = str.pos("hello world", "xyz")
+log.info(pos1)
+log.info(pos2)
+
+// Repeat
+rep2 = str.repeat("ab", 3)
+log.info(rep2)
+
+// Convert to number
+num1 = str.tonumber("123.45")
+num2 = str.tonumber("67")
+log.info(num1)
+log.info(num2)
+
+// Convert to string
+str1 = str.tostring(42.5)
+str2 = str.tostring(true)
+log.info(str1)
+log.info(str2)
+
+// Expected output:
+// hello
+// world
+// hello rust rust
+// 6
+// -1
+// ababab
+// 123.45
+// 67
+// 42.5
+// true

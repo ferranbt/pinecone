@@ -1,0 +1,27 @@
+// Test UDT copy method
+type pivotPoint
+    int x
+    float y
+
+pivot1 = pivotPoint.new()
+pivot1.x := 1000
+pivot1.y := 50.5
+
+pivot2 = pivotPoint.copy(pivot1)
+pivot2.x := 2000
+
+x1 = pivot1.x
+x2 = pivot2.x
+y1 = pivot1.y
+y2 = pivot2.y
+
+log.info(x1)
+log.info(x2)
+log.info(y1)
+log.info(y2)
+
+// Expected output:
+// 1000
+// 2000
+// 50.5
+// 50.5

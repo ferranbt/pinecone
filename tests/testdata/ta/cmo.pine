@@ -1,0 +1,18 @@
+// Test ta.cmo (Chande Momentum Oscillator)
+// CMO = 100 * (sum of gains - sum of losses) / (sum of gains + sum of losses)
+// Last 5 closes: 301, 300, 299, 298, 297 (all gains, no losses)
+// Changes: +1, +1, +1, +1 (4 gains of 1 each)
+// sum_gains = 4, sum_losses = 0
+// CMO = 100 * (4 - 0) / (4 + 0) = 100
+
+// CMO over 5 bars
+cmo5 = ta.cmo(close, 5)
+log.info(cmo5)
+
+// CMO over 10 bars
+cmo10 = ta.cmo(close, 10)
+log.info(cmo10)
+
+// Expected output:
+// 100
+// 100

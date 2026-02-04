@@ -37,7 +37,7 @@ fn bench_compile_only(c: &mut Criterion) {
     for (name, source) in TEST_SCRIPTS {
         group.bench_with_input(BenchmarkId::from_parameter(name), source, |b, source| {
             b.iter(|| {
-                let _ = Script::compile(black_box(source)).unwrap();
+                let _ = Script::compile::<pine_builtins::DefaultLogger>(black_box(source), None).unwrap();
             });
         });
     }

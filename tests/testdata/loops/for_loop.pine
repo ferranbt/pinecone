@@ -1,0 +1,17 @@
+// Test for loops
+
+// Simple for loop
+var sum1 = 0
+for i = 1 to 5
+    sum1 := sum1 + i
+log.info(sum1)
+
+// Another for loop
+var sum2 = 0
+for i = 10 to 15
+    sum2 := sum2 + i
+log.info(sum2)
+
+// Expected output:
+// 15
+// 75

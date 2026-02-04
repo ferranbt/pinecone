@@ -1,0 +1,15 @@
+// Test ta.hma (Hull Moving Average)
+// HMA = WMA(2 * WMA(n/2) - WMA(n), sqrt(n))
+// Reduces lag and improves smoothing
+
+// HMA with period 9
+hma9 = ta.hma(close, 9)
+log.info(hma9)
+
+// HMA with period 16
+hma16 = ta.hma(close, 16)
+log.info(hma16)
+
+// Expected output:
+// 301.6666666666667
+// 301.33333333333337

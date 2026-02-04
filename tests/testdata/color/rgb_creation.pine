@@ -1,0 +1,38 @@
+// Test color.rgb creation
+
+// Create basic RGB colors
+red = color.rgb(255, 0, 0)
+green = color.rgb(0, 255, 0)
+blue = color.rgb(0, 0, 255)
+
+// Get components
+r1 = color.r(red)
+g1 = color.g(green)
+b1 = color.b(blue)
+
+log.info(r1)
+log.info(g1)
+log.info(b1)
+
+// Create color with transparency
+semi_red = color.rgb(255, 0, 0, 50)
+t1 = color.t(semi_red)
+log.info(t1)
+
+// Create mixed color
+purple = color.rgb(128, 0, 128)
+r2 = color.r(purple)
+g2 = color.g(purple)
+b2 = color.b(purple)
+log.info(r2)
+log.info(g2)
+log.info(b2)
+
+// Expected output:
+// 255
+// 255
+// 255
+// 50
+// 128
+// 0
+// 128

@@ -1,0 +1,6 @@
+// Test break outside loop - should fail
+
+var x = 10
+break
+
+// Expected error: Break statement outside of loop

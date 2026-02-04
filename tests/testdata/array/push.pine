@@ -1,0 +1,23 @@
+// Test array.push
+
+a = array.new_float(0, 0.0)
+array.push(a, 10.0)
+array.push(a, 20.0)
+array.push(a, 30.0)
+
+size1 = array.size(a)
+log.info(size1)
+
+val1 = array.get(a, 0)
+val2 = array.get(a, 1)
+val3 = array.get(a, 2)
+
+log.info(val1)
+log.info(val2)
+log.info(val3)
+
+// Expected output:
+// 3
+// 10
+// 20
+// 30

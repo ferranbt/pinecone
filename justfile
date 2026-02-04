@@ -5,6 +5,14 @@ generate-ast:
 ref path="":
     cargo run --package pine-reference -- query {{path}}
 
+# Run integration tests with verbose output
+test-integration:
+    cargo test -p pine-integration-tests -- --nocapture
+
+# Run integration tests for a specific test
+test-integration-test test_name:
+    TEST_FILE={{test_name}} cargo test -p pine-integration-tests -- --nocapture
+
 # Run all benchmarks
 bench:
     cargo bench

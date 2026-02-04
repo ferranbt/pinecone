@@ -1,0 +1,56 @@
+// Test arithmetic operators
+
+// Addition
+add1 = 10 + 5
+add2 = -3 + 7
+add3 = 2.5 + 3.5
+
+// Subtraction
+sub1 = 10 - 5
+sub2 = 3 - 7
+sub3 = 5.5 - 2.5
+
+// Multiplication
+mul1 = 5 * 4
+mul2 = -3 * 2
+mul3 = 2.5 * 4
+
+// Division
+div1 = 20 / 4
+div2 = 15 / 2
+div3 = -10 / 2
+
+// Modulo
+mod1 = 10 % 3
+mod2 = 15 % 4
+
+log.info(add1)
+log.info(add2)
+log.info(add3)
+log.info(sub1)
+log.info(sub2)
+log.info(sub3)
+log.info(mul1)
+log.info(mul2)
+log.info(mul3)
+log.info(div1)
+log.info(div2)
+log.info(div3)
+log.info(mod1)
+log.info(mod2)
+
+// Expected output:
+// 15
+// 4
+// 6
+// 5
+// -4
+// 3
+// 20
+// -6
+// 10
+// 5
+// 7.5
+// -5
+// 1
+// 3

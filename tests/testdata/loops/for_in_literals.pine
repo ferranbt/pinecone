@@ -1,0 +1,29 @@
+// Test for-in loops with array literal syntax
+
+// Simple for-in with array literal
+var arr = [1, 2, 3, 4, 5]
+var sum1 = 0
+for item in arr
+    sum1 := sum1 + item
+log.info(sum1)
+
+// For-in with tuple unpacking and array literal
+var arr2 = [10, 20, 30]
+var sum2 = 0
+for [i, value] in arr2
+    sum2 := sum2 + i * value
+log.info(sum2)
+
+// For-in with break and array literal
+var arr3 = [1, 2, 3, 4, 5]
+var sum3 = 0
+for item in arr3
+    if item == 3
+        break
+    sum3 := sum3 + item
+log.info(sum3)
+
+// Expected output:
+// 15
+// 80
+// 3

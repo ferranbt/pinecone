@@ -1,0 +1,15 @@
+// Test ta.rsi (Relative Strength Index)
+// RSI measures momentum, values between 0-100
+// Close is always increasing, so RSI should be 100
+
+// RSI with period 14
+rsi14 = ta.rsi(close, 14)
+log.info(rsi14)
+
+// RSI with period 7
+rsi7 = ta.rsi(close, 7)
+log.info(rsi7)
+
+// Expected output:
+// 100
+// 100

@@ -8,6 +8,9 @@ pub use pine_interpreter::Bar;
 pub use pine_interpreter::BuiltinFn;
 pub use pine_interpreter::EvaluatedArg;
 
+// Re-export log types for custom logger support
+pub use log::{DefaultLogger, Log, Logger, LogLevel};
+
 // Namespace modules
 mod array;
 mod color;

@@ -1,0 +1,27 @@
+// Test compound assignment operators
+
+// Addition assignment
+var x = 10
+x += 5
+log.info(x)
+
+// Subtraction assignment
+var y = 20
+y -= 7
+log.info(y)
+
+// Multiplication assignment
+var z = 5
+z *= 3
+log.info(z)
+
+// Division assignment
+var w = 30
+w /= 6
+log.info(w)
+
+// Expected output:
+// 15
+// 13
+// 15
+// 5

@@ -1,0 +1,16 @@
+// Test ta.rma (Rolling Moving Average / Wilder's Smoothing)
+// RMA uses alpha = 1/length for smoothing
+// RMA = alpha * current + (1 - alpha) * prev_RMA
+// More smoothed than EMA, often used in RSI
+
+// RMA with period 5
+rma5 = ta.rma(close, 5)
+log.info(rma5)
+
+// RMA with period 14
+rma14 = ta.rma(close, 14)
+log.info(rma14)
+
+// Expected output:
+// 299.635008
+// 295.67359715525674
