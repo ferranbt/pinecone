@@ -8,6 +8,7 @@ members = [
     "crates/pine-builtins",
     "crates/pine",
     "crates/pine-reference",
+    "benches",
 ]
 resolver = "2"
 

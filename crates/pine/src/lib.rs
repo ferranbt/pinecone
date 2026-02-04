@@ -105,6 +105,21 @@ impl Script {
         }
         Ok(())
     }
+
+    /// Set the historical data provider for accessing past bar data
+    ///
+    /// This is required for TA functions that need to look back at historical values.
+    pub fn set_historical_provider(&mut self, provider: Box<dyn pine_interpreter::HistoricalDataProvider>) {
+        self.interpreter.set_historical_provider(provider);
+    }
+
+    /// Get a mutable reference to the interpreter
+    ///
+    /// This allows direct access to the interpreter for advanced use cases like
+    /// updating the historical provider state between bar executions.
+    pub fn interpreter_mut(&mut self) -> &mut Interpreter {
+        &mut self.interpreter
+    }
 }
 
 #[cfg(test)]
