@@ -8,7 +8,11 @@ members = [
     "crates/pine-builtins",
     "crates/pine",
     "crates/pine-reference",
+<<<<<<< HEAD
     "tests",
+=======
+    "benches",
+>>>>>>> main
 ]
 resolver = "2"
 

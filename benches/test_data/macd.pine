@@ -1,0 +1,13 @@
+//@version=5
+fast = 12
+slow = 26
+signal_length = 9
+
+ema_fast = ta.ema(close, fast)
+ema_slow = ta.ema(close, slow)
+macd = ema_fast - ema_slow
+signal = ta.ema(macd, signal_length)
+histogram = macd - signal
+
+bullish_cross = ta.crossover(macd, signal)
+bearish_cross = ta.crossunder(macd, signal)

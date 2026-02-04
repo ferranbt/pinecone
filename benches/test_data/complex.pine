@@ -1,0 +1,26 @@
+// Multiple moving averages
+sma10 = ta.sma(close, 10)
+sma20 = ta.sma(close, 20)
+sma50 = ta.sma(close, 50)
+sma200 = ta.sma(close, 200)
+ema21 = ta.ema(close, 21)
+
+// RSI
+rsi14 = ta.rsi(close, 14)
+
+// Volatility
+atr14 = ta.atr(14)
+stdev20 = ta.stdev(close, 20)
+
+// Price changes
+change1 = ta.change(close, 1)
+roc10 = ta.roc(close, 10)
+
+// Highs and lows
+highest20 = ta.highest(high, 20)
+lowest20 = ta.lowest(low, 20)
+
+// Trend detection
+uptrend = ta.rising(close, 3)
+downtrend = ta.falling(close, 3)
+ma_cross = ta.cross(sma10, sma20)
