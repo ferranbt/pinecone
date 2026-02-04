@@ -1,0 +1,24 @@
+// Test logarithmic and exponential functions
+
+// Natural logarithm
+log1 = math.log(math.exp(1))
+log.info(log1)
+
+// Base-10 logarithm
+log10_1 = math.log10(100)
+log10_2 = math.log10(1000)
+log.info(log10_1)
+log.info(log10_2)
+
+// Exponential
+exp1 = math.exp(0)
+exp2 = math.exp(1)
+log.info(exp1)
+log.info(exp2)
+
+// Expected output:
+// 1
+// 2
+// 3
+// 1
+// 2.718281828459045

@@ -1,0 +1,61 @@
+// Test for...in loops
+
+// Simple for in loop
+var arr1 = array.new_float(0, 0)
+array.push(arr1, 1)
+array.push(arr1, 2)
+array.push(arr1, 3)
+array.push(arr1, 4)
+array.push(arr1, 5)
+
+var sum1 = 0
+for item in arr1
+    sum1 := sum1 + item
+log.info(sum1)
+
+// For in with index (tuple unpacking)
+var arr2 = array.new_float(0, 0)
+array.push(arr2, 10)
+array.push(arr2, 20)
+array.push(arr2, 30)
+
+var sum2 = 0
+for [i, value] in arr2
+    sum2 := sum2 + i * value
+log.info(sum2)
+
+// For in with break
+var arr3 = array.new_float(0, 0)
+array.push(arr3, 1)
+array.push(arr3, 2)
+array.push(arr3, 3)
+array.push(arr3, 4)
+array.push(arr3, 5)
+
+var sum3 = 0
+for item in arr3
+    if item == 3
+        break
+    sum3 := sum3 + item
+log.info(sum3)
+
+// For in with continue
+var arr4 = array.new_float(0, 0)
+array.push(arr4, 1)
+array.push(arr4, 2)
+array.push(arr4, 3)
+array.push(arr4, 4)
+array.push(arr4, 5)
+
+var sum4 = 0
+for item in arr4
+    if item % 2 == 0
+        continue
+    sum4 := sum4 + item
+log.info(sum4)
+
+// Expected output:
+// 15
+// 80
+// 3
+// 9

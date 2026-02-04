@@ -1,0 +1,35 @@
+// Test color transparency operations
+
+// Create base color
+base = color.rgb(255, 100, 50)
+
+// Apply different transparency levels
+trans1 = color.new(base, 25)
+trans2 = color.new(base, 50)
+trans3 = color.new(base, 75)
+
+// Check transparency values
+t1 = color.t(trans1)
+t2 = color.t(trans2)
+t3 = color.t(trans3)
+
+log.info(t1)
+log.info(t2)
+log.info(t3)
+
+// Check that RGB components are preserved
+r1 = color.r(trans1)
+g1 = color.g(trans1)
+b1 = color.b(trans1)
+
+log.info(r1)
+log.info(g1)
+log.info(b1)
+
+// Expected output:
+// 25
+// 50
+// 75
+// 255
+// 100
+// 50

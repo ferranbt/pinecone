@@ -1,0 +1,36 @@
+// Test if/else statements
+
+// Simple if
+var x = 10
+if x > 5
+    log.info("greater")
+
+// If-else
+var y = 3
+if y > 5
+    log.info("big")
+else
+    log.info("small")
+
+// If-else if-else
+var z = 7
+if z < 5
+    log.info("low")
+else if z < 10
+    log.info("medium")
+else
+    log.info("high")
+
+// Nested if
+var a = 15
+if a > 10
+    if a > 20
+        log.info("very large")
+    else
+        log.info("large")
+
+// Expected output:
+// greater
+// small
+// medium
+// large

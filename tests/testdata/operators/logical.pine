@@ -1,0 +1,51 @@
+// Test logical operators
+
+// AND operator
+and1 = true and true
+and2 = true and false
+and3 = false and true
+and4 = false and false
+
+// OR operator
+or1 = true or true
+or2 = true or false
+or3 = false or true
+or4 = false or false
+
+// NOT operator
+not1 = not true
+not2 = not false
+
+// Combined logical expressions
+comb1 = true and (false or true)
+comb2 = (true or false) and false
+comb3 = not (true and false)
+
+log.info(and1)
+log.info(and2)
+log.info(and3)
+log.info(and4)
+log.info(or1)
+log.info(or2)
+log.info(or3)
+log.info(or4)
+log.info(not1)
+log.info(not2)
+log.info(comb1)
+log.info(comb2)
+log.info(comb3)
+
+// Expected output:
+// true
+// false
+// false
+// false
+// true
+// true
+// true
+// false
+// false
+// true
+// true
+// false
+// true
