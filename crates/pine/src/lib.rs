@@ -6,7 +6,7 @@ pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
 use pine_ast::Program;
-use pine_interpreter::{Bar, Interpreter, RuntimeError, Value};
+use pine_interpreter::{Bar, Interpreter, RuntimeError};
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
 
@@ -95,16 +95,44 @@ impl Script {
     /// This maintains interpreter state across multiple calls,
     /// allowing variables to persist between bars.
     pub fn execute(&mut self, bar: &Bar) -> Result<(), Error> {
-        // Load bar data as variables in the interpreter context
-        self.interpreter
-            .set_variable("open", Value::Number(bar.open));
-        self.interpreter
-            .set_variable("high", Value::Number(bar.high));
-        self.interpreter.set_variable("low", Value::Number(bar.low));
-        self.interpreter
-            .set_variable("close", Value::Number(bar.close));
-        self.interpreter
-            .set_variable("volume", Value::Number(bar.volume));
+        // Load bar data as Series variables so TA functions can access historical data
+        use interpreter::{Series, Value};
+
+        self.interpreter.set_variable(
+            "open",
+            Value::Series(Series {
+                id: "open".to_string(),
+                current: Box::new(Value::Number(bar.open)),
+            }),
+        );
+        self.interpreter.set_variable(
+            "high",
+            Value::Series(Series {
+                id: "high".to_string(),
+                current: Box::new(Value::Number(bar.high)),
+            }),
+        );
+        self.interpreter.set_variable(
+            "low",
+            Value::Series(Series {
+                id: "low".to_string(),
+                current: Box::new(Value::Number(bar.low)),
+            }),
+        );
+        self.interpreter.set_variable(
+            "close",
+            Value::Series(Series {
+                id: "close".to_string(),
+                current: Box::new(Value::Number(bar.close)),
+            }),
+        );
+        self.interpreter.set_variable(
+            "volume",
+            Value::Series(Series {
+                id: "volume".to_string(),
+                current: Box::new(Value::Number(bar.volume)),
+            }),
+        );
 
         self.interpreter.execute(&self.program)?;
         Ok(())
@@ -123,8 +151,15 @@ impl Script {
     /// Set the historical data provider for accessing past bar data
     ///
     /// This is required for TA functions that need to look back at historical values.
-    pub fn set_historical_provider(&mut self, provider: Box<dyn pine_interpreter::HistoricalDataProvider>) {
+    pub fn set_historical_provider(
+        &mut self,
+        provider: Box<dyn pine_interpreter::HistoricalDataProvider>,
+    ) {
         self.interpreter.set_historical_provider(provider);
+    }
+
+    pub fn set_library_loader(&mut self, provider: Box<dyn pine_interpreter::LibraryLoader>) {
+        self.interpreter.set_library_loader(provider);
     }
 
     /// Get a mutable reference to the interpreter
@@ -135,4 +170,3 @@ impl Script {
         &mut self.interpreter
     }
 }
-

@@ -1,0 +1,19 @@
+// Test ta.rising and ta.falling
+// close values: 299, 300, 301 (bar 197, 198, 199 - always increasing)
+
+// Check if close is rising for last 3 bars (should be true)
+is_rising = ta.rising(close, 3)
+log.info(is_rising)
+
+// Check if close is falling for last 3 bars (should be false, it's rising)
+is_falling = ta.falling(close, 3)
+log.info(is_falling)
+
+// Check rising for 1 bar (true, current > previous)
+is_rising1 = ta.rising(close, 1)
+log.info(is_rising1)
+
+// Expected output:
+// true
+// false
+// true

@@ -1,0 +1,24 @@
+// Test using series in expressions
+// Bar 199: close=301, Bar 198: close=300, Bar 197: close=299
+
+// Calculate change from previous bar
+change = close[0] - close[1]
+log.info(change)
+
+// Calculate average of current and previous
+avg = (close[0] + close[1]) / 2
+log.info(avg)
+
+// Check if price is rising
+is_rising = close[0] > close[1]
+log.info(is_rising)
+
+// Calculate sum of last 3 bars
+sum3 = close[0] + close[1] + close[2]
+log.info(sum3)
+
+// Expected output:
+// 1
+// 300.5
+// true
+// 900

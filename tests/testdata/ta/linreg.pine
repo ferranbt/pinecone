@@ -1,0 +1,16 @@
+// Test ta.linreg (Linear Regression)
+// Linear regression fits a line through the data points
+// Last 5 closes: 297, 298, 299, 300, 301 (perfect uptrend, slope = 1)
+// At offset 0 (current bar), linreg should return value on the trend line
+
+// Linear regression over 5 bars at current offset
+linreg5 = ta.linreg(close, 5, 0)
+log.info(linreg5)
+
+// Linear regression over 10 bars at current offset
+linreg10 = ta.linreg(close, 10, 0)
+log.info(linreg10)
+
+// Expected output:
+// 301
+// 301

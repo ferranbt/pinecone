@@ -1,0 +1,20 @@
+// Test member access on objects
+
+// Access color constants from color namespace
+myRed = color.red
+myBlue = color.blue
+myGreen = color.green
+
+// Verify we can use them by extracting RGB components
+r1 = color.r(myRed)
+b1 = color.b(myBlue)
+g1 = color.g(myGreen)
+
+log.info(r1)
+log.info(b1)
+log.info(g1)
+
+// Expected output:
+// 255
+// 255
+// 128

@@ -1380,8 +1380,12 @@ dependencies = [
 name = "pine-integration-tests"
 version = "0.1.0"
 dependencies = [
+ "eyre",
  "pine",
+ "pine-ast",
  "pine-interpreter",
+ "pine-lexer",
+ "pine-parser",
  "walkdir",
 ]
 

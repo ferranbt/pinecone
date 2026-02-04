@@ -1,0 +1,20 @@
+// Test ta.sma (Simple Moving Average)
+// Uses generated bars: bar[i] has close = 100 + i + 2 = 102 + i
+// For bar 199 (last bar): close = 301, bar 198: close = 300, etc.
+
+// SMA of last 5 close values: (301+300+299+298+297)/5 = 299
+sma5 = ta.sma(close, 5)
+log.info(sma5)
+
+// SMA of last 10 close values: (301+300+...+292)/10 = 296.5
+sma10 = ta.sma(close, 10)
+log.info(sma10)
+
+// SMA of last 20 close values: (301+300+...+282)/20 = 291.5
+sma20 = ta.sma(close, 20)
+log.info(sma20)
+
+// Expected output:
+// 299
+// 296.5
+// 291.5

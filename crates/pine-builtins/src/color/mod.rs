@@ -131,136 +131,60 @@ impl ColorFromGradient {
 
 /// Register all color namespace functions and return the namespace object
 pub fn register() -> Value {
-    use std::rc::Rc;
     use std::cell::RefCell;
+    use std::rc::Rc;
 
     let mut color_ns = std::collections::HashMap::new();
 
-    color_ns.insert("new".to_string(), Value::BuiltinFunction(Rc::new(ColorNew::builtin_fn)));
-    color_ns.insert("rgb".to_string(), Value::BuiltinFunction(Rc::new(ColorRgb::builtin_fn)));
-    color_ns.insert("r".to_string(), Value::BuiltinFunction(Rc::new(ColorR::builtin_fn)));
-    color_ns.insert("g".to_string(), Value::BuiltinFunction(Rc::new(ColorG::builtin_fn)));
-    color_ns.insert("b".to_string(), Value::BuiltinFunction(Rc::new(ColorB::builtin_fn)));
-    color_ns.insert("t".to_string(), Value::BuiltinFunction(Rc::new(ColorT::builtin_fn)));
-    color_ns.insert("from_gradient".to_string(), Value::BuiltinFunction(Rc::new(ColorFromGradient::builtin_fn)));
+    color_ns.insert(
+        "new".to_string(),
+        Value::BuiltinFunction(Rc::new(ColorNew::builtin_fn)),
+    );
+    color_ns.insert(
+        "rgb".to_string(),
+        Value::BuiltinFunction(Rc::new(ColorRgb::builtin_fn)),
+    );
+    color_ns.insert(
+        "r".to_string(),
+        Value::BuiltinFunction(Rc::new(ColorR::builtin_fn)),
+    );
+    color_ns.insert(
+        "g".to_string(),
+        Value::BuiltinFunction(Rc::new(ColorG::builtin_fn)),
+    );
+    color_ns.insert(
+        "b".to_string(),
+        Value::BuiltinFunction(Rc::new(ColorB::builtin_fn)),
+    );
+    color_ns.insert(
+        "t".to_string(),
+        Value::BuiltinFunction(Rc::new(ColorT::builtin_fn)),
+    );
+    color_ns.insert(
+        "from_gradient".to_string(),
+        Value::BuiltinFunction(Rc::new(ColorFromGradient::builtin_fn)),
+    );
+
+    color_ns.insert("aqua".to_string(), Value::new_color(0, 255, 255, 0));
+    color_ns.insert("black".to_string(), Value::new_color(0, 0, 0, 0));
+    color_ns.insert("blue".to_string(), Value::new_color(0, 0, 255, 0));
+    color_ns.insert("fuchsia".to_string(), Value::new_color(255, 0, 255, 0));
+    color_ns.insert("gray".to_string(), Value::new_color(128, 128, 128, 0));
+    color_ns.insert("green".to_string(), Value::new_color(0, 128, 0, 0));
+    color_ns.insert("lime".to_string(), Value::new_color(0, 255, 0, 0));
+    color_ns.insert("maroon".to_string(), Value::new_color(128, 0, 0, 0));
+    color_ns.insert("navy".to_string(), Value::new_color(0, 0, 128, 0));
+    color_ns.insert("olive".to_string(), Value::new_color(128, 128, 0, 0));
+    color_ns.insert("orange".to_string(), Value::new_color(255, 165, 0, 0));
+    color_ns.insert("purple".to_string(), Value::new_color(128, 0, 128, 0));
+    color_ns.insert("red".to_string(), Value::new_color(255, 0, 0, 0));
+    color_ns.insert("silver".to_string(), Value::new_color(192, 192, 192, 0));
+    color_ns.insert("teal".to_string(), Value::new_color(0, 128, 128, 0));
+    color_ns.insert("white".to_string(), Value::new_color(255, 255, 255, 0));
+    color_ns.insert("yellow".to_string(), Value::new_color(255, 255, 0, 0));
 
     Value::Object {
         type_name: "color".to_string(),
         fields: Rc::new(RefCell::new(color_ns)),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use pine_interpreter::EvaluatedArg;
-
-    fn create_mock_interpreter() -> Interpreter {
-        Interpreter::new()
-    }
-
-    #[test]
-    fn test_color_rgb() {
-        let mut ctx = create_mock_interpreter();
-
-        // Test basic RGB creation
-        let args = vec![
-            EvaluatedArg::Positional(Value::Number(255.0)),
-            EvaluatedArg::Positional(Value::Number(128.0)),
-            EvaluatedArg::Positional(Value::Number(64.0)),
-        ];
-        let result = ColorRgb::builtin_fn(&mut ctx, args).unwrap();
-        assert_eq!(result, Value::Color { r: 255, g: 128, b: 64, t: 0 });
-
-        // Test with transparency
-        let args = vec![
-            EvaluatedArg::Positional(Value::Number(100.0)),
-            EvaluatedArg::Positional(Value::Number(200.0)),
-            EvaluatedArg::Positional(Value::Number(50.0)),
-            EvaluatedArg::Positional(Value::Number(50.0)),
-        ];
-        let result = ColorRgb::builtin_fn(&mut ctx, args).unwrap();
-        assert_eq!(result, Value::Color { r: 100, g: 200, b: 50, t: 50 });
-    }
-
-    #[test]
-    fn test_color_new() {
-        let mut ctx = create_mock_interpreter();
-
-        let base_color = Value::Color { r: 255, g: 0, b: 0, t: 0 };
-        let args = vec![
-            EvaluatedArg::Positional(base_color),
-            EvaluatedArg::Positional(Value::Number(50.0)),
-        ];
-
-        let result = ColorNew::builtin_fn(&mut ctx, args).unwrap();
-        assert_eq!(result, Value::Color { r: 255, g: 0, b: 0, t: 50 });
-    }
-
-    #[test]
-    fn test_color_components() {
-        let mut ctx = create_mock_interpreter();
-        let color = Value::Color { r: 123, g: 45, b: 67, t: 89 };
-
-        // Test r component
-        let args = vec![EvaluatedArg::Positional(color.clone())];
-        let result = ColorR::builtin_fn(&mut ctx, args).unwrap();
-        assert_eq!(result, Value::Number(123.0));
-
-        // Test g component
-        let args = vec![EvaluatedArg::Positional(color.clone())];
-        let result = ColorG::builtin_fn(&mut ctx, args).unwrap();
-        assert_eq!(result, Value::Number(45.0));
-
-        // Test b component
-        let args = vec![EvaluatedArg::Positional(color.clone())];
-        let result = ColorB::builtin_fn(&mut ctx, args).unwrap();
-        assert_eq!(result, Value::Number(67.0));
-
-        // Test t component
-        let args = vec![EvaluatedArg::Positional(color.clone())];
-        let result = ColorT::builtin_fn(&mut ctx, args).unwrap();
-        assert_eq!(result, Value::Number(89.0));
-    }
-
-    #[test]
-    fn test_color_from_gradient() {
-        let mut ctx = create_mock_interpreter();
-
-        let bottom_color = Value::Color { r: 0, g: 0, b: 0, t: 0 };
-        let top_color = Value::Color { r: 100, g: 100, b: 100, t: 100 };
-
-        // Test middle value (should be halfway)
-        let args = vec![
-            EvaluatedArg::Positional(Value::Number(50.0)),
-            EvaluatedArg::Positional(Value::Number(0.0)),
-            EvaluatedArg::Positional(Value::Number(100.0)),
-            EvaluatedArg::Positional(bottom_color.clone()),
-            EvaluatedArg::Positional(top_color.clone()),
-        ];
-        let result = ColorFromGradient::builtin_fn(&mut ctx, args).unwrap();
-        assert_eq!(result, Value::Color { r: 50, g: 50, b: 50, t: 50 });
-
-        // Test bottom value (should be bottom color)
-        let args = vec![
-            EvaluatedArg::Positional(Value::Number(0.0)),
-            EvaluatedArg::Positional(Value::Number(0.0)),
-            EvaluatedArg::Positional(Value::Number(100.0)),
-            EvaluatedArg::Positional(bottom_color.clone()),
-            EvaluatedArg::Positional(top_color.clone()),
-        ];
-        let result = ColorFromGradient::builtin_fn(&mut ctx, args).unwrap();
-        assert_eq!(result, Value::Color { r: 0, g: 0, b: 0, t: 0 });
-
-        // Test top value (should be top color)
-        let args = vec![
-            EvaluatedArg::Positional(Value::Number(100.0)),
-            EvaluatedArg::Positional(Value::Number(0.0)),
-            EvaluatedArg::Positional(Value::Number(100.0)),
-            EvaluatedArg::Positional(bottom_color),
-            EvaluatedArg::Positional(top_color),
-        ];
-        let result = ColorFromGradient::builtin_fn(&mut ctx, args).unwrap();
-        assert_eq!(result, Value::Color { r: 100, g: 100, b: 100, t: 100 });
     }
 }

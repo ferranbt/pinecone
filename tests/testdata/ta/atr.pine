@@ -1,0 +1,16 @@
+// Test ta.atr (Average True Range)
+// ATR is the RMA (moving average) of True Range values
+// Uses historical high, low, close values to calculate TR for each bar
+// Then applies RMA smoothing
+
+// ATR with period 5
+atr5 = ta.atr(5)
+log.info(atr5)
+
+// ATR with period 14 (common default)
+atr14 = ta.atr(14)
+log.info(atr14)
+
+// Expected output:
+// 10
+// 10

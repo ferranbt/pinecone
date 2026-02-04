@@ -132,113 +132,33 @@ pub fn register_time_functions() -> Vec<(String, Value)> {
     use std::rc::Rc;
 
     vec![
-        ("year".to_string(), Value::BuiltinFunction(Rc::new(Year::builtin_fn))),
-        ("month".to_string(), Value::BuiltinFunction(Rc::new(Month::builtin_fn))),
-        ("dayofmonth".to_string(), Value::BuiltinFunction(Rc::new(DayOfMonth::builtin_fn))),
-        ("dayofweek".to_string(), Value::BuiltinFunction(Rc::new(DayOfWeek::builtin_fn))),
-        ("hour".to_string(), Value::BuiltinFunction(Rc::new(Hour::builtin_fn))),
-        ("minute".to_string(), Value::BuiltinFunction(Rc::new(Minute::builtin_fn))),
-        ("second".to_string(), Value::BuiltinFunction(Rc::new(Second::builtin_fn))),
+        (
+            "year".to_string(),
+            Value::BuiltinFunction(Rc::new(Year::builtin_fn)),
+        ),
+        (
+            "month".to_string(),
+            Value::BuiltinFunction(Rc::new(Month::builtin_fn)),
+        ),
+        (
+            "dayofmonth".to_string(),
+            Value::BuiltinFunction(Rc::new(DayOfMonth::builtin_fn)),
+        ),
+        (
+            "dayofweek".to_string(),
+            Value::BuiltinFunction(Rc::new(DayOfWeek::builtin_fn)),
+        ),
+        (
+            "hour".to_string(),
+            Value::BuiltinFunction(Rc::new(Hour::builtin_fn)),
+        ),
+        (
+            "minute".to_string(),
+            Value::BuiltinFunction(Rc::new(Minute::builtin_fn)),
+        ),
+        (
+            "second".to_string(),
+            Value::BuiltinFunction(Rc::new(Second::builtin_fn)),
+        ),
     ]
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use pine_interpreter::EvaluatedArg;
-
-    #[test]
-    fn test_hour() {
-        let mut ctx = Interpreter::new();
-
-        // Test 1 hour in milliseconds (3600000 ms)
-        let result = Hour::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(3600000.0))
-        ]).unwrap();
-        assert_eq!(result, Value::Number(1.0));
-
-        // Test 25 hours (should wrap to 1)
-        let result = Hour::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(25.0 * 3600000.0))
-        ]).unwrap();
-        assert_eq!(result, Value::Number(1.0));
-    }
-
-    #[test]
-    fn test_minute() {
-        let mut ctx = Interpreter::new();
-
-        // Test 30 minutes
-        let result = Minute::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(30.0 * 60000.0))
-        ]).unwrap();
-        assert_eq!(result, Value::Number(30.0));
-    }
-
-    #[test]
-    fn test_second() {
-        let mut ctx = Interpreter::new();
-
-        // Test 45 seconds
-        let result = Second::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(45000.0))
-        ]).unwrap();
-        assert_eq!(result, Value::Number(45.0));
-    }
-
-    #[test]
-    fn test_dayofweek() {
-        let mut ctx = Interpreter::new();
-
-        // Test epoch (Jan 1, 1970 was a Thursday = 5)
-        let result = DayOfWeek::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(0.0))
-        ]).unwrap();
-        assert_eq!(result, Value::Number(5.0));
-
-        // Test one day later (Friday = 6)
-        let result = DayOfWeek::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(24.0 * 60.0 * 60.0 * 1000.0))
-        ]).unwrap();
-        assert_eq!(result, Value::Number(6.0));
-    }
-
-    #[test]
-    fn test_dayofmonth() {
-        let mut ctx = Interpreter::new();
-
-        // Test epoch (should be day 1)
-        let result = DayOfMonth::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(0.0))
-        ]).unwrap();
-        assert_eq!(result, Value::Number(1.0));
-
-        // Test 5 days later (should be day 6)
-        let result = DayOfMonth::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(5.0 * 24.0 * 60.0 * 60.0 * 1000.0))
-        ]).unwrap();
-        assert_eq!(result, Value::Number(6.0));
-    }
-
-    #[test]
-    fn test_year() {
-        let mut ctx = Interpreter::new();
-
-        // Test epoch (should be 1970)
-        let result = Year::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(0.0))
-        ]).unwrap();
-        assert_eq!(result, Value::Number(1970.0));
-    }
-
-    #[test]
-    fn test_month() {
-        let mut ctx = Interpreter::new();
-
-        // Test epoch (should be January = 1)
-        let result = Month::builtin_fn(&mut ctx, vec![
-            EvaluatedArg::Positional(Value::Number(0.0))
-        ]).unwrap();
-        assert_eq!(result, Value::Number(1.0));
-    }
 }

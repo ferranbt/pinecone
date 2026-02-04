@@ -1,0 +1,19 @@
+// Test ta.change (Difference between current and N bars ago)
+// Bar 199: close = 301, Bar 198: close = 300, Bar 197: close = 299
+
+// Change from 1 bar ago
+change1 = ta.change(close, 1)
+log.info(change1)
+
+// Change from 2 bars ago
+change2 = ta.change(close, 2)
+log.info(change2)
+
+// Change from 5 bars ago
+change5 = ta.change(close, 5)
+log.info(change5)
+
+// Expected output:
+// 1
+// 2
+// 5

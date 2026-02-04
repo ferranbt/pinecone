@@ -1,0 +1,12 @@
+// Test basic import functionality
+
+import mylib as lib
+
+// Use exported type
+p = lib.Point.new(10.0, 20.0)
+log.info(p.x)
+log.info(p.y)
+
+// Expected output:
+// 10
+// 20

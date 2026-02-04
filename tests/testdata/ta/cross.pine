@@ -1,0 +1,23 @@
+// Test ta.cross, ta.crossover, ta.crossunder
+// Bar 198: close=300, open=298, Bar 199: close=301, open=299
+// Testing if close crosses over open
+
+// Test if close crossed open (either direction)
+crossed = ta.cross(close, open)
+log.info(crossed)
+
+// Test if close crossed over open (below to above)
+// Bar 198: close(300) > open(298), Bar 199: close(301) > open(299)
+// No crossover since both bars have close > open
+crossed_over = ta.crossover(close, open)
+log.info(crossed_over)
+
+// Test if close crossed under open (above to below)
+crossed_under = ta.crossunder(close, open)
+log.info(crossed_under)
+
+// Expected output:
+// false
+// false
+// false
+

@@ -10,4 +10,8 @@ path = "lib.rs"
 [dependencies]
 pine.workspace = true
 pine-interpreter.workspace = true
+pine-lexer.workspace = true
+pine-parser.workspace = true
+pine-ast.workspace = true
+eyre.workspace = true
 walkdir = "2"

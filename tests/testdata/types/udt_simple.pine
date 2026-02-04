@@ -1,0 +1,23 @@
+// Test user-defined types (UDT) - simple creation
+
+// Define a simple type
+type Point
+    float x
+    float y
+
+// Create instance with default values (Na)
+p1 = Point.new()
+
+// Create instance with values
+p2 = Point.new(10.0, 20.0)
+
+// Access fields
+x1 = p2.x
+y1 = p2.y
+
+log.info(x1)
+log.info(y1)
+
+// Expected output:
+// 10
+// 20

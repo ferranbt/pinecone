@@ -1,0 +1,17 @@
+// Test ta.cci (Commodity Channel Index)
+// CCI = (Typical Price - SMA) / (0.015 * Mean Deviation)
+// Last 5 closes at bar 199: 301, 300, 299, 298, 297
+// SMA = 299, Current = 301, MAD = 1.2
+// CCI = (301 - 299) / (0.015 * 1.2) = 2 / 0.018 = 111.11...
+
+// CCI with period 5
+cci5 = ta.cci(close, 5)
+log.info(cci5)
+
+// CCI with period 10
+cci10 = ta.cci(close, 10)
+log.info(cci10)
+
+// Expected output:
+// 111.11111111111111
+// 120

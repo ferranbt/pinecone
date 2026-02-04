@@ -10,36 +10,15 @@ middle = color.from_gradient(50, 0, 100, black, white)
 top = color.from_gradient(100, 0, 100, black, white)
 
 // Check bottom (should be black)
-r1 = color.r(bottom)
-g1 = color.g(bottom)
-b1 = color.b(bottom)
-log.info(r1)
-log.info(g1)
-log.info(b1)
+log.info(bottom)
 
 // Check middle (should be gray ~50)
-r2 = color.r(middle)
-g2 = color.g(middle)
-b2 = color.b(middle)
-log.info(r2)
-log.info(g2)
-log.info(b2)
+log.info(middle)
 
 // Check top (should be white-ish 100)
-r3 = color.r(top)
-g3 = color.g(top)
-b3 = color.b(top)
-log.info(r3)
-log.info(g3)
-log.info(b3)
+log.info(top)
 
 // Expected output:
-// 0
-// 0
-// 0
-// 50
-// 50
-// 50
-// 100
-// 100
-// 100
+// Color(rgba(0, 0, 0, 0))
+// Color(rgba(50, 50, 50, 0))
+// Color(rgba(100, 100, 100, 0))

@@ -1,0 +1,6 @@
+// Test continue outside loop - should fail
+
+var x = 10
+continue
+
+// Expected error: Continue statement outside of loop

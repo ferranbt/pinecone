@@ -1,0 +1,25 @@
+// Test series indexing (accessing historical values)
+// The test framework provides 200 bars of historical data
+// Bar 199 (current): close = 301, Bar 198: close = 300, Bar 197: close = 299
+
+// Access current value (index 0)
+current = close[0]
+log.info(current)
+
+// Access previous bar (index 1)
+prev1 = close[1]
+log.info(prev1)
+
+// Access 2 bars ago (index 2)
+prev2 = close[2]
+log.info(prev2)
+
+// Access 5 bars ago (index 5)
+prev5 = close[5]
+log.info(prev5)
+
+// Expected output:
+// 301
+// 300
+// 299
+// 296

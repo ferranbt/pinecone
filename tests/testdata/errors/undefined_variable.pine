@@ -1,0 +1,6 @@
+// Test undefined variable access - should fail
+
+var x = 10
+var y = undefinedVar
+
+// Expected error: Variable 'undefinedVar' not found

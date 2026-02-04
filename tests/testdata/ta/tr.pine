@@ -1,0 +1,17 @@
+// Test ta.tr (True Range)
+// True Range = max(high-low, abs(high-close[1]), abs(low-close[1]))
+// At bar 199: high=306, low=296, close[1]=300
+// TR = max(306-296, abs(306-300), abs(296-300))
+// TR = max(10, 6, 4) = 10
+
+// True Range with default handle_na
+tr_default = ta.tr()
+log.info(tr_default)
+
+// True Range with handle_na=true
+tr_handle_na = ta.tr(true)
+log.info(tr_handle_na)
+
+// Expected output:
+// 10
+// 10

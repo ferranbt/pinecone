@@ -1,0 +1,27 @@
+// Test UDT with default values
+
+type BarInfo
+    int index = 0
+    float price = 100.0
+
+// Create instance with defaults
+bar1 = BarInfo.new()
+
+// Access default values
+idx1 = bar1.index
+price1 = bar1.price
+log.info(idx1)
+log.info(price1)
+
+// Create instance with custom values
+bar2 = BarInfo.new(5, 250.5)
+idx2 = bar2.index
+price2 = bar2.price
+log.info(idx2)
+log.info(price2)
+
+// Expected output:
+// 0
+// 100
+// 5
+// 250.5

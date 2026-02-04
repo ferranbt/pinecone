@@ -1,0 +1,17 @@
+// Test ta.mom (Momentum)
+// Momentum = Current - Value N bars ago
+// Current close = 301 (bar 199)
+// 5 bars ago = 296 (bar 194)
+// mom(5) = 301 - 296 = 5
+
+// Momentum over 5 bars
+mom5 = ta.mom(close, 5)
+log.info(mom5)
+
+// Momentum over 10 bars
+mom10 = ta.mom(close, 10)
+log.info(mom10)
+
+// Expected output:
+// 5
+// 10

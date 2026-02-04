@@ -1,0 +1,5 @@
+// Test calling undefined function - should fail
+
+var x = undefinedFunction(10)
+
+// Expected error: Variable 'undefinedFunction' not found

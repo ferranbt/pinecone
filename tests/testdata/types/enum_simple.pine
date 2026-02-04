@@ -1,0 +1,27 @@
+// Test enum definitions and values
+
+// Define enum with titles
+enum Signal
+    buy = "Buy signal"
+    sell = "Sell signal"
+    neutral
+
+// Create enum values
+x = Signal.buy
+y = Signal.sell
+z = Signal.neutral
+
+// For testing, we can't directly log enum values
+// But we can test comparisons
+is_buy = x == Signal.buy
+is_sell = y == Signal.sell
+is_neutral = z == Signal.neutral
+
+log.info(is_buy)
+log.info(is_sell)
+log.info(is_neutral)
+
+// Expected output:
+// true
+// true
+// true
