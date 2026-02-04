@@ -258,67 +258,151 @@ impl MathPow {
 
 // Variadic functions - these need special handling
 
-/// math.min(...) - Returns minimum of all arguments
+/// math.min(...) - Returns minimum of all arguments (requires at least 2)
 #[derive(BuiltinFunction)]
 #[builtin(name = "math.min")]
 struct MathMin {
-    number0: f64,
-    #[arg(default = f64::INFINITY)]
-    number1: f64,
+    #[arg(variadic)]
+    values: Vec<Value>,
 }
 
 impl MathMin {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        Ok(Value::Number(self.number0.min(self.number1)))
+        if self.values.len() < 2 {
+            return Err(RuntimeError::TypeError(
+                "math.min requires at least 2 arguments".to_string(),
+            ));
+        }
+
+        let mut min = f64::INFINITY;
+        for val in &self.values {
+            match val {
+                Value::Number(n) => {
+                    min = min.min(*n);
+                }
+                Value::Na => continue, // Skip Na values
+                _ => {
+                    return Err(RuntimeError::TypeError(
+                        "math.min requires number arguments".to_string(),
+                    ))
+                }
+            }
+        }
+
+        Ok(Value::Number(min))
     }
 }
 
-/// math.max(...) - Returns maximum of all arguments
+/// math.max(...) - Returns maximum of all arguments (requires at least 2)
 #[derive(BuiltinFunction)]
 #[builtin(name = "math.max")]
 struct MathMax {
-    number0: f64,
-    #[arg(default = f64::NEG_INFINITY)]
-    number1: f64,
+    #[arg(variadic)]
+    values: Vec<Value>,
 }
 
 impl MathMax {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        Ok(Value::Number(self.number0.max(self.number1)))
+        if self.values.len() < 2 {
+            return Err(RuntimeError::TypeError(
+                "math.max requires at least 2 arguments".to_string(),
+            ));
+        }
+
+        let mut max = f64::NEG_INFINITY;
+        for val in &self.values {
+            match val {
+                Value::Number(n) => {
+                    max = max.max(*n);
+                }
+                Value::Na => continue, // Skip Na values
+                _ => {
+                    return Err(RuntimeError::TypeError(
+                        "math.max requires number arguments".to_string(),
+                    ))
+                }
+            }
+        }
+
+        Ok(Value::Number(max))
     }
 }
 
-/// math.avg(...) - Returns average of all arguments
+/// math.avg(...) - Returns average of all arguments (requires at least 1)
 #[derive(BuiltinFunction)]
 #[builtin(name = "math.avg")]
 struct MathAvg {
-    number0: f64,
-    #[arg(default = 0.0)]
-    number1: f64,
+    #[arg(variadic)]
+    values: Vec<Value>,
 }
 
 impl MathAvg {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if self.number1 == 0.0 {
-            Ok(Value::Number(self.number0))
+        if self.values.is_empty() {
+            return Err(RuntimeError::TypeError(
+                "math.avg requires at least 1 argument".to_string(),
+            ));
+        }
+
+        let mut sum = 0.0;
+        let mut count = 0;
+
+        for val in &self.values {
+            match val {
+                Value::Number(n) => {
+                    sum += n;
+                    count += 1;
+                }
+                Value::Na => continue, // Skip Na values
+                _ => {
+                    return Err(RuntimeError::TypeError(
+                        "math.avg requires number arguments".to_string(),
+                    ))
+                }
+            }
+        }
+
+        if count == 0 {
+            Ok(Value::Na)
         } else {
-            Ok(Value::Number((self.number0 + self.number1) / 2.0))
+            Ok(Value::Number(sum / count as f64))
         }
     }
 }
 
-/// math.sum(...) - Returns sum of all arguments
+/// math.sum(...) - Returns sum of all arguments (requires at least 1)
 #[derive(BuiltinFunction)]
 #[builtin(name = "math.sum")]
 struct MathSum {
-    number0: f64,
-    #[arg(default = 0.0)]
-    number1: f64,
+    #[arg(variadic)]
+    values: Vec<Value>,
 }
 
 impl MathSum {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        Ok(Value::Number(self.number0 + self.number1))
+        if self.values.is_empty() {
+            return Err(RuntimeError::TypeError(
+                "math.sum requires at least 1 argument".to_string(),
+            ));
+        }
+
+        let mut sum = 0.0;
+
+        for val in &self.values {
+            match val {
+                Value::Number(n) => {
+                    sum += n;
+                }
+                Value::Na => continue, // Skip Na values
+                _ => {
+                    return Err(RuntimeError::TypeError(
+                        "math.sum requires number arguments".to_string(),
+                    ))
+                }
+            }
+        }
+
+        Ok(Value::Number(sum))
     }
 }
 
