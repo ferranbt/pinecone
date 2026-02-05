@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Data, Fields, Field, Meta};
+use syn::{parse_macro_input, Data, DeriveInput, Field, Fields, Meta};
 
 /// Derive macro for builtin functions
 ///
@@ -86,7 +86,9 @@ fn parse_function_name(input: &DeriveInput) -> String {
     panic!("BuiltinFunction requires a #[builtin(name = \"...\")] attribute");
 }
 
-fn generate_field_parsing(fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>) -> proc_macro2::TokenStream {
+fn generate_field_parsing(
+    fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>,
+) -> proc_macro2::TokenStream {
     let mut field_decls = Vec::new();
     let mut positional_matches = Vec::new();
     let mut named_matches = Vec::new();
@@ -213,7 +215,8 @@ fn parse_field_default(field: &Field) -> (bool, Option<proc_macro2::TokenStream>
                     if let Some(eq_pos) = tokens_str.find('=') {
                         let default_str = tokens_str[eq_pos + 1..].trim();
                         if !default_str.is_empty() && default_str != "\"\"" {
-                            let default_tokens: proc_macro2::TokenStream = default_str.parse().unwrap();
+                            let default_tokens: proc_macro2::TokenStream =
+                                default_str.parse().unwrap();
                             // Check if field type is String and default is a string literal
                             let type_str = quote! { #field.ty }.to_string();
                             if type_str.contains("String") && default_str.starts_with('"') {
@@ -275,7 +278,9 @@ fn generate_value_conversion(
     }
 }
 
-fn generate_field_validation(fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>) -> proc_macro2::TokenStream {
+fn generate_field_validation(
+    fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>,
+) -> proc_macro2::TokenStream {
     let mut validations = Vec::new();
 
     for field in fields {
@@ -290,8 +295,7 @@ fn generate_field_validation(fields: &syn::punctuated::Punctuated<Field, syn::to
         // Check if field has a default
         let has_default = field.attrs.iter().any(|attr| {
             if let Meta::List(meta_list) = &attr.meta {
-                meta_list.path.is_ident("arg") &&
-                meta_list.tokens.to_string().contains("default")
+                meta_list.path.is_ident("arg") && meta_list.tokens.to_string().contains("default")
             } else {
                 false
             }
@@ -311,11 +315,16 @@ fn generate_field_validation(fields: &syn::punctuated::Punctuated<Field, syn::to
     }
 }
 
-fn generate_struct_construction(fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>) -> proc_macro2::TokenStream {
-    let field_assignments: Vec<_> = fields.iter().map(|field| {
-        let field_name = field.ident.as_ref().unwrap();
-        quote! { #field_name }
-    }).collect();
+fn generate_struct_construction(
+    fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>,
+) -> proc_macro2::TokenStream {
+    let field_assignments: Vec<_> = fields
+        .iter()
+        .map(|field| {
+            let field_name = field.ident.as_ref().unwrap();
+            quote! { #field_name }
+        })
+        .collect();
 
     quote! {
         #(#field_assignments),*

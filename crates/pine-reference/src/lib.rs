@@ -166,10 +166,11 @@ pub fn query(path: Option<&str>) -> eyre::Result<QueryResult> {
                 for section in &sections {
                     if section.level == 2 {
                         in_target_section = section.title.eq_ignore_ascii_case(section_name);
-                    } else if section.level == 3 && in_target_section {
-                        if section.title.eq_ignore_ascii_case(&item_name) {
-                            return Ok(QueryResult::Content(section.content.clone()));
-                        }
+                    } else if section.level == 3
+                        && in_target_section
+                        && section.title.eq_ignore_ascii_case(&item_name)
+                    {
+                        return Ok(QueryResult::Content(section.content.clone()));
                     }
                 }
             }
@@ -188,10 +189,11 @@ pub fn query(path: Option<&str>) -> eyre::Result<QueryResult> {
             for section in sections {
                 if section.level == 2 {
                     in_target_section = section.title.eq_ignore_ascii_case(section_name);
-                } else if section.level == 3 && in_target_section {
-                    if prefix.is_empty() || section.title.starts_with(&prefix) {
-                        results.push(section.title);
-                    }
+                } else if section.level == 3
+                    && in_target_section
+                    && (prefix.is_empty() || section.title.starts_with(&prefix))
+                {
+                    results.push(section.title);
                 }
             }
 

@@ -30,14 +30,14 @@ fn bench_single_bar(c: &mut Criterion) {
     group.finish();
 }
 
-
 fn bench_compile_only(c: &mut Criterion) {
     let mut group = c.benchmark_group("interpreter/compile");
 
     for (name, source) in TEST_SCRIPTS {
         group.bench_with_input(BenchmarkId::from_parameter(name), source, |b, source| {
             b.iter(|| {
-                let _ = Script::compile::<pine_builtins::DefaultLogger>(black_box(source), None).unwrap();
+                let _ = Script::compile::<pine_builtins::DefaultLogger>(black_box(source), None)
+                    .unwrap();
             });
         });
     }
@@ -45,9 +45,5 @@ fn bench_compile_only(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(
-    benches,
-    bench_compile_only,
-    bench_single_bar
-);
+criterion_group!(benches, bench_compile_only, bench_single_bar);
 criterion_main!(benches);

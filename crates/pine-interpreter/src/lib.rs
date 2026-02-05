@@ -723,7 +723,7 @@ impl Interpreter {
 
                 self.methods
                     .entry(name.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(method_def);
 
                 Ok(None)
