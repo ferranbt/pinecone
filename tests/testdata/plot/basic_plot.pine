@@ -1,0 +1,8 @@
+// Test basic plot function
+value = 100.0
+p = plot(value, title="Test Plot")
+
+// Test plot with all parameters
+p2 = plot(50.0, title="Full Plot", linewidth=2, style="histogram", trackprice=true)
+
+// Expected output:

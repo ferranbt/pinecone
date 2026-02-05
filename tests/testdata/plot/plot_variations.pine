@@ -1,0 +1,8 @@
+// Test different plot functions
+plotarrow(10.0, title="Arrow")
+plotbar(100.0, 110.0, 90.0, 105.0, title="Bar")
+plotcandle(100.0, 110.0, 90.0, 105.0, title="Candle")
+plotchar(true, title="Char", char="X")
+plotshape(true, title="Shape", style="circle")
+
+// Expected output:
