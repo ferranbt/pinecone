@@ -1,0 +1,45 @@
+// Test label constants
+log.info(label.style_arrowdown)
+log.info(label.style_arrowup)
+log.info(label.style_circle)
+log.info(label.style_cross)
+log.info(label.style_diamond)
+log.info(label.style_flag)
+log.info(label.style_label_center)
+log.info(label.style_label_down)
+log.info(label.style_label_left)
+log.info(label.style_label_lower_left)
+log.info(label.style_label_lower_right)
+log.info(label.style_label_right)
+log.info(label.style_label_up)
+log.info(label.style_label_upper_left)
+log.info(label.style_label_upper_right)
+log.info(label.style_none)
+log.info(label.style_square)
+log.info(label.style_text_outline)
+log.info(label.style_triangledown)
+log.info(label.style_triangleup)
+log.info(label.style_xcross)
+
+// Expected output:
+// style_arrowdown
+// style_arrowup
+// style_circle
+// style_cross
+// style_diamond
+// style_flag
+// style_label_center
+// style_label_down
+// style_label_left
+// style_label_lower_left
+// style_label_lower_right
+// style_label_right
+// style_label_up
+// style_label_upper_left
+// style_label_upper_right
+// style_none
+// style_square
+// style_text_outline
+// style_triangledown
+// style_triangleup
+// style_xcross
