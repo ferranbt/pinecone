@@ -9,7 +9,7 @@ pub use pine_interpreter::BuiltinFn;
 pub use pine_interpreter::EvaluatedArg;
 
 // Re-export log types for custom logger support
-pub use log::{DefaultLogger, Log, Logger, LogLevel};
+pub use log::{DefaultLogger, Log, LogLevel, Logger};
 
 // Namespace modules
 mod array;
@@ -66,7 +66,10 @@ impl Int {
             Value::Number(n) => Ok(Value::Number(n.trunc())),
             Value::Bool(b) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
             Value::Na => Ok(Value::Na),
-            _ => Err(RuntimeError::TypeError(format!("Cannot convert {:?} to int", self.x))),
+            _ => Err(RuntimeError::TypeError(format!(
+                "Cannot convert {:?} to int",
+                self.x
+            ))),
         }
     }
 }
@@ -84,7 +87,10 @@ impl Float {
             Value::Number(n) => Ok(Value::Number(*n)),
             Value::Bool(b) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
             Value::Na => Ok(Value::Na),
-            _ => Err(RuntimeError::TypeError(format!("Cannot convert {:?} to float", self.x))),
+            _ => Err(RuntimeError::TypeError(format!(
+                "Cannot convert {:?} to float",
+                self.x
+            ))),
         }
     }
 }
@@ -130,9 +136,7 @@ impl Fixnan {
                 // For now, just return 0.0 as a placeholder
                 Ok(Value::Number(0.0))
             }
-            Value::Number(n) if n.is_nan() => {
-                Ok(Value::Number(0.0))
-            }
+            Value::Number(n) if n.is_nan() => Ok(Value::Number(0.0)),
             _ => Ok(self.source.clone()),
         }
     }
@@ -153,12 +157,30 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
     namespaces.insert("ta".to_string(), ta::register());
 
     // Register global builtin functions
-    namespaces.insert("na".to_string(), Value::BuiltinFunction(Rc::new(Na::builtin_fn) as BuiltinFn));
-    namespaces.insert("bool".to_string(), Value::BuiltinFunction(Rc::new(Bool::builtin_fn) as BuiltinFn));
-    namespaces.insert("int".to_string(), Value::BuiltinFunction(Rc::new(Int::builtin_fn) as BuiltinFn));
-    namespaces.insert("float".to_string(), Value::BuiltinFunction(Rc::new(Float::builtin_fn) as BuiltinFn));
-    namespaces.insert("nz".to_string(), Value::BuiltinFunction(Rc::new(Nz::builtin_fn) as BuiltinFn));
-    namespaces.insert("fixnan".to_string(), Value::BuiltinFunction(Rc::new(Fixnan::builtin_fn) as BuiltinFn));
+    namespaces.insert(
+        "na".to_string(),
+        Value::BuiltinFunction(Rc::new(Na::builtin_fn) as BuiltinFn),
+    );
+    namespaces.insert(
+        "bool".to_string(),
+        Value::BuiltinFunction(Rc::new(Bool::builtin_fn) as BuiltinFn),
+    );
+    namespaces.insert(
+        "int".to_string(),
+        Value::BuiltinFunction(Rc::new(Int::builtin_fn) as BuiltinFn),
+    );
+    namespaces.insert(
+        "float".to_string(),
+        Value::BuiltinFunction(Rc::new(Float::builtin_fn) as BuiltinFn),
+    );
+    namespaces.insert(
+        "nz".to_string(),
+        Value::BuiltinFunction(Rc::new(Nz::builtin_fn) as BuiltinFn),
+    );
+    namespaces.insert(
+        "fixnan".to_string(),
+        Value::BuiltinFunction(Rc::new(Fixnan::builtin_fn) as BuiltinFn),
+    );
 
     // Register time/date functions
     for (name, func) in time::register_time_functions() {

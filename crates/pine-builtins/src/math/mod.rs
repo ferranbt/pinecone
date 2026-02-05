@@ -418,7 +418,7 @@ impl MathRandom {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         use std::cell::Cell;
         thread_local! {
-            static SEED: Cell<u64> = Cell::new(0x123456789abcdef0);
+            static SEED: Cell<u64> = const { Cell::new(0x123456789abcdef0) };
         }
 
         // Simple LCG random number generator

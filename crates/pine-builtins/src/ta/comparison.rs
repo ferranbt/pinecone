@@ -199,8 +199,8 @@ impl TaRising {
 
         // Check if current value is greater than all previous values
         let current = values[0];
-        for i in 1..=length {
-            if current <= values[i] {
+        for value in values.iter().take(length + 1).skip(1) {
+            if current <= *value {
                 return Ok(Value::Bool(false));
             }
         }
@@ -232,8 +232,8 @@ impl TaFalling {
 
         // Check if current value is less than all previous values
         let current = values[0];
-        for i in 1..=length {
-            if current >= values[i] {
+        for value in values.iter().take(length + 1).skip(1) {
+            if current >= *value {
                 return Ok(Value::Bool(false));
             }
         }

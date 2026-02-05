@@ -21,20 +21,22 @@ fn main() {
     let cli = Cli::parse();
 
     // Read input
-    let input = if cli.stdin || cli.file.is_none() {
-        // Read from stdin
-        let mut buffer = String::new();
-        io::stdin()
-            .read_to_string(&mut buffer)
-            .expect("Failed to read from stdin");
-        buffer
-    } else {
-        // Read from file
-        let filename = cli.file.unwrap();
-        fs::read_to_string(&filename).unwrap_or_else(|e| {
-            eprintln!("Error reading file '{}': {}", filename, e);
-            std::process::exit(1);
-        })
+    let input = match cli.file {
+        Some(filename) if !cli.stdin => {
+            // Read from file
+            fs::read_to_string(&filename).unwrap_or_else(|e| {
+                eprintln!("Error reading file '{}': {}", filename, e);
+                std::process::exit(1);
+            })
+        }
+        _ => {
+            // Read from stdin
+            let mut buffer = String::new();
+            io::stdin()
+                .read_to_string(&mut buffer)
+                .expect("Failed to read from stdin");
+            buffer
+        }
     };
 
     // Tokenize

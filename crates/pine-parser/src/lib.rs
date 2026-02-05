@@ -229,7 +229,10 @@ impl Parser {
                 if p.check(expected) {
                     Ok(())
                 } else {
-                    Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line))
+                    Err(ParserError::UnexpectedToken(
+                        p.peek().typ.clone(),
+                        p.peek().line,
+                    ))
                 }
             });
         }
@@ -245,7 +248,10 @@ impl Parser {
                         return Ok(());
                     }
                 }
-                Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line))
+                Err(ParserError::UnexpectedToken(
+                    p.peek().typ.clone(),
+                    p.peek().line,
+                ))
             });
         }
     }
@@ -342,7 +348,7 @@ impl Parser {
 
         // Check if followed by type annotation: var int x = ..., var float y = ..., var label l = ...
         let type_annotation = self.parse_optional_type_annotation();
-        return self.typed_var_declaration(type_annotation, is_varip);
+        self.typed_var_declaration(type_annotation, is_varip)
     }
 
     fn check_type_annotated_declaration(&mut self) -> Result<Stmt, ParserError> {
@@ -398,7 +404,10 @@ impl Parser {
                 p.advance();
                 type_name
             } else {
-                return Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line));
+                return Err(ParserError::UnexpectedToken(
+                    p.peek().typ.clone(),
+                    p.peek().line,
+                ));
             };
 
             // Parse field name
@@ -447,7 +456,10 @@ impl Parser {
                     p.advance();
                     Some(s)
                 } else {
-                    return Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line));
+                    return Err(ParserError::UnexpectedToken(
+                        p.peek().typ.clone(),
+                        p.peek().line,
+                    ));
                 }
             } else {
                 None
@@ -498,7 +510,10 @@ impl Parser {
                     path_parts.push(n.to_string());
                     self.advance();
                 } else {
-                    return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+                    return Err(ParserError::UnexpectedToken(
+                        self.peek().typ.clone(),
+                        self.peek().line,
+                    ));
                 }
             }
 
@@ -510,11 +525,17 @@ impl Parser {
         // Expect 'as' keyword - for now we'll check for an identifier "as"
         if let TokenType::Ident(kw) = &self.peek().typ {
             if kw != "as" {
-                return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+                return Err(ParserError::UnexpectedToken(
+                    self.peek().typ.clone(),
+                    self.peek().line,
+                ));
             }
             self.advance();
         } else {
-            return Err(ParserError::UnexpectedToken(self.peek().typ.clone(), self.peek().line));
+            return Err(ParserError::UnexpectedToken(
+                self.peek().typ.clone(),
+                self.peek().line,
+            ));
         }
 
         // Parse alias
@@ -715,20 +736,20 @@ impl Parser {
                     // This is an assignment with =, treat it as a var declaration
                     let initializer = Some(p.parse_indented_expression()?);
 
-                    return Ok(Stmt::VarDecl {
+                    Ok(Stmt::VarDecl {
                         name: name.clone(),
                         type_annotation: None,
                         initializer,
                         is_varip: false,
-                    });
+                    })
                 } else if p.match_token(&[TokenType::ColonAssign]) {
                     // This is a reassignment with :=
                     let value = p.parse_indented_expression()?;
 
-                    return Ok(Stmt::Assignment {
+                    Ok(Stmt::Assignment {
                         target: Expr::Variable(name.clone()),
                         value,
-                    });
+                    })
                 } else if p.match_token(&[
                     TokenType::PlusAssign,
                     TokenType::MinusAssign,
@@ -748,16 +769,16 @@ impl Parser {
                         op,
                         right: Box::new(right),
                     };
-                    return Ok(Stmt::Assignment {
+                    Ok(Stmt::Assignment {
                         target: Expr::Variable(name.clone()),
                         value,
-                    });
+                    })
                 } else {
                     // Not an assignment operator, fail
-                    return Err(ParserError::UnexpectedToken(
+                    Err(ParserError::UnexpectedToken(
                         p.peek().typ.clone(),
                         p.peek().line,
-                    ));
+                    ))
                 }
             }) {
                 return Ok(stmt);
@@ -887,7 +908,7 @@ impl Parser {
             if self.check(&TokenType::Else) {
                 if let Some((else_if_condition, else_if_body)) = self.try_parse(|p| {
                     p.advance(); // consume 'else'
-                    // Check if next token is 'if'
+                                 // Check if next token is 'if'
                     if p.match_token(&[TokenType::If]) {
                         // This is an else if
                         let else_if_condition = p.expression()?;
@@ -895,7 +916,10 @@ impl Parser {
                         let else_if_body = p.parse_block()?;
                         Ok((else_if_condition, else_if_body))
                     } else {
-                        Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line))
+                        Err(ParserError::UnexpectedToken(
+                            p.peek().typ.clone(),
+                            p.peek().line,
+                        ))
                     }
                 }) {
                     else_if_branches.push((else_if_condition, else_if_body));
@@ -958,7 +982,7 @@ impl Parser {
             if self.check(&TokenType::Else) {
                 if let Some((else_if_condition, else_if_expr)) = self.try_parse(|p| {
                     p.advance(); // consume 'else'
-                    // Check if next token is 'if'
+                                 // Check if next token is 'if'
                     if p.match_token(&[TokenType::If]) {
                         // This is an else if
                         let else_if_condition = p.expression()?;
@@ -969,7 +993,10 @@ impl Parser {
                         p.match_token(&[TokenType::Dedent]);
                         Ok((else_if_condition, else_if_expr))
                     } else {
-                        Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line))
+                        Err(ParserError::UnexpectedToken(
+                            p.peek().typ.clone(),
+                            p.peek().line,
+                        ))
                     }
                 }) {
                     else_if_branches.push((else_if_condition, else_if_expr));
@@ -1321,7 +1348,10 @@ impl Parser {
                             let value = p.expression()?;
                             Ok((name.clone(), value))
                         } else {
-                            Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line))
+                            Err(ParserError::UnexpectedToken(
+                                p.peek().typ.clone(),
+                                p.peek().line,
+                            ))
                         }
                     }) {
                         args.push(Argument::Named { name, value });
@@ -1462,7 +1492,10 @@ impl Parser {
 
                     // Expect =>
                     if !p.match_token(&[TokenType::Arrow]) {
-                        return Err(ParserError::UnexpectedToken(p.peek().typ.clone(), p.peek().line));
+                        return Err(ParserError::UnexpectedToken(
+                            p.peek().typ.clone(),
+                            p.peek().line,
+                        ));
                     }
 
                     // Skip newlines after =>
@@ -1569,8 +1602,14 @@ mod tests {
         if let Expr::Call { callee, args } = expr {
             assert_eq!(*callee, Expr::Variable("sma".to_string()));
             assert_eq!(args.len(), 2);
-            assert_eq!(args[0], Argument::Positional(Expr::Variable("close".to_string())));
-            assert_eq!(args[1], Argument::Positional(Expr::Literal(Literal::Number(14.0))));
+            assert_eq!(
+                args[0],
+                Argument::Positional(Expr::Variable("close".to_string()))
+            );
+            assert_eq!(
+                args[1],
+                Argument::Positional(Expr::Literal(Literal::Number(14.0)))
+            );
         } else {
             panic!("Expected function call");
         }
@@ -1700,7 +1739,7 @@ mod tests {
                 initializer.as_ref().unwrap(),
                 &Expr::Literal(Literal::Number(10.0))
             );
-            assert_eq!(*is_varip, false);
+            assert!(!(*is_varip));
         } else {
             panic!("Expected VarDecl");
         }
@@ -1778,7 +1817,7 @@ mod tests {
         let pine_files = collect_pine_files_recursive(&testdata_dir);
 
         let process_file = |path: &std::path::PathBuf| -> eyre::Result<()> {
-            let content = fs::read_to_string(&path)?;
+            let content = fs::read_to_string(path)?;
 
             let mut lexer = Lexer::new(&content);
             let tokens = lexer.tokenize()?;
@@ -1854,7 +1893,7 @@ mod tests {
         let pine_files = collect_pine_files_recursive(&testdata_dir);
 
         let process_file = |path: &std::path::PathBuf| -> eyre::Result<()> {
-            let content = fs::read_to_string(&path)?;
+            let content = fs::read_to_string(path)?;
 
             let mut lexer = Lexer::new(&content);
             let tokens = lexer.tokenize()?;

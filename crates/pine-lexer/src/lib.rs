@@ -6,16 +6,28 @@ pub enum LexerError {
     UnterminatedString { line: usize, column: usize },
 
     #[error("Invalid hex color format '{value}' at line {line}, column {column}")]
-    InvalidHexColor { value: String, line: usize, column: usize },
+    InvalidHexColor {
+        value: String,
+        line: usize,
+        column: usize,
+    },
 
     #[error("Unexpected character '{ch}' at line {line}, column {column}")]
-    UnexpectedCharacter { ch: char, line: usize, column: usize },
+    UnexpectedCharacter {
+        ch: char,
+        line: usize,
+        column: usize,
+    },
 
     #[error("Indentation error at line {line}")]
     IndentationError { line: usize },
 
     #[error("Invalid number '{value}' at line {line}, column {column}")]
-    InvalidNumber { value: String, line: usize, column: usize },
+    InvalidNumber {
+        value: String,
+        line: usize,
+        column: usize,
+    },
 }
 
 // Token types
@@ -175,11 +187,13 @@ impl Lexer {
             }
         }
 
-        let value = num_str.parse::<f64>().map_err(|_| LexerError::InvalidNumber {
-            value: num_str.clone(),
-            line: start_line,
-            column: start_col,
-        })?;
+        let value = num_str
+            .parse::<f64>()
+            .map_err(|_| LexerError::InvalidNumber {
+                value: num_str.clone(),
+                line: start_line,
+                column: start_col,
+            })?;
         Ok(Token {
             typ: TokenType::Number(value),
             lexeme: num_str,
@@ -610,11 +624,13 @@ impl Lexer {
             '#' => return self.scan_hex_color(),
             _ if ch.is_numeric() => return self.scan_number(),
             _ if ch.is_alphabetic() || ch == '_' => self.scan_identifier(),
-            _ => return Err(LexerError::UnexpectedCharacter {
-                ch,
-                line,
-                column: col,
-            }),
+            _ => {
+                return Err(LexerError::UnexpectedCharacter {
+                    ch,
+                    line,
+                    column: col,
+                })
+            }
         };
 
         Ok(token)
@@ -774,10 +790,10 @@ mod tests {
     #[test]
     fn test_literals() -> eyre::Result<()> {
         // Numbers
-        let mut lexer = Lexer::new("42 3.14");
+        let mut lexer = Lexer::new("42 3.15");
         let tokens = lexer.tokenize()?;
         assert!(matches!(tokens[0].typ, TokenType::Number(n) if n == 42.0));
-        assert!(matches!(tokens[1].typ, TokenType::Number(n) if n == 3.14));
+        assert!(matches!(tokens[1].typ, TokenType::Number(n) if n == 3.15));
 
         // Strings
         let mut lexer = Lexer::new(r#""hello" "world\n""#);
