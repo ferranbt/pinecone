@@ -1,0 +1,115 @@
+// Test currency constants
+log.info(currency.AED)
+log.info(currency.ARS)
+log.info(currency.AUD)
+log.info(currency.BDT)
+log.info(currency.BHD)
+log.info(currency.BRL)
+log.info(currency.BTC)
+log.info(currency.CAD)
+log.info(currency.CHF)
+log.info(currency.CLP)
+log.info(currency.CNY)
+log.info(currency.COP)
+log.info(currency.CZK)
+log.info(currency.DKK)
+log.info(currency.EGP)
+log.info(currency.ETH)
+log.info(currency.EUR)
+log.info(currency.GBP)
+log.info(currency.HKD)
+log.info(currency.HUF)
+log.info(currency.IDR)
+log.info(currency.ILS)
+log.info(currency.INR)
+log.info(currency.ISK)
+log.info(currency.JPY)
+log.info(currency.KES)
+log.info(currency.KRW)
+log.info(currency.KWD)
+log.info(currency.LKR)
+log.info(currency.MAD)
+log.info(currency.MXN)
+log.info(currency.MYR)
+log.info(currency.NGN)
+log.info(currency.NOK)
+log.info(currency.NONE)
+log.info(currency.NZD)
+log.info(currency.PEN)
+log.info(currency.PHP)
+log.info(currency.PKR)
+log.info(currency.PLN)
+log.info(currency.QAR)
+log.info(currency.RON)
+log.info(currency.RSD)
+log.info(currency.RUB)
+log.info(currency.SAR)
+log.info(currency.SEK)
+log.info(currency.SGD)
+log.info(currency.THB)
+log.info(currency.TND)
+log.info(currency.TRY)
+log.info(currency.TWD)
+log.info(currency.USD)
+log.info(currency.USDT)
+log.info(currency.VES)
+log.info(currency.VND)
+log.info(currency.ZAR)
+
+// Expected output:
+// AED
+// ARS
+// AUD
+// BDT
+// BHD
+// BRL
+// BTC
+// CAD
+// CHF
+// CLP
+// CNY
+// COP
+// CZK
+// DKK
+// EGP
+// ETH
+// EUR
+// GBP
+// HKD
+// HUF
+// IDR
+// ILS
+// INR
+// ISK
+// JPY
+// KES
+// KRW
+// KWD
+// LKR
+// MAD
+// MXN
+// MYR
+// NGN
+// NOK
+// NONE
+// NZD
+// PEN
+// PHP
+// PKR
+// PLN
+// QAR
+// RON
+// RSD
+// RUB
+// SAR
+// SEK
+// SGD
+// THB
+// TND
+// TRY
+// TWD
+// USD
+// USDT
+// VES
+// VND
+// ZAR

@@ -14,6 +14,7 @@ pub use log::{DefaultLogger, Log, LogLevel, Logger};
 // Namespace modules
 mod array;
 mod color;
+mod currency;
 mod log;
 mod math;
 mod str;
@@ -152,6 +153,7 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
     // Register namespace objects
     namespaces.insert("array".to_string(), array::register());
     namespaces.insert("color".to_string(), color::register());
+    namespaces.insert("currency".to_string(), currency::register());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("str".to_string(), str::register());
     namespaces.insert("ta".to_string(), ta::register());
