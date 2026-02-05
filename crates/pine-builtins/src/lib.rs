@@ -19,6 +19,7 @@ mod currency;
 mod label;
 mod log;
 mod math;
+mod plot;
 mod str;
 mod ta;
 mod time;
@@ -190,6 +191,11 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
 
     // Register time/date functions
     for (name, func) in time::register_time_functions() {
+        namespaces.insert(name, func);
+    }
+
+    // Register plot functions
+    for (name, func) in plot::register_plot_functions() {
         namespaces.insert(name, func);
     }
 
