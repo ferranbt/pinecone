@@ -1,0 +1,35 @@
+// Test box setter functions
+b = box.new(0, 100.0, 10, 50.0, text="Initial Text")
+
+// Test coordinate setters
+box.set_left(b, 5)
+box.set_top(b, 200.0)
+box.set_right(b, 20)
+box.set_bottom(b, 75.0)
+
+log.info(box.get_left(b))
+log.info(box.get_top(b))
+log.info(box.get_right(b))
+log.info(box.get_bottom(b))
+
+// Test combined setters
+box.set_lefttop(b, 1, 150.0)
+log.info(box.get_left(b))
+log.info(box.get_top(b))
+
+box.set_rightbottom(b, 15, 80.0)
+log.info(box.get_right(b))
+log.info(box.get_bottom(b))
+
+// Test text setter
+box.set_text(b, "Updated Text")
+
+// Expected output:
+// 5
+// 200
+// 20
+// 75
+// 1
+// 150
+// 15
+// 80

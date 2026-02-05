@@ -1,0 +1,33 @@
+// Test box copy and delete
+original = box.new(5, 150.0, 15, 100.0, text="Original Box")
+log.info(box.get_left(original))
+log.info(box.get_top(original))
+
+// Copy the box
+copy = box.copy(original)
+log.info(box.get_left(copy))
+log.info(box.get_top(copy))
+
+// Modify the copy
+box.set_left(copy, 10)
+box.set_top(copy, 200.0)
+log.info(box.get_left(copy))
+log.info(box.get_top(copy))
+
+// Original should be unchanged
+log.info(box.get_left(original))
+log.info(box.get_top(original))
+
+// Delete boxes (no visible output, just shouldn't error)
+box.delete(original)
+box.delete(copy)
+
+// Expected output:
+// 5
+// 150
+// 5
+// 150
+// 10
+// 200
+// 5
+// 150
