@@ -19,11 +19,10 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+      - uses: taiki-e/install-action@just
 
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: just lint
 
   run-tests:
     name: Run tests
