@@ -11,7 +11,7 @@ fmt:
 
 # Run clippy lints
 clippy:
-    cargo clippy --all-targets --all-features -- -D warnings
+    cargo clippy --all-targets --all-features --locked
 
 # Run all lint checks (format + clippy)
 lint: fmt-check clippy

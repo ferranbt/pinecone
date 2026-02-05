@@ -14,15 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           components: rustfmt, clippy
 
       - uses: taiki-e/install-action@just
 
-      - name: Run clippy
+      - name: Run lint checks
         run: just lint
+        env:
+          RUSTFLAGS: -D warnings
 
   run-tests:
     name: Run tests
