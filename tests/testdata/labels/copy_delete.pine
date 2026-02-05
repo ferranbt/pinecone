@@ -1,0 +1,24 @@
+// Test label copy and delete
+original = label.new(5, 150.0, "Original Label")
+log.info(label.get_text(original))
+
+// Copy the label
+copy = label.copy(original)
+log.info(label.get_text(copy))
+
+// Modify the copy
+label.set_text(copy, "Modified Copy")
+log.info(label.get_text(copy))
+
+// Original should be unchanged
+log.info(label.get_text(original))
+
+// Delete labels (no visible output, just shouldn't error)
+label.delete(original)
+label.delete(copy)
+
+// Expected output:
+// Original Label
+// Original Label
+// Modified Copy
+// Original Label

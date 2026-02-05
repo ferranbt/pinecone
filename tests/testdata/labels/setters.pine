@@ -1,0 +1,22 @@
+// Test label setter functions
+lbl = label.new(0, 100.0, "Initial")
+
+// Test all setter functions
+label.set_text(lbl, "New Text")
+label.set_x(lbl, 10)
+label.set_y(lbl, 200.0)
+label.set_xy(lbl, 20, 300.0)
+label.set_style(lbl, label.style_arrowup)
+label.set_size(lbl, "large")
+label.set_textalign(lbl, "left")
+label.set_tooltip(lbl, "Tooltip text")
+
+// Verify values
+log.info(label.get_text(lbl))
+log.info(label.get_x(lbl))
+log.info(label.get_y(lbl))
+
+// Expected output:
+// New Text
+// 20
+// 300

@@ -1,0 +1,26 @@
+// Test label functions
+lbl = label.new(0, 100.0, "Test Label")
+log.info(label.get_text(lbl))
+log.info(label.get_x(lbl))
+log.info(label.get_y(lbl))
+
+label.set_text(lbl, "Updated")
+log.info(label.get_text(lbl))
+
+label.set_x(lbl, 5)
+log.info(label.get_x(lbl))
+
+label.set_y(lbl, 200.0)
+log.info(label.get_y(lbl))
+
+lbl2 = label.copy(lbl)
+log.info(label.get_text(lbl2))
+
+// Expected output:
+// Test Label
+// 0
+// 100
+// Updated
+// 5
+// 200
+// Updated
