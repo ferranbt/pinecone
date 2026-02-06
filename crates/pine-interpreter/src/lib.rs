@@ -101,6 +101,7 @@ pub enum Value {
         b: u8, // Blue component (0-255)
         t: u8, // Transparency (0-100)
     }, // Color value
+    Matrix(Rc<RefCell<Vec<Vec<Value>>>>), // 2D matrix - mutable shared reference to rows of columns
 }
 
 impl Value {
@@ -129,6 +130,7 @@ impl std::fmt::Debug for Value {
                 ..
             } => write!(f, "Enum({}::{})", enum_name, field_name),
             Value::Color { r, g, b, t } => write!(f, "Color(rgba({}, {}, {}, {}))", r, g, b, t),
+            Value::Matrix(m) => write!(f, "Matrix({:?})", m),
         }
     }
 }
@@ -178,6 +180,8 @@ impl PartialEq for Value {
                     t: t2,
                 },
             ) => r1 == r2 && g1 == g2 && b1 == b2 && t1 == t2,
+            // Matrices compare by reference (Rc pointer equality)
+            (Value::Matrix(a), Value::Matrix(b)) => Rc::ptr_eq(a, b),
             _ => false,
         }
     }

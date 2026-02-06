@@ -1,0 +1,27 @@
+// Test matrix fill and copy
+m = matrix.new(2, 2, 1.0)
+log.info(matrix.get(m, 0, 0))
+
+// Fill with new value
+matrix.fill(m, 7.0)
+log.info(matrix.get(m, 0, 0))
+log.info(matrix.get(m, 1, 1))
+
+// Copy matrix
+m2 = matrix.copy(m)
+log.info(matrix.get(m2, 0, 0))
+
+// Modify copy
+matrix.set(m2, 0, 0, 99.0)
+log.info(matrix.get(m2, 0, 0))
+
+// Original unchanged
+log.info(matrix.get(m, 0, 0))
+
+// Expected output:
+// 1
+// 7
+// 7
+// 7
+// 99
+// 7

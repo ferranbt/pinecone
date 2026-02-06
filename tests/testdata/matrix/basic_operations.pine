@@ -1,0 +1,20 @@
+// Test basic matrix operations
+m = matrix.new(2, 3, 5.0)
+log.info(matrix.rows(m))
+log.info(matrix.columns(m))
+log.info(matrix.elements_count(m))
+
+// Get element
+val = matrix.get(m, 0, 0)
+log.info(val)
+
+// Set element
+matrix.set(m, 0, 0, 10.0)
+log.info(matrix.get(m, 0, 0))
+
+// Expected output:
+// 2
+// 3
+// 6
+// 5
+// 10

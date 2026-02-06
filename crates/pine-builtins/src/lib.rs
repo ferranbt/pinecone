@@ -19,6 +19,7 @@ mod currency;
 mod label;
 mod log;
 mod math;
+mod matrix;
 mod plot;
 mod str;
 mod ta;
@@ -160,6 +161,7 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
     namespaces.insert("currency".to_string(), currency::register());
     namespaces.insert("label".to_string(), label::register());
     namespaces.insert("math".to_string(), math::register());
+    namespaces.insert("matrix".to_string(), matrix::register());
     namespaces.insert("str".to_string(), str::register());
     namespaces.insert("ta".to_string(), ta::register());
 

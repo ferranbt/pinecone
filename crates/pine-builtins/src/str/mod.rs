@@ -221,6 +221,12 @@ impl StrToString {
                 field_name,
                 ..
             } => format!("{}::{}", enum_name, field_name),
+            Value::Matrix(m) => {
+                let matrix_ref = m.borrow();
+                let rows = matrix_ref.len();
+                let cols = if rows > 0 { matrix_ref[0].len() } else { 0 };
+                format!("[Matrix:{}x{}]", rows, cols)
+            }
         };
         Ok(Value::String(result))
     }
