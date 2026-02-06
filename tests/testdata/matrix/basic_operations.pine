@@ -1,5 +1,5 @@
 // Test basic matrix operations
-m = matrix.new(2, 3, 5.0)
+m = matrix.new<float>(2, 3, 5.0)
 log.info(matrix.rows(m))
 log.info(matrix.columns(m))
 log.info(matrix.elements_count(m))

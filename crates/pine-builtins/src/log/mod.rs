@@ -58,8 +58,8 @@ impl<T: Logger + 'static> Log<T> {
 
         for (name, level) in levels {
             let logger_clone = logger.clone();
-            let log_fn: pine_interpreter::BuiltinFn = Rc::new(move |_ctx, args| {
-                let msg = match args.first() {
+            let log_fn: pine_interpreter::BuiltinFn = Rc::new(move |_ctx, func_call| {
+                let msg = match func_call.args.first() {
                     Some(pine_interpreter::EvaluatedArg::Positional(v)) => value_to_string(v),
                     _ => String::new(),
                 };

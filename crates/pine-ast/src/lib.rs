@@ -23,6 +23,8 @@ pub enum Expr {
     },
     Call {
         callee: Box<Expr>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        type_args: Vec<String>, // Type arguments like <int>, <float>
         args: Vec<Argument>,
     },
     Index {

@@ -101,7 +101,10 @@ pub enum Value {
         b: u8, // Blue component (0-255)
         t: u8, // Transparency (0-100)
     }, // Color value
-    Matrix(Rc<RefCell<Vec<Vec<Value>>>>), // 2D matrix - mutable shared reference to rows of columns
+    Matrix {
+        element_type: String, // Type of elements: "int", "float", "string", "bool"
+        data: Rc<RefCell<Vec<Vec<Value>>>>, // 2D matrix - mutable shared reference to rows of columns
+    },
 }
 
 impl Value {
@@ -130,7 +133,9 @@ impl std::fmt::Debug for Value {
                 ..
             } => write!(f, "Enum({}::{})", enum_name, field_name),
             Value::Color { r, g, b, t } => write!(f, "Color(rgba({}, {}, {}, {}))", r, g, b, t),
-            Value::Matrix(m) => write!(f, "Matrix({:?})", m),
+            Value::Matrix { element_type, data } => {
+                write!(f, "Matrix<{}>({:?})", element_type, data)
+            }
         }
     }
 }
@@ -181,7 +186,7 @@ impl PartialEq for Value {
                 },
             ) => r1 == r2 && g1 == g2 && b1 == b2 && t1 == t2,
             // Matrices compare by reference (Rc pointer equality)
-            (Value::Matrix(a), Value::Matrix(b)) => Rc::ptr_eq(a, b),
+            (Value::Matrix { data: a, .. }, Value::Matrix { data: b, .. }) => Rc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -194,8 +199,28 @@ pub enum EvaluatedArg {
     Named { name: String, value: Value },
 }
 
+/// Container for function call arguments including type parameters
+#[derive(Debug, Clone)]
+pub struct FunctionCallArgs {
+    pub type_args: Vec<String>,
+    pub args: Vec<EvaluatedArg>,
+}
+
+impl FunctionCallArgs {
+    pub fn new(type_args: Vec<String>, args: Vec<EvaluatedArg>) -> Self {
+        Self { type_args, args }
+    }
+
+    pub fn without_types(args: Vec<EvaluatedArg>) -> Self {
+        Self {
+            type_args: vec![],
+            args,
+        }
+    }
+}
+
 /// Type signature for builtin functions (can be function pointers or closures)
-pub type BuiltinFn = Rc<dyn Fn(&mut Interpreter, Vec<EvaluatedArg>) -> Result<Value, RuntimeError>>;
+pub type BuiltinFn = Rc<dyn Fn(&mut Interpreter, FunctionCallArgs) -> Result<Value, RuntimeError>>;
 
 impl Value {
     pub fn as_number(&self) -> Result<f64, RuntimeError> {
@@ -912,7 +937,11 @@ impl Interpreter {
                 Ok(Value::Na)
             }
 
-            Expr::Call { callee, args } => {
+            Expr::Call {
+                callee,
+                type_args,
+                args,
+            } => {
                 // Check if this is a method call (object.method())
                 if let Expr::MemberAccess { object, member } = callee.as_ref() {
                     // Try to find a method with this name
@@ -952,7 +981,11 @@ impl Interpreter {
                     Value::Function { params, body } => {
                         self.call_user_function(&params, &body, evaluated_args)
                     }
-                    Value::BuiltinFunction(builtin_fn) => (builtin_fn)(self, evaluated_args),
+                    Value::BuiltinFunction(builtin_fn) => {
+                        // Pass type_args from the parsed call expression
+                        let call_args = FunctionCallArgs::new(type_args.clone(), evaluated_args);
+                        (builtin_fn)(self, call_args)
+                    }
                     _ => Err(RuntimeError::TypeError(
                         "Attempted to call a non-function value".to_string(),
                     )),
@@ -1229,73 +1262,75 @@ impl Default for Interpreter {
 impl Interpreter {
     /// Create a constructor function for a user-defined type
     fn create_constructor(type_name: String, fields: Vec<TypeField>) -> BuiltinFn {
-        Rc::new(move |interp: &mut Interpreter, args: Vec<EvaluatedArg>| {
-            let mut instance_fields = HashMap::new();
+        Rc::new(
+            move |interp: &mut Interpreter, call_args: FunctionCallArgs| {
+                let mut instance_fields = HashMap::new();
 
-            // Match arguments to fields
-            let mut positional_idx = 0;
+                // Match arguments to fields
+                let mut positional_idx = 0;
 
-            for arg in &args {
-                match arg {
-                    EvaluatedArg::Positional(value) => {
-                        // Assign to field by position
-                        if positional_idx < fields.len() {
-                            let field = &fields[positional_idx];
-                            instance_fields.insert(field.name.clone(), value.clone());
-                            positional_idx += 1;
-                        } else {
-                            return Err(RuntimeError::TypeError(format!(
-                                "Too many arguments for type '{}' (expected {} fields)",
-                                type_name,
-                                fields.len()
-                            )));
+                for arg in &call_args.args {
+                    match arg {
+                        EvaluatedArg::Positional(value) => {
+                            // Assign to field by position
+                            if positional_idx < fields.len() {
+                                let field = &fields[positional_idx];
+                                instance_fields.insert(field.name.clone(), value.clone());
+                                positional_idx += 1;
+                            } else {
+                                return Err(RuntimeError::TypeError(format!(
+                                    "Too many arguments for type '{}' (expected {} fields)",
+                                    type_name,
+                                    fields.len()
+                                )));
+                            }
                         }
-                    }
-                    EvaluatedArg::Named { name, value } => {
-                        // Find field by name
-                        if let Some(field) = fields.iter().find(|f| f.name == *name) {
-                            instance_fields.insert(field.name.clone(), value.clone());
-                        } else {
-                            return Err(RuntimeError::TypeError(format!(
-                                "Type '{}' has no field '{}'",
-                                type_name, name
-                            )));
+                        EvaluatedArg::Named { name, value } => {
+                            // Find field by name
+                            if let Some(field) = fields.iter().find(|f| f.name == *name) {
+                                instance_fields.insert(field.name.clone(), value.clone());
+                            } else {
+                                return Err(RuntimeError::TypeError(format!(
+                                    "Type '{}' has no field '{}'",
+                                    type_name, name
+                                )));
+                            }
                         }
                     }
                 }
-            }
 
-            // Fill in defaults for missing fields
-            for field in &fields {
-                if !instance_fields.contains_key(&field.name) {
-                    if let Some(default_expr) = &field.default_value {
-                        let default_val = interp.eval_expr(default_expr)?;
-                        instance_fields.insert(field.name.clone(), default_val);
-                    } else {
-                        // Field has no default and wasn't provided
-                        instance_fields.insert(field.name.clone(), Value::Na);
+                // Fill in defaults for missing fields
+                for field in &fields {
+                    if !instance_fields.contains_key(&field.name) {
+                        if let Some(default_expr) = &field.default_value {
+                            let default_val = interp.eval_expr(default_expr)?;
+                            instance_fields.insert(field.name.clone(), default_val);
+                        } else {
+                            // Field has no default and wasn't provided
+                            instance_fields.insert(field.name.clone(), Value::Na);
+                        }
                     }
                 }
-            }
 
-            Ok(Value::Object {
-                type_name: type_name.clone(),
-                fields: Rc::new(RefCell::new(instance_fields)),
-            })
-        })
+                Ok(Value::Object {
+                    type_name: type_name.clone(),
+                    fields: Rc::new(RefCell::new(instance_fields)),
+                })
+            },
+        )
     }
 
     /// Creates a copy function for types that takes an object and returns a shallow copy
     fn create_copy_function() -> BuiltinFn {
-        Rc::new(|_interp: &mut Interpreter, args: Vec<EvaluatedArg>| {
+        Rc::new(|_interp: &mut Interpreter, call_args: FunctionCallArgs| {
             // Expect exactly one positional argument (the object to copy)
-            if args.len() != 1 {
+            if call_args.args.len() != 1 {
                 return Err(RuntimeError::TypeError(
                     "copy() expects exactly one argument".to_string(),
                 ));
             }
 
-            match &args[0] {
+            match &call_args.args[0] {
                 EvaluatedArg::Positional(value) => {
                     if let Value::Object { type_name, fields } = value {
                         // Create a shallow copy of the object's fields

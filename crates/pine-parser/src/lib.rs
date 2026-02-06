@@ -119,6 +119,47 @@ impl Parser {
         }
     }
 
+    /// Try to parse type arguments: <type1, type2, ...>
+    /// Returns None if this isn't actually type arguments (e.g., it's a comparison)
+    fn try_parse_type_args(&mut self) -> Option<Vec<String>> {
+        self.try_parse(|p| {
+            p.consume(TokenType::Less, "Expected '<'")?;
+
+            let mut type_args = vec![];
+
+            loop {
+                // Parse type name (identifier or type keyword like int/float)
+                let type_name = match &p.peek().typ {
+                    TokenType::Ident(name) => name.clone(),
+                    TokenType::Int => "int".to_string(),
+                    TokenType::Float => "float".to_string(),
+                    _ => {
+                        return Err(ParserError::UnexpectedToken(
+                            p.peek().typ.clone(),
+                            p.peek().line,
+                        ))
+                    }
+                };
+                p.advance();
+                type_args.push(type_name);
+
+                // Check for comma (more types) or end
+                if p.match_token(&[TokenType::Comma]) {
+                    continue;
+                } else if p.match_token(&[TokenType::Greater]) {
+                    break;
+                } else {
+                    return Err(ParserError::UnexpectedToken(
+                        p.peek().typ.clone(),
+                        p.peek().line,
+                    ));
+                }
+            }
+
+            Ok(type_args)
+        })
+    }
+
     /// Skip any newline tokens
     fn skip_newlines(&mut self) {
         while self.match_token(&[TokenType::Newline]) {}
@@ -1312,12 +1353,32 @@ impl Parser {
                     expr: Box::new(expr),
                     index: Box::new(index),
                 };
+            } else if self.check(&TokenType::Less) {
+                // Try to parse type arguments: <type>
+                // This is tricky because < can also be a comparison operator
+                // We use try_parse to backtrack if it's not actually type args
+                let type_args = self.try_parse_type_args().unwrap_or_default();
+
+                // After type args, we must have a function call
+                if self.match_token(&[TokenType::LParen]) {
+                    let args = self.arguments()?;
+                    self.consume(TokenType::RParen, "Expected ')'")?;
+                    expr = Expr::Call {
+                        callee: Box::new(expr),
+                        type_args,
+                        args,
+                    };
+                } else {
+                    // Not a function call, just break
+                    break;
+                }
             } else if self.match_token(&[TokenType::LParen]) {
-                // Function call - callee can be Variable, MemberAccess, or other expressions
+                // Function call without type arguments
                 let args = self.arguments()?;
                 self.consume(TokenType::RParen, "Expected ')'")?;
                 expr = Expr::Call {
                     callee: Box::new(expr),
+                    type_args: vec![],
                     args,
                 };
             } else {
@@ -1599,8 +1660,14 @@ mod tests {
     fn test_function_calls() {
         // Simple function call
         let expr = parse_expr("sma(close, 14)").unwrap();
-        if let Expr::Call { callee, args } = expr {
+        if let Expr::Call {
+            callee,
+            type_args,
+            args,
+        } = expr
+        {
             assert_eq!(*callee, Expr::Variable("sma".to_string()));
+            assert_eq!(type_args.len(), 0);
             assert_eq!(args.len(), 2);
             assert_eq!(
                 args[0],
@@ -1616,8 +1683,14 @@ mod tests {
 
         // No arguments
         let expr = parse_expr("foo()").unwrap();
-        if let Expr::Call { callee, args } = expr {
+        if let Expr::Call {
+            callee,
+            type_args,
+            args,
+        } = expr
+        {
             assert_eq!(*callee, Expr::Variable("foo".to_string()));
+            assert_eq!(type_args.len(), 0);
             assert_eq!(args.len(), 0);
         }
     }

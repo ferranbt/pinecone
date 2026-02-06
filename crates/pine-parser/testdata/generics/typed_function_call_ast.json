@@ -1,0 +1,109 @@
+[
+  {
+    "VarDecl": {
+      "name": "m",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "matrix"
+              },
+              "member": "new"
+            }
+          },
+          "type_args": [
+            "int"
+          ],
+          "args": [
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 2.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 3.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 0.0
+                }
+              }
+            }
+          ]
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "arr",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "array"
+              },
+              "member": "new"
+            }
+          },
+          "type_args": [
+            "float"
+          ],
+          "args": [
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 10.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 0.0
+                }
+              }
+            }
+          ]
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "map",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "map"
+              },
+              "member": "new"
+            }
+          },
+          "type_args": [
+            "string",
+            "int"
+          ],
+          "args": []
+        }
+      },
+      "is_varip": false
+    }
+  }
+]
