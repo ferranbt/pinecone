@@ -1,0 +1,6 @@
+// Test that positional arguments cannot appear after any named argument
+// Even when mixing positional and named
+
+p = plot(100.0, title="Test", 2.0)
+
+// Expected error: Positional arguments cannot follow named arguments
