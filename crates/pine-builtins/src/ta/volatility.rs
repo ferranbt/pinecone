@@ -243,3 +243,69 @@ impl TaAtr {
         Ok(Value::Number(rma))
     }
 }
+
+/// ta.bb(series, length, mult) - Bollinger Bands
+/// Returns [middle, upper, lower] bands
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.bb")]
+pub struct TaBb {
+    series: Value,
+    length: f64,
+    mult: f64,
+}
+
+impl TaBb {
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let length = self.length as usize;
+        if length == 0 {
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
+        }
+
+        // Get series values
+        let values = ctx.get_series_values(&self.series, length)?;
+
+        if values.is_empty() {
+            // Return tuple of [na, na, na]
+            let tuple = vec![Value::Na, Value::Na, Value::Na];
+            return Ok(Value::Array(std::rc::Rc::new(std::cell::RefCell::new(
+                tuple,
+            ))));
+        }
+
+        // Calculate basis (SMA)
+        let sum: f64 = values.iter().sum();
+        let basis = sum / values.len() as f64;
+
+        // Calculate standard deviation
+        let variance: f64 = if values.len() == 1 {
+            0.0
+        } else {
+            values
+                .iter()
+                .map(|&val| {
+                    let diff = val - basis;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / values.len() as f64
+        };
+        let stdev = variance.sqrt();
+
+        // Calculate bands
+        let dev = self.mult * stdev;
+        let upper = basis + dev;
+        let lower = basis - dev;
+
+        // Return tuple [middle, upper, lower]
+        let tuple = vec![
+            Value::Number(basis),
+            Value::Number(upper),
+            Value::Number(lower),
+        ];
+        Ok(Value::Array(std::rc::Rc::new(std::cell::RefCell::new(
+            tuple,
+        ))))
+    }
+}
