@@ -1,0 +1,6 @@
+// Test that positional arguments after named arguments fail
+// This should produce an error
+
+p = plot(series=100.0, "Invalid Plot")
+
+// Expected error: Positional arguments cannot follow named arguments

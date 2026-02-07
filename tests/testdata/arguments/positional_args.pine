@@ -1,0 +1,34 @@
+// Test all positional arguments for plot function
+// plot(series, title, color, linewidth, style, trackprice)
+
+// Just series (required parameter)
+p1 = plot(100.0)
+log.info(p1.series)
+
+// Series and title
+p2 = plot(200.0, "My Plot")
+log.info(p2.series)
+log.info(p2.title)
+
+// Series, title, and color (na)
+p3 = plot(300.0, "Colored Plot", na)
+log.info(p3.series)
+log.info(p3.title)
+log.info(p3.color)
+
+// Series, title, color, linewidth
+p4 = plot(400.0, "Wide Plot", na, 3.0)
+log.info(p4.series)
+log.info(p4.title)
+log.info(p4.linewidth)
+
+// Expected output:
+// 100
+// 200
+// My Plot
+// 300
+// Colored Plot
+// na
+// 400
+// Wide Plot
+// 3

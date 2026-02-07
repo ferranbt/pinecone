@@ -302,6 +302,18 @@ fn generate_field_parsing(
     quote! {
         #(#field_decls)*
 
+        // Validate no duplicate named arguments
+        {
+            let mut seen_names = std::collections::HashSet::new();
+            for arg in &args {
+                if let EvaluatedArg::Named { name, .. } = arg {
+                    if !seen_names.insert(name.clone()) {
+                        return Err(RuntimeError::TypeError(format!("Duplicate argument: {}", name)));
+                    }
+                }
+            }
+        }
+
         #arg_parsing
     }
 }
