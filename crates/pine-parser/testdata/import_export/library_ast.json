@@ -18,26 +18,94 @@
     }
   },
   {
-    "Export": {
-      "item": {
-        "Type": "point"
-      }
+    "TypeDecl": {
+      "name": "point",
+      "fields": [
+        {
+          "name": "x",
+          "type_annotation": "int",
+          "default_value": null
+        },
+        {
+          "name": "y",
+          "type_annotation": "float",
+          "default_value": null
+        }
+      ],
+      "export": true
     }
   },
   {
-    "VarDecl": {
-      "name": "x",
-      "type_annotation": "int",
-      "initializer": null,
-      "is_varip": false
+    "MethodDecl": {
+      "name": "set",
+      "params": [
+        {
+          "type_annotation": "point",
+          "name": "this",
+          "default_value": null
+        }
+      ],
+      "body": [
+        {
+          "Assignment": {
+            "target": {
+              "MemberAccess": {
+                "object": {
+                  "Variable": "this"
+                },
+                "member": "x"
+              }
+            },
+            "value": {
+              "Literal": {
+                "Number": 1.0
+              }
+            }
+          }
+        }
+      ],
+      "export": true
     }
   },
   {
-    "VarDecl": {
-      "name": "y",
-      "type_annotation": "float",
-      "initializer": null,
-      "is_varip": false
+    "FunctionDecl": {
+      "name": "add",
+      "params": [
+        "x",
+        "y"
+      ],
+      "body": [
+        {
+          "Expression": {
+            "Binary": {
+              "left": {
+                "Variable": "x"
+              },
+              "op": "Add",
+              "right": {
+                "Variable": "y"
+              }
+            }
+          }
+        }
+      ],
+      "export": true
+    }
+  },
+  {
+    "EnumDecl": {
+      "name": "Signal",
+      "fields": [
+        {
+          "name": "buy",
+          "title": "Buy signal"
+        },
+        {
+          "name": "sell",
+          "title": "Sell signal"
+        }
+      ],
+      "export": true
     }
   }
 ]

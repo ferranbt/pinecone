@@ -1,0 +1,11 @@
+// Test importing and using an exported method
+
+import mylib as lib
+
+// Create a Point instance and call the distance method
+p = lib.Point.new(3.0, 4.0)
+d = p.distance()
+log.info(d)
+
+// Expected output:
+// 5

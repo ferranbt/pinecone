@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 
+// Helper function for serde to skip false values
+fn is_false(b: &bool) -> bool {
+    !b
+}
+
 /// Function argument - can be positional or named
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Argument {
@@ -135,15 +140,28 @@ pub enum Stmt {
     TypeDecl {
         name: String,
         fields: Vec<TypeField>,
+        #[serde(default, skip_serializing_if = "is_false")]
+        export: bool,
     },
     MethodDecl {
         name: String,
         params: Vec<MethodParam>,
         body: Vec<Stmt>,
+        #[serde(default, skip_serializing_if = "is_false")]
+        export: bool,
     },
     EnumDecl {
         name: String,
         fields: Vec<EnumField>,
+        #[serde(default, skip_serializing_if = "is_false")]
+        export: bool,
+    },
+    FunctionDecl {
+        name: String,
+        params: Vec<String>,
+        body: Vec<Stmt>,
+        #[serde(default, skip_serializing_if = "is_false")]
+        export: bool,
     },
     Export {
         item: ExportItem,

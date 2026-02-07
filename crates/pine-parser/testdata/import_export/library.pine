@@ -4,3 +4,12 @@ library("Point")
 export type point
     int x
     float y
+
+export method set(point this) =>
+    this.x := 1
+
+export add(x, y) => x + y
+
+export enum Signal
+    buy = "Buy signal"
+    sell = "Sell signal"
