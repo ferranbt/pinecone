@@ -395,17 +395,17 @@ impl Parser {
     fn check_type_annotated_declaration(&mut self) -> Result<Stmt, ParserError> {
         // Check for type declaration: type TypeName
         if self.match_token(&[TokenType::Type]) {
-            return self.type_declaration();
+            return self.type_declaration(false);
         }
 
         // Check for enum declaration: enum EnumName
         if self.match_token(&[TokenType::Enum]) {
-            return self.enum_declaration();
+            return self.enum_declaration(false);
         }
 
         // Check for method declaration: method methodName(params) =>
         if self.match_token(&[TokenType::Method]) {
-            return self.method_declaration();
+            return self.method_declaration(false);
         }
 
         // Check for type-annotated declaration without var: int x = ..., float y = ..., int[] x = ...
@@ -424,7 +424,7 @@ impl Parser {
         self.statement()
     }
 
-    fn type_declaration(&mut self) -> Result<Stmt, ParserError> {
+    fn type_declaration(&mut self, export: bool) -> Result<Stmt, ParserError> {
         // Parse type name
         let type_name = self.expect_identifier()?;
 
@@ -471,10 +471,11 @@ impl Parser {
         Ok(Stmt::TypeDecl {
             name: type_name,
             fields,
+            export,
         })
     }
 
-    fn enum_declaration(&mut self) -> Result<Stmt, ParserError> {
+    fn enum_declaration(&mut self, export: bool) -> Result<Stmt, ParserError> {
         // Parse enum name
         let enum_name = self.expect_identifier()?;
 
@@ -515,22 +516,57 @@ impl Parser {
         Ok(Stmt::EnumDecl {
             name: enum_name,
             fields,
+            export,
         })
     }
 
     fn export_statement(&mut self) -> Result<Stmt, ParserError> {
-        // export type typename or export functionname
+        // export type typename - delegate to type_declaration
         if self.match_token(&[TokenType::Type]) {
-            // export type typename
-            let type_name = self.expect_identifier()?;
-            Ok(Stmt::Export {
-                item: pine_ast::ExportItem::Type(type_name),
+            return self.type_declaration(true);
+        }
+
+        // export enum enumname - delegate to enum_declaration
+        if self.match_token(&[TokenType::Enum]) {
+            return self.enum_declaration(true);
+        }
+
+        // export [method] functionname(params) => body
+        // Check if it's a method
+        let is_method = self.match_token(&[TokenType::Method]);
+
+        if is_method {
+            return self.method_declaration(true);
+        }
+
+        // Parse function name
+        let func_name = self.expect_identifier()?;
+
+        // Check if this is a function declaration (followed by '(')
+        if self.check(&TokenType::LParen) {
+            // export functionname(params) => body
+            self.advance(); // consume '('
+
+            let params = self.function_params()?;
+            self.consume(TokenType::RParen, "Expected ')' after function parameters")?;
+            self.consume(TokenType::Arrow, "Expected '=>'")?;
+
+            // Skip optional newline after =>
+            self.match_token(&[TokenType::Newline]);
+
+            // Parse function body (can be a block or single expression)
+            let body = self.parse_block()?;
+
+            Ok(Stmt::FunctionDecl {
+                name: func_name,
+                params,
+                body,
+                export: true,
             })
         } else {
-            // export functionname
-            let func_name = self.expect_identifier()?;
+            // Just export functionname (old style - keeping for backward compatibility)
             Ok(Stmt::Export {
-                item: pine_ast::ExportItem::Function(func_name),
+                item: pine_ast::ExportItem::Type(func_name),
             })
         }
     }
@@ -585,7 +621,7 @@ impl Parser {
         Ok(Stmt::Import { path, alias })
     }
 
-    fn method_declaration(&mut self) -> Result<Stmt, ParserError> {
+    fn method_declaration(&mut self, export: bool) -> Result<Stmt, ParserError> {
         // Parse method name
         let method_name = self.expect_identifier()?;
 
@@ -637,6 +673,7 @@ impl Parser {
             name: method_name,
             params,
             body,
+            export,
         })
     }
 

@@ -1,7 +1,16 @@
 // Library with exported types and functions
 
-type Point
+export type Point
     float x = 0.0
     float y = 0.0
 
-export type Point
+export method distance(Point this) =>
+    math.sqrt(this.x * this.x + this.y * this.y)
+
+export add(a, b) => a + b
+
+export enum Direction
+    UP = "Up"
+    DOWN = "Down"
+    LEFT = "Left"
+    RIGHT = "Right"

@@ -642,17 +642,22 @@ impl Interpreter {
             Stmt::Break => Err(RuntimeError::BreakOutsideLoop),
             Stmt::Continue => Err(RuntimeError::ContinueOutsideLoop),
 
-            Stmt::TypeDecl { name, fields } => {
+            Stmt::TypeDecl { name, fields, export } => {
                 // Create a Type value and store it as a variable
                 let type_value = Value::Type {
                     name: name.clone(),
                     fields: fields.clone(),
                 };
-                self.variables.insert(name.clone(), type_value);
+                self.variables.insert(name.clone(), type_value.clone());
+
+                // If exported, also store in exports
+                if *export {
+                    self.exports.insert(name.clone(), type_value);
+                }
                 Ok(None)
             }
 
-            Stmt::EnumDecl { name, fields } => {
+            Stmt::EnumDecl { name, fields, export } => {
                 // Create an Object that contains all enum members as fields
                 let mut enum_fields = HashMap::new();
 
@@ -670,7 +675,12 @@ impl Interpreter {
                     type_name: name.clone(),
                     fields: Rc::new(RefCell::new(enum_fields)),
                 };
-                self.variables.insert(name.clone(), enum_object);
+                self.variables.insert(name.clone(), enum_object.clone());
+
+                // If exported, also store in exports
+                if *export {
+                    self.exports.insert(name.clone(), enum_object);
+                }
                 Ok(None)
             }
 
@@ -707,6 +717,16 @@ impl Interpreter {
                             // Get the exports from the library
                             let library_exports = library_interp.exports();
 
+                            // Import methods from the library
+                            for (method_name, method_defs) in &library_interp.methods {
+                                for method_def in method_defs {
+                                    self.methods
+                                        .entry(method_name.clone())
+                                        .or_default()
+                                        .push(method_def.clone());
+                                }
+                            }
+
                             // Create a namespace object containing the exported items
                             let namespace = Value::Object {
                                 type_name: alias.clone(),
@@ -729,7 +749,7 @@ impl Interpreter {
                 Ok(None)
             }
 
-            Stmt::MethodDecl { name, params, body } => {
+            Stmt::MethodDecl { name, params, body, export } => {
                 // Extract the type name from the first parameter's type annotation
                 let type_name = if let Some(first_param) = params.first() {
                     first_param.type_annotation.clone().ok_or_else(|| {
@@ -754,6 +774,29 @@ impl Interpreter {
                     .entry(name.clone())
                     .or_default()
                     .push(method_def);
+
+                // If exported, store the method in exports
+                // Methods are exported as part of their type, so we may need to handle this differently
+                // For now, just mark it as exported (this might need more work)
+                if *export {
+                    // TODO: Handle method exports properly
+                }
+
+                Ok(None)
+            }
+
+            Stmt::FunctionDecl { name, params, body, export } => {
+                // Create a function value
+                let func_value = Value::Function {
+                    params: params.clone(),
+                    body: body.clone(),
+                };
+                self.variables.insert(name.clone(), func_value.clone());
+
+                // If exported, also store in exports
+                if *export {
+                    self.exports.insert(name.clone(), func_value);
+                }
 
                 Ok(None)
             }

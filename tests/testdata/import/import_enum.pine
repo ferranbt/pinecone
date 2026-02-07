@@ -1,0 +1,10 @@
+// Test importing and using an exported enum
+
+import mylib as lib
+
+// Use exported enum
+dir = lib.Direction.UP
+log.info(dir)
+
+// Expected output:
+// Enum(Direction::UP)
