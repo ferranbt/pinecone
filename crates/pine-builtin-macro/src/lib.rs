@@ -13,18 +13,29 @@ use syn::{parse_macro_input, Data, DeriveInput, Field, Fields, Meta};
 ///     initial_value: Value,
 /// }
 ///
+/// // With type parameters:
+/// #[derive(BuiltinFunction)]
+/// #[builtin(name = "matrix.new", type_params = 1)]
+/// struct MatrixNew {
+///     #[type_param]
+///     element_type: String,
+///     rows: f64,
+///     columns: f64,
+///     initial_value: Value,
+/// }
+///
 /// impl ArrayNewFloat {
 ///     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
 ///         // implementation
 ///     }
 /// }
 /// ```
-#[proc_macro_derive(BuiltinFunction, attributes(builtin, arg))]
+#[proc_macro_derive(BuiltinFunction, attributes(builtin, arg, type_param))]
 pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    // Parse the function name from attributes
-    let function_name = parse_function_name(&input);
+    // Parse the function name and type params count from attributes
+    let (function_name, type_params_count) = parse_builtin_attributes(&input);
 
     let struct_name = &input.ident;
 
@@ -37,6 +48,13 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
         _ => panic!("BuiltinFunction only works with structs"),
     };
 
+    // Generate type param extraction if needed
+    let type_param_extraction = if type_params_count > 0 {
+        generate_type_param_extraction(fields, type_params_count)
+    } else {
+        quote! {}
+    };
+
     // Generate field parsing code
     let field_parsing = generate_field_parsing(fields);
     let field_validation = generate_field_validation(fields);
@@ -46,9 +64,14 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
         impl #struct_name {
             pub fn builtin_fn(
                 ctx: &mut ::pine_interpreter::Interpreter,
-                args: Vec<::pine_interpreter::EvaluatedArg>,
+                call_args: ::pine_interpreter::FunctionCallArgs,
             ) -> Result<::pine_interpreter::Value, ::pine_interpreter::RuntimeError> {
                 use ::pine_interpreter::{Value, RuntimeError, EvaluatedArg};
+
+                // Extract type parameters first
+                #type_param_extraction
+
+                let args = call_args.args;
 
                 #field_parsing
 
@@ -70,20 +93,90 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-fn parse_function_name(input: &DeriveInput) -> String {
+fn parse_builtin_attributes(input: &DeriveInput) -> (String, usize) {
+    let mut function_name = None;
+    let mut type_params_count = 0;
+
     for attr in &input.attrs {
         if let Meta::List(meta_list) = &attr.meta {
             if meta_list.path.is_ident("builtin") {
                 let tokens_str = meta_list.tokens.to_string();
+
+                // Parse name
                 if let Some(start) = tokens_str.find('"') {
                     if let Some(end) = tokens_str[start + 1..].find('"') {
-                        return tokens_str[start + 1..start + 1 + end].to_string();
+                        function_name = Some(tokens_str[start + 1..start + 1 + end].to_string());
+                    }
+                }
+
+                // Parse type_params
+                if let Some(type_params_pos) = tokens_str.find("type_params") {
+                    let after_eq = &tokens_str[type_params_pos..];
+                    if let Some(eq_pos) = after_eq.find('=') {
+                        let num_str = after_eq[eq_pos + 1..].trim();
+                        // Extract just the number (could be followed by comma or end)
+                        let num_str = num_str.split(',').next().unwrap_or(num_str).trim();
+                        if let Ok(count) = num_str.parse::<usize>() {
+                            type_params_count = count;
+                        }
                     }
                 }
             }
         }
     }
-    panic!("BuiltinFunction requires a #[builtin(name = \"...\")] attribute");
+
+    let function_name =
+        function_name.expect("BuiltinFunction requires a #[builtin(name = \"...\")] attribute");
+    (function_name, type_params_count)
+}
+
+fn generate_type_param_extraction(
+    fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>,
+    expected_count: usize,
+) -> proc_macro2::TokenStream {
+    // Find fields marked with #[type_param]
+    let type_param_fields: Vec<_> = fields.iter().filter(|f| is_field_type_param(f)).collect();
+
+    if type_param_fields.is_empty() {
+        panic!(
+            "Expected {} type parameter fields marked with #[type_param], but found none",
+            expected_count
+        );
+    }
+
+    if type_param_fields.len() != expected_count {
+        panic!(
+            "Expected {} type parameter fields, but found {}",
+            expected_count,
+            type_param_fields.len()
+        );
+    }
+
+    let mut extractions = Vec::new();
+    for (idx, field) in type_param_fields.iter().enumerate() {
+        let field_name = field.ident.as_ref().unwrap();
+        extractions.push(quote! {
+            let #field_name = call_args.type_args.get(#idx)
+                .ok_or_else(|| RuntimeError::TypeError(
+                    format!("Missing type parameter {} (expected {} type parameters)", #idx, #expected_count)
+                ))?
+                .clone();
+        });
+    }
+
+    quote! {
+        #(#extractions)*
+    }
+}
+
+fn is_field_type_param(field: &Field) -> bool {
+    field.attrs.iter().any(|attr| {
+        if let Meta::Path(path) = &attr.meta {
+            path.is_ident("type_param")
+        } else {
+            false
+        }
+    })
 }
 
 fn generate_field_parsing(
@@ -94,11 +187,17 @@ fn generate_field_parsing(
     let mut named_matches = Vec::new();
     let mut variadic_field: Option<&syn::Ident> = None;
     let mut non_variadic_count = 0;
+    let mut arg_position = 0; // Track positional argument index (excluding type params)
 
-    for (idx, field) in fields.iter().enumerate() {
+    for field in fields.iter() {
         let field_name = field.ident.as_ref().unwrap();
         let field_name_str = field_name.to_string();
         let field_type = &field.ty;
+
+        // Skip type parameter fields - they're extracted separately
+        if is_field_type_param(field) {
+            continue;
+        }
 
         // Check if this is a variadic field
         let is_variadic = is_field_variadic(field);
@@ -136,9 +235,11 @@ fn generate_field_parsing(
         // Generate positional assignment based on type
         let positional_assign = generate_value_conversion(field_name, field_type, has_default);
 
+        let current_position = arg_position;
         positional_matches.push(quote! {
-            #idx => { #positional_assign }
+            #current_position => { #positional_assign }
         });
+        arg_position += 1;
 
         // Generate named assignment
         let named_assign = generate_value_conversion(field_name, field_type, has_default);
@@ -286,6 +387,11 @@ fn generate_field_validation(
     for field in fields {
         let field_name = field.ident.as_ref().unwrap();
         let field_name_str = field_name.to_string();
+
+        // Skip type parameter fields - they're validated separately
+        if is_field_type_param(field) {
+            continue;
+        }
 
         // Skip variadic fields - they don't need validation
         if is_field_variadic(field) {

@@ -207,7 +207,7 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pine_interpreter::EvaluatedArg;
+    use pine_interpreter::{EvaluatedArg, FunctionCallArgs};
 
     #[test]
     fn test_na() {
@@ -215,22 +215,22 @@ mod tests {
 
         // Test with na value
         let args = vec![EvaluatedArg::Positional(Value::Na)];
-        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        let result = Na::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Bool(true));
 
         // Test with number
         let args = vec![EvaluatedArg::Positional(Value::Number(42.0))];
-        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        let result = Na::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Bool(false));
 
         // Test with string
         let args = vec![EvaluatedArg::Positional(Value::String("hello".to_string()))];
-        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        let result = Na::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Bool(false));
 
         // Test with bool
         let args = vec![EvaluatedArg::Positional(Value::Bool(true))];
-        let result = Na::builtin_fn(&mut ctx, args).unwrap();
+        let result = Na::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Bool(false));
     }
 
@@ -240,16 +240,16 @@ mod tests {
 
         // Test number to bool
         let args = vec![EvaluatedArg::Positional(Value::Number(5.0))];
-        let result = Bool::builtin_fn(&mut ctx, args).unwrap();
+        let result = Bool::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Bool(true));
 
         let args = vec![EvaluatedArg::Positional(Value::Number(0.0))];
-        let result = Bool::builtin_fn(&mut ctx, args).unwrap();
+        let result = Bool::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Bool(false));
 
         // Test na to bool
         let args = vec![EvaluatedArg::Positional(Value::Na)];
-        let result = Bool::builtin_fn(&mut ctx, args).unwrap();
+        let result = Bool::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Bool(false));
     }
 
@@ -259,21 +259,21 @@ mod tests {
 
         // Test float to int (truncate)
         let args = vec![EvaluatedArg::Positional(Value::Number(5.7))];
-        let result = Int::builtin_fn(&mut ctx, args).unwrap();
+        let result = Int::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(5.0));
 
         let args = vec![EvaluatedArg::Positional(Value::Number(-5.7))];
-        let result = Int::builtin_fn(&mut ctx, args).unwrap();
+        let result = Int::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(-5.0));
 
         // Test bool to int
         let args = vec![EvaluatedArg::Positional(Value::Bool(true))];
-        let result = Int::builtin_fn(&mut ctx, args).unwrap();
+        let result = Int::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(1.0));
 
         // Test na to int
         let args = vec![EvaluatedArg::Positional(Value::Na)];
-        let result = Int::builtin_fn(&mut ctx, args).unwrap();
+        let result = Int::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Na);
     }
 
@@ -283,17 +283,17 @@ mod tests {
 
         // Test number to float
         let args = vec![EvaluatedArg::Positional(Value::Number(5.0))];
-        let result = Float::builtin_fn(&mut ctx, args).unwrap();
+        let result = Float::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(5.0));
 
         // Test bool to float
         let args = vec![EvaluatedArg::Positional(Value::Bool(true))];
-        let result = Float::builtin_fn(&mut ctx, args).unwrap();
+        let result = Float::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(1.0));
 
         // Test na to float
         let args = vec![EvaluatedArg::Positional(Value::Na)];
-        let result = Float::builtin_fn(&mut ctx, args).unwrap();
+        let result = Float::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Na);
     }
 
@@ -303,7 +303,7 @@ mod tests {
 
         // Test na value without replacement (should return 0.0)
         let args = vec![EvaluatedArg::Positional(Value::Na)];
-        let result = Nz::builtin_fn(&mut ctx, args).unwrap();
+        let result = Nz::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(0.0));
 
         // Test na value with replacement
@@ -311,12 +311,12 @@ mod tests {
             EvaluatedArg::Positional(Value::Na),
             EvaluatedArg::Positional(Value::Number(42.0)),
         ];
-        let result = Nz::builtin_fn(&mut ctx, args).unwrap();
+        let result = Nz::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(42.0));
 
         // Test non-na value (should return source)
         let args = vec![EvaluatedArg::Positional(Value::Number(5.0))];
-        let result = Nz::builtin_fn(&mut ctx, args).unwrap();
+        let result = Nz::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(5.0));
     }
 
@@ -326,17 +326,17 @@ mod tests {
 
         // Test na value
         let args = vec![EvaluatedArg::Positional(Value::Na)];
-        let result = Fixnan::builtin_fn(&mut ctx, args).unwrap();
+        let result = Fixnan::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(0.0));
 
         // Test normal value
         let args = vec![EvaluatedArg::Positional(Value::Number(5.0))];
-        let result = Fixnan::builtin_fn(&mut ctx, args).unwrap();
+        let result = Fixnan::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(5.0));
 
         // Test NaN value
         let args = vec![EvaluatedArg::Positional(Value::Number(f64::NAN))];
-        let result = Fixnan::builtin_fn(&mut ctx, args).unwrap();
+        let result = Fixnan::builtin_fn(&mut ctx, FunctionCallArgs::without_types(args)).unwrap();
         assert_eq!(result, Value::Number(0.0));
     }
 }

@@ -4,10 +4,12 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-/// matrix.new() - Creates a new matrix
+/// matrix.new<type>() - Creates a new typed matrix
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.new")]
+#[builtin(name = "matrix.new", type_params = 1)]
 struct MatrixNew {
+    #[type_param]
+    element_type: String,
     #[arg(default = Value::Number(0.0))]
     rows: Value,
     #[arg(default = Value::Number(0.0))]
@@ -32,6 +34,17 @@ impl MatrixNew {
             }
         };
 
+        // Validate element type
+        if !matches!(
+            self.element_type.as_str(),
+            "int" | "float" | "string" | "bool"
+        ) {
+            return Err(RuntimeError::TypeError(format!(
+                "Invalid matrix element type '{}'. Must be int, float, string, or bool",
+                self.element_type
+            )));
+        }
+
         // Create a matrix filled with the initial value
         let mut matrix_data = Vec::with_capacity(rows);
         for _ in 0..rows {
@@ -42,7 +55,10 @@ impl MatrixNew {
             matrix_data.push(row);
         }
 
-        Ok(Value::Matrix(Rc::new(RefCell::new(matrix_data))))
+        Ok(Value::Matrix {
+            element_type: self.element_type.clone(),
+            data: Rc::new(RefCell::new(matrix_data)),
+        })
     }
 }
 
@@ -58,7 +74,7 @@ struct MatrixGet {
 impl MatrixGet {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let matrix = match &self.id {
-            Value::Matrix(m) => m,
+            Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
@@ -101,7 +117,7 @@ struct MatrixSet {
 impl MatrixSet {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let matrix = match &self.id {
-            Value::Matrix(m) => m,
+            Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
@@ -142,7 +158,7 @@ struct MatrixRows {
 impl MatrixRows {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let matrix = match &self.id {
-            Value::Matrix(m) => m,
+            Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
@@ -161,7 +177,7 @@ struct MatrixColumns {
 impl MatrixColumns {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let matrix = match &self.id {
-            Value::Matrix(m) => m,
+            Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
@@ -185,7 +201,7 @@ struct MatrixElementsCount {
 impl MatrixElementsCount {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let matrix = match &self.id {
-            Value::Matrix(m) => m,
+            Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
@@ -206,7 +222,7 @@ struct MatrixFill {
 impl MatrixFill {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let matrix = match &self.id {
-            Value::Matrix(m) => m,
+            Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
@@ -230,14 +246,17 @@ struct MatrixCopy {
 
 impl MatrixCopy {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let matrix = match &self.id {
-            Value::Matrix(m) => m,
+        let (matrix, element_type) = match &self.id {
+            Value::Matrix { data, element_type } => (data, element_type.clone()),
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
         let matrix_ref = matrix.borrow();
         let copied_data = matrix_ref.clone();
-        Ok(Value::Matrix(Rc::new(RefCell::new(copied_data))))
+        Ok(Value::Matrix {
+            element_type,
+            data: Rc::new(RefCell::new(copied_data)),
+        })
     }
 }
 
@@ -254,7 +273,7 @@ struct MatrixAddRow {
 impl MatrixAddRow {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let matrix = match &self.id {
-            Value::Matrix(m) => m,
+            Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
@@ -303,7 +322,7 @@ struct MatrixAddCol {
 impl MatrixAddCol {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let matrix = match &self.id {
-            Value::Matrix(m) => m,
+            Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
@@ -350,14 +369,17 @@ struct MatrixTranspose {
 
 impl MatrixTranspose {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let matrix = match &self.id {
-            Value::Matrix(m) => m,
+        let (matrix, element_type) = match &self.id {
+            Value::Matrix { data, element_type } => (data, element_type.clone()),
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
         let matrix_ref = matrix.borrow();
         if matrix_ref.is_empty() {
-            return Ok(Value::Matrix(Rc::new(RefCell::new(vec![]))));
+            return Ok(Value::Matrix {
+                element_type,
+                data: Rc::new(RefCell::new(vec![])),
+            });
         }
 
         let rows = matrix_ref.len();
@@ -370,7 +392,10 @@ impl MatrixTranspose {
             }
         }
 
-        Ok(Value::Matrix(Rc::new(RefCell::new(transposed))))
+        Ok(Value::Matrix {
+            element_type,
+            data: Rc::new(RefCell::new(transposed)),
+        })
     }
 }
 

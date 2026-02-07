@@ -1,0 +1,4 @@
+//@version=5
+var m = matrix.new<int>(2, 3, 0)
+var arr = array.new<float>(10, 0.0)
+var map = map.new<string, int>()

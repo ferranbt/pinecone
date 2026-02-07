@@ -3,6 +3,37 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+/// array.new<type>() - Creates a new typed array (generic version)
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.new", type_params = 1)]
+struct ArrayNew {
+    #[type_param]
+    element_type: String,
+    size: f64,
+    #[arg(default = Value::Na)]
+    initial_value: Value,
+}
+
+impl ArrayNew {
+    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        // Validate element type
+        if !matches!(
+            self.element_type.as_str(),
+            "int" | "float" | "string" | "bool" | "color"
+        ) {
+            return Err(RuntimeError::TypeError(format!(
+                "Invalid array element type '{}'. Must be int, float, string, bool, or color",
+                self.element_type
+            )));
+        }
+
+        let size = self.size as usize;
+        let arr = vec![self.initial_value.clone(); size];
+        Ok(Value::Array(Rc::new(RefCell::new(arr))))
+    }
+}
+
+/// array.new_float() - Creates a new float array (backward compatibility)
 #[derive(BuiltinFunction)]
 #[builtin(name = "array.new_float")]
 struct ArrayNewFloat {
@@ -83,6 +114,12 @@ impl ArraySize {
 pub fn register() -> Value {
     let mut array_ns = std::collections::HashMap::new();
 
+    // Generic typed array.new<type>()
+    array_ns.insert(
+        "new".to_string(),
+        Value::BuiltinFunction(Rc::new(ArrayNew::builtin_fn)),
+    );
+    // Backward compatible array.new_float()
     array_ns.insert(
         "new_float".to_string(),
         Value::BuiltinFunction(Rc::new(ArrayNewFloat::builtin_fn)),

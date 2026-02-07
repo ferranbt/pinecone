@@ -1,5 +1,5 @@
 // Test matrix fill and copy
-m = matrix.new(2, 2, 1.0)
+m = matrix.new<float>(2, 2, 1.0)
 log.info(matrix.get(m, 0, 0))
 
 // Fill with new value

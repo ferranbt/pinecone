@@ -1,0 +1,5 @@
+// Test that matrix.new with invalid type fails
+m = matrix.new<foobar>(2, 3, 0.0)
+log.info(m)
+
+// Expected error: Invalid matrix element type
