@@ -642,7 +642,11 @@ impl Interpreter {
             Stmt::Break => Err(RuntimeError::BreakOutsideLoop),
             Stmt::Continue => Err(RuntimeError::ContinueOutsideLoop),
 
-            Stmt::TypeDecl { name, fields, export } => {
+            Stmt::TypeDecl {
+                name,
+                fields,
+                export,
+            } => {
                 // Create a Type value and store it as a variable
                 let type_value = Value::Type {
                     name: name.clone(),
@@ -657,7 +661,11 @@ impl Interpreter {
                 Ok(None)
             }
 
-            Stmt::EnumDecl { name, fields, export } => {
+            Stmt::EnumDecl {
+                name,
+                fields,
+                export,
+            } => {
                 // Create an Object that contains all enum members as fields
                 let mut enum_fields = HashMap::new();
 
@@ -749,7 +757,12 @@ impl Interpreter {
                 Ok(None)
             }
 
-            Stmt::MethodDecl { name, params, body, export } => {
+            Stmt::MethodDecl {
+                name,
+                params,
+                body,
+                export,
+            } => {
                 // Extract the type name from the first parameter's type annotation
                 let type_name = if let Some(first_param) = params.first() {
                     first_param.type_annotation.clone().ok_or_else(|| {
@@ -785,7 +798,12 @@ impl Interpreter {
                 Ok(None)
             }
 
-            Stmt::FunctionDecl { name, params, body, export } => {
+            Stmt::FunctionDecl {
+                name,
+                params,
+                body,
+                export,
+            } => {
                 // Create a function value
                 let func_value = Value::Function {
                     params: params.clone(),
