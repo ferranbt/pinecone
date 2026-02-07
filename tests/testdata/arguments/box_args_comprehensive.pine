@@ -1,0 +1,39 @@
+// Test argument variations with box.new function
+// box.new(left, top, right, bottom, border_color, bgcolor, text, text_size, text_color, xloc, extend, border_width, border_style)
+
+// All positional arguments (first 4 required)
+b1 = box.new(0, 100.0, 1, 90.0)
+log.info(box.get_left(b1))
+log.info(box.get_top(b1))
+
+// Positional required + some optional positional
+b2 = box.new(0, 200.0, 1, 190.0, color.red)
+log.info(box.get_left(b2))
+log.info(box.get_top(b2))
+
+// All named arguments
+b3 = box.new(left=0, top=300.0, right=1, bottom=290.0, border_color=color.blue)
+log.info(box.get_left(b3))
+log.info(box.get_top(b3))
+
+// Named arguments in different order
+b4 = box.new(bottom=390.0, top=400.0, left=0, right=1)
+log.info(box.get_left(b4))
+log.info(box.get_top(b4))
+
+// Mix: positional required, named optional
+b5 = box.new(0, 500.0, 1, 490.0, border_width=2)
+log.info(box.get_left(b5))
+log.info(box.get_top(b5))
+
+// Expected output:
+// 0
+// 100
+// 0
+// 200
+// 0
+// 300
+// 0
+// 400
+// 0
+// 500

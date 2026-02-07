@@ -1,0 +1,5 @@
+// Test that unknown named arguments fail
+
+p = plot(series=100.0, invalid_param=200.0)
+
+// Expected error: Unknown parameter: invalid_param

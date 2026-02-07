@@ -1,0 +1,5 @@
+// Test that duplicate named arguments fail
+
+p = plot(series=100.0, title="Test", series=200.0)
+
+// Expected error: Duplicate argument: series
