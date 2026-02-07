@@ -187,8 +187,9 @@ fn generate_field_parsing(
     let mut named_matches = Vec::new();
     let mut variadic_field: Option<&syn::Ident> = None;
     let mut non_variadic_count = 0;
+    let mut arg_position = 0; // Track positional argument index (excluding type params)
 
-    for (idx, field) in fields.iter().enumerate() {
+    for field in fields.iter() {
         let field_name = field.ident.as_ref().unwrap();
         let field_name_str = field_name.to_string();
         let field_type = &field.ty;
@@ -234,9 +235,11 @@ fn generate_field_parsing(
         // Generate positional assignment based on type
         let positional_assign = generate_value_conversion(field_name, field_type, has_default);
 
+        let current_position = arg_position;
         positional_matches.push(quote! {
-            #idx => { #positional_assign }
+            #current_position => { #positional_assign }
         });
+        arg_position += 1;
 
         // Generate named assignment
         let named_assign = generate_value_conversion(field_name, field_type, has_default);

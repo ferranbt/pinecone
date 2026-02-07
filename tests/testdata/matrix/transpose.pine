@@ -1,5 +1,5 @@
 // Test matrix transpose
-m = matrix.new(2, 3, 0.0)
+m = matrix.new<float>(2, 3, 0.0)
 matrix.set(m, 0, 0, 1.0)
 matrix.set(m, 0, 1, 2.0)
 matrix.set(m, 0, 2, 3.0)

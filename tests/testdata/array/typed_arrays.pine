@@ -1,0 +1,32 @@
+// Test all valid typed arrays
+
+// Int array
+arr_int = array.new<int>(3, 42)
+log.info(array.get(arr_int, 0))
+log.info(array.size(arr_int))
+
+// Float array
+arr_float = array.new<float>(3, 3.14)
+log.info(array.get(arr_float, 0))
+
+// String array
+arr_string = array.new<string>(3, "hello")
+log.info(array.get(arr_string, 0))
+
+// Bool array
+arr_bool = array.new<bool>(3, true)
+log.info(array.get(arr_bool, 0))
+
+// Test backward compatibility with array.new_float
+arr_old = array.new_float(2, 2.5)
+log.info(array.get(arr_old, 0))
+log.info(array.size(arr_old))
+
+// Expected output:
+// 42
+// 3
+// 3.14
+// hello
+// true
+// 2.5
+// 2

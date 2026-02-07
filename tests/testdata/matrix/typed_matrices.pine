@@ -1,0 +1,23 @@
+// Test all valid matrix types
+
+// Int matrix
+m_int = matrix.new<int>(2, 2, 42)
+log.info(matrix.get(m_int, 0, 0))
+
+// Float matrix
+m_float = matrix.new<float>(2, 2, 3.14)
+log.info(matrix.get(m_float, 0, 0))
+
+// String matrix
+m_string = matrix.new<string>(2, 2, "hello")
+log.info(matrix.get(m_string, 0, 0))
+
+// Bool matrix
+m_bool = matrix.new<bool>(2, 2, true)
+log.info(matrix.get(m_bool, 0, 0))
+
+// Expected output:
+// 42
+// 3.14
+// hello
+// true

@@ -246,15 +246,15 @@ struct MatrixCopy {
 
 impl MatrixCopy {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let matrix = match &self.id {
-            Value::Matrix { data, .. } => data,
+        let (matrix, element_type) = match &self.id {
+            Value::Matrix { data, element_type } => (data, element_type.clone()),
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
         let matrix_ref = matrix.borrow();
         let copied_data = matrix_ref.clone();
         Ok(Value::Matrix {
-            element_type: "float".to_string(),
+            element_type,
             data: Rc::new(RefCell::new(copied_data)),
         })
     }
@@ -369,15 +369,15 @@ struct MatrixTranspose {
 
 impl MatrixTranspose {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let matrix = match &self.id {
-            Value::Matrix { data, .. } => data,
+        let (matrix, element_type) = match &self.id {
+            Value::Matrix { data, element_type } => (data, element_type.clone()),
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
         let matrix_ref = matrix.borrow();
         if matrix_ref.is_empty() {
             return Ok(Value::Matrix {
-                element_type: "float".to_string(),
+                element_type,
                 data: Rc::new(RefCell::new(vec![])),
             });
         }
@@ -393,7 +393,7 @@ impl MatrixTranspose {
         }
 
         Ok(Value::Matrix {
-            element_type: "float".to_string(),
+            element_type,
             data: Rc::new(RefCell::new(transposed)),
         })
     }
