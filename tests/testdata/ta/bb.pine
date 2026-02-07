@@ -1,0 +1,38 @@
+// Test ta.bb (Bollinger Bands)
+// Uses generated bars: bar[i] has close = 100 + i + 2 = 102 + i
+// For bar 199 (last bar): close = 301, bar 198: close = 300, etc.
+
+// BB with length=5, mult=2
+// Last 5 closes: [301, 300, 299, 298, 297]
+// Middle (SMA): (301+300+299+298+297)/5 = 299
+// Variance: sum((x - 299)^2) / 5 = (4+1+0+1+4)/5 = 2
+// Stdev: sqrt(2) = 1.4142135623730951
+// Upper: 299 + 2*1.4142135623730951 = 301.8284271247462
+// Lower: 299 - 2*1.4142135623730951 = 296.1715728752538
+[middle, upper, lower] = ta.bb(close, 5, 2)
+log.info(middle)
+log.info(upper)
+log.info(lower)
+
+// BB with length=10, mult=1
+// Last 10 closes: [301, 300, 299, 298, 297, 296, 295, 294, 293, 292]
+// Middle (SMA): 296.5
+// Variance: sum((x - 296.5)^2) / 10
+//  = ((4.5)^2 + (3.5)^2 + (2.5)^2 + (1.5)^2 + (0.5)^2 + (-0.5)^2 + (-1.5)^2 + (-2.5)^2 + (-3.5)^2 + (-4.5)^2) / 10
+//  = (20.25 + 12.25 + 6.25 + 2.25 + 0.25 + 0.25 + 2.25 + 6.25 + 12.25 + 20.25) / 10
+//  = 82.5 / 10 = 8.25
+// Stdev: sqrt(8.25) = 2.8722813232690143
+// Upper: 296.5 + 1*2.8722813232690143 = 299.3722813232690143
+// Lower: 296.5 - 1*2.8722813232690143 = 293.6277186767310
+[middle2, upper2, lower2] = ta.bb(close, 10, 1)
+log.info(middle2)
+log.info(upper2)
+log.info(lower2)
+
+// Expected output:
+// 299
+// 301.8284271247462
+// 296.1715728752538
+// 296.5
+// 299.372281323269
+// 293.627718676731

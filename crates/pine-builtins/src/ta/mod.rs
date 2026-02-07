@@ -75,6 +75,10 @@ pub fn register() -> Value {
         "atr".to_string(),
         Value::BuiltinFunction(Rc::new(TaAtr::builtin_fn)),
     );
+    ta_ns.insert(
+        "bb".to_string(),
+        Value::BuiltinFunction(Rc::new(TaBb::builtin_fn)),
+    );
 
     // Comparison & Signals
     ta_ns.insert(
