@@ -71,8 +71,12 @@
     "FunctionDecl": {
       "name": "add",
       "params": [
-        "x",
-        "y"
+        {
+          "name": "x"
+        },
+        {
+          "name": "y"
+        }
       ],
       "body": [
         {

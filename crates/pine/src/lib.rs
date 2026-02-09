@@ -80,8 +80,9 @@ impl Script {
             namespaces.insert("log".to_string(), log_namespace);
         }
 
+        // Register namespace objects as const variables
         for (name, value) in namespaces {
-            interpreter.set_variable(&name, value);
+            interpreter.set_const_variable(&name, value);
         }
 
         Ok(Self {

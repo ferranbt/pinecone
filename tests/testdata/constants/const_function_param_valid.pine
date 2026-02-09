@@ -1,0 +1,18 @@
+// Test that const function parameters work with const arguments
+
+add(const int x, const int y) => x + y
+
+const int a = 10
+const int b = 20
+
+// Literals are const
+result1 = add(5, 10)
+log.info(result1)
+
+// Const variables are const
+result2 = add(a, b)
+log.info(result2)
+
+// Expected output:
+// 15
+// 30

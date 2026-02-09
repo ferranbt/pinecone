@@ -1,0 +1,10 @@
+// Test basic const variable usage
+
+const int x = 10
+const string name = "test"
+log.info(x)
+log.info(name)
+
+// Expected output:
+// 10
+// test

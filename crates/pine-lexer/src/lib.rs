@@ -43,6 +43,7 @@ pub enum TokenType {
     Ident(String),
     Var,
     Varip,
+    Const,
     Type,
     Enum,
     Method,
@@ -220,6 +221,7 @@ impl Lexer {
         let typ = match ident.as_str() {
             "var" => TokenType::Var,
             "varip" => TokenType::Varip,
+            "const" => TokenType::Const,
             "type" => TokenType::Type,
             "enum" => TokenType::Enum,
             "method" => TokenType::Method,

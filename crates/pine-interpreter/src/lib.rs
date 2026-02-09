@@ -41,6 +41,9 @@ pub enum RuntimeError {
 
     #[error("Library error: {0}")]
     LibraryError(String),
+
+    #[error("Cannot reassign const variable '{0}'")]
+    ConstReassignment(String),
 }
 
 /// Control flow signals for loops
@@ -49,6 +52,13 @@ enum LoopControl {
     None,
     Break,
     Continue,
+}
+
+/// Variable storage with const qualifier tracking
+#[derive(Clone)]
+struct Variable {
+    value: Value,
+    is_const: bool,
 }
 
 /// Represents a single bar/candle of market data
@@ -82,7 +92,7 @@ pub enum Value {
         fields: Rc<RefCell<HashMap<String, Value>>>, // Dictionary/Object with string keys
     },
     Function {
-        params: Vec<String>,
+        params: Vec<pine_ast::FunctionParam>,
         body: Vec<Stmt>,
     },
     BuiltinFunction(BuiltinFn), // Builtin function pointer
@@ -290,7 +300,7 @@ struct MethodDef {
 /// The interpreter executes a program with a given bar
 pub struct Interpreter {
     /// Local variables in the current scope
-    variables: HashMap<String, Value>,
+    variables: HashMap<String, Variable>,
     /// Builtin function registry
     builtins: HashMap<String, BuiltinFn>,
     /// Method registry (method_name -> Vec<MethodDef>) - can have multiple methods with same name for different types
@@ -379,12 +389,29 @@ impl Interpreter {
 
     /// Get a variable value
     pub fn get_variable(&self, name: &str) -> Option<&Value> {
-        self.variables.get(name)
+        self.variables.get(name).map(|var| &var.value)
     }
 
     /// Set a variable value (useful for loading objects and test setup)
     pub fn set_variable(&mut self, name: &str, value: Value) {
-        self.variables.insert(name.to_string(), value);
+        self.variables.insert(
+            name.to_string(),
+            Variable {
+                value,
+                is_const: false,
+            },
+        );
+    }
+
+    /// Set a const variable (cannot be reassigned)
+    pub fn set_const_variable(&mut self, name: &str, value: Value) {
+        self.variables.insert(
+            name.to_string(),
+            Variable {
+                value,
+                is_const: true,
+            },
+        );
     }
 
     /// Helper to get series values as a Vec<f64> for the given length
@@ -465,6 +492,7 @@ impl Interpreter {
         match stmt {
             Stmt::VarDecl {
                 name,
+                type_qualifier,
                 type_annotation: _,
                 initializer,
                 is_varip: _, // TODO: implement varip behavior (requires stateful execution)
@@ -474,7 +502,9 @@ impl Interpreter {
                 } else {
                     Value::Na
                 };
-                self.variables.insert(name.clone(), value);
+                let is_const = matches!(type_qualifier, Some(pine_ast::TypeQualifier::Const));
+                self.variables
+                    .insert(name.clone(), Variable { value, is_const });
                 Ok(None)
             }
 
@@ -483,10 +513,35 @@ impl Interpreter {
 
                 match target {
                     Expr::Variable(name) => {
-                        self.variables.insert(name.clone(), val);
+                        // Check if variable is const
+                        if let Some(var) = self.variables.get(name) {
+                            if var.is_const {
+                                return Err(RuntimeError::ConstReassignment(name.clone()));
+                            }
+                        }
+
+                        self.variables.insert(
+                            name.clone(),
+                            Variable {
+                                value: val,
+                                is_const: false,
+                            },
+                        );
                         Ok(None)
                     }
                     Expr::MemberAccess { object, member } => {
+                        // Check if we're trying to modify a member of a const variable
+                        if let Expr::Variable(var_name) = object.as_ref() {
+                            if let Some(var) = self.variables.get(var_name) {
+                                if var.is_const {
+                                    return Err(RuntimeError::ConstReassignment(format!(
+                                        "{}.{}",
+                                        var_name, member
+                                    )));
+                                }
+                            }
+                        }
+
                         // Get the object
                         let obj_value = self.eval_expr(object)?;
 
@@ -512,7 +567,13 @@ impl Interpreter {
                     let arr = arr_ref.borrow();
                     for (i, name) in names.iter().enumerate() {
                         let element_val = arr.get(i).cloned().unwrap_or(Value::Na);
-                        self.variables.insert(name.clone(), element_val);
+                        self.variables.insert(
+                            name.clone(),
+                            Variable {
+                                value: element_val,
+                                is_const: false,
+                            },
+                        );
                     }
                     Ok(None)
                 } else {
@@ -581,8 +642,13 @@ impl Interpreter {
                 let end = to_val as i64;
 
                 while i <= end {
-                    self.variables
-                        .insert(var_name.clone(), Value::Number(i as f64));
+                    self.variables.insert(
+                        var_name.clone(),
+                        Variable {
+                            value: Value::Number(i as f64),
+                            is_const: false,
+                        },
+                    );
 
                     let control = self.execute_loop_body(body)?;
                     if control == LoopControl::Break {
@@ -608,12 +674,23 @@ impl Interpreter {
                 for (index, item) in arr_borrowed.iter().enumerate() {
                     // Set index variable if tuple form
                     if let Some(idx_var) = index_var {
-                        self.variables
-                            .insert(idx_var.clone(), Value::Number(index as f64));
+                        self.variables.insert(
+                            idx_var.clone(),
+                            Variable {
+                                value: Value::Number(index as f64),
+                                is_const: false,
+                            },
+                        );
                     }
 
                     // Set item variable
-                    self.variables.insert(item_var.clone(), item.clone());
+                    self.variables.insert(
+                        item_var.clone(),
+                        Variable {
+                            value: item.clone(),
+                            is_const: false,
+                        },
+                    );
 
                     let control = self.execute_loop_body(body)?;
                     if control == LoopControl::Break {
@@ -652,7 +729,13 @@ impl Interpreter {
                     name: name.clone(),
                     fields: fields.clone(),
                 };
-                self.variables.insert(name.clone(), type_value.clone());
+                self.variables.insert(
+                    name.clone(),
+                    Variable {
+                        value: type_value.clone(),
+                        is_const: false,
+                    },
+                );
 
                 // If exported, also store in exports
                 if *export {
@@ -683,7 +766,13 @@ impl Interpreter {
                     type_name: name.clone(),
                     fields: Rc::new(RefCell::new(enum_fields)),
                 };
-                self.variables.insert(name.clone(), enum_object.clone());
+                self.variables.insert(
+                    name.clone(),
+                    Variable {
+                        value: enum_object.clone(),
+                        is_const: false,
+                    },
+                );
 
                 // If exported, also store in exports
                 if *export {
@@ -697,14 +786,14 @@ impl Interpreter {
                 match item {
                     pine_ast::ExportItem::Type(type_name) => {
                         // Export the type - it should already be in variables
-                        if let Some(value) = self.variables.get(type_name) {
-                            self.exports.insert(type_name.clone(), value.clone());
+                        if let Some(var) = self.variables.get(type_name) {
+                            self.exports.insert(type_name.clone(), var.value.clone());
                         }
                     }
                     pine_ast::ExportItem::Function(func_name) => {
                         // Export the function - it should already be in variables
-                        if let Some(value) = self.variables.get(func_name) {
-                            self.exports.insert(func_name.clone(), value.clone());
+                        if let Some(var) = self.variables.get(func_name) {
+                            self.exports.insert(func_name.clone(), var.value.clone());
                         }
                     }
                 }
@@ -740,7 +829,13 @@ impl Interpreter {
                                 type_name: alias.clone(),
                                 fields: Rc::new(RefCell::new(library_exports.clone())),
                             };
-                            self.variables.insert(alias.clone(), namespace);
+                            self.variables.insert(
+                                alias.clone(),
+                                Variable {
+                                    value: namespace,
+                                    is_const: false,
+                                },
+                            );
                         }
                         Err(e) => {
                             return Err(RuntimeError::LibraryError(format!(
@@ -809,7 +904,13 @@ impl Interpreter {
                     params: params.clone(),
                     body: body.clone(),
                 };
-                self.variables.insert(name.clone(), func_value.clone());
+                self.variables.insert(
+                    name.clone(),
+                    Variable {
+                        value: func_value.clone(),
+                        is_const: false,
+                    },
+                );
 
                 // If exported, also store in exports
                 if *export {
@@ -884,7 +985,7 @@ impl Interpreter {
                 } else {
                     self.variables
                         .get(name)
-                        .cloned()
+                        .map(|var| var.value.clone())
                         .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone()))
                 }
             }
@@ -1040,7 +1141,7 @@ impl Interpreter {
                 // Call the function based on its type
                 match callee_value {
                     Value::Function { params, body } => {
-                        self.call_user_function(&params, &body, evaluated_args)
+                        self.call_user_function(&params, &body, args, evaluated_args)
                     }
                     Value::BuiltinFunction(builtin_fn) => {
                         // Pass type_args from the parsed call expression
@@ -1087,7 +1188,7 @@ impl Interpreter {
             }
 
             Expr::Function { params, body } => {
-                // Create a function value
+                // params is already Vec<FunctionParam> from the AST
                 Ok(Value::Function {
                     params: params.clone(),
                     body: body.clone(),
@@ -1193,17 +1294,43 @@ impl Interpreter {
         }
     }
 
+    /// Check if an expression evaluates to a const value
+    fn is_const_expr(&self, expr: &Expr) -> bool {
+        match expr {
+            // Literals are always const
+            Expr::Literal(_) => true,
+            // Variable is const if it's stored as const
+            Expr::Variable(name) => self
+                .variables
+                .get(name)
+                .map(|var| var.is_const)
+                .unwrap_or(false),
+            // Member access is const if the base object is const
+            Expr::MemberAccess { object, .. } => self.is_const_expr(object),
+            // All other expressions are not const
+            _ => false,
+        }
+    }
+
     fn call_user_function(
         &mut self,
-        params: &[String],
+        params: &[pine_ast::FunctionParam],
         body: &[Stmt],
+        arg_exprs: &[Argument],
         args: Vec<EvaluatedArg>,
     ) -> Result<Value, RuntimeError> {
         // Extract positional arguments (user functions don't support named args yet)
         let mut positional_values = Vec::new();
-        for arg in args {
+        let mut positional_exprs = Vec::new();
+
+        for (i, arg) in args.iter().enumerate() {
             match arg {
-                EvaluatedArg::Positional(value) => positional_values.push(value),
+                EvaluatedArg::Positional(value) => {
+                    positional_values.push(value.clone());
+                    if let Some(Argument::Positional(expr)) = arg_exprs.get(i) {
+                        positional_exprs.push(expr);
+                    }
+                }
                 EvaluatedArg::Named { .. } => {
                     return Err(RuntimeError::TypeError(
                         "User-defined functions do not support named arguments yet".to_string(),
@@ -1221,12 +1348,33 @@ impl Interpreter {
             )));
         }
 
+        // Validate const parameters receive const arguments
+        for (i, param) in params.iter().enumerate() {
+            if matches!(param.type_qualifier, Some(pine_ast::TypeQualifier::Const)) {
+                if let Some(arg_expr) = positional_exprs.get(i) {
+                    if !self.is_const_expr(arg_expr) {
+                        return Err(RuntimeError::TypeError(format!(
+                            "Parameter '{}' requires a const argument, but received a non-const value",
+                            param.name
+                        )));
+                    }
+                }
+            }
+        }
+
         // Save current variable state (for function scope)
         let saved_vars = self.variables.clone();
 
-        // Bind parameters to arguments
+        // Bind parameters to arguments with appropriate const flag
         for (param, value) in params.iter().zip(positional_values.iter()) {
-            self.variables.insert(param.clone(), value.clone());
+            let is_const = matches!(param.type_qualifier, Some(pine_ast::TypeQualifier::Const));
+            self.variables.insert(
+                param.name.clone(),
+                Variable {
+                    value: value.clone(),
+                    is_const,
+                },
+            );
         }
 
         // Execute function body
@@ -1293,7 +1441,13 @@ impl Interpreter {
                 Value::Na
             };
 
-            self.variables.insert(param.name.clone(), param_value);
+            self.variables.insert(
+                param.name.clone(),
+                Variable {
+                    value: param_value,
+                    is_const: false,
+                },
+            );
         }
 
         // Execute method body

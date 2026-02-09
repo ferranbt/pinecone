@@ -1,0 +1,5 @@
+type InfoLabel
+    int x = 0
+
+method set(InfoLabel this, const int newX) =>
+    this.x := newX

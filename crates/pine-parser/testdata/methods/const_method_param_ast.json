@@ -1,0 +1,53 @@
+[
+  {
+    "TypeDecl": {
+      "name": "InfoLabel",
+      "fields": [
+        {
+          "name": "x",
+          "type_annotation": "int",
+          "default_value": {
+            "Literal": {
+              "Number": 0.0
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "MethodDecl": {
+      "name": "set",
+      "params": [
+        {
+          "type_annotation": "InfoLabel",
+          "name": "this",
+          "default_value": null
+        },
+        {
+          "type_qualifier": "Const",
+          "type_annotation": "int",
+          "name": "newX",
+          "default_value": null
+        }
+      ],
+      "body": [
+        {
+          "Assignment": {
+            "target": {
+              "MemberAccess": {
+                "object": {
+                  "Variable": "this"
+                },
+                "member": "x"
+              }
+            },
+            "value": {
+              "Variable": "newX"
+            }
+          }
+        }
+      ]
+    }
+  }
+]

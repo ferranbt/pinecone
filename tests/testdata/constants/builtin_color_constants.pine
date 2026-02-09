@@ -1,0 +1,19 @@
+// Test builtin color constants
+
+red_val = color.red
+blue_val = color.blue
+green_val = color.green
+
+// Test color component extraction
+r = color.r(red_val)
+g = color.g(green_val)
+b = color.b(blue_val)
+
+log.info(r)
+log.info(g)
+log.info(b)
+
+// Expected output:
+// 255
+// 128
+// 255

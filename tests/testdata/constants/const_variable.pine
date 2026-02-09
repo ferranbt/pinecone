@@ -1,0 +1,14 @@
+// Test const variable declarations
+
+const int x = 10
+const string message = "Hello"
+const float PI = 3.14159
+
+log.info(x)
+log.info(message)
+log.info(PI)
+
+// Expected output:
+// 10
+// Hello
+// 3.14159

@@ -1,0 +1,8 @@
+// Simpler test for const parameter validation
+
+f(const int x) => x + 1
+
+int y = 10
+f(y)  // Error
+
+// Expected error: Parameter 'x' requires a const argument

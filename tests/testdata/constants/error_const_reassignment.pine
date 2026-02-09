@@ -1,0 +1,8 @@
+// Test that const variables cannot be reassigned
+
+const int x = 10
+x := 20  // This should fail
+
+log.info(x)
+
+// Expected error: Cannot reassign const variable

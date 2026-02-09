@@ -1,13 +1,24 @@
 [
   {
     "VarDecl": {
-      "name": "f_format",
+      "name": "f",
       "type_annotation": null,
       "initializer": {
         "Function": {
           "params": [
             {
-              "name": "_val"
+              "type_qualifier": "Const",
+              "type_annotation": "int",
+              "name": "x"
+            },
+            {
+              "type_annotation": "int",
+              "name": "y"
+            },
+            {
+              "type_qualifier": "Const",
+              "type_annotation": "string",
+              "name": "z"
             }
           ],
           "body": [
@@ -15,13 +26,11 @@
               "Expression": {
                 "Binary": {
                   "left": {
-                    "Variable": "_val"
+                    "Variable": "x"
                   },
-                  "op": "Mul",
+                  "op": "Add",
                   "right": {
-                    "Literal": {
-                      "Number": 2.0
-                    }
+                    "Variable": "y"
                   }
                 }
               }

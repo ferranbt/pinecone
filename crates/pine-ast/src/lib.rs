@@ -5,6 +5,21 @@ fn is_false(b: &bool) -> bool {
     !b
 }
 
+// Helper function for serde to skip None values
+fn skip_none<T>(opt: &Option<T>) -> bool {
+    opt.is_none()
+}
+
+/// Type qualifier for variables and parameters
+/// Hierarchy: const < input < simple < series (const is the weakest)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TypeQualifier {
+    Const,
+    Input,
+    Simple,
+    Series,
+}
+
 /// Function argument - can be positional or named
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Argument {
@@ -46,7 +61,7 @@ pub enum Expr {
         else_expr: Box<Expr>,
     },
     Function {
-        params: Vec<String>,
+        params: Vec<FunctionParam>,
         body: Vec<Stmt>,
     },
     Array(Vec<Expr>),
@@ -98,6 +113,8 @@ pub enum UnOp {
 pub enum Stmt {
     VarDecl {
         name: String,
+        #[serde(skip_serializing_if = "skip_none")]
+        type_qualifier: Option<TypeQualifier>,
         type_annotation: Option<String>,
         initializer: Option<Expr>,
         is_varip: bool, // true for varip, false for var
@@ -158,7 +175,7 @@ pub enum Stmt {
     },
     FunctionDecl {
         name: String,
-        params: Vec<String>,
+        params: Vec<FunctionParam>,
         body: Vec<Stmt>,
         #[serde(default, skip_serializing_if = "is_false")]
         export: bool,
@@ -189,8 +206,22 @@ pub struct EnumField {
 /// A parameter in a method declaration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MethodParam {
+    #[serde(skip_serializing_if = "skip_none")]
+    pub type_qualifier: Option<TypeQualifier>,
     pub type_annotation: Option<String>, // e.g., "InfoLabel"
     pub name: String,
+    pub default_value: Option<Expr>,
+}
+
+/// A parameter in a function declaration
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FunctionParam {
+    #[serde(skip_serializing_if = "skip_none")]
+    pub type_qualifier: Option<TypeQualifier>,
+    #[serde(skip_serializing_if = "skip_none")]
+    pub type_annotation: Option<String>,
+    pub name: String,
+    #[serde(skip_serializing_if = "skip_none")]
     pub default_value: Option<Expr>,
 }
 
@@ -198,6 +229,8 @@ pub struct MethodParam {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TypeField {
     pub name: String,
+    #[serde(skip_serializing_if = "skip_none")]
+    pub type_qualifier: Option<TypeQualifier>,
     pub type_annotation: String,
     pub default_value: Option<Expr>,
 }

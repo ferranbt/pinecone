@@ -297,6 +297,32 @@ impl Parser {
         }
     }
 
+    /// Helper to parse optional type qualifier (const, input, simple, series)
+    fn parse_optional_type_qualifier(&mut self) -> Option<pine_ast::TypeQualifier> {
+        use pine_ast::TypeQualifier;
+        if self.match_token(&[TokenType::Const]) {
+            Some(TypeQualifier::Const)
+        } else if let TokenType::Ident(name) = &self.peek().typ {
+            match name.as_str() {
+                "input" => {
+                    self.advance();
+                    Some(TypeQualifier::Input)
+                }
+                "simple" => {
+                    self.advance();
+                    Some(TypeQualifier::Simple)
+                }
+                "series" => {
+                    self.advance();
+                    Some(TypeQualifier::Series)
+                }
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+
     /// Helper to parse optional type annotation with array suffix
     /// Returns None if no type annotation is found
     /// Supports: int, float, or custom identifier types with optional [] suffix
@@ -377,10 +403,17 @@ impl Parser {
 
     // Declarations (var declarations, assignments, etc.)
     fn declaration(&mut self) -> Result<Stmt, ParserError> {
+        // Check for type qualifier first (const, input, simple, series)
+        let type_qualifier = self.parse_optional_type_qualifier();
+
         // Check for var or varip keyword (can be followed by type annotation)
         let is_varip = if self.match_token(&[TokenType::Varip]) {
             true
         } else if self.match_token(&[TokenType::Var]) {
+            false
+        } else if type_qualifier.is_some() {
+            // If we have a type qualifier but no var/varip, it's still a variable declaration
+            // e.g., const int x = 5
             false
         } else {
             // Not a var/varip declaration, continue to other statement types
@@ -389,7 +422,7 @@ impl Parser {
 
         // Check if followed by type annotation: var int x = ..., var float y = ..., var label l = ...
         let type_annotation = self.parse_optional_type_annotation();
-        self.typed_var_declaration(type_annotation, is_varip)
+        self.typed_var_declaration_with_qualifier(type_qualifier, type_annotation, is_varip)
     }
 
     fn check_type_annotated_declaration(&mut self) -> Result<Stmt, ParserError> {
@@ -436,6 +469,9 @@ impl Parser {
 
         // Parse fields using generic helper
         let fields = self.parse_indented_fields(|p| {
+            // Parse optional type qualifier (const, input, simple, series)
+            let type_qualifier = p.parse_optional_type_qualifier();
+
             // Parse field: type_annotation field_name [= default_value]
             // First, get the type annotation (int, float, or identifier)
             let field_type = if p.match_token(&[TokenType::Int, TokenType::Float]) {
@@ -463,6 +499,7 @@ impl Parser {
 
             Ok(pine_ast::TypeField {
                 name: field_name,
+                type_qualifier,
                 type_annotation: field_type,
                 default_value,
             })
@@ -633,6 +670,9 @@ impl Parser {
 
         if !self.check(&TokenType::RParen) {
             loop {
+                // Parse optional type qualifier (const, input, simple, series)
+                let type_qualifier = self.parse_optional_type_qualifier();
+
                 // Parse optional type annotation
                 let type_annotation = self.parse_optional_type_annotation();
 
@@ -647,6 +687,7 @@ impl Parser {
                 };
 
                 params.push(pine_ast::MethodParam {
+                    type_qualifier,
                     type_annotation,
                     name: param_name,
                     default_value,
@@ -682,6 +723,15 @@ impl Parser {
         type_annotation: Option<String>,
         is_varip: bool,
     ) -> Result<Stmt, ParserError> {
+        self.typed_var_declaration_with_qualifier(None, type_annotation, is_varip)
+    }
+
+    fn typed_var_declaration_with_qualifier(
+        &mut self,
+        type_qualifier: Option<pine_ast::TypeQualifier>,
+        type_annotation: Option<String>,
+        is_varip: bool,
+    ) -> Result<Stmt, ParserError> {
         let name = self.expect_identifier()?;
 
         let initializer = if self.match_token(&[TokenType::Assign]) {
@@ -692,6 +742,7 @@ impl Parser {
 
         Ok(Stmt::VarDecl {
             name,
+            type_qualifier,
             type_annotation,
             initializer,
             is_varip,
@@ -781,7 +832,7 @@ impl Parser {
             let name = name.clone();
 
             // Check for function definition: name(params) =>
-            if let Some((params, body)) = self.try_parse(|p| {
+            if let Some((param_structs, body)) = self.try_parse(|p| {
                 p.advance(); // consume identifier
                 p.consume(TokenType::LParen, "Expected '('")?;
 
@@ -797,9 +848,14 @@ impl Parser {
 
                 Ok((params, body))
             }) {
-                let initializer = Some(Expr::Function { params, body });
+                // Use the full FunctionParam structs for Expr::Function
+                let initializer = Some(Expr::Function {
+                    params: param_structs,
+                    body,
+                });
                 return Ok(Stmt::VarDecl {
                     name,
+                    type_qualifier: None,
                     type_annotation: None,
                     initializer,
                     is_varip: false,
@@ -816,6 +872,7 @@ impl Parser {
 
                     Ok(Stmt::VarDecl {
                         name: name.clone(),
+                        type_qualifier: None,
                         type_annotation: None,
                         initializer,
                         is_varip: false,
@@ -866,18 +923,29 @@ impl Parser {
         self.expression_statement()
     }
 
-    fn function_params(&mut self) -> Result<Vec<String>, ParserError> {
+    fn function_params(&mut self) -> Result<Vec<pine_ast::FunctionParam>, ParserError> {
         self.parse_comma_separated(&TokenType::RParen, |p| {
+            // Parse optional type qualifier (const, input, simple, series)
+            let type_qualifier = p.parse_optional_type_qualifier();
+
+            // Parse optional type annotation
+            let type_annotation = p.parse_optional_type_annotation();
+
             let name = p.expect_identifier()?;
 
             // Check for default value: param = value
-            if p.match_token(&[TokenType::Assign]) {
-                // Skip the default value expression (we're not storing it in our simple AST)
-                // Just parse and discard it
-                p.expression()?;
-            }
+            let default_value = if p.match_token(&[TokenType::Assign]) {
+                Some(p.expression()?)
+            } else {
+                None
+            };
 
-            Ok(name)
+            Ok(pine_ast::FunctionParam {
+                type_qualifier,
+                type_annotation,
+                name,
+                default_value,
+            })
         })
     }
 
@@ -1838,12 +1906,14 @@ mod tests {
         assert_eq!(stmts.len(), 1);
         if let Stmt::VarDecl {
             name,
+            type_qualifier,
             type_annotation,
             initializer,
             is_varip,
         } = &stmts[0]
         {
             assert_eq!(name, "x");
+            assert_eq!(*type_qualifier, None);
             assert_eq!(*type_annotation, None);
             assert_eq!(
                 initializer.as_ref().unwrap(),

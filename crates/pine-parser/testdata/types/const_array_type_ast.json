@@ -1,0 +1,81 @@
+[
+  {
+    "VarDecl": {
+      "name": "myArray",
+      "type_qualifier": "Const",
+      "type_annotation": "int[]",
+      "initializer": {
+        "Call": {
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "array"
+              },
+              "member": "from"
+            }
+          },
+          "args": [
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 1.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 2.0
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "Number": 3.0
+                }
+              }
+            }
+          ]
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "names",
+      "type_qualifier": "Const",
+      "type_annotation": "string[]",
+      "initializer": {
+        "Call": {
+          "callee": {
+            "MemberAccess": {
+              "object": {
+                "Variable": "array"
+              },
+              "member": "from"
+            }
+          },
+          "args": [
+            {
+              "Positional": {
+                "Literal": {
+                  "String": "Alice"
+                }
+              }
+            },
+            {
+              "Positional": {
+                "Literal": {
+                  "String": "Bob"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "is_varip": false
+    }
+  }
+]

@@ -6,7 +6,9 @@
       "initializer": {
         "Function": {
           "params": [
-            "x"
+            {
+              "name": "x"
+            }
           ],
           "body": [
             {
@@ -37,8 +39,12 @@
       "initializer": {
         "Function": {
           "params": [
-            "a",
-            "b"
+            {
+              "name": "a"
+            },
+            {
+              "name": "b"
+            }
           ],
           "body": [
             {
