@@ -92,7 +92,7 @@ pub enum Value {
         fields: Rc<RefCell<HashMap<String, Value>>>, // Dictionary/Object with string keys
     },
     Function {
-        params: Vec<String>,
+        params: Vec<pine_ast::FunctionParam>,
         body: Vec<Stmt>,
     },
     BuiltinFunction(BuiltinFn), // Builtin function pointer
@@ -899,12 +899,9 @@ impl Interpreter {
                 body,
                 export,
             } => {
-                // Extract parameter names from FunctionParam structs
-                let param_names: Vec<String> = params.iter().map(|p| p.name.clone()).collect();
-
                 // Create a function value
                 let func_value = Value::Function {
-                    params: param_names,
+                    params: params.clone(),
                     body: body.clone(),
                 };
                 self.variables.insert(
@@ -1144,7 +1141,7 @@ impl Interpreter {
                 // Call the function based on its type
                 match callee_value {
                     Value::Function { params, body } => {
-                        self.call_user_function(&params, &body, evaluated_args)
+                        self.call_user_function(&params, &body, args, evaluated_args)
                     }
                     Value::BuiltinFunction(builtin_fn) => {
                         // Pass type_args from the parsed call expression
@@ -1191,7 +1188,7 @@ impl Interpreter {
             }
 
             Expr::Function { params, body } => {
-                // Create a function value
+                // params is already Vec<FunctionParam> from the AST
                 Ok(Value::Function {
                     params: params.clone(),
                     body: body.clone(),
@@ -1297,17 +1294,43 @@ impl Interpreter {
         }
     }
 
+    /// Check if an expression evaluates to a const value
+    fn is_const_expr(&self, expr: &Expr) -> bool {
+        match expr {
+            // Literals are always const
+            Expr::Literal(_) => true,
+            // Variable is const if it's stored as const
+            Expr::Variable(name) => self
+                .variables
+                .get(name)
+                .map(|var| var.is_const)
+                .unwrap_or(false),
+            // Member access is const if the base object is const
+            Expr::MemberAccess { object, .. } => self.is_const_expr(object),
+            // All other expressions are not const
+            _ => false,
+        }
+    }
+
     fn call_user_function(
         &mut self,
-        params: &[String],
+        params: &[pine_ast::FunctionParam],
         body: &[Stmt],
+        arg_exprs: &[Argument],
         args: Vec<EvaluatedArg>,
     ) -> Result<Value, RuntimeError> {
         // Extract positional arguments (user functions don't support named args yet)
         let mut positional_values = Vec::new();
-        for arg in args {
+        let mut positional_exprs = Vec::new();
+
+        for (i, arg) in args.iter().enumerate() {
             match arg {
-                EvaluatedArg::Positional(value) => positional_values.push(value),
+                EvaluatedArg::Positional(value) => {
+                    positional_values.push(value.clone());
+                    if let Some(Argument::Positional(expr)) = arg_exprs.get(i) {
+                        positional_exprs.push(expr);
+                    }
+                },
                 EvaluatedArg::Named { .. } => {
                     return Err(RuntimeError::TypeError(
                         "User-defined functions do not support named arguments yet".to_string(),
@@ -1325,16 +1348,31 @@ impl Interpreter {
             )));
         }
 
+        // Validate const parameters receive const arguments
+        for (i, param) in params.iter().enumerate() {
+            if matches!(param.type_qualifier, Some(pine_ast::TypeQualifier::Const)) {
+                if let Some(arg_expr) = positional_exprs.get(i) {
+                    if !self.is_const_expr(arg_expr) {
+                        return Err(RuntimeError::TypeError(format!(
+                            "Parameter '{}' requires a const argument, but received a non-const value",
+                            param.name
+                        )));
+                    }
+                }
+            }
+        }
+
         // Save current variable state (for function scope)
         let saved_vars = self.variables.clone();
 
-        // Bind parameters to arguments
+        // Bind parameters to arguments with appropriate const flag
         for (param, value) in params.iter().zip(positional_values.iter()) {
+            let is_const = matches!(param.type_qualifier, Some(pine_ast::TypeQualifier::Const));
             self.variables.insert(
-                param.clone(),
+                param.name.clone(),
                 Variable {
                     value: value.clone(),
-                    is_const: false,
+                    is_const,
                 },
             );
         }

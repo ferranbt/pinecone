@@ -6,8 +6,17 @@
       "initializer": {
         "Function": {
           "params": [
-            "a",
-            "b"
+            {
+              "name": "a"
+            },
+            {
+              "name": "b",
+              "default_value": {
+                "Literal": {
+                  "Number": 10.0
+                }
+              }
+            }
           ],
           "body": [
             {
@@ -36,9 +45,25 @@
       "initializer": {
         "Function": {
           "params": [
-            "name",
-            "greeting",
-            "punctuation"
+            {
+              "name": "name"
+            },
+            {
+              "name": "greeting",
+              "default_value": {
+                "Literal": {
+                  "String": "Hello"
+                }
+              }
+            },
+            {
+              "name": "punctuation",
+              "default_value": {
+                "Literal": {
+                  "String": "!"
+                }
+              }
+            }
           ],
           "body": [
             {

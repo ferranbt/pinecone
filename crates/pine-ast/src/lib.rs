@@ -61,7 +61,7 @@ pub enum Expr {
         else_expr: Box<Expr>,
     },
     Function {
-        params: Vec<String>,
+        params: Vec<FunctionParam>,
         body: Vec<Stmt>,
     },
     Array(Vec<Expr>),
@@ -218,8 +218,10 @@ pub struct MethodParam {
 pub struct FunctionParam {
     #[serde(skip_serializing_if = "skip_none")]
     pub type_qualifier: Option<TypeQualifier>,
+    #[serde(skip_serializing_if = "skip_none")]
     pub type_annotation: Option<String>,
     pub name: String,
+    #[serde(skip_serializing_if = "skip_none")]
     pub default_value: Option<Expr>,
 }
 

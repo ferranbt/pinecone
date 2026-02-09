@@ -72,14 +72,10 @@
       "name": "add",
       "params": [
         {
-          "type_annotation": null,
-          "name": "x",
-          "default_value": null
+          "name": "x"
         },
         {
-          "type_annotation": null,
-          "name": "y",
-          "default_value": null
+          "name": "y"
         }
       ],
       "body": [

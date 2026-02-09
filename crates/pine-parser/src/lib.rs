@@ -848,9 +848,11 @@ impl Parser {
 
                 Ok((params, body))
             }) {
-                // Extract just the parameter names for Expr::Function
-                let params: Vec<String> = param_structs.iter().map(|p| p.name.clone()).collect();
-                let initializer = Some(Expr::Function { params, body });
+                // Use the full FunctionParam structs for Expr::Function
+                let initializer = Some(Expr::Function {
+                    params: param_structs,
+                    body,
+                });
                 return Ok(Stmt::VarDecl {
                     name,
                     type_qualifier: None,

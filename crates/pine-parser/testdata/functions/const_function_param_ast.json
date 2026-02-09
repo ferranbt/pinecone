@@ -6,14 +6,12 @@
         {
           "type_qualifier": "Const",
           "type_annotation": "int",
-          "name": "x",
-          "default_value": null
+          "name": "x"
         },
         {
           "type_qualifier": "Const",
           "type_annotation": "int",
-          "name": "y",
-          "default_value": null
+          "name": "y"
         }
       ],
       "body": [

@@ -1,0 +1,9 @@
+// Test that const function parameters cannot be reassigned
+
+modify(const int x) =>
+    x := x + 1  // Error: cannot reassign const parameter
+    x
+
+result = modify(10)
+
+// Expected error: Cannot reassign const variable

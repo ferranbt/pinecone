@@ -1,0 +1,8 @@
+// Test that non-const variables can be reassigned
+
+int a = 10
+a := 20
+log.info(a)
+
+// Expected output:
+// 20

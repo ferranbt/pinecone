@@ -1,0 +1,10 @@
+// Test that const function parameters reject non-const arguments
+
+add(const int x, const int y) => x + y
+
+int a = 10  // Not const
+const int b = 20
+
+result = add(a, b)  // Error: a is not const
+
+// Expected error: Parameter 'x' requires a const argument
