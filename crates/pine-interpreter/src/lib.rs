@@ -1330,7 +1330,7 @@ impl Interpreter {
                     if let Some(Argument::Positional(expr)) = arg_exprs.get(i) {
                         positional_exprs.push(expr);
                     }
-                },
+                }
                 EvaluatedArg::Named { .. } => {
                     return Err(RuntimeError::TypeError(
                         "User-defined functions do not support named arguments yet".to_string(),
