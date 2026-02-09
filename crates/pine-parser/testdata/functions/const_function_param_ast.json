@@ -1,0 +1,37 @@
+[
+  {
+    "FunctionDecl": {
+      "name": "add",
+      "params": [
+        {
+          "type_qualifier": "Const",
+          "type_annotation": "int",
+          "name": "x",
+          "default_value": null
+        },
+        {
+          "type_qualifier": "Const",
+          "type_annotation": "int",
+          "name": "y",
+          "default_value": null
+        }
+      ],
+      "body": [
+        {
+          "Expression": {
+            "Binary": {
+              "left": {
+                "Variable": "x"
+              },
+              "op": "Add",
+              "right": {
+                "Variable": "y"
+              }
+            }
+          }
+        }
+      ],
+      "export": true
+    }
+  }
+]

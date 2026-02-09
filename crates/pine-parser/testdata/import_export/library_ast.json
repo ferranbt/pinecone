@@ -71,8 +71,16 @@
     "FunctionDecl": {
       "name": "add",
       "params": [
-        "x",
-        "y"
+        {
+          "type_annotation": null,
+          "name": "x",
+          "default_value": null
+        },
+        {
+          "type_annotation": null,
+          "name": "y",
+          "default_value": null
+        }
       ],
       "body": [
         {

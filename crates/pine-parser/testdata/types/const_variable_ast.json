@@ -1,0 +1,28 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_qualifier": "Const",
+      "type_annotation": "int",
+      "initializer": {
+        "Literal": {
+          "Number": 10.0
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "y",
+      "type_qualifier": "Const",
+      "type_annotation": "string",
+      "initializer": {
+        "Literal": {
+          "String": "hello"
+        }
+      },
+      "is_varip": false
+    }
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "TypeDecl": {
+      "name": "Point",
+      "fields": [
+        {
+          "name": "x",
+          "type_qualifier": "Const",
+          "type_annotation": "int",
+          "default_value": {
+            "Literal": {
+              "Number": 0.0
+            }
+          }
+        },
+        {
+          "name": "y",
+          "type_qualifier": "Const",
+          "type_annotation": "int",
+          "default_value": {
+            "Literal": {
+              "Number": 0.0
+            }
+          }
+        }
+      ]
+    }
+  }
+]

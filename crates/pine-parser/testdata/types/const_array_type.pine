@@ -1,0 +1,2 @@
+const int[] myArray = array.from(1, 2, 3)
+const string[] names = array.from("Alice", "Bob")

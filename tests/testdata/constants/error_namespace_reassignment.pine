@@ -1,0 +1,5 @@
+// Test that namespace objects (color, math, etc.) cannot be reassigned
+
+color := "test"  // This should fail
+
+// Expected error: Cannot reassign const variable 'color'
