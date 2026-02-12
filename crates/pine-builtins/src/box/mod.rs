@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Color, Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -12,32 +12,32 @@ struct BoxNew {
     top: Value,
     right: Value,
     bottom: Value,
-    #[arg(default = Value::Na)]
-    border_color: Value,
-    #[arg(default = Value::Number(1.0))]
-    border_width: Value,
-    #[arg(default = Value::String("solid".to_string()))]
-    border_style: Value,
-    #[arg(default = Value::String("none".to_string()))]
-    extend: Value,
-    #[arg(default = Value::String("bar_index".to_string()))]
-    xloc: Value,
-    #[arg(default = Value::Na)]
-    bgcolor: Value,
-    #[arg(default = Value::String(String::new()))]
-    text: Value,
-    #[arg(default = Value::Number(0.0))]
-    text_size: Value,
-    #[arg(default = Value::Na)]
-    text_color: Value,
-    #[arg(default = Value::String("center".to_string()))]
-    text_halign: Value,
-    #[arg(default = Value::String("center".to_string()))]
-    text_valign: Value,
-    #[arg(default = Value::String("none".to_string()))]
-    text_wrap: Value,
-    #[arg(default = Value::String("default".to_string()))]
-    text_font_family: Value,
+    #[arg(default = None)]
+    border_color: Option<Color>,
+    #[arg(default = 1.0)]
+    border_width: f64,
+    #[arg(default = "solid")]
+    border_style: String,
+    #[arg(default = "none")]
+    extend: String,
+    #[arg(default = "bar_index")]
+    xloc: String,
+    #[arg(default = None)]
+    bgcolor: Option<Color>,
+    #[arg(default = "")]
+    text: String,
+    #[arg(default = 0.0)]
+    text_size: f64,
+    #[arg(default = None)]
+    text_color: Option<Color>,
+    #[arg(default = "center")]
+    text_halign: String,
+    #[arg(default = "center")]
+    text_valign: String,
+    #[arg(default = "none")]
+    text_wrap: String,
+    #[arg(default = "default")]
+    text_font_family: String,
 }
 
 impl BoxNew {
@@ -47,22 +47,28 @@ impl BoxNew {
         fields.insert("top".to_string(), self.top.clone());
         fields.insert("right".to_string(), self.right.clone());
         fields.insert("bottom".to_string(), self.bottom.clone());
-        fields.insert("border_color".to_string(), self.border_color.clone());
-        fields.insert("border_width".to_string(), self.border_width.clone());
-        fields.insert("border_style".to_string(), self.border_style.clone());
-        fields.insert("extend".to_string(), self.extend.clone());
-        fields.insert("xloc".to_string(), self.xloc.clone());
-        fields.insert("bgcolor".to_string(), self.bgcolor.clone());
-        fields.insert("text".to_string(), self.text.clone());
-        fields.insert("text_size".to_string(), self.text_size.clone());
-        fields.insert("text_color".to_string(), self.text_color.clone());
-        fields.insert("text_halign".to_string(), self.text_halign.clone());
-        fields.insert("text_valign".to_string(), self.text_valign.clone());
-        fields.insert("text_wrap".to_string(), self.text_wrap.clone());
-        fields.insert(
-            "text_font_family".to_string(),
-            self.text_font_family.clone(),
-        );
+        fields.insert("border_color".to_string(), match &self.border_color {
+            Some(c) => Value::Color(c.clone()),
+            None => Value::Na,
+        });
+        fields.insert("border_width".to_string(), Value::Number(self.border_width));
+        fields.insert("border_style".to_string(), Value::String(self.border_style.clone()));
+        fields.insert("extend".to_string(), Value::String(self.extend.clone()));
+        fields.insert("xloc".to_string(), Value::String(self.xloc.clone()));
+        fields.insert("bgcolor".to_string(), match &self.bgcolor {
+            Some(c) => Value::Color(c.clone()),
+            None => Value::Na,
+        });
+        fields.insert("text".to_string(), Value::String(self.text.clone()));
+        fields.insert("text_size".to_string(), Value::Number(self.text_size));
+        fields.insert("text_color".to_string(), match &self.text_color {
+            Some(c) => Value::Color(c.clone()),
+            None => Value::Na,
+        });
+        fields.insert("text_halign".to_string(), Value::String(self.text_halign.clone()));
+        fields.insert("text_valign".to_string(), Value::String(self.text_valign.clone()));
+        fields.insert("text_wrap".to_string(), Value::String(self.text_wrap.clone()));
+        fields.insert("text_font_family".to_string(), Value::String(self.text_font_family.clone()));
 
         Ok(Value::Object {
             type_name: "box".to_string(),
@@ -204,7 +210,7 @@ impl BoxSetRightbottom {
 #[builtin(name = "box.set_border_color")]
 struct BoxSetBorderColor {
     id: Value,
-    color: Value,
+    color: Color,
 }
 
 impl BoxSetBorderColor {
@@ -212,7 +218,7 @@ impl BoxSetBorderColor {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("border_color".to_string(), self.color.clone());
+                .insert("border_color".to_string(), Value::Color(self.color.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -225,7 +231,7 @@ impl BoxSetBorderColor {
 #[builtin(name = "box.set_border_width")]
 struct BoxSetBorderWidth {
     id: Value,
-    width: Value,
+    width: f64,
 }
 
 impl BoxSetBorderWidth {
@@ -233,7 +239,7 @@ impl BoxSetBorderWidth {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("border_width".to_string(), self.width.clone());
+                .insert("border_width".to_string(), Value::Number(self.width));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -246,7 +252,7 @@ impl BoxSetBorderWidth {
 #[builtin(name = "box.set_border_style")]
 struct BoxSetBorderStyle {
     id: Value,
-    style: Value,
+    style: String,
 }
 
 impl BoxSetBorderStyle {
@@ -254,7 +260,7 @@ impl BoxSetBorderStyle {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("border_style".to_string(), self.style.clone());
+                .insert("border_style".to_string(), Value::String(self.style.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -267,7 +273,7 @@ impl BoxSetBorderStyle {
 #[builtin(name = "box.set_extend")]
 struct BoxSetExtend {
     id: Value,
-    extend: Value,
+    extend: String,
 }
 
 impl BoxSetExtend {
@@ -275,7 +281,7 @@ impl BoxSetExtend {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("extend".to_string(), self.extend.clone());
+                .insert("extend".to_string(), Value::String(self.extend.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -288,7 +294,7 @@ impl BoxSetExtend {
 #[builtin(name = "box.set_bgcolor")]
 struct BoxSetBgcolor {
     id: Value,
-    color: Value,
+    color: Color,
 }
 
 impl BoxSetBgcolor {
@@ -296,7 +302,7 @@ impl BoxSetBgcolor {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("bgcolor".to_string(), self.color.clone());
+                .insert("bgcolor".to_string(), Value::Color(self.color.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -309,7 +315,7 @@ impl BoxSetBgcolor {
 #[builtin(name = "box.set_text")]
 struct BoxSetText {
     id: Value,
-    text: Value,
+    text: String,
 }
 
 impl BoxSetText {
@@ -317,7 +323,7 @@ impl BoxSetText {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("text".to_string(), self.text.clone());
+                .insert("text".to_string(), Value::String(self.text.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -330,7 +336,7 @@ impl BoxSetText {
 #[builtin(name = "box.set_text_color")]
 struct BoxSetTextColor {
     id: Value,
-    color: Value,
+    color: Color,
 }
 
 impl BoxSetTextColor {
@@ -338,7 +344,7 @@ impl BoxSetTextColor {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("text_color".to_string(), self.color.clone());
+                .insert("text_color".to_string(), Value::Color(self.color.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -351,7 +357,7 @@ impl BoxSetTextColor {
 #[builtin(name = "box.set_text_size")]
 struct BoxSetTextSize {
     id: Value,
-    size: Value,
+    size: f64,
 }
 
 impl BoxSetTextSize {
@@ -359,7 +365,7 @@ impl BoxSetTextSize {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("text_size".to_string(), self.size.clone());
+                .insert("text_size".to_string(), Value::Number(self.size));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -372,7 +378,7 @@ impl BoxSetTextSize {
 #[builtin(name = "box.set_text_halign")]
 struct BoxSetTextHalign {
     id: Value,
-    halign: Value,
+    halign: String,
 }
 
 impl BoxSetTextHalign {
@@ -380,7 +386,7 @@ impl BoxSetTextHalign {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("text_halign".to_string(), self.halign.clone());
+                .insert("text_halign".to_string(), Value::String(self.halign.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -393,7 +399,7 @@ impl BoxSetTextHalign {
 #[builtin(name = "box.set_text_valign")]
 struct BoxSetTextValign {
     id: Value,
-    valign: Value,
+    valign: String,
 }
 
 impl BoxSetTextValign {
@@ -401,7 +407,7 @@ impl BoxSetTextValign {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("text_valign".to_string(), self.valign.clone());
+                .insert("text_valign".to_string(), Value::String(self.valign.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -414,7 +420,7 @@ impl BoxSetTextValign {
 #[builtin(name = "box.set_text_wrap")]
 struct BoxSetTextWrap {
     id: Value,
-    wrap: Value,
+    wrap: String,
 }
 
 impl BoxSetTextWrap {
@@ -422,7 +428,7 @@ impl BoxSetTextWrap {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("text_wrap".to_string(), self.wrap.clone());
+                .insert("text_wrap".to_string(), Value::String(self.wrap.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -435,7 +441,7 @@ impl BoxSetTextWrap {
 #[builtin(name = "box.set_text_font_family")]
 struct BoxSetTextFontFamily {
     id: Value,
-    font_family: Value,
+    font_family: String,
 }
 
 impl BoxSetTextFontFamily {
@@ -443,7 +449,7 @@ impl BoxSetTextFontFamily {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("text_font_family".to_string(), self.font_family.clone());
+                .insert("text_font_family".to_string(), Value::String(self.font_family.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
@@ -458,7 +464,7 @@ struct BoxSetXloc {
     id: Value,
     left: Value,
     right: Value,
-    xloc: Value,
+    xloc: String,
 }
 
 impl BoxSetXloc {
@@ -467,7 +473,7 @@ impl BoxSetXloc {
             let mut fields_mut = fields.borrow_mut();
             fields_mut.insert("left".to_string(), self.left.clone());
             fields_mut.insert("right".to_string(), self.right.clone());
-            fields_mut.insert("xloc".to_string(), self.xloc.clone());
+            fields_mut.insert("xloc".to_string(), Value::String(self.xloc.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected box object".to_string()))
