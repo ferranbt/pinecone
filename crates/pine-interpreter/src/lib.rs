@@ -78,6 +78,21 @@ pub struct Series {
     pub current: Box<Value>,
 }
 
+/// Represents a color with RGBA components
+#[derive(Clone, Debug, PartialEq)]
+pub struct Color {
+    pub r: u8, // Red component (0-255)
+    pub g: u8, // Green component (0-255)
+    pub b: u8, // Blue component (0-255)
+    pub t: u8, // Transparency (0-100)
+}
+
+impl Color {
+    pub fn new(r: u8, g: u8, b: u8, t: u8) -> Self {
+        Color { r, g, b, t }
+    }
+}
+
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value {
@@ -105,12 +120,7 @@ pub enum Value {
         field_name: String, // The specific field/member name (e.g., "buy")
         title: String,      // The title of this enum member
     }, // Enum member value
-    Color {
-        r: u8, // Red component (0-255)
-        g: u8, // Green component (0-255)
-        b: u8, // Blue component (0-255)
-        t: u8, // Transparency (0-100)
-    }, // Color value
+    Color(Color), // Color value
     Matrix {
         element_type: String, // Type of elements: "int", "float", "string", "bool"
         data: Rc<RefCell<Vec<Vec<Value>>>>, // 2D matrix - mutable shared reference to rows of columns
@@ -119,7 +129,7 @@ pub enum Value {
 
 impl Value {
     pub fn new_color(r: u8, g: u8, b: u8, t: u8) -> Value {
-        Value::Color { r, g, b, t }
+        Value::Color(Color::new(r, g, b, t))
     }
 }
 
@@ -142,7 +152,7 @@ impl std::fmt::Debug for Value {
                 field_name,
                 ..
             } => write!(f, "Enum({}::{})", enum_name, field_name),
-            Value::Color { r, g, b, t } => write!(f, "Color(rgba({}, {}, {}, {}))", r, g, b, t),
+            Value::Color(color) => write!(f, "Color(rgba({}, {}, {}, {}))", color.r, color.g, color.b, color.t),
             Value::Matrix { element_type, data } => {
                 write!(f, "Matrix<{}>({:?})", element_type, data)
             }
@@ -182,19 +192,9 @@ impl PartialEq for Value {
             ) => a_enum == b_enum && a_field == b_field,
             // Colors compare by all components
             (
-                Value::Color {
-                    r: r1,
-                    g: g1,
-                    b: b1,
-                    t: t1,
-                },
-                Value::Color {
-                    r: r2,
-                    g: g2,
-                    b: b2,
-                    t: t2,
-                },
-            ) => r1 == r2 && g1 == g2 && b1 == b2 && t1 == t2,
+                Value::Color(c1),
+                Value::Color(c2),
+            ) => c1 == c2,
             // Matrices compare by reference (Rc pointer equality)
             (Value::Matrix { data: a, .. }, Value::Matrix { data: b, .. }) => Rc::ptr_eq(a, b),
             _ => false,
@@ -278,9 +278,9 @@ impl Value {
         }
     }
 
-    pub fn as_color(&self) -> Result<(u8, u8, u8, u8), RuntimeError> {
+    pub fn as_color(&self) -> Result<Color, RuntimeError> {
         match self {
-            Value::Color { r, g, b, t } => Ok((*r, *g, *b, *t)),
+            Value::Color(color) => Ok(color.clone()),
             _ => Err(RuntimeError::TypeError(format!(
                 "Expected color, got {:?}",
                 self

@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Color, Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -10,26 +10,26 @@ use std::rc::Rc;
 struct LabelNew {
     x: Value,
     y: Value,
-    #[arg(default = Value::String(String::new()))]
-    text: Value,
-    #[arg(default = Value::String("bar_index".to_string()))]
-    xloc: Value,
-    #[arg(default = Value::String("price".to_string()))]
-    yloc: Value,
-    #[arg(default = Value::Na)]
-    color: Value,
-    #[arg(default = Value::String("style_label_down".to_string()))]
-    style: Value,
-    #[arg(default = Value::Na)]
-    textcolor: Value,
-    #[arg(default = Value::String("normal".to_string()))]
-    size: Value,
-    #[arg(default = Value::String("center".to_string()))]
-    textalign: Value,
-    #[arg(default = Value::Na)]
-    tooltip: Value,
-    #[arg(default = Value::String("default".to_string()))]
-    text_font_family: Value,
+    #[arg(default = "")]
+    text: String,
+    #[arg(default = "bar_index")]
+    xloc: String,
+    #[arg(default = "price")]
+    yloc: String,
+    #[arg(default = None)]
+    color: Option<Color>,
+    #[arg(default = "style_label_down")]
+    style: String,
+    #[arg(default = None)]
+    textcolor: Option<Color>,
+    #[arg(default = "normal")]
+    size: String,
+    #[arg(default = "center")]
+    textalign: String,
+    #[arg(default = None)]
+    tooltip: Option<String>,
+    #[arg(default = "default")]
+    text_font_family: String,
 }
 
 impl LabelNew {
@@ -38,18 +38,24 @@ impl LabelNew {
         let mut fields = HashMap::new();
         fields.insert("x".to_string(), self.x.clone());
         fields.insert("y".to_string(), self.y.clone());
-        fields.insert("text".to_string(), self.text.clone());
-        fields.insert("xloc".to_string(), self.xloc.clone());
-        fields.insert("yloc".to_string(), self.yloc.clone());
-        fields.insert("color".to_string(), self.color.clone());
-        fields.insert("style".to_string(), self.style.clone());
-        fields.insert("textcolor".to_string(), self.textcolor.clone());
-        fields.insert("size".to_string(), self.size.clone());
-        fields.insert("textalign".to_string(), self.textalign.clone());
-        fields.insert("tooltip".to_string(), self.tooltip.clone());
+        fields.insert("text".to_string(), Value::String(self.text.clone()));
+        fields.insert("xloc".to_string(), Value::String(self.xloc.clone()));
+        fields.insert("yloc".to_string(), Value::String(self.yloc.clone()));
+        fields.insert("color".to_string(), match &self.color {
+            Some(c) => Value::Color(c.clone()),
+            None => Value::Na,
+        });
+        fields.insert("style".to_string(), Value::String(self.style.clone()));
+        fields.insert("textcolor".to_string(), match &self.textcolor {
+            Some(c) => Value::Color(c.clone()),
+            None => Value::Na,
+        });
+        fields.insert("size".to_string(), Value::String(self.size.clone()));
+        fields.insert("textalign".to_string(), Value::String(self.textalign.clone()));
+        fields.insert("tooltip".to_string(), self.tooltip.clone().map(Value::String).unwrap_or(Value::Na));
         fields.insert(
             "text_font_family".to_string(),
-            self.text_font_family.clone(),
+            Value::String(self.text_font_family.clone()),
         );
 
         Ok(Value::Object {
@@ -125,7 +131,7 @@ impl LabelSetXy {
 struct LabelSetXloc {
     id: Value,
     x: Value,
-    xloc: Value,
+    xloc: String,
 }
 
 impl LabelSetXloc {
@@ -133,7 +139,7 @@ impl LabelSetXloc {
         if let Value::Object { fields, .. } = &self.id {
             let mut fields_mut = fields.borrow_mut();
             fields_mut.insert("x".to_string(), self.x.clone());
-            fields_mut.insert("xloc".to_string(), self.xloc.clone());
+            fields_mut.insert("xloc".to_string(), Value::String(self.xloc.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected label object".to_string()))
@@ -146,7 +152,7 @@ impl LabelSetXloc {
 #[builtin(name = "label.set_yloc")]
 struct LabelSetYloc {
     id: Value,
-    yloc: Value,
+    yloc: String,
 }
 
 impl LabelSetYloc {
@@ -154,7 +160,7 @@ impl LabelSetYloc {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("yloc".to_string(), self.yloc.clone());
+                .insert("yloc".to_string(), Value::String(self.yloc.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected label object".to_string()))
@@ -167,7 +173,7 @@ impl LabelSetYloc {
 #[builtin(name = "label.set_color")]
 struct LabelSetColor {
     id: Value,
-    color: Value,
+    color: Color,
 }
 
 impl LabelSetColor {
@@ -175,7 +181,7 @@ impl LabelSetColor {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("color".to_string(), self.color.clone());
+                .insert("color".to_string(), Value::Color(self.color.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected label object".to_string()))
@@ -188,7 +194,7 @@ impl LabelSetColor {
 #[builtin(name = "label.set_style")]
 struct LabelSetStyle {
     id: Value,
-    style: Value,
+    style: String,
 }
 
 impl LabelSetStyle {
@@ -196,7 +202,7 @@ impl LabelSetStyle {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("style".to_string(), self.style.clone());
+                .insert("style".to_string(), Value::String(self.style.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected label object".to_string()))
@@ -209,7 +215,7 @@ impl LabelSetStyle {
 #[builtin(name = "label.set_text")]
 struct LabelSetText {
     id: Value,
-    text: Value,
+    text: String,
 }
 
 impl LabelSetText {
@@ -217,7 +223,7 @@ impl LabelSetText {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("text".to_string(), self.text.clone());
+                .insert("text".to_string(), Value::String(self.text.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected label object".to_string()))
@@ -230,7 +236,7 @@ impl LabelSetText {
 #[builtin(name = "label.set_textcolor")]
 struct LabelSetTextcolor {
     id: Value,
-    textcolor: Value,
+    textcolor: Color,
 }
 
 impl LabelSetTextcolor {
@@ -238,7 +244,7 @@ impl LabelSetTextcolor {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("textcolor".to_string(), self.textcolor.clone());
+                .insert("textcolor".to_string(), Value::Color(self.textcolor.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected label object".to_string()))
@@ -251,7 +257,7 @@ impl LabelSetTextcolor {
 #[builtin(name = "label.set_size")]
 struct LabelSetSize {
     id: Value,
-    size: Value,
+    size: String,
 }
 
 impl LabelSetSize {
@@ -259,7 +265,7 @@ impl LabelSetSize {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("size".to_string(), self.size.clone());
+                .insert("size".to_string(), Value::String(self.size.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected label object".to_string()))
@@ -272,7 +278,7 @@ impl LabelSetSize {
 #[builtin(name = "label.set_textalign")]
 struct LabelSetTextalign {
     id: Value,
-    textalign: Value,
+    textalign: String,
 }
 
 impl LabelSetTextalign {
@@ -280,7 +286,7 @@ impl LabelSetTextalign {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("textalign".to_string(), self.textalign.clone());
+                .insert("textalign".to_string(), Value::String(self.textalign.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected label object".to_string()))
@@ -293,7 +299,7 @@ impl LabelSetTextalign {
 #[builtin(name = "label.set_tooltip")]
 struct LabelSetTooltip {
     id: Value,
-    tooltip: Value,
+    tooltip: String,
 }
 
 impl LabelSetTooltip {
@@ -301,7 +307,7 @@ impl LabelSetTooltip {
         if let Value::Object { fields, .. } = &self.id {
             fields
                 .borrow_mut()
-                .insert("tooltip".to_string(), self.tooltip.clone());
+                .insert("tooltip".to_string(), Value::String(self.tooltip.clone()));
             Ok(Value::Na)
         } else {
             Err(RuntimeError::TypeError("Expected label object".to_string()))
@@ -314,7 +320,7 @@ impl LabelSetTooltip {
 #[builtin(name = "label.set_text_font_family")]
 struct LabelSetTextFontFamily {
     id: Value,
-    text_font_family: Value,
+    text_font_family: String,
 }
 
 impl LabelSetTextFontFamily {
@@ -322,7 +328,7 @@ impl LabelSetTextFontFamily {
         if let Value::Object { fields, .. } = &self.id {
             fields.borrow_mut().insert(
                 "text_font_family".to_string(),
-                self.text_font_family.clone(),
+                Value::String(self.text_font_family.clone()),
             );
             Ok(Value::Na)
         } else {

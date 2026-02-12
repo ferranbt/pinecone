@@ -367,12 +367,69 @@ fn generate_value_conversion(
 ) -> proc_macro2::TokenStream {
     let type_str = quote! { #field_type }.to_string();
 
-    let conversion = if type_str.contains("f64") {
+    // Check if this is an Option type
+    let is_option = type_str.contains("Option");
+
+    let conversion = if is_option {
+        // For Option types, handle Na values
+        // Check for Color BEFORE other types since Value might also be in the type string
+        if type_str.contains("Color") && !type_str.contains("Value") {
+            quote! {
+                if matches!(arg_value, Value::Na) {
+                    None
+                } else {
+                    Some(arg_value.as_color()?)
+                }
+            }
+        } else if type_str.contains("f64") {
+            quote! {
+                if matches!(arg_value, Value::Na) {
+                    None
+                } else {
+                    Some(arg_value.as_number()?)
+                }
+            }
+        } else if type_str.contains("String") {
+            quote! {
+                if matches!(arg_value, Value::Na) {
+                    None
+                } else {
+                    Some(arg_value.as_string()?)
+                }
+            }
+        } else if type_str.contains("bool") {
+            quote! {
+                if matches!(arg_value, Value::Na) {
+                    None
+                } else {
+                    Some(arg_value.as_bool()?)
+                }
+            }
+        } else if type_str.contains("Value") {
+            quote! {
+                if matches!(arg_value, Value::Na) {
+                    None
+                } else {
+                    Some(arg_value)
+                }
+            }
+        } else {
+            quote! {
+                if matches!(arg_value, Value::Na) {
+                    None
+                } else {
+                    Some(arg_value)
+                }
+            }
+        }
+    } else if type_str.contains("f64") {
         quote! { arg_value.as_number()? }
     } else if type_str.contains("String") {
         quote! { arg_value.as_string()? }
     } else if type_str.contains("bool") {
         quote! { arg_value.as_bool()? }
+    } else if type_str.contains("Color") {
+        quote! { arg_value.as_color()? }
     } else if type_str.contains("Value") {
         quote! { arg_value }
     } else {

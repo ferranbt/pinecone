@@ -11,9 +11,9 @@ struct ColorNew {
 
 impl ColorNew {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let (r, g, b, _) = self.color.as_color()?;
-        let transp = self.transp.clamp(0.0, 100.0) as u8;
-        Ok(Value::Color { r, g, b, t: transp })
+        let mut color = self.color.as_color()?;
+        color.t = self.transp.clamp(0.0, 100.0) as u8;
+        Ok(Value::Color(color))
     }
 }
 
@@ -34,7 +34,7 @@ impl ColorRgb {
         let g = self.green.clamp(0.0, 255.0) as u8;
         let b = self.blue.clamp(0.0, 255.0) as u8;
         let t = self.transp.clamp(0.0, 100.0) as u8;
-        Ok(Value::Color { r, g, b, t })
+        Ok(Value::Color(pine_interpreter::Color::new(r, g, b, t)))
     }
 }
 
@@ -47,8 +47,8 @@ struct ColorR {
 
 impl ColorR {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let (r, _, _, _) = self.color.as_color()?;
-        Ok(Value::Number(r as f64))
+        let color = self.color.as_color()?;
+        Ok(Value::Number(color.r as f64))
     }
 }
 
@@ -61,8 +61,8 @@ struct ColorG {
 
 impl ColorG {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let (_, g, _, _) = self.color.as_color()?;
-        Ok(Value::Number(g as f64))
+        let color = self.color.as_color()?;
+        Ok(Value::Number(color.g as f64))
     }
 }
 
@@ -75,8 +75,8 @@ struct ColorB {
 
 impl ColorB {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let (_, _, b, _) = self.color.as_color()?;
-        Ok(Value::Number(b as f64))
+        let color = self.color.as_color()?;
+        Ok(Value::Number(color.b as f64))
     }
 }
 
@@ -89,8 +89,8 @@ struct ColorT {
 
 impl ColorT {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let (_, _, _, t) = self.color.as_color()?;
-        Ok(Value::Number(t as f64))
+        let color = self.color.as_color()?;
+        Ok(Value::Number(color.t as f64))
     }
 }
 
@@ -108,8 +108,8 @@ struct ColorFromGradient {
 
 impl ColorFromGradient {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let (r1, g1, b1, t1) = self.bottom_color.as_color()?;
-        let (r2, g2, b2, t2) = self.top_color.as_color()?;
+        let c1 = self.bottom_color.as_color()?;
+        let c2 = self.top_color.as_color()?;
 
         // Calculate the position ratio (0.0 to 1.0)
         let ratio = if (self.top_value - self.bottom_value).abs() < f64::EPSILON {
@@ -120,12 +120,12 @@ impl ColorFromGradient {
         };
 
         // Interpolate each component
-        let r = (r1 as f64 + (r2 as f64 - r1 as f64) * ratio) as u8;
-        let g = (g1 as f64 + (g2 as f64 - g1 as f64) * ratio) as u8;
-        let b = (b1 as f64 + (b2 as f64 - b1 as f64) * ratio) as u8;
-        let t = (t1 as f64 + (t2 as f64 - t1 as f64) * ratio) as u8;
+        let r = (c1.r as f64 + (c2.r as f64 - c1.r as f64) * ratio) as u8;
+        let g = (c1.g as f64 + (c2.g as f64 - c1.g as f64) * ratio) as u8;
+        let b = (c1.b as f64 + (c2.b as f64 - c1.b as f64) * ratio) as u8;
+        let t = (c1.t as f64 + (c2.t as f64 - c1.t as f64) * ratio) as u8;
 
-        Ok(Value::Color { r, g, b, t })
+        Ok(Value::Color(pine_interpreter::Color::new(r, g, b, t)))
     }
 }
 
