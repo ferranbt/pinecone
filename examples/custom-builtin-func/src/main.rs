@@ -1,6 +1,6 @@
 /// Example: Custom Builtin Functions with Custom Output
 ///
-/// This example demonstrates how to extend PineVM with:
+/// This example demonstrates how to extend Pinecone with:
 /// 1. A custom output type that stores additional data (alerts)
 /// 2. A custom builtin function that works with the custom output
 use pine::Script;
