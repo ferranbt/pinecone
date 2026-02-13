@@ -89,6 +89,6 @@ pub fn execute_with_history(source: &str, bars: &[Bar]) -> Result<(), pine::Erro
     let historical_data = BenchHistoricalData::new(bars.to_vec());
     historical_data.set_current_bar(bars.len() - 1);
     script.set_historical_provider(Box::new(historical_data));
-    script.execute(&bars[bars.len() - 1])?;
+    let _output = script.execute(&bars[bars.len() - 1])?;
     Ok(())
 }

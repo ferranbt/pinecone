@@ -95,7 +95,7 @@ impl Script {
     ///
     /// This maintains interpreter state across multiple calls,
     /// allowing variables to persist between bars.
-    pub fn execute(&mut self, bar: &Bar) -> Result<(), Error> {
+    pub fn execute(&mut self, bar: &Bar) -> Result<interpreter::PineOutput, Error> {
         // Load bar data as Series variables so TA functions can access historical data
         use interpreter::{Series, Value};
 
@@ -135,8 +135,8 @@ impl Script {
             }),
         );
 
-        self.interpreter.execute(&self.program)?;
-        Ok(())
+        let output = self.interpreter.execute(&self.program)?;
+        Ok(output)
     }
 
     /// Execute the script with multiple bars sequentially

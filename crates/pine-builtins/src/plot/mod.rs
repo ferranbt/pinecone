@@ -1,6 +1,9 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Color, Interpreter, RuntimeError, Value};
-use std::cell::RefCell;
+use pine_interpreter::{
+    Color, Interpreter, Plot as PlotOutput, Plotarrow as PlotarrowOutput,
+    Plotbar as PlotbarOutput, Plotcandle as PlotcandleOutput, Plotchar as PlotcharOutput,
+    Plotshape as PlotshapeOutput, RuntimeError, Value,
+};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -42,32 +45,28 @@ struct Plot {
 }
 
 impl Plot {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let mut fields = HashMap::new();
-        fields.insert("series".to_string(), self.series.clone());
-        fields.insert("title".to_string(), Value::String(self.title.clone()));
-        fields.insert("color".to_string(), self.color.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("linewidth".to_string(), Value::Number(self.linewidth));
-        fields.insert("style".to_string(), Value::String(self.style.clone()));
-        fields.insert("trackprice".to_string(), Value::Bool(self.trackprice));
-        fields.insert("histbase".to_string(), Value::Number(self.histbase));
-        fields.insert("offset".to_string(), Value::Number(self.offset));
-        fields.insert("join".to_string(), Value::Bool(self.join));
-        fields.insert("editable".to_string(), Value::Bool(self.editable));
-        fields.insert("show_last".to_string(), self.show_last.map_or(Value::Na, Value::Number));
-        fields.insert("display".to_string(), Value::String(self.display.clone()));
-        fields.insert("format".to_string(), self.format.as_ref().map_or(Value::Na, |s| Value::String(s.clone())));
-        fields.insert("precision".to_string(), self.precision.map_or(Value::Na, Value::Number));
-        fields.insert("force_overlay".to_string(), Value::Bool(self.force_overlay));
-        fields.insert(
-            "linestyle".to_string(),
-            Value::String(self.linestyle.clone()),
-        );
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let plot = PlotOutput {
+            series: self.series.clone(),
+            title: self.title.clone(),
+            color: self.color.clone(),
+            linewidth: self.linewidth,
+            style: self.style.clone(),
+            trackprice: self.trackprice,
+            histbase: self.histbase,
+            offset: self.offset,
+            join: self.join,
+            editable: self.editable,
+            show_last: self.show_last,
+            display: self.display.clone(),
+            format: self.format.clone(),
+            precision: self.precision,
+            force_overlay: self.force_overlay,
+            linestyle: self.linestyle.clone(),
+        };
 
-        Ok(Value::Object {
-            type_name: "plot".to_string(),
-            fields: Rc::new(RefCell::new(fields)),
-        })
+        ctx.output.plots.push(plot);
+        Ok(Value::Na)
     }
 }
 
@@ -103,22 +102,24 @@ struct Plotarrow {
 }
 
 impl Plotarrow {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let mut fields = HashMap::new();
-        fields.insert("series".to_string(), self.series.clone());
-        fields.insert("title".to_string(), Value::String(self.title.clone()));
-        fields.insert("colorup".to_string(), self.colorup.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("colordown".to_string(), self.colordown.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("offset".to_string(), Value::Number(self.offset));
-        fields.insert("minheight".to_string(), Value::Number(self.minheight));
-        fields.insert("maxheight".to_string(), Value::Number(self.maxheight));
-        fields.insert("editable".to_string(), Value::Bool(self.editable));
-        fields.insert("show_last".to_string(), self.show_last.map_or(Value::Na, Value::Number));
-        fields.insert("display".to_string(), Value::String(self.display.clone()));
-        fields.insert("format".to_string(), self.format.as_ref().map_or(Value::Na, |s| Value::String(s.clone())));
-        fields.insert("precision".to_string(), self.precision.map_or(Value::Na, Value::Number));
-        fields.insert("force_overlay".to_string(), Value::Bool(self.force_overlay));
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let plotarrow = PlotarrowOutput {
+            series: self.series.clone(),
+            title: self.title.clone(),
+            colorup: self.colorup.clone(),
+            colordown: self.colordown.clone(),
+            offset: self.offset,
+            minheight: self.minheight,
+            maxheight: self.maxheight,
+            editable: self.editable,
+            show_last: self.show_last,
+            display: self.display.clone(),
+            format: self.format.clone(),
+            precision: self.precision,
+            force_overlay: self.force_overlay,
+        };
 
+        ctx.output.plotarrows.push(plotarrow);
         Ok(Value::Na)
     }
 }
@@ -150,21 +151,23 @@ struct Plotbar {
 }
 
 impl Plotbar {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let mut fields = HashMap::new();
-        fields.insert("open".to_string(), self.open.clone());
-        fields.insert("high".to_string(), self.high.clone());
-        fields.insert("low".to_string(), self.low.clone());
-        fields.insert("close".to_string(), self.close.clone());
-        fields.insert("title".to_string(), Value::String(self.title.clone()));
-        fields.insert("color".to_string(), self.color.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("editable".to_string(), Value::Bool(self.editable));
-        fields.insert("show_last".to_string(), self.show_last.map_or(Value::Na, Value::Number));
-        fields.insert("display".to_string(), Value::String(self.display.clone()));
-        fields.insert("format".to_string(), self.format.as_ref().map_or(Value::Na, |s| Value::String(s.clone())));
-        fields.insert("precision".to_string(), self.precision.map_or(Value::Na, Value::Number));
-        fields.insert("force_overlay".to_string(), Value::Bool(self.force_overlay));
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let plotbar = PlotbarOutput {
+            open: self.open.clone(),
+            high: self.high.clone(),
+            low: self.low.clone(),
+            close: self.close.clone(),
+            title: self.title.clone(),
+            color: self.color.clone(),
+            editable: self.editable,
+            show_last: self.show_last,
+            display: self.display.clone(),
+            format: self.format.clone(),
+            precision: self.precision,
+            force_overlay: self.force_overlay,
+        };
 
+        ctx.output.plotbars.push(plotbar);
         Ok(Value::Na)
     }
 }
@@ -200,23 +203,25 @@ struct Plotcandle {
 }
 
 impl Plotcandle {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let mut fields = HashMap::new();
-        fields.insert("open".to_string(), self.open.clone());
-        fields.insert("high".to_string(), self.high.clone());
-        fields.insert("low".to_string(), self.low.clone());
-        fields.insert("close".to_string(), self.close.clone());
-        fields.insert("title".to_string(), Value::String(self.title.clone()));
-        fields.insert("color".to_string(), self.color.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("wickcolor".to_string(), self.wickcolor.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("editable".to_string(), Value::Bool(self.editable));
-        fields.insert("show_last".to_string(), self.show_last.map_or(Value::Na, Value::Number));
-        fields.insert("bordercolor".to_string(), self.bordercolor.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("display".to_string(), Value::String(self.display.clone()));
-        fields.insert("format".to_string(), self.format.as_ref().map_or(Value::Na, |s| Value::String(s.clone())));
-        fields.insert("precision".to_string(), self.precision.map_or(Value::Na, Value::Number));
-        fields.insert("force_overlay".to_string(), Value::Bool(self.force_overlay));
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let plotcandle = PlotcandleOutput {
+            open: self.open.clone(),
+            high: self.high.clone(),
+            low: self.low.clone(),
+            close: self.close.clone(),
+            title: self.title.clone(),
+            color: self.color.clone(),
+            wickcolor: self.wickcolor.clone(),
+            editable: self.editable,
+            show_last: self.show_last,
+            bordercolor: self.bordercolor.clone(),
+            display: self.display.clone(),
+            format: self.format.clone(),
+            precision: self.precision,
+            force_overlay: self.force_overlay,
+        };
 
+        ctx.output.plotcandles.push(plotcandle);
         Ok(Value::Na)
     }
 }
@@ -257,24 +262,26 @@ struct Plotchar {
 }
 
 impl Plotchar {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let mut fields = HashMap::new();
-        fields.insert("series".to_string(), self.series.clone());
-        fields.insert("title".to_string(), Value::String(self.title.clone()));
-        fields.insert("char".to_string(), Value::String(self.char.clone()));
-        fields.insert("location".to_string(), Value::String(self.location.clone()));
-        fields.insert("color".to_string(), self.color.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("offset".to_string(), Value::Number(self.offset));
-        fields.insert("text".to_string(), Value::String(self.text.clone()));
-        fields.insert("textcolor".to_string(), self.textcolor.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("editable".to_string(), Value::Bool(self.editable));
-        fields.insert("size".to_string(), Value::String(self.size.clone()));
-        fields.insert("show_last".to_string(), self.show_last.map_or(Value::Na, Value::Number));
-        fields.insert("display".to_string(), Value::String(self.display.clone()));
-        fields.insert("format".to_string(), self.format.as_ref().map_or(Value::Na, |s| Value::String(s.clone())));
-        fields.insert("precision".to_string(), self.precision.map_or(Value::Na, Value::Number));
-        fields.insert("force_overlay".to_string(), Value::Bool(self.force_overlay));
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let plotchar = PlotcharOutput {
+            series: self.series.clone(),
+            title: self.title.clone(),
+            char: self.char.clone(),
+            location: self.location.clone(),
+            color: self.color.clone(),
+            offset: self.offset,
+            text: self.text.clone(),
+            textcolor: self.textcolor.clone(),
+            editable: self.editable,
+            size: self.size.clone(),
+            show_last: self.show_last,
+            display: self.display.clone(),
+            format: self.format.clone(),
+            precision: self.precision,
+            force_overlay: self.force_overlay,
+        };
 
+        ctx.output.plotchars.push(plotchar);
         Ok(Value::Na)
     }
 }
@@ -315,24 +322,26 @@ struct Plotshape {
 }
 
 impl Plotshape {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let mut fields = HashMap::new();
-        fields.insert("series".to_string(), self.series.clone());
-        fields.insert("title".to_string(), Value::String(self.title.clone()));
-        fields.insert("style".to_string(), Value::String(self.style.clone()));
-        fields.insert("location".to_string(), Value::String(self.location.clone()));
-        fields.insert("color".to_string(), self.color.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("offset".to_string(), Value::Number(self.offset));
-        fields.insert("text".to_string(), Value::String(self.text.clone()));
-        fields.insert("textcolor".to_string(), self.textcolor.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
-        fields.insert("editable".to_string(), Value::Bool(self.editable));
-        fields.insert("size".to_string(), Value::String(self.size.clone()));
-        fields.insert("show_last".to_string(), self.show_last.map_or(Value::Na, Value::Number));
-        fields.insert("display".to_string(), Value::String(self.display.clone()));
-        fields.insert("format".to_string(), self.format.as_ref().map_or(Value::Na, |s| Value::String(s.clone())));
-        fields.insert("precision".to_string(), self.precision.map_or(Value::Na, Value::Number));
-        fields.insert("force_overlay".to_string(), Value::Bool(self.force_overlay));
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let plotshape = PlotshapeOutput {
+            series: self.series.clone(),
+            title: self.title.clone(),
+            style: self.style.clone(),
+            location: self.location.clone(),
+            color: self.color.clone(),
+            offset: self.offset,
+            text: self.text.clone(),
+            textcolor: self.textcolor.clone(),
+            editable: self.editable,
+            size: self.size.clone(),
+            show_last: self.show_last,
+            display: self.display.clone(),
+            format: self.format.clone(),
+            precision: self.precision,
+            force_overlay: self.force_overlay,
+        };
 
+        ctx.output.plotshapes.push(plotshape);
         Ok(Value::Na)
     }
 }

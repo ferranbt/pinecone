@@ -132,6 +132,121 @@ pub struct PineBox {
     pub text_font_family: String,
 }
 
+/// Represents a plot output
+#[derive(Clone, Debug)]
+pub struct Plot {
+    pub series: Value,
+    pub title: String,
+    pub color: Option<Color>,
+    pub linewidth: f64,
+    pub style: String,
+    pub trackprice: bool,
+    pub histbase: f64,
+    pub offset: f64,
+    pub join: bool,
+    pub editable: bool,
+    pub show_last: Option<f64>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+    pub linestyle: String,
+}
+
+/// Represents a plotarrow output
+#[derive(Clone, Debug)]
+pub struct Plotarrow {
+    pub series: Value,
+    pub title: String,
+    pub colorup: Option<Color>,
+    pub colordown: Option<Color>,
+    pub offset: f64,
+    pub minheight: f64,
+    pub maxheight: f64,
+    pub editable: bool,
+    pub show_last: Option<f64>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+}
+
+/// Represents a plotbar output
+#[derive(Clone, Debug)]
+pub struct Plotbar {
+    pub open: Value,
+    pub high: Value,
+    pub low: Value,
+    pub close: Value,
+    pub title: String,
+    pub color: Option<Color>,
+    pub editable: bool,
+    pub show_last: Option<f64>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+}
+
+/// Represents a plotcandle output
+#[derive(Clone, Debug)]
+pub struct Plotcandle {
+    pub open: Value,
+    pub high: Value,
+    pub low: Value,
+    pub close: Value,
+    pub title: String,
+    pub color: Option<Color>,
+    pub wickcolor: Option<Color>,
+    pub editable: bool,
+    pub show_last: Option<f64>,
+    pub bordercolor: Option<Color>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+}
+
+/// Represents a plotchar output
+#[derive(Clone, Debug)]
+pub struct Plotchar {
+    pub series: Value,
+    pub title: String,
+    pub char: String,
+    pub location: String,
+    pub color: Option<Color>,
+    pub offset: f64,
+    pub text: String,
+    pub textcolor: Option<Color>,
+    pub editable: bool,
+    pub size: String,
+    pub show_last: Option<f64>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+}
+
+/// Represents a plotshape output
+#[derive(Clone, Debug)]
+pub struct Plotshape {
+    pub series: Value,
+    pub title: String,
+    pub style: String,
+    pub location: String,
+    pub color: Option<Color>,
+    pub offset: f64,
+    pub text: String,
+    pub textcolor: Option<Color>,
+    pub editable: bool,
+    pub size: String,
+    pub show_last: Option<f64>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+}
+
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value {
@@ -337,7 +452,7 @@ struct MethodDef {
     body: Vec<Stmt>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct PineOutput {
     /// Label storage for drawable objects
     labels: HashMap<usize, Label>,
@@ -347,9 +462,36 @@ pub struct PineOutput {
     boxes: HashMap<usize, PineBox>,
     /// Next box ID
     next_box_id: usize,
+    /// Plot outputs
+    pub plots: Vec<Plot>,
+    /// Plotarrow outputs
+    pub plotarrows: Vec<Plotarrow>,
+    /// Plotbar outputs
+    pub plotbars: Vec<Plotbar>,
+    /// Plotcandle outputs
+    pub plotcandles: Vec<Plotcandle>,
+    /// Plotchar outputs
+    pub plotchars: Vec<Plotchar>,
+    /// Plotshape outputs
+    pub plotshapes: Vec<Plotshape>,
 }
 
 impl PineOutput {
+    /// Clear all output data for a new iteration
+    pub fn clear(&mut self) {
+        self.labels.clear();
+        self.boxes.clear();
+        self.plots.clear();
+        self.plotarrows.clear();
+        self.plotbars.clear();
+        self.plotcandles.clear();
+        self.plotchars.clear();
+        self.plotshapes.clear();
+        // Reset ID counters
+        self.next_label_id = 0;
+        self.next_box_id = 0;
+    }
+
     /// Add a label and return its ID
     pub fn add_label(&mut self, label: Label) -> usize {
         let id = self.next_label_id;
@@ -476,11 +618,16 @@ impl Interpreter {
     }
 
     /// Execute a program with a single bar
-    pub fn execute(&mut self, program: &Program) -> Result<(), RuntimeError> {
+    pub fn execute(&mut self, program: &Program) -> Result<PineOutput, RuntimeError> {
+        // Clear output from previous iteration
+        self.output.clear();
+
         for stmt in &program.statements {
             self.execute_stmt(stmt)?;
         }
-        Ok(())
+
+        // Return a clone of the output
+        Ok(self.output.clone())
     }
 
     /// Get a variable value

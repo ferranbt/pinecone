@@ -1,35 +1,24 @@
 // Test named arguments for plot function
+// Note: plot() now returns void and stores output internally
 
 // All named arguments
-p1 = plot(series=100.0, title="Named Plot", linewidth=2.0)
-log.info(p1.series)
-log.info(p1.title)
-log.info(p1.linewidth)
+plot(series=100.0, title="Named Plot", linewidth=2.0)
+log.info("Plot 1 created")
 
 // Named arguments in different order
-p2 = plot(linewidth=5.0, series=200.0, title="Reordered")
-log.info(p2.series)
-log.info(p2.title)
-log.info(p2.linewidth)
+plot(linewidth=5.0, series=200.0, title="Reordered")
+log.info("Plot 2 created")
 
 // Mix of required and optional named arguments
-p3 = plot(series=300.0, trackprice=true, style="histogram")
-log.info(p3.series)
-log.info(p3.trackprice)
-log.info(p3.style)
+plot(series=300.0, trackprice=true, style="histogram")
+log.info("Plot 3 created")
 
 // Single named argument (required one)
-p4 = plot(series=400.0)
-log.info(p4.series)
+plot(series=400.0)
+log.info("Plot 4 created")
 
 // Expected output:
-// 100
-// Named Plot
-// 2
-// 200
-// Reordered
-// 5
-// 300
-// true
-// histogram
-// 400
+// Plot 1 created
+// Plot 2 created
+// Plot 3 created
+// Plot 4 created

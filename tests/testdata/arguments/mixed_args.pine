@@ -1,36 +1,21 @@
 // Test mixing positional and named arguments
 // Pine Script allows positional arguments followed by named arguments,
 // but once you use a named argument, all following must be named
+// Note: plot() now returns void and stores output internally
 
 // Positional for required, named for optional
-p1 = plot(100.0, title="Mixed", linewidth=2.0)
-log.info(p1.series)
-log.info(p1.title)
-log.info(p1.linewidth)
+plot(100.0, title="Mixed", linewidth=2.0)
+log.info("Plot 1 created")
 
 // First two positional, rest named
-p2 = plot(200.0, "Second Plot", linewidth=3.0, style="histogram")
-log.info(p2.series)
-log.info(p2.title)
-log.info(p2.linewidth)
-log.info(p2.style)
+plot(200.0, "Second Plot", linewidth=3.0, style="histogram")
+log.info("Plot 2 created")
 
 // Multiple positional, then named
-p3 = plot(300.0, "Third", na, trackprice=true, offset=10.0)
-log.info(p3.series)
-log.info(p3.title)
-log.info(p3.trackprice)
-log.info(p3.offset)
+plot(300.0, "Third", na, trackprice=true, offset=10.0)
+log.info("Plot 3 created")
 
 // Expected output:
-// 100
-// Mixed
-// 2
-// 200
-// Second Plot
-// 3
-// histogram
-// 300
-// Third
-// true
-// 10
+// Plot 1 created
+// Plot 2 created
+// Plot 3 created
