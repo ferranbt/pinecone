@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Color, Interpreter, PineBox, RuntimeError, Value};
+use pine_interpreter::{BoxOutput, Color, Interpreter, PineBox, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;

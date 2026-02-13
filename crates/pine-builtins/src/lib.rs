@@ -6,6 +6,7 @@ use std::rc::Rc;
 // Re-export for convenience
 pub use pine_interpreter::Bar;
 pub use pine_interpreter::BuiltinFn;
+pub use pine_interpreter::DefaultPineOutput;
 pub use pine_interpreter::EvaluatedArg;
 pub use pine_interpreter::LogLevel;
 
@@ -149,7 +150,10 @@ impl Fixnan {
 /// Returns namespace objects to be loaded as variables (e.g., "array", "str", "ta")
 /// and global builtin functions (e.g., "na")
 /// Each member stores the builtin function pointer as Value::BuiltinFunction
-pub fn register_namespace_objects() -> HashMap<String, Value> {
+///
+/// This uses DefaultPineOutput for now. Full generic support will be added when the
+/// BuiltinFunction macro is updated to support generic output types.
+pub fn register_namespace_objects() -> HashMap<String, Value<DefaultPineOutput>> {
     let mut namespaces = HashMap::new();
 
     // Register namespace objects
@@ -158,7 +162,7 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
     namespaces.insert("color".to_string(), color::register());
     namespaces.insert("currency".to_string(), currency::register());
     namespaces.insert("label".to_string(), label::register());
-    namespaces.insert("log".to_string(), log::register());
+    namespaces.insert("log".to_string(), log::register::<DefaultPineOutput>());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("matrix".to_string(), matrix::register());
     namespaces.insert("str".to_string(), str::register());
@@ -167,27 +171,27 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
     // Register global builtin functions
     namespaces.insert(
         "na".to_string(),
-        Value::BuiltinFunction(Rc::new(Na::builtin_fn) as BuiltinFn),
+        Value::BuiltinFunction(Rc::new(Na::builtin_fn) as BuiltinFn<DefaultPineOutput>),
     );
     namespaces.insert(
         "bool".to_string(),
-        Value::BuiltinFunction(Rc::new(Bool::builtin_fn) as BuiltinFn),
+        Value::BuiltinFunction(Rc::new(Bool::builtin_fn) as BuiltinFn<DefaultPineOutput>),
     );
     namespaces.insert(
         "int".to_string(),
-        Value::BuiltinFunction(Rc::new(Int::builtin_fn) as BuiltinFn),
+        Value::BuiltinFunction(Rc::new(Int::builtin_fn) as BuiltinFn<DefaultPineOutput>),
     );
     namespaces.insert(
         "float".to_string(),
-        Value::BuiltinFunction(Rc::new(Float::builtin_fn) as BuiltinFn),
+        Value::BuiltinFunction(Rc::new(Float::builtin_fn) as BuiltinFn<DefaultPineOutput>),
     );
     namespaces.insert(
         "nz".to_string(),
-        Value::BuiltinFunction(Rc::new(Nz::builtin_fn) as BuiltinFn),
+        Value::BuiltinFunction(Rc::new(Nz::builtin_fn) as BuiltinFn<DefaultPineOutput>),
     );
     namespaces.insert(
         "fixnan".to_string(),
-        Value::BuiltinFunction(Rc::new(Fixnan::builtin_fn) as BuiltinFn),
+        Value::BuiltinFunction(Rc::new(Fixnan::builtin_fn) as BuiltinFn<DefaultPineOutput>),
     );
 
     // Register time/date functions

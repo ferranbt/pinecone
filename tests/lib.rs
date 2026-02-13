@@ -2,7 +2,9 @@
 mod tests {
     use pine::Script;
     use pine_ast::Program;
-    use pine_interpreter::{Bar, HistoricalDataProvider, LibraryLoader, Value};
+    use pine_interpreter::{
+        Bar, DefaultPineOutput, HistoricalDataProvider, LibraryLoader, LogOutput, Value,
+    };
     use pine_lexer::Lexer;
     use pine_parser::Parser;
     use std::cell::Cell;
@@ -46,8 +48,12 @@ mod tests {
         }
     }
 
-    impl HistoricalDataProvider for TestHistoricalData {
-        fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value> {
+    impl HistoricalDataProvider<DefaultPineOutput> for TestHistoricalData {
+        fn get_historical(
+            &self,
+            series_id: &str,
+            offset: usize,
+        ) -> Option<Value<DefaultPineOutput>> {
             let current_index = self.current_index.get();
 
             if current_index < offset {
@@ -172,7 +178,11 @@ mod tests {
         let pine_output = script.execute(&bars[bars.len() - 1])?;
 
         // Extract log messages from output
-        let result = pine_output.logs.iter().map(|log| log.message.clone()).collect();
+        let result = pine_output
+            .get_logs()
+            .iter()
+            .map(|log| log.message.clone())
+            .collect();
         Ok(result)
     }
 

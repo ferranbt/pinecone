@@ -40,3 +40,11 @@ bench:
 # Run a specific benchmark (e.g. just bench-one lexer)
 bench-one name:
     cargo bench --bench {{name}}
+
+# Compile all examples to verify they build
+compile-examples:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for example in examples/*/; do
+        [ -f "$example/Cargo.toml" ] && (cd "$example" && cargo build)
+    done

@@ -1,9 +1,9 @@
-use pine_interpreter::{LogLevel, Value};
+use pine_interpreter::{LogLevel, LogOutput, PineOutput, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 /// Create the log namespace with functions that write to interpreter output
-pub fn register() -> Value {
+pub fn register<O: PineOutput + LogOutput>() -> Value<O> {
     use std::collections::HashMap;
 
     let mut log_ns = HashMap::new();
@@ -16,7 +16,7 @@ pub fn register() -> Value {
     ];
 
     for (name, level) in levels {
-        let log_fn: pine_interpreter::BuiltinFn = Rc::new(move |ctx, func_call| {
+        let log_fn: pine_interpreter::BuiltinFn<O> = Rc::new(move |ctx, func_call| {
             let msg = match func_call.args.first() {
                 Some(pine_interpreter::EvaluatedArg::Positional(v)) => value_to_string(v),
                 _ => String::new(),
@@ -33,7 +33,7 @@ pub fn register() -> Value {
     }
 }
 
-fn value_to_string(value: &Value) -> String {
+fn value_to_string<O: PineOutput>(value: &Value<O>) -> String {
     match value {
         Value::String(s) => s.clone(),
         Value::Number(n) => n.to_string(),
