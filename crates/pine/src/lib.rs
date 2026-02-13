@@ -85,17 +85,6 @@ impl Script<DefaultPineOutput> {
 }
 
 impl<O: PineOutput> Script<O> {
-    /// Compile PineScript with custom output type and custom variables
-    ///
-    /// This allows you to use custom builtin functions with custom output types.
-    ///
-    /// # Example
-    /// ```ignore
-    /// let mut custom_vars: HashMap<String, Value<CustomOutput>> = HashMap::new();
-    /// custom_vars.insert("alert".to_string(), create_alert_builtin());
-    ///
-    /// let script = Script::<CustomOutput>::compile_with_variables(source, custom_vars)?;
-    /// ```
     pub fn compile_with_variables(
         source: &str,
         custom_variables: HashMap<String, Value<O>>,
@@ -121,10 +110,6 @@ impl<O: PineOutput> Script<O> {
         })
     }
 
-    /// Execute the script with a single bar
-    ///
-    /// This maintains interpreter state across multiple calls,
-    /// allowing variables to persist between bars.
     pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
         // Load bar data as Series variables so TA functions can access historical data
         use interpreter::{Series, Value};
