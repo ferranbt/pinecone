@@ -1,8 +1,8 @@
-# Testing Guide for PineVM
+# Testing Guide for Pinecone
 
 ## Overview
 
-Testing is **critical** for PineVM. Every interpreter feature, builtin function, and language construct **MUST** have both positive (success) and negative (error) test cases.
+Testing is **critical** for Pinecone. Every interpreter feature, builtin function, and language construct **MUST** have both positive (success) and negative (error) test cases.
 
 ## Test Organization
 
@@ -99,7 +99,7 @@ just test-integration-test basic_operations.pine
 
 ### For Every Feature
 
-When adding ANY new feature to PineVM, you **MUST** create:
+When adding ANY new feature to Pinecone, you **MUST** create:
 
 1. **Positive Test**: Test that the feature works correctly
    - Test basic functionality
@@ -268,4 +268,4 @@ When a test fails:
 - ✅ One concept per test file
 - ✅ Clear, descriptive file names and comments
 
-Testing is not optional - it ensures PineVM works correctly and prevents regressions!
+Testing is not optional - it ensures Pinecone works correctly and prevents regressions!
