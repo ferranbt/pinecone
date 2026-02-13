@@ -1,8 +1,8 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_interpreter::{
-    Color, Interpreter, Plot as PlotOutput, Plotarrow as PlotarrowOutput,
-    Plotbar as PlotbarOutput, Plotcandle as PlotcandleOutput, Plotchar as PlotcharOutput,
-    Plotshape as PlotshapeOutput, RuntimeError, Value,
+    Color, Interpreter, Plot as PlotOutput, Plotarrow as PlotarrowOutput, Plotbar as PlotbarOutput,
+    Plotcandle as PlotcandleOutput, Plotchar as PlotcharOutput, Plotshape as PlotshapeOutput,
+    RuntimeError, Value,
 };
 use std::collections::HashMap;
 use std::rc::Rc;

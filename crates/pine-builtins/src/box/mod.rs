@@ -82,7 +82,9 @@ struct BoxSetLeft {
 impl BoxSetLeft {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.left = self.left.clone();
         Ok(Value::Na)
@@ -100,7 +102,9 @@ struct BoxSetTop {
 impl BoxSetTop {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.top = self.top.clone();
         Ok(Value::Na)
@@ -118,7 +122,9 @@ struct BoxSetRight {
 impl BoxSetRight {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.right = self.right.clone();
         Ok(Value::Na)
@@ -136,7 +142,9 @@ struct BoxSetBottom {
 impl BoxSetBottom {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.bottom = self.bottom.clone();
         Ok(Value::Na)
@@ -155,7 +163,9 @@ struct BoxSetLefttop {
 impl BoxSetLefttop {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.left = self.left.clone();
         box_obj.top = self.top.clone();
@@ -175,7 +185,9 @@ struct BoxSetRightbottom {
 impl BoxSetRightbottom {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.right = self.right.clone();
         box_obj.bottom = self.bottom.clone();
@@ -194,7 +206,9 @@ struct BoxSetBorderColor {
 impl BoxSetBorderColor {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.border_color = Some(self.color.clone());
         Ok(Value::Na)
@@ -212,7 +226,9 @@ struct BoxSetBorderWidth {
 impl BoxSetBorderWidth {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.border_width = self.width;
         Ok(Value::Na)
@@ -230,7 +246,9 @@ struct BoxSetBorderStyle {
 impl BoxSetBorderStyle {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.border_style = self.style.clone();
         Ok(Value::Na)
@@ -248,7 +266,9 @@ struct BoxSetExtend {
 impl BoxSetExtend {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.extend = self.extend.clone();
         Ok(Value::Na)
@@ -266,7 +286,9 @@ struct BoxSetBgcolor {
 impl BoxSetBgcolor {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.bgcolor = Some(self.color.clone());
         Ok(Value::Na)
@@ -284,7 +306,9 @@ struct BoxSetText {
 impl BoxSetText {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.text = self.text.clone();
         Ok(Value::Na)
@@ -302,7 +326,9 @@ struct BoxSetTextColor {
 impl BoxSetTextColor {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.text_color = Some(self.color.clone());
         Ok(Value::Na)
@@ -320,7 +346,9 @@ struct BoxSetTextSize {
 impl BoxSetTextSize {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.text_size = self.size;
         Ok(Value::Na)
@@ -338,7 +366,9 @@ struct BoxSetTextHalign {
 impl BoxSetTextHalign {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.text_halign = self.halign.clone();
         Ok(Value::Na)
@@ -356,7 +386,9 @@ struct BoxSetTextValign {
 impl BoxSetTextValign {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.text_valign = self.valign.clone();
         Ok(Value::Na)
@@ -374,7 +406,9 @@ struct BoxSetTextWrap {
 impl BoxSetTextWrap {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.text_wrap = self.wrap.clone();
         Ok(Value::Na)
@@ -392,7 +426,9 @@ struct BoxSetTextFontFamily {
 impl BoxSetTextFontFamily {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.text_font_family = self.font_family.clone();
         Ok(Value::Na)
@@ -412,7 +448,9 @@ struct BoxSetXloc {
 impl BoxSetXloc {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         box_obj.left = self.left.clone();
         box_obj.right = self.right.clone();
@@ -431,7 +469,9 @@ struct BoxGetLeft {
 impl BoxGetLeft {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         Ok(box_obj.left.clone())
     }
@@ -447,7 +487,9 @@ struct BoxGetTop {
 impl BoxGetTop {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         Ok(box_obj.top.clone())
     }
@@ -463,7 +505,9 @@ struct BoxGetRight {
 impl BoxGetRight {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         Ok(box_obj.right.clone())
     }
@@ -479,7 +523,9 @@ struct BoxGetBottom {
 impl BoxGetBottom {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         Ok(box_obj.bottom.clone())
     }
@@ -510,7 +556,9 @@ struct BoxCopy {
 impl BoxCopy {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let id = self.id as usize;
-        let box_obj = ctx.output.get_box_mut(id)
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
         let copied_box = box_obj.clone();
         let new_id = ctx.output.add_box(copied_box);

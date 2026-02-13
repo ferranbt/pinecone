@@ -209,7 +209,9 @@ impl StrToString {
             Value::Number(n) => n.to_string(),
             Value::Bool(b) => if *b { "true" } else { "false" }.to_string(),
             Value::Na => "NaN".to_string(),
-            Value::Color(color) => format!("rgba({}, {}, {}, {})", color.r, color.g, color.b, color.t),
+            Value::Color(color) => {
+                format!("rgba({}, {}, {}, {})", color.r, color.g, color.b, color.t)
+            }
             Value::Array(_) => "[Array]".to_string(),
             Value::Series(series) => format!("[Series:{}]", series.id),
             Value::Object { type_name, .. } => format!("[Object:{}]", type_name),

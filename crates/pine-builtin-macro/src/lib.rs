@@ -405,14 +405,6 @@ fn generate_value_conversion(
                     Some(arg_value.as_bool()?)
                 }
             }
-        } else if type_str.contains("Value") {
-            quote! {
-                if matches!(arg_value, Value::Na) {
-                    None
-                } else {
-                    Some(arg_value)
-                }
-            }
         } else {
             quote! {
                 if matches!(arg_value, Value::Na) {
