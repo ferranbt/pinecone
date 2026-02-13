@@ -4,13 +4,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-fn color_to_value(color: &Option<Color>) -> Value {
-    match color {
-        Some(c) => Value::Color(c.clone()),
-        None => Value::Na,
-    }
-}
-
 /// plot() - Plots a series of data on the chart
 #[derive(BuiltinFunction)]
 #[builtin(name = "plot")]
@@ -53,7 +46,7 @@ impl Plot {
         let mut fields = HashMap::new();
         fields.insert("series".to_string(), self.series.clone());
         fields.insert("title".to_string(), Value::String(self.title.clone()));
-        fields.insert("color".to_string(), color_to_value(&self.color));
+        fields.insert("color".to_string(), self.color.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
         fields.insert("linewidth".to_string(), Value::Number(self.linewidth));
         fields.insert("style".to_string(), Value::String(self.style.clone()));
         fields.insert("trackprice".to_string(), Value::Bool(self.trackprice));
@@ -164,7 +157,7 @@ impl Plotbar {
         fields.insert("low".to_string(), self.low.clone());
         fields.insert("close".to_string(), self.close.clone());
         fields.insert("title".to_string(), Value::String(self.title.clone()));
-        fields.insert("color".to_string(), color_to_value(&self.color));
+        fields.insert("color".to_string(), self.color.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
         fields.insert("editable".to_string(), Value::Bool(self.editable));
         fields.insert("show_last".to_string(), self.show_last.map_or(Value::Na, Value::Number));
         fields.insert("display".to_string(), Value::String(self.display.clone()));
@@ -214,7 +207,7 @@ impl Plotcandle {
         fields.insert("low".to_string(), self.low.clone());
         fields.insert("close".to_string(), self.close.clone());
         fields.insert("title".to_string(), Value::String(self.title.clone()));
-        fields.insert("color".to_string(), color_to_value(&self.color));
+        fields.insert("color".to_string(), self.color.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
         fields.insert("wickcolor".to_string(), self.wickcolor.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
         fields.insert("editable".to_string(), Value::Bool(self.editable));
         fields.insert("show_last".to_string(), self.show_last.map_or(Value::Na, Value::Number));
@@ -270,7 +263,7 @@ impl Plotchar {
         fields.insert("title".to_string(), Value::String(self.title.clone()));
         fields.insert("char".to_string(), Value::String(self.char.clone()));
         fields.insert("location".to_string(), Value::String(self.location.clone()));
-        fields.insert("color".to_string(), color_to_value(&self.color));
+        fields.insert("color".to_string(), self.color.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
         fields.insert("offset".to_string(), Value::Number(self.offset));
         fields.insert("text".to_string(), Value::String(self.text.clone()));
         fields.insert("textcolor".to_string(), self.textcolor.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
@@ -328,7 +321,7 @@ impl Plotshape {
         fields.insert("title".to_string(), Value::String(self.title.clone()));
         fields.insert("style".to_string(), Value::String(self.style.clone()));
         fields.insert("location".to_string(), Value::String(self.location.clone()));
-        fields.insert("color".to_string(), color_to_value(&self.color));
+        fields.insert("color".to_string(), self.color.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));
         fields.insert("offset".to_string(), Value::Number(self.offset));
         fields.insert("text".to_string(), Value::String(self.text.clone()));
         fields.insert("textcolor".to_string(), self.textcolor.clone().map(|c| Value::Color(c)).unwrap_or(Value::Na));

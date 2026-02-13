@@ -1,0 +1,9 @@
+// Test accessing a deleted box - should fail
+
+b = box.new(5, 150.0, 15, 100.0)
+box.delete(b)
+
+// Accessing deleted box should error
+box.get_left(b)
+
+// Expected error: Box with id 0 not found

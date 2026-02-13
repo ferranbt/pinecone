@@ -62,13 +62,13 @@ impl LabelNew {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_x")]
 struct LabelSetX {
-    id: Value,
+    id: f64,
     x: Value,
 }
 
 impl LabelSetX {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -82,13 +82,13 @@ impl LabelSetX {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_y")]
 struct LabelSetY {
-    id: Value,
+    id: f64,
     y: Value,
 }
 
 impl LabelSetY {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -102,14 +102,14 @@ impl LabelSetY {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_xy")]
 struct LabelSetXy {
-    id: Value,
+    id: f64,
     x: Value,
     y: Value,
 }
 
 impl LabelSetXy {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -124,14 +124,14 @@ impl LabelSetXy {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_xloc")]
 struct LabelSetXloc {
-    id: Value,
+    id: f64,
     x: Value,
     xloc: String,
 }
 
 impl LabelSetXloc {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -146,13 +146,13 @@ impl LabelSetXloc {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_yloc")]
 struct LabelSetYloc {
-    id: Value,
+    id: f64,
     yloc: String,
 }
 
 impl LabelSetYloc {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -166,13 +166,13 @@ impl LabelSetYloc {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_color")]
 struct LabelSetColor {
-    id: Value,
+    id: f64,
     color: Color,
 }
 
 impl LabelSetColor {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -186,13 +186,13 @@ impl LabelSetColor {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_style")]
 struct LabelSetStyle {
-    id: Value,
+    id: f64,
     style: String,
 }
 
 impl LabelSetStyle {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -206,13 +206,13 @@ impl LabelSetStyle {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_text")]
 struct LabelSetText {
-    id: Value,
+    id: f64,
     text: String,
 }
 
 impl LabelSetText {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -226,13 +226,13 @@ impl LabelSetText {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_textcolor")]
 struct LabelSetTextcolor {
-    id: Value,
+    id: f64,
     textcolor: Color,
 }
 
 impl LabelSetTextcolor {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -246,13 +246,13 @@ impl LabelSetTextcolor {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_size")]
 struct LabelSetSize {
-    id: Value,
+    id: f64,
     size: String,
 }
 
 impl LabelSetSize {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -266,13 +266,13 @@ impl LabelSetSize {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_textalign")]
 struct LabelSetTextalign {
-    id: Value,
+    id: f64,
     textalign: String,
 }
 
 impl LabelSetTextalign {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -286,13 +286,13 @@ impl LabelSetTextalign {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_tooltip")]
 struct LabelSetTooltip {
-    id: Value,
+    id: f64,
     tooltip: String,
 }
 
 impl LabelSetTooltip {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -306,13 +306,13 @@ impl LabelSetTooltip {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_text_font_family")]
 struct LabelSetTextFontFamily {
-    id: Value,
+    id: f64,
     text_font_family: String,
 }
 
 impl LabelSetTextFontFamily {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -326,12 +326,12 @@ impl LabelSetTextFontFamily {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.get_x")]
 struct LabelGetX {
-    id: Value,
+    id: f64,
 }
 
 impl LabelGetX {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -344,12 +344,12 @@ impl LabelGetX {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.get_y")]
 struct LabelGetY {
-    id: Value,
+    id: f64,
 }
 
 impl LabelGetY {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -362,12 +362,12 @@ impl LabelGetY {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.get_text")]
 struct LabelGetText {
-    id: Value,
+    id: f64,
 }
 
 impl LabelGetText {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)
@@ -380,12 +380,12 @@ impl LabelGetText {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.delete")]
 struct LabelDelete {
-    id: Value,
+    id: f64,
 }
 
 impl LabelDelete {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         ctx.output.delete_label(id);
         Ok(Value::Na)
     }
@@ -395,12 +395,12 @@ impl LabelDelete {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.copy")]
 struct LabelCopy {
-    id: Value,
+    id: f64,
 }
 
 impl LabelCopy {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let id = self.id.as_number()? as usize;
+        let id = self.id as usize;
         let label = ctx
             .output
             .get_label_mut(id)

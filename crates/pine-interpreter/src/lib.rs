@@ -110,6 +110,28 @@ pub struct Label {
     pub text_font_family: String,
 }
 
+/// Represents a box drawable object
+#[derive(Clone, Debug)]
+pub struct PineBox {
+    pub left: Value,
+    pub top: Value,
+    pub right: Value,
+    pub bottom: Value,
+    pub border_color: Option<Color>,
+    pub border_width: f64,
+    pub border_style: String,
+    pub extend: String,
+    pub xloc: String,
+    pub bgcolor: Option<Color>,
+    pub text: String,
+    pub text_size: f64,
+    pub text_color: Option<Color>,
+    pub text_halign: String,
+    pub text_valign: String,
+    pub text_wrap: String,
+    pub text_font_family: String,
+}
+
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value {
@@ -321,6 +343,10 @@ pub struct PineOutput {
     labels: HashMap<usize, Label>,
     /// Next label ID
     next_label_id: usize,
+    /// Box storage for drawable objects
+    boxes: HashMap<usize, PineBox>,
+    /// Next box ID
+    next_box_id: usize,
 }
 
 impl PineOutput {
@@ -340,6 +366,24 @@ impl PineOutput {
     /// Delete a label by ID
     pub fn delete_label(&mut self, id: usize) {
         self.labels.remove(&id);
+    }
+
+    /// Add a box and return its ID
+    pub fn add_box(&mut self, box_obj: PineBox) -> usize {
+        let id = self.next_box_id;
+        self.next_box_id += 1;
+        self.boxes.insert(id, box_obj);
+        id
+    }
+
+    /// Get a mutable reference to a box by ID
+    pub fn get_box_mut(&mut self, id: usize) -> Option<&mut PineBox> {
+        self.boxes.get_mut(&id)
+    }
+
+    /// Delete a box by ID
+    pub fn delete_box(&mut self, id: usize) {
+        self.boxes.remove(&id);
     }
 }
 

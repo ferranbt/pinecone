@@ -1,0 +1,9 @@
+// Test accessing a deleted label - should fail
+
+lbl = label.new(5, 150.0, "Test")
+label.delete(lbl)
+
+// Accessing deleted label should error
+label.get_text(lbl)
+
+// Expected error: Label with id 0 not found

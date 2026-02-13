@@ -1,0 +1,15 @@
+// Test that label.delete() actually removes the label
+// When we try to access a deleted label, we should get an error
+
+lbl = label.new(5, 150.0, "Test Label")
+log.info(label.get_text(lbl))
+
+// Delete the label
+label.delete(lbl)
+
+// Try to access the deleted label - this should error
+// Uncomment to test error handling:
+// label.get_text(lbl)
+
+// Expected output:
+// Test Label

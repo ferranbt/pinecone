@@ -1,15 +1,8 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Color, Interpreter, RuntimeError, Value};
+use pine_interpreter::{Color, Interpreter, PineBox, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-
-fn color_to_value(color: &Option<Color>) -> Value {
-    match color {
-        Some(c) => Value::Color(c.clone()),
-        None => Value::Na,
-    }
-}
 
 /// box.new() - Creates a new box object
 #[derive(BuiltinFunction)]
@@ -48,30 +41,33 @@ struct BoxNew {
 }
 
 impl BoxNew {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let mut fields = HashMap::new();
-        fields.insert("left".to_string(), self.left.clone());
-        fields.insert("top".to_string(), self.top.clone());
-        fields.insert("right".to_string(), self.right.clone());
-        fields.insert("bottom".to_string(), self.bottom.clone());
-        fields.insert("border_color".to_string(), color_to_value(&self.border_color));
-        fields.insert("border_width".to_string(), Value::Number(self.border_width));
-        fields.insert("border_style".to_string(), Value::String(self.border_style.clone()));
-        fields.insert("extend".to_string(), Value::String(self.extend.clone()));
-        fields.insert("xloc".to_string(), Value::String(self.xloc.clone()));
-        fields.insert("bgcolor".to_string(), color_to_value(&self.bgcolor));
-        fields.insert("text".to_string(), Value::String(self.text.clone()));
-        fields.insert("text_size".to_string(), Value::Number(self.text_size));
-        fields.insert("text_color".to_string(), color_to_value(&self.text_color));
-        fields.insert("text_halign".to_string(), Value::String(self.text_halign.clone()));
-        fields.insert("text_valign".to_string(), Value::String(self.text_valign.clone()));
-        fields.insert("text_wrap".to_string(), Value::String(self.text_wrap.clone()));
-        fields.insert("text_font_family".to_string(), Value::String(self.text_font_family.clone()));
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        // Create a box struct
+        let box_obj = PineBox {
+            left: self.left.clone(),
+            top: self.top.clone(),
+            right: self.right.clone(),
+            bottom: self.bottom.clone(),
+            border_color: self.border_color.clone(),
+            border_width: self.border_width,
+            border_style: self.border_style.clone(),
+            extend: self.extend.clone(),
+            xloc: self.xloc.clone(),
+            bgcolor: self.bgcolor.clone(),
+            text: self.text.clone(),
+            text_size: self.text_size,
+            text_color: self.text_color.clone(),
+            text_halign: self.text_halign.clone(),
+            text_valign: self.text_valign.clone(),
+            text_wrap: self.text_wrap.clone(),
+            text_font_family: self.text_font_family.clone(),
+        };
 
-        Ok(Value::Object {
-            type_name: "box".to_string(),
-            fields: Rc::new(RefCell::new(fields)),
-        })
+        // Add to interpreter and get ID
+        let id = ctx.output.add_box(box_obj);
+
+        // Return the ID as a number
+        Ok(Value::Number(id as f64))
     }
 }
 
@@ -79,20 +75,17 @@ impl BoxNew {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_left")]
 struct BoxSetLeft {
-    id: Value,
+    id: f64,
     left: Value,
 }
 
 impl BoxSetLeft {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("left".to_string(), self.left.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.left = self.left.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -100,20 +93,17 @@ impl BoxSetLeft {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_top")]
 struct BoxSetTop {
-    id: Value,
+    id: f64,
     top: Value,
 }
 
 impl BoxSetTop {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("top".to_string(), self.top.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.top = self.top.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -121,20 +111,17 @@ impl BoxSetTop {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_right")]
 struct BoxSetRight {
-    id: Value,
+    id: f64,
     right: Value,
 }
 
 impl BoxSetRight {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("right".to_string(), self.right.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.right = self.right.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -142,20 +129,17 @@ impl BoxSetRight {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_bottom")]
 struct BoxSetBottom {
-    id: Value,
+    id: f64,
     bottom: Value,
 }
 
 impl BoxSetBottom {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("bottom".to_string(), self.bottom.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.bottom = self.bottom.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -163,21 +147,19 @@ impl BoxSetBottom {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_lefttop")]
 struct BoxSetLefttop {
-    id: Value,
+    id: f64,
     left: Value,
     top: Value,
 }
 
 impl BoxSetLefttop {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            let mut fields_mut = fields.borrow_mut();
-            fields_mut.insert("left".to_string(), self.left.clone());
-            fields_mut.insert("top".to_string(), self.top.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.left = self.left.clone();
+        box_obj.top = self.top.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -185,21 +167,19 @@ impl BoxSetLefttop {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_rightbottom")]
 struct BoxSetRightbottom {
-    id: Value,
+    id: f64,
     right: Value,
     bottom: Value,
 }
 
 impl BoxSetRightbottom {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            let mut fields_mut = fields.borrow_mut();
-            fields_mut.insert("right".to_string(), self.right.clone());
-            fields_mut.insert("bottom".to_string(), self.bottom.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.right = self.right.clone();
+        box_obj.bottom = self.bottom.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -207,20 +187,17 @@ impl BoxSetRightbottom {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_border_color")]
 struct BoxSetBorderColor {
-    id: Value,
+    id: f64,
     color: Color,
 }
 
 impl BoxSetBorderColor {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("border_color".to_string(), Value::Color(self.color.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.border_color = Some(self.color.clone());
+        Ok(Value::Na)
     }
 }
 
@@ -228,20 +205,17 @@ impl BoxSetBorderColor {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_border_width")]
 struct BoxSetBorderWidth {
-    id: Value,
+    id: f64,
     width: f64,
 }
 
 impl BoxSetBorderWidth {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("border_width".to_string(), Value::Number(self.width));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.border_width = self.width;
+        Ok(Value::Na)
     }
 }
 
@@ -249,20 +223,17 @@ impl BoxSetBorderWidth {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_border_style")]
 struct BoxSetBorderStyle {
-    id: Value,
+    id: f64,
     style: String,
 }
 
 impl BoxSetBorderStyle {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("border_style".to_string(), Value::String(self.style.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.border_style = self.style.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -270,20 +241,17 @@ impl BoxSetBorderStyle {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_extend")]
 struct BoxSetExtend {
-    id: Value,
+    id: f64,
     extend: String,
 }
 
 impl BoxSetExtend {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("extend".to_string(), Value::String(self.extend.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.extend = self.extend.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -291,20 +259,17 @@ impl BoxSetExtend {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_bgcolor")]
 struct BoxSetBgcolor {
-    id: Value,
+    id: f64,
     color: Color,
 }
 
 impl BoxSetBgcolor {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("bgcolor".to_string(), Value::Color(self.color.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.bgcolor = Some(self.color.clone());
+        Ok(Value::Na)
     }
 }
 
@@ -312,20 +277,17 @@ impl BoxSetBgcolor {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_text")]
 struct BoxSetText {
-    id: Value,
+    id: f64,
     text: String,
 }
 
 impl BoxSetText {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("text".to_string(), Value::String(self.text.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.text = self.text.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -333,20 +295,17 @@ impl BoxSetText {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_text_color")]
 struct BoxSetTextColor {
-    id: Value,
+    id: f64,
     color: Color,
 }
 
 impl BoxSetTextColor {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("text_color".to_string(), Value::Color(self.color.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.text_color = Some(self.color.clone());
+        Ok(Value::Na)
     }
 }
 
@@ -354,20 +313,17 @@ impl BoxSetTextColor {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_text_size")]
 struct BoxSetTextSize {
-    id: Value,
+    id: f64,
     size: f64,
 }
 
 impl BoxSetTextSize {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("text_size".to_string(), Value::Number(self.size));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.text_size = self.size;
+        Ok(Value::Na)
     }
 }
 
@@ -375,20 +331,17 @@ impl BoxSetTextSize {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_text_halign")]
 struct BoxSetTextHalign {
-    id: Value,
+    id: f64,
     halign: String,
 }
 
 impl BoxSetTextHalign {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("text_halign".to_string(), Value::String(self.halign.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.text_halign = self.halign.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -396,20 +349,17 @@ impl BoxSetTextHalign {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_text_valign")]
 struct BoxSetTextValign {
-    id: Value,
+    id: f64,
     valign: String,
 }
 
 impl BoxSetTextValign {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("text_valign".to_string(), Value::String(self.valign.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.text_valign = self.valign.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -417,20 +367,17 @@ impl BoxSetTextValign {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_text_wrap")]
 struct BoxSetTextWrap {
-    id: Value,
+    id: f64,
     wrap: String,
 }
 
 impl BoxSetTextWrap {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("text_wrap".to_string(), Value::String(self.wrap.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.text_wrap = self.wrap.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -438,20 +385,17 @@ impl BoxSetTextWrap {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_text_font_family")]
 struct BoxSetTextFontFamily {
-    id: Value,
+    id: f64,
     font_family: String,
 }
 
 impl BoxSetTextFontFamily {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("text_font_family".to_string(), Value::String(self.font_family.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.text_font_family = self.font_family.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -459,23 +403,21 @@ impl BoxSetTextFontFamily {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.set_xloc")]
 struct BoxSetXloc {
-    id: Value,
+    id: f64,
     left: Value,
     right: Value,
     xloc: String,
 }
 
 impl BoxSetXloc {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            let mut fields_mut = fields.borrow_mut();
-            fields_mut.insert("left".to_string(), self.left.clone());
-            fields_mut.insert("right".to_string(), self.right.clone());
-            fields_mut.insert("xloc".to_string(), Value::String(self.xloc.clone()));
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.left = self.left.clone();
+        box_obj.right = self.right.clone();
+        box_obj.xloc = self.xloc.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -483,16 +425,15 @@ impl BoxSetXloc {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.get_left")]
 struct BoxGetLeft {
-    id: Value,
+    id: f64,
 }
 
 impl BoxGetLeft {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            Ok(fields.borrow().get("left").cloned().unwrap_or(Value::Na))
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        Ok(box_obj.left.clone())
     }
 }
 
@@ -500,16 +441,15 @@ impl BoxGetLeft {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.get_top")]
 struct BoxGetTop {
-    id: Value,
+    id: f64,
 }
 
 impl BoxGetTop {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            Ok(fields.borrow().get("top").cloned().unwrap_or(Value::Na))
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        Ok(box_obj.top.clone())
     }
 }
 
@@ -517,16 +457,15 @@ impl BoxGetTop {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.get_right")]
 struct BoxGetRight {
-    id: Value,
+    id: f64,
 }
 
 impl BoxGetRight {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            Ok(fields.borrow().get("right").cloned().unwrap_or(Value::Na))
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        Ok(box_obj.right.clone())
     }
 }
 
@@ -534,16 +473,15 @@ impl BoxGetRight {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.get_bottom")]
 struct BoxGetBottom {
-    id: Value,
+    id: f64,
 }
 
 impl BoxGetBottom {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            Ok(fields.borrow().get("bottom").cloned().unwrap_or(Value::Na))
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        Ok(box_obj.bottom.clone())
     }
 }
 
@@ -551,12 +489,13 @@ impl BoxGetBottom {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.delete")]
 struct BoxDelete {
-    _id: Value,
+    id: f64,
 }
 
 impl BoxDelete {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        // For now, just return na - actual deletion would be handled by state management
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        ctx.output.delete_box(id);
         Ok(Value::Na)
     }
 }
@@ -565,20 +504,17 @@ impl BoxDelete {
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.copy")]
 struct BoxCopy {
-    id: Value,
+    id: f64,
 }
 
 impl BoxCopy {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { type_name, fields } = &self.id {
-            let copied_fields = fields.borrow().clone();
-            Ok(Value::Object {
-                type_name: type_name.clone(),
-                fields: Rc::new(RefCell::new(copied_fields)),
-            })
-        } else {
-            Err(RuntimeError::TypeError("Expected box object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let box_obj = ctx.output.get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        let copied_box = box_obj.clone();
+        let new_id = ctx.output.add_box(copied_box);
+        Ok(Value::Number(new_id as f64))
     }
 }
 
