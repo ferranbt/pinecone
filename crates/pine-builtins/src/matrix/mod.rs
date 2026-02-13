@@ -10,29 +10,18 @@ use std::rc::Rc;
 struct MatrixNew {
     #[type_param]
     element_type: String,
-    #[arg(default = Value::Number(0.0))]
-    rows: Value,
-    #[arg(default = Value::Number(0.0))]
-    columns: Value,
+    #[arg(default = 0.0)]
+    rows: f64,
+    #[arg(default = 0.0)]
+    columns: f64,
     #[arg(default = Value::Na)]
     initial_value: Value,
 }
 
 impl MatrixNew {
     fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let rows = match &self.rows {
-            Value::Number(n) => *n as usize,
-            _ => return Err(RuntimeError::TypeError("rows must be a number".to_string())),
-        };
-
-        let columns = match &self.columns {
-            Value::Number(n) => *n as usize,
-            _ => {
-                return Err(RuntimeError::TypeError(
-                    "columns must be a number".to_string(),
-                ))
-            }
-        };
+        let rows = self.rows as usize;
+        let columns = self.columns as usize;
 
         // Validate element type
         if !matches!(
@@ -67,8 +56,8 @@ impl MatrixNew {
 #[builtin(name = "matrix.get")]
 struct MatrixGet {
     id: Value,
-    row: Value,
-    column: Value,
+    row: f64,
+    column: f64,
 }
 
 impl MatrixGet {
@@ -78,19 +67,8 @@ impl MatrixGet {
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
-        let row_idx = match &self.row {
-            Value::Number(n) => *n as usize,
-            _ => return Err(RuntimeError::TypeError("row must be a number".to_string())),
-        };
-
-        let col_idx = match &self.column {
-            Value::Number(n) => *n as usize,
-            _ => {
-                return Err(RuntimeError::TypeError(
-                    "column must be a number".to_string(),
-                ))
-            }
-        };
+        let row_idx = self.row as usize;
+        let col_idx = self.column as usize;
 
         let matrix_ref = matrix.borrow();
         if row_idx >= matrix_ref.len() {
@@ -109,8 +87,8 @@ impl MatrixGet {
 #[builtin(name = "matrix.set")]
 struct MatrixSet {
     id: Value,
-    row: Value,
-    column: Value,
+    row: f64,
+    column: f64,
     value: Value,
 }
 
@@ -121,19 +99,8 @@ impl MatrixSet {
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
-        let row_idx = match &self.row {
-            Value::Number(n) => *n as usize,
-            _ => return Err(RuntimeError::TypeError("row must be a number".to_string())),
-        };
-
-        let col_idx = match &self.column {
-            Value::Number(n) => *n as usize,
-            _ => {
-                return Err(RuntimeError::TypeError(
-                    "column must be a number".to_string(),
-                ))
-            }
-        };
+        let row_idx = self.row as usize;
+        let col_idx = self.column as usize;
 
         let mut matrix_ref = matrix.borrow_mut();
         if row_idx >= matrix_ref.len() {
@@ -265,7 +232,7 @@ impl MatrixCopy {
 #[builtin(name = "matrix.add_row")]
 struct MatrixAddRow {
     id: Value,
-    row: Value,
+    row: f64,
     #[arg(default = Value::Na)]
     array_id: Value,
 }
@@ -277,10 +244,7 @@ impl MatrixAddRow {
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
-        let row_idx = match &self.row {
-            Value::Number(n) => *n as usize,
-            _ => return Err(RuntimeError::TypeError("row must be a number".to_string())),
-        };
+        let row_idx = self.row as usize;
 
         let mut matrix_ref = matrix.borrow_mut();
         let cols = if matrix_ref.is_empty() {
@@ -314,7 +278,7 @@ impl MatrixAddRow {
 #[builtin(name = "matrix.add_col")]
 struct MatrixAddCol {
     id: Value,
-    column: Value,
+    column: f64,
     #[arg(default = Value::Na)]
     array_id: Value,
 }
@@ -326,14 +290,7 @@ impl MatrixAddCol {
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
         };
 
-        let col_idx = match &self.column {
-            Value::Number(n) => *n as usize,
-            _ => {
-                return Err(RuntimeError::TypeError(
-                    "column must be a number".to_string(),
-                ))
-            }
-        };
+        let col_idx = self.column as usize;
 
         let mut matrix_ref = matrix.borrow_mut();
 

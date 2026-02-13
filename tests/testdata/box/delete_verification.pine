@@ -1,0 +1,15 @@
+// Test that box.delete() actually removes the box
+// When we try to access a deleted box, we should get an error
+
+b = box.new(5, 150.0, 15, 100.0, text="Test Box")
+log.info(box.get_left(b))
+
+// Delete the box
+box.delete(b)
+
+// Try to access the deleted box - this should error
+// Uncomment to test error handling:
+// box.get_left(b)
+
+// Expected output:
+// 5

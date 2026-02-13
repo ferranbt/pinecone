@@ -78,6 +78,175 @@ pub struct Series {
     pub current: Box<Value>,
 }
 
+/// Represents a color with RGBA components
+#[derive(Clone, Debug, PartialEq)]
+pub struct Color {
+    pub r: u8, // Red component (0-255)
+    pub g: u8, // Green component (0-255)
+    pub b: u8, // Blue component (0-255)
+    pub t: u8, // Transparency (0-100)
+}
+
+impl Color {
+    pub fn new(r: u8, g: u8, b: u8, t: u8) -> Self {
+        Color { r, g, b, t }
+    }
+}
+
+/// Represents a label drawable object
+#[derive(Clone, Debug)]
+pub struct Label {
+    pub x: Value,
+    pub y: Value,
+    pub text: String,
+    pub xloc: String,
+    pub yloc: String,
+    pub color: Option<Color>,
+    pub style: String,
+    pub textcolor: Option<Color>,
+    pub size: String,
+    pub textalign: String,
+    pub tooltip: Option<String>,
+    pub text_font_family: String,
+}
+
+/// Represents a box drawable object
+#[derive(Clone, Debug)]
+pub struct PineBox {
+    pub left: Value,
+    pub top: Value,
+    pub right: Value,
+    pub bottom: Value,
+    pub border_color: Option<Color>,
+    pub border_width: f64,
+    pub border_style: String,
+    pub extend: String,
+    pub xloc: String,
+    pub bgcolor: Option<Color>,
+    pub text: String,
+    pub text_size: f64,
+    pub text_color: Option<Color>,
+    pub text_halign: String,
+    pub text_valign: String,
+    pub text_wrap: String,
+    pub text_font_family: String,
+}
+
+/// Represents a plot output
+#[derive(Clone, Debug)]
+pub struct Plot {
+    pub series: Value,
+    pub title: String,
+    pub color: Option<Color>,
+    pub linewidth: f64,
+    pub style: String,
+    pub trackprice: bool,
+    pub histbase: f64,
+    pub offset: f64,
+    pub join: bool,
+    pub editable: bool,
+    pub show_last: Option<f64>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+    pub linestyle: String,
+}
+
+/// Represents a plotarrow output
+#[derive(Clone, Debug)]
+pub struct Plotarrow {
+    pub series: Value,
+    pub title: String,
+    pub colorup: Option<Color>,
+    pub colordown: Option<Color>,
+    pub offset: f64,
+    pub minheight: f64,
+    pub maxheight: f64,
+    pub editable: bool,
+    pub show_last: Option<f64>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+}
+
+/// Represents a plotbar output
+#[derive(Clone, Debug)]
+pub struct Plotbar {
+    pub open: Value,
+    pub high: Value,
+    pub low: Value,
+    pub close: Value,
+    pub title: String,
+    pub color: Option<Color>,
+    pub editable: bool,
+    pub show_last: Option<f64>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+}
+
+/// Represents a plotcandle output
+#[derive(Clone, Debug)]
+pub struct Plotcandle {
+    pub open: Value,
+    pub high: Value,
+    pub low: Value,
+    pub close: Value,
+    pub title: String,
+    pub color: Option<Color>,
+    pub wickcolor: Option<Color>,
+    pub editable: bool,
+    pub show_last: Option<f64>,
+    pub bordercolor: Option<Color>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+}
+
+/// Represents a plotchar output
+#[derive(Clone, Debug)]
+pub struct Plotchar {
+    pub series: Value,
+    pub title: String,
+    pub char: String,
+    pub location: String,
+    pub color: Option<Color>,
+    pub offset: f64,
+    pub text: String,
+    pub textcolor: Option<Color>,
+    pub editable: bool,
+    pub size: String,
+    pub show_last: Option<f64>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+}
+
+/// Represents a plotshape output
+#[derive(Clone, Debug)]
+pub struct Plotshape {
+    pub series: Value,
+    pub title: String,
+    pub style: String,
+    pub location: String,
+    pub color: Option<Color>,
+    pub offset: f64,
+    pub text: String,
+    pub textcolor: Option<Color>,
+    pub editable: bool,
+    pub size: String,
+    pub show_last: Option<f64>,
+    pub display: String,
+    pub format: Option<String>,
+    pub precision: Option<f64>,
+    pub force_overlay: bool,
+}
+
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value {
@@ -105,12 +274,7 @@ pub enum Value {
         field_name: String, // The specific field/member name (e.g., "buy")
         title: String,      // The title of this enum member
     }, // Enum member value
-    Color {
-        r: u8, // Red component (0-255)
-        g: u8, // Green component (0-255)
-        b: u8, // Blue component (0-255)
-        t: u8, // Transparency (0-100)
-    }, // Color value
+    Color(Color),               // Color value
     Matrix {
         element_type: String, // Type of elements: "int", "float", "string", "bool"
         data: Rc<RefCell<Vec<Vec<Value>>>>, // 2D matrix - mutable shared reference to rows of columns
@@ -119,7 +283,7 @@ pub enum Value {
 
 impl Value {
     pub fn new_color(r: u8, g: u8, b: u8, t: u8) -> Value {
-        Value::Color { r, g, b, t }
+        Value::Color(Color::new(r, g, b, t))
     }
 }
 
@@ -142,7 +306,11 @@ impl std::fmt::Debug for Value {
                 field_name,
                 ..
             } => write!(f, "Enum({}::{})", enum_name, field_name),
-            Value::Color { r, g, b, t } => write!(f, "Color(rgba({}, {}, {}, {}))", r, g, b, t),
+            Value::Color(color) => write!(
+                f,
+                "Color(rgba({}, {}, {}, {}))",
+                color.r, color.g, color.b, color.t
+            ),
             Value::Matrix { element_type, data } => {
                 write!(f, "Matrix<{}>({:?})", element_type, data)
             }
@@ -181,20 +349,7 @@ impl PartialEq for Value {
                 },
             ) => a_enum == b_enum && a_field == b_field,
             // Colors compare by all components
-            (
-                Value::Color {
-                    r: r1,
-                    g: g1,
-                    b: b1,
-                    t: t1,
-                },
-                Value::Color {
-                    r: r2,
-                    g: g2,
-                    b: b2,
-                    t: t2,
-                },
-            ) => r1 == r2 && g1 == g2 && b1 == b2 && t1 == t2,
+            (Value::Color(c1), Value::Color(c2)) => c1 == c2,
             // Matrices compare by reference (Rc pointer equality)
             (Value::Matrix { data: a, .. }, Value::Matrix { data: b, .. }) => Rc::ptr_eq(a, b),
             _ => false,
@@ -278,9 +433,9 @@ impl Value {
         }
     }
 
-    pub fn as_color(&self) -> Result<(u8, u8, u8, u8), RuntimeError> {
+    pub fn as_color(&self) -> Result<Color, RuntimeError> {
         match self {
-            Value::Color { r, g, b, t } => Ok((*r, *g, *b, *t)),
+            Value::Color(color) => Ok(color.clone()),
             _ => Err(RuntimeError::TypeError(format!(
                 "Expected color, got {:?}",
                 self
@@ -297,6 +452,83 @@ struct MethodDef {
     body: Vec<Stmt>,
 }
 
+#[derive(Default, Clone)]
+pub struct PineOutput {
+    /// Label storage for drawable objects
+    labels: HashMap<usize, Label>,
+    /// Next label ID
+    next_label_id: usize,
+    /// Box storage for drawable objects
+    boxes: HashMap<usize, PineBox>,
+    /// Next box ID
+    next_box_id: usize,
+    /// Plot outputs
+    pub plots: Vec<Plot>,
+    /// Plotarrow outputs
+    pub plotarrows: Vec<Plotarrow>,
+    /// Plotbar outputs
+    pub plotbars: Vec<Plotbar>,
+    /// Plotcandle outputs
+    pub plotcandles: Vec<Plotcandle>,
+    /// Plotchar outputs
+    pub plotchars: Vec<Plotchar>,
+    /// Plotshape outputs
+    pub plotshapes: Vec<Plotshape>,
+}
+
+impl PineOutput {
+    /// Clear all output data for a new iteration
+    pub fn clear(&mut self) {
+        self.labels.clear();
+        self.boxes.clear();
+        self.plots.clear();
+        self.plotarrows.clear();
+        self.plotbars.clear();
+        self.plotcandles.clear();
+        self.plotchars.clear();
+        self.plotshapes.clear();
+        // Reset ID counters
+        self.next_label_id = 0;
+        self.next_box_id = 0;
+    }
+
+    /// Add a label and return its ID
+    pub fn add_label(&mut self, label: Label) -> usize {
+        let id = self.next_label_id;
+        self.next_label_id += 1;
+        self.labels.insert(id, label);
+        id
+    }
+
+    /// Get a mutable reference to a label by ID
+    pub fn get_label_mut(&mut self, id: usize) -> Option<&mut Label> {
+        self.labels.get_mut(&id)
+    }
+
+    /// Delete a label by ID
+    pub fn delete_label(&mut self, id: usize) {
+        self.labels.remove(&id);
+    }
+
+    /// Add a box and return its ID
+    pub fn add_box(&mut self, box_obj: PineBox) -> usize {
+        let id = self.next_box_id;
+        self.next_box_id += 1;
+        self.boxes.insert(id, box_obj);
+        id
+    }
+
+    /// Get a mutable reference to a box by ID
+    pub fn get_box_mut(&mut self, id: usize) -> Option<&mut PineBox> {
+        self.boxes.get_mut(&id)
+    }
+
+    /// Delete a box by ID
+    pub fn delete_box(&mut self, id: usize) {
+        self.boxes.remove(&id);
+    }
+}
+
 /// The interpreter executes a program with a given bar
 pub struct Interpreter {
     /// Local variables in the current scope
@@ -311,6 +543,8 @@ pub struct Interpreter {
     pub historical_provider: Option<Box<dyn HistoricalDataProvider>>,
     /// Exported items from this module (for library mode)
     exports: HashMap<String, Value>,
+    /// Label storage for drawable objects
+    pub output: PineOutput,
 }
 
 impl Interpreter {
@@ -322,6 +556,7 @@ impl Interpreter {
             library_loader: None,
             historical_provider: None,
             exports: HashMap::new(),
+            output: PineOutput::default(),
         }
     }
 
@@ -334,6 +569,7 @@ impl Interpreter {
             library_loader: None,
             historical_provider: None,
             exports: HashMap::new(),
+            output: PineOutput::default(),
         }
     }
 
@@ -346,6 +582,7 @@ impl Interpreter {
             library_loader: Some(loader),
             historical_provider: None,
             exports: HashMap::new(),
+            output: PineOutput::default(),
         }
     }
 
@@ -361,6 +598,7 @@ impl Interpreter {
             library_loader: Some(loader),
             historical_provider: None,
             exports: HashMap::new(),
+            output: PineOutput::default(),
         }
     }
 
@@ -380,11 +618,16 @@ impl Interpreter {
     }
 
     /// Execute a program with a single bar
-    pub fn execute(&mut self, program: &Program) -> Result<(), RuntimeError> {
+    pub fn execute(&mut self, program: &Program) -> Result<PineOutput, RuntimeError> {
+        // Clear output from previous iteration
+        self.output.clear();
+
         for stmt in &program.statements {
             self.execute_stmt(stmt)?;
         }
-        Ok(())
+
+        // Return a clone of the output
+        Ok(self.output.clone())
     }
 
     /// Get a variable value

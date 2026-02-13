@@ -194,9 +194,9 @@ mod tests {
         script.set_library_loader(Box::new(library_loader));
 
         // Execute with the last bar
-        script.execute(&bars[bars.len() - 1])?;
+        let _pine_output = script.execute(&bars[bars.len() - 1])?;
 
-        // Clone the output before returning
+        // Clone the log output before returning
         let result = output.borrow().clone();
         Ok(result)
     }

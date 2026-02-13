@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Color, Interpreter, Label, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -10,52 +10,51 @@ use std::rc::Rc;
 struct LabelNew {
     x: Value,
     y: Value,
-    #[arg(default = Value::String(String::new()))]
-    text: Value,
-    #[arg(default = Value::String("bar_index".to_string()))]
-    xloc: Value,
-    #[arg(default = Value::String("price".to_string()))]
-    yloc: Value,
-    #[arg(default = Value::Na)]
-    color: Value,
-    #[arg(default = Value::String("style_label_down".to_string()))]
-    style: Value,
-    #[arg(default = Value::Na)]
-    textcolor: Value,
-    #[arg(default = Value::String("normal".to_string()))]
-    size: Value,
-    #[arg(default = Value::String("center".to_string()))]
-    textalign: Value,
-    #[arg(default = Value::Na)]
-    tooltip: Value,
-    #[arg(default = Value::String("default".to_string()))]
-    text_font_family: Value,
+    #[arg(default = "")]
+    text: String,
+    #[arg(default = "bar_index")]
+    xloc: String,
+    #[arg(default = "price")]
+    yloc: String,
+    #[arg(default = None)]
+    color: Option<Color>,
+    #[arg(default = "style_label_down")]
+    style: String,
+    #[arg(default = None)]
+    textcolor: Option<Color>,
+    #[arg(default = "normal")]
+    size: String,
+    #[arg(default = "center")]
+    textalign: String,
+    #[arg(default = None)]
+    tooltip: Option<String>,
+    #[arg(default = "default")]
+    text_font_family: String,
 }
 
 impl LabelNew {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        // Create a label object with all the properties
-        let mut fields = HashMap::new();
-        fields.insert("x".to_string(), self.x.clone());
-        fields.insert("y".to_string(), self.y.clone());
-        fields.insert("text".to_string(), self.text.clone());
-        fields.insert("xloc".to_string(), self.xloc.clone());
-        fields.insert("yloc".to_string(), self.yloc.clone());
-        fields.insert("color".to_string(), self.color.clone());
-        fields.insert("style".to_string(), self.style.clone());
-        fields.insert("textcolor".to_string(), self.textcolor.clone());
-        fields.insert("size".to_string(), self.size.clone());
-        fields.insert("textalign".to_string(), self.textalign.clone());
-        fields.insert("tooltip".to_string(), self.tooltip.clone());
-        fields.insert(
-            "text_font_family".to_string(),
-            self.text_font_family.clone(),
-        );
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        // Create a label struct
+        let label = Label {
+            x: self.x.clone(),
+            y: self.y.clone(),
+            text: self.text.clone(),
+            xloc: self.xloc.clone(),
+            yloc: self.yloc.clone(),
+            color: self.color.clone(),
+            style: self.style.clone(),
+            textcolor: self.textcolor.clone(),
+            size: self.size.clone(),
+            textalign: self.textalign.clone(),
+            tooltip: self.tooltip.clone(),
+            text_font_family: self.text_font_family.clone(),
+        };
 
-        Ok(Value::Object {
-            type_name: "label".to_string(),
-            fields: Rc::new(RefCell::new(fields)),
-        })
+        // Add to interpreter and get ID
+        let id = ctx.output.add_label(label);
+
+        // Return the ID as a number
+        Ok(Value::Number(id as f64))
     }
 }
 
@@ -63,18 +62,19 @@ impl LabelNew {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_x")]
 struct LabelSetX {
-    id: Value,
+    id: f64,
     x: Value,
 }
 
 impl LabelSetX {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields.borrow_mut().insert("x".to_string(), self.x.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.x = self.x.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -82,18 +82,19 @@ impl LabelSetX {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_y")]
 struct LabelSetY {
-    id: Value,
+    id: f64,
     y: Value,
 }
 
 impl LabelSetY {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields.borrow_mut().insert("y".to_string(), self.y.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.y = self.y.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -101,233 +102,223 @@ impl LabelSetY {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_xy")]
 struct LabelSetXy {
-    id: Value,
+    id: f64,
     x: Value,
     y: Value,
 }
 
 impl LabelSetXy {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            let mut fields_mut = fields.borrow_mut();
-            fields_mut.insert("x".to_string(), self.x.clone());
-            fields_mut.insert("y".to_string(), self.y.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.x = self.x.clone();
+        label.y = self.y.clone();
+        Ok(Value::Na)
     }
 }
 
-/// label.set_xloc() - Sets the x location mode of a label
+/// label.set_xloc() - Sets the x location mode and coordinate
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_xloc")]
 struct LabelSetXloc {
-    id: Value,
+    id: f64,
     x: Value,
-    xloc: Value,
+    xloc: String,
 }
 
 impl LabelSetXloc {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            let mut fields_mut = fields.borrow_mut();
-            fields_mut.insert("x".to_string(), self.x.clone());
-            fields_mut.insert("xloc".to_string(), self.xloc.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.x = self.x.clone();
+        label.xloc = self.xloc.clone();
+        Ok(Value::Na)
     }
 }
 
-/// label.set_yloc() - Sets the y location mode of a label
+/// label.set_yloc() - Sets the y location mode
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_yloc")]
 struct LabelSetYloc {
-    id: Value,
-    yloc: Value,
+    id: f64,
+    yloc: String,
 }
 
 impl LabelSetYloc {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("yloc".to_string(), self.yloc.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.yloc = self.yloc.clone();
+        Ok(Value::Na)
     }
 }
 
-/// label.set_color() - Sets the color of a label
+/// label.set_color() - Sets the label color
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_color")]
 struct LabelSetColor {
-    id: Value,
-    color: Value,
+    id: f64,
+    color: Color,
 }
 
 impl LabelSetColor {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("color".to_string(), self.color.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.color = Some(self.color.clone());
+        Ok(Value::Na)
     }
 }
 
-/// label.set_style() - Sets the style of a label
+/// label.set_style() - Sets the label style
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_style")]
 struct LabelSetStyle {
-    id: Value,
-    style: Value,
+    id: f64,
+    style: String,
 }
 
 impl LabelSetStyle {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("style".to_string(), self.style.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.style = self.style.clone();
+        Ok(Value::Na)
     }
 }
 
-/// label.set_text() - Sets the text of a label
+/// label.set_text() - Sets the label text
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_text")]
 struct LabelSetText {
-    id: Value,
-    text: Value,
+    id: f64,
+    text: String,
 }
 
 impl LabelSetText {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("text".to_string(), self.text.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.text = self.text.clone();
+        Ok(Value::Na)
     }
 }
 
-/// label.set_textcolor() - Sets the text color of a label
+/// label.set_textcolor() - Sets the label text color
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_textcolor")]
 struct LabelSetTextcolor {
-    id: Value,
-    textcolor: Value,
+    id: f64,
+    textcolor: Color,
 }
 
 impl LabelSetTextcolor {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("textcolor".to_string(), self.textcolor.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.textcolor = Some(self.textcolor.clone());
+        Ok(Value::Na)
     }
 }
 
-/// label.set_size() - Sets the size of a label
+/// label.set_size() - Sets the label size
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_size")]
 struct LabelSetSize {
-    id: Value,
-    size: Value,
+    id: f64,
+    size: String,
 }
 
 impl LabelSetSize {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("size".to_string(), self.size.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.size = self.size.clone();
+        Ok(Value::Na)
     }
 }
 
-/// label.set_textalign() - Sets the text alignment of a label
+/// label.set_textalign() - Sets the label text alignment
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_textalign")]
 struct LabelSetTextalign {
-    id: Value,
-    textalign: Value,
+    id: f64,
+    textalign: String,
 }
 
 impl LabelSetTextalign {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("textalign".to_string(), self.textalign.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.textalign = self.textalign.clone();
+        Ok(Value::Na)
     }
 }
 
-/// label.set_tooltip() - Sets the tooltip of a label
+/// label.set_tooltip() - Sets the label tooltip
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_tooltip")]
 struct LabelSetTooltip {
-    id: Value,
-    tooltip: Value,
+    id: f64,
+    tooltip: String,
 }
 
 impl LabelSetTooltip {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields
-                .borrow_mut()
-                .insert("tooltip".to_string(), self.tooltip.clone());
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.tooltip = Some(self.tooltip.clone());
+        Ok(Value::Na)
     }
 }
 
-/// label.set_text_font_family() - Sets the font family of a label
+/// label.set_text_font_family() - Sets the label text font family
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_text_font_family")]
 struct LabelSetTextFontFamily {
-    id: Value,
-    text_font_family: Value,
+    id: f64,
+    text_font_family: String,
 }
 
 impl LabelSetTextFontFamily {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            fields.borrow_mut().insert(
-                "text_font_family".to_string(),
-                self.text_font_family.clone(),
-            );
-            Ok(Value::Na)
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        label.text_font_family = self.text_font_family.clone();
+        Ok(Value::Na)
     }
 }
 
@@ -335,16 +326,17 @@ impl LabelSetTextFontFamily {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.get_x")]
 struct LabelGetX {
-    id: Value,
+    id: f64,
 }
 
 impl LabelGetX {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            Ok(fields.borrow().get("x").cloned().unwrap_or(Value::Na))
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        Ok(label.x.clone())
     }
 }
 
@@ -352,16 +344,17 @@ impl LabelGetX {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.get_y")]
 struct LabelGetY {
-    id: Value,
+    id: f64,
 }
 
 impl LabelGetY {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            Ok(fields.borrow().get("y").cloned().unwrap_or(Value::Na))
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        Ok(label.y.clone())
     }
 }
 
@@ -369,16 +362,17 @@ impl LabelGetY {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.get_text")]
 struct LabelGetText {
-    id: Value,
+    id: f64,
 }
 
 impl LabelGetText {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { fields, .. } = &self.id {
-            Ok(fields.borrow().get("text").cloned().unwrap_or(Value::Na))
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        Ok(Value::String(label.text.clone()))
     }
 }
 
@@ -386,12 +380,13 @@ impl LabelGetText {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.delete")]
 struct LabelDelete {
-    _id: Value,
+    id: f64,
 }
 
 impl LabelDelete {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        // For now, just return na - actual deletion would be handled by state management
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        ctx.output.delete_label(id);
         Ok(Value::Na)
     }
 }
@@ -400,58 +395,112 @@ impl LabelDelete {
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.copy")]
 struct LabelCopy {
-    id: Value,
+    id: f64,
 }
 
 impl LabelCopy {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        if let Value::Object { type_name, fields } = &self.id {
-            // Create a deep copy of the fields
-            let copied_fields = fields.borrow().clone();
-            Ok(Value::Object {
-                type_name: type_name.clone(),
-                fields: Rc::new(RefCell::new(copied_fields)),
-            })
-        } else {
-            Err(RuntimeError::TypeError("Expected label object".to_string()))
-        }
+    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+        let id = self.id as usize;
+        let label = ctx
+            .output
+            .get_label_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
+        let copied_label = label.clone();
+        let new_id = ctx.output.add_label(copied_label);
+        Ok(Value::Number(new_id as f64))
     }
 }
 
-/// Register the label namespace with all label style constants and functions
+/// Register the label namespace with all functions
 pub fn register() -> Value {
     let mut members = HashMap::new();
 
-    // All label style constants as string values
-    let styles = [
-        "style_arrowdown",
-        "style_arrowup",
-        "style_circle",
-        "style_cross",
-        "style_diamond",
-        "style_flag",
-        "style_label_center",
-        "style_label_down",
-        "style_label_left",
-        "style_label_lower_left",
-        "style_label_lower_right",
-        "style_label_right",
-        "style_label_up",
-        "style_label_upper_left",
-        "style_label_upper_right",
-        "style_none",
-        "style_square",
-        "style_text_outline",
-        "style_triangledown",
-        "style_triangleup",
-        "style_xcross",
-    ];
+    // Add style constants
+    members.insert(
+        "style_arrowdown".to_string(),
+        Value::String("style_arrowdown".to_string()),
+    );
+    members.insert(
+        "style_arrowup".to_string(),
+        Value::String("style_arrowup".to_string()),
+    );
+    members.insert(
+        "style_circle".to_string(),
+        Value::String("style_circle".to_string()),
+    );
+    members.insert(
+        "style_cross".to_string(),
+        Value::String("style_cross".to_string()),
+    );
+    members.insert(
+        "style_diamond".to_string(),
+        Value::String("style_diamond".to_string()),
+    );
+    members.insert(
+        "style_flag".to_string(),
+        Value::String("style_flag".to_string()),
+    );
+    members.insert(
+        "style_label_center".to_string(),
+        Value::String("style_label_center".to_string()),
+    );
+    members.insert(
+        "style_label_down".to_string(),
+        Value::String("style_label_down".to_string()),
+    );
+    members.insert(
+        "style_label_left".to_string(),
+        Value::String("style_label_left".to_string()),
+    );
+    members.insert(
+        "style_label_lower_left".to_string(),
+        Value::String("style_label_lower_left".to_string()),
+    );
+    members.insert(
+        "style_label_lower_right".to_string(),
+        Value::String("style_label_lower_right".to_string()),
+    );
+    members.insert(
+        "style_label_right".to_string(),
+        Value::String("style_label_right".to_string()),
+    );
+    members.insert(
+        "style_label_up".to_string(),
+        Value::String("style_label_up".to_string()),
+    );
+    members.insert(
+        "style_label_upper_left".to_string(),
+        Value::String("style_label_upper_left".to_string()),
+    );
+    members.insert(
+        "style_label_upper_right".to_string(),
+        Value::String("style_label_upper_right".to_string()),
+    );
+    members.insert(
+        "style_none".to_string(),
+        Value::String("style_none".to_string()),
+    );
+    members.insert(
+        "style_square".to_string(),
+        Value::String("style_square".to_string()),
+    );
+    members.insert(
+        "style_text_outline".to_string(),
+        Value::String("style_text_outline".to_string()),
+    );
+    members.insert(
+        "style_triangledown".to_string(),
+        Value::String("style_triangledown".to_string()),
+    );
+    members.insert(
+        "style_triangleup".to_string(),
+        Value::String("style_triangleup".to_string()),
+    );
+    members.insert(
+        "style_xcross".to_string(),
+        Value::String("style_xcross".to_string()),
+    );
 
-    for style in styles {
-        members.insert(style.to_string(), Value::String(style.to_string()));
-    }
-
-    // Register functions
     members.insert(
         "new".to_string(),
         Value::BuiltinFunction(Rc::new(LabelNew::builtin_fn)),
