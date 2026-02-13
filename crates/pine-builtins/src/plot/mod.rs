@@ -1,8 +1,8 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_interpreter::{
-    Color, Interpreter, Plot as PlotOutput, Plotarrow as PlotarrowOutput, Plotbar as PlotbarOutput,
-    Plotcandle as PlotcandleOutput, Plotchar as PlotcharOutput, Plotshape as PlotshapeOutput,
-    RuntimeError, Value,
+    Color, Interpreter, Plot as PlotStruct, PlotOutput, Plotarrow as PlotarrowStruct,
+    Plotbar as PlotbarStruct, Plotcandle as PlotcandleStruct, Plotchar as PlotcharStruct,
+    Plotshape as PlotshapeStruct, RuntimeError, Value,
 };
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -46,8 +46,8 @@ struct Plot {
 
 impl Plot {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let plot = PlotOutput {
-            series: self.series.clone(),
+        let plot = PlotStruct {
+            series: self.series.as_number()?,
             title: self.title.clone(),
             color: self.color.clone(),
             linewidth: self.linewidth,
@@ -65,7 +65,7 @@ impl Plot {
             linestyle: self.linestyle.clone(),
         };
 
-        ctx.output.plots.push(plot);
+        ctx.output.add_plot(plot);
         Ok(Value::Na)
     }
 }
@@ -103,8 +103,8 @@ struct Plotarrow {
 
 impl Plotarrow {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let plotarrow = PlotarrowOutput {
-            series: self.series.clone(),
+        let plotarrow = PlotarrowStruct {
+            series: self.series.as_number()?,
             title: self.title.clone(),
             colorup: self.colorup.clone(),
             colordown: self.colordown.clone(),
@@ -119,7 +119,7 @@ impl Plotarrow {
             force_overlay: self.force_overlay,
         };
 
-        ctx.output.plotarrows.push(plotarrow);
+        ctx.output.add_plotarrow(plotarrow);
         Ok(Value::Na)
     }
 }
@@ -152,11 +152,11 @@ struct Plotbar {
 
 impl Plotbar {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let plotbar = PlotbarOutput {
-            open: self.open.clone(),
-            high: self.high.clone(),
-            low: self.low.clone(),
-            close: self.close.clone(),
+        let plotbar = PlotbarStruct {
+            open: self.open.as_number()?,
+            high: self.high.as_number()?,
+            low: self.low.as_number()?,
+            close: self.close.as_number()?,
             title: self.title.clone(),
             color: self.color.clone(),
             editable: self.editable,
@@ -167,7 +167,7 @@ impl Plotbar {
             force_overlay: self.force_overlay,
         };
 
-        ctx.output.plotbars.push(plotbar);
+        ctx.output.add_plotbar(plotbar);
         Ok(Value::Na)
     }
 }
@@ -204,11 +204,11 @@ struct Plotcandle {
 
 impl Plotcandle {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let plotcandle = PlotcandleOutput {
-            open: self.open.clone(),
-            high: self.high.clone(),
-            low: self.low.clone(),
-            close: self.close.clone(),
+        let plotcandle = PlotcandleStruct {
+            open: self.open.as_number()?,
+            high: self.high.as_number()?,
+            low: self.low.as_number()?,
+            close: self.close.as_number()?,
             title: self.title.clone(),
             color: self.color.clone(),
             wickcolor: self.wickcolor.clone(),
@@ -221,7 +221,7 @@ impl Plotcandle {
             force_overlay: self.force_overlay,
         };
 
-        ctx.output.plotcandles.push(plotcandle);
+        ctx.output.add_plotcandle(plotcandle);
         Ok(Value::Na)
     }
 }
@@ -263,8 +263,8 @@ struct Plotchar {
 
 impl Plotchar {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let plotchar = PlotcharOutput {
-            series: self.series.clone(),
+        let plotchar = PlotcharStruct {
+            series: self.series.as_number()?,
             title: self.title.clone(),
             char: self.char.clone(),
             location: self.location.clone(),
@@ -281,7 +281,7 @@ impl Plotchar {
             force_overlay: self.force_overlay,
         };
 
-        ctx.output.plotchars.push(plotchar);
+        ctx.output.add_plotchar(plotchar);
         Ok(Value::Na)
     }
 }
@@ -323,8 +323,8 @@ struct Plotshape {
 
 impl Plotshape {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let plotshape = PlotshapeOutput {
-            series: self.series.clone(),
+        let plotshape = PlotshapeStruct {
+            series: self.series.as_number()?,
             title: self.title.clone(),
             style: self.style.clone(),
             location: self.location.clone(),
@@ -341,7 +341,7 @@ impl Plotshape {
             force_overlay: self.force_overlay,
         };
 
-        ctx.output.plotshapes.push(plotshape);
+        ctx.output.add_plotshape(plotshape);
         Ok(Value::Na)
     }
 }

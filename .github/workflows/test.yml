@@ -58,3 +58,14 @@ jobs:
 
       - name: Run integration tests
         run: cargo test -p pine-integration-tests -- --nocapture
+
+  examples:
+    name: Build Examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: extractions/setup-just@v2
+      - name: Compile all examples
+        run: just compile-examples

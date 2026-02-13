@@ -1,82 +1,39 @@
-use pine_interpreter::Value;
+use pine_interpreter::{LogLevel, LogOutput, PineOutput, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-/// Log level
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LogLevel {
-    Info,
-    Warning,
-    Error,
-}
+/// Create the log namespace with functions that write to interpreter output
+pub fn register<O: PineOutput + LogOutput>() -> Value<O> {
+    use std::collections::HashMap;
 
-impl std::fmt::Display for LogLevel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LogLevel::Info => write!(f, "INFO"),
-            LogLevel::Warning => write!(f, "WARNING"),
-            LogLevel::Error => write!(f, "ERROR"),
-        }
+    let mut log_ns = HashMap::new();
+
+    // Define all log levels and their corresponding function names
+    let levels = [
+        ("info", LogLevel::Info),
+        ("warning", LogLevel::Warning),
+        ("error", LogLevel::Error),
+    ];
+
+    for (name, level) in levels {
+        let log_fn: pine_interpreter::BuiltinFn<O> = Rc::new(move |ctx, func_call| {
+            let msg = match func_call.args.first() {
+                Some(pine_interpreter::EvaluatedArg::Positional(v)) => value_to_string(v),
+                _ => String::new(),
+            };
+            ctx.output.add_log(level, msg);
+            Ok(Value::Na)
+        });
+        log_ns.insert(name.to_string(), Value::BuiltinFunction(log_fn));
+    }
+
+    Value::Object {
+        type_name: "log".to_string(),
+        fields: Rc::new(RefCell::new(log_ns)),
     }
 }
 
-/// Trait for logging output
-pub trait Logger {
-    fn log(&self, level: LogLevel, msg: &str);
-}
-
-/// Default logger implementation that outputs to screen
-pub struct DefaultLogger;
-
-impl Logger for DefaultLogger {
-    fn log(&self, level: LogLevel, msg: &str) {
-        eprintln!("[{}] {}", level, msg);
-    }
-}
-
-pub struct Log<T: Logger> {
-    pub logger: T,
-}
-
-impl<T: Logger + 'static> Log<T> {
-    pub fn new(logger: T) -> Self {
-        Log { logger }
-    }
-
-    pub fn register(self) -> Value {
-        use std::collections::HashMap;
-
-        let logger = Rc::new(self.logger);
-        let mut log_ns = HashMap::new();
-
-        // Define all log levels and their corresponding function names
-        let levels = [
-            ("info", LogLevel::Info),
-            ("warning", LogLevel::Warning),
-            ("error", LogLevel::Error),
-        ];
-
-        for (name, level) in levels {
-            let logger_clone = logger.clone();
-            let log_fn: pine_interpreter::BuiltinFn = Rc::new(move |_ctx, func_call| {
-                let msg = match func_call.args.first() {
-                    Some(pine_interpreter::EvaluatedArg::Positional(v)) => value_to_string(v),
-                    _ => String::new(),
-                };
-                logger_clone.log(level, &msg);
-                Ok(Value::Na)
-            });
-            log_ns.insert(name.to_string(), Value::BuiltinFunction(log_fn));
-        }
-
-        Value::Object {
-            type_name: "log".to_string(),
-            fields: Rc::new(RefCell::new(log_ns)),
-        }
-    }
-}
-
-fn value_to_string(value: &Value) -> String {
+fn value_to_string<O: PineOutput>(value: &Value<O>) -> String {
     match value {
         Value::String(s) => s.clone(),
         Value::Number(n) => n.to_string(),

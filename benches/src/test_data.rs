@@ -85,7 +85,7 @@ impl HistoricalDataProvider for BenchHistoricalData {
 /// This helper compiles a script, sets up the historical data provider,
 /// and executes it with the last bar in the dataset.
 pub fn execute_with_history(source: &str, bars: &[Bar]) -> Result<(), pine::Error> {
-    let mut script = Script::compile::<pine_builtins::DefaultLogger>(source, None)?;
+    let mut script = Script::compile(source)?;
     let historical_data = BenchHistoricalData::new(bars.to_vec());
     historical_data.set_current_bar(bars.len() - 1);
     script.set_historical_provider(Box::new(historical_data));

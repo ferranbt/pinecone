@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Color, Interpreter, PineBox, RuntimeError, Value};
+use pine_interpreter::{BoxOutput, Color, Interpreter, PineBox, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -44,10 +44,10 @@ impl BoxNew {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         // Create a box struct
         let box_obj = PineBox {
-            left: self.left.clone(),
-            top: self.top.clone(),
-            right: self.right.clone(),
-            bottom: self.bottom.clone(),
+            left: self.left.as_number()?,
+            top: self.top.as_number()?,
+            right: self.right.as_number()?,
+            bottom: self.bottom.as_number()?,
             border_color: self.border_color.clone(),
             border_width: self.border_width,
             border_style: self.border_style.clone(),
@@ -86,7 +86,7 @@ impl BoxSetLeft {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        box_obj.left = self.left.clone();
+        box_obj.left = self.left.as_number()?;
         Ok(Value::Na)
     }
 }
@@ -106,7 +106,7 @@ impl BoxSetTop {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        box_obj.top = self.top.clone();
+        box_obj.top = self.top.as_number()?;
         Ok(Value::Na)
     }
 }
@@ -126,7 +126,7 @@ impl BoxSetRight {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        box_obj.right = self.right.clone();
+        box_obj.right = self.right.as_number()?;
         Ok(Value::Na)
     }
 }
@@ -146,7 +146,7 @@ impl BoxSetBottom {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        box_obj.bottom = self.bottom.clone();
+        box_obj.bottom = self.bottom.as_number()?;
         Ok(Value::Na)
     }
 }
@@ -167,8 +167,8 @@ impl BoxSetLefttop {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        box_obj.left = self.left.clone();
-        box_obj.top = self.top.clone();
+        box_obj.left = self.left.as_number()?;
+        box_obj.top = self.top.as_number()?;
         Ok(Value::Na)
     }
 }
@@ -189,8 +189,8 @@ impl BoxSetRightbottom {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        box_obj.right = self.right.clone();
-        box_obj.bottom = self.bottom.clone();
+        box_obj.right = self.right.as_number()?;
+        box_obj.bottom = self.bottom.as_number()?;
         Ok(Value::Na)
     }
 }
@@ -452,8 +452,8 @@ impl BoxSetXloc {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        box_obj.left = self.left.clone();
-        box_obj.right = self.right.clone();
+        box_obj.left = self.left.as_number()?;
+        box_obj.right = self.right.as_number()?;
         box_obj.xloc = self.xloc.clone();
         Ok(Value::Na)
     }
@@ -473,7 +473,7 @@ impl BoxGetLeft {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        Ok(box_obj.left.clone())
+        Ok(Value::Number(box_obj.left))
     }
 }
 
@@ -491,7 +491,7 @@ impl BoxGetTop {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        Ok(box_obj.top.clone())
+        Ok(Value::Number(box_obj.top))
     }
 }
 
@@ -509,7 +509,7 @@ impl BoxGetRight {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        Ok(box_obj.right.clone())
+        Ok(Value::Number(box_obj.right))
     }
 }
 
@@ -527,7 +527,7 @@ impl BoxGetBottom {
             .output
             .get_box_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
-        Ok(box_obj.bottom.clone())
+        Ok(Value::Number(box_obj.bottom))
     }
 }
 

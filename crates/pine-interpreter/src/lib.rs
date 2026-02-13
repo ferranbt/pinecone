@@ -1,3 +1,13 @@
+mod output;
+
+// Re-export output types and traits
+pub use output::{
+    BoxOutput, Color, DefaultPineOutput, Label, LabelOutput, LogEntry, LogLevel, LogOutput,
+    PineBox, PineOutput, Plot, PlotOutput, Plotarrow, Plotbar, Plotcandle, Plotchar, Plotshape,
+};
+
+// Note: impl_output_traits_delegate! macro is automatically exported at crate root by #[macro_export]
+
 use pine_ast::{Argument, BinOp, Expr, Literal, MethodParam, Program, Stmt, TypeField, UnOp};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -11,9 +21,9 @@ pub trait LibraryLoader {
 }
 
 /// Trait for providing historical data for series
-pub trait HistoricalDataProvider {
+pub trait HistoricalDataProvider<O: PineOutput = DefaultPineOutput> {
     /// Get historical value for a series at a given offset (0 = current, 1 = previous bar, etc.)
-    fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value>;
+    fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value<O>>;
 }
 
 #[derive(Error, Debug)]
@@ -56,8 +66,8 @@ enum LoopControl {
 
 /// Variable storage with const qualifier tracking
 #[derive(Clone)]
-struct Variable {
-    value: Value,
+struct Variable<O: PineOutput = DefaultPineOutput> {
+    value: Value<O>,
     is_const: bool,
 }
 
@@ -73,198 +83,29 @@ pub struct Bar {
 
 /// Represents a time series with an identifier and current value
 #[derive(Clone, Debug)]
-pub struct Series {
+pub struct Series<O: PineOutput = DefaultPineOutput> {
     pub id: String,
-    pub current: Box<Value>,
-}
-
-/// Represents a color with RGBA components
-#[derive(Clone, Debug, PartialEq)]
-pub struct Color {
-    pub r: u8, // Red component (0-255)
-    pub g: u8, // Green component (0-255)
-    pub b: u8, // Blue component (0-255)
-    pub t: u8, // Transparency (0-100)
-}
-
-impl Color {
-    pub fn new(r: u8, g: u8, b: u8, t: u8) -> Self {
-        Color { r, g, b, t }
-    }
-}
-
-/// Represents a label drawable object
-#[derive(Clone, Debug)]
-pub struct Label {
-    pub x: Value,
-    pub y: Value,
-    pub text: String,
-    pub xloc: String,
-    pub yloc: String,
-    pub color: Option<Color>,
-    pub style: String,
-    pub textcolor: Option<Color>,
-    pub size: String,
-    pub textalign: String,
-    pub tooltip: Option<String>,
-    pub text_font_family: String,
-}
-
-/// Represents a box drawable object
-#[derive(Clone, Debug)]
-pub struct PineBox {
-    pub left: Value,
-    pub top: Value,
-    pub right: Value,
-    pub bottom: Value,
-    pub border_color: Option<Color>,
-    pub border_width: f64,
-    pub border_style: String,
-    pub extend: String,
-    pub xloc: String,
-    pub bgcolor: Option<Color>,
-    pub text: String,
-    pub text_size: f64,
-    pub text_color: Option<Color>,
-    pub text_halign: String,
-    pub text_valign: String,
-    pub text_wrap: String,
-    pub text_font_family: String,
-}
-
-/// Represents a plot output
-#[derive(Clone, Debug)]
-pub struct Plot {
-    pub series: Value,
-    pub title: String,
-    pub color: Option<Color>,
-    pub linewidth: f64,
-    pub style: String,
-    pub trackprice: bool,
-    pub histbase: f64,
-    pub offset: f64,
-    pub join: bool,
-    pub editable: bool,
-    pub show_last: Option<f64>,
-    pub display: String,
-    pub format: Option<String>,
-    pub precision: Option<f64>,
-    pub force_overlay: bool,
-    pub linestyle: String,
-}
-
-/// Represents a plotarrow output
-#[derive(Clone, Debug)]
-pub struct Plotarrow {
-    pub series: Value,
-    pub title: String,
-    pub colorup: Option<Color>,
-    pub colordown: Option<Color>,
-    pub offset: f64,
-    pub minheight: f64,
-    pub maxheight: f64,
-    pub editable: bool,
-    pub show_last: Option<f64>,
-    pub display: String,
-    pub format: Option<String>,
-    pub precision: Option<f64>,
-    pub force_overlay: bool,
-}
-
-/// Represents a plotbar output
-#[derive(Clone, Debug)]
-pub struct Plotbar {
-    pub open: Value,
-    pub high: Value,
-    pub low: Value,
-    pub close: Value,
-    pub title: String,
-    pub color: Option<Color>,
-    pub editable: bool,
-    pub show_last: Option<f64>,
-    pub display: String,
-    pub format: Option<String>,
-    pub precision: Option<f64>,
-    pub force_overlay: bool,
-}
-
-/// Represents a plotcandle output
-#[derive(Clone, Debug)]
-pub struct Plotcandle {
-    pub open: Value,
-    pub high: Value,
-    pub low: Value,
-    pub close: Value,
-    pub title: String,
-    pub color: Option<Color>,
-    pub wickcolor: Option<Color>,
-    pub editable: bool,
-    pub show_last: Option<f64>,
-    pub bordercolor: Option<Color>,
-    pub display: String,
-    pub format: Option<String>,
-    pub precision: Option<f64>,
-    pub force_overlay: bool,
-}
-
-/// Represents a plotchar output
-#[derive(Clone, Debug)]
-pub struct Plotchar {
-    pub series: Value,
-    pub title: String,
-    pub char: String,
-    pub location: String,
-    pub color: Option<Color>,
-    pub offset: f64,
-    pub text: String,
-    pub textcolor: Option<Color>,
-    pub editable: bool,
-    pub size: String,
-    pub show_last: Option<f64>,
-    pub display: String,
-    pub format: Option<String>,
-    pub precision: Option<f64>,
-    pub force_overlay: bool,
-}
-
-/// Represents a plotshape output
-#[derive(Clone, Debug)]
-pub struct Plotshape {
-    pub series: Value,
-    pub title: String,
-    pub style: String,
-    pub location: String,
-    pub color: Option<Color>,
-    pub offset: f64,
-    pub text: String,
-    pub textcolor: Option<Color>,
-    pub editable: bool,
-    pub size: String,
-    pub show_last: Option<f64>,
-    pub display: String,
-    pub format: Option<String>,
-    pub precision: Option<f64>,
-    pub force_overlay: bool,
+    pub current: Box<Value<O>>,
 }
 
 /// Value types in the interpreter
 #[derive(Clone)]
-pub enum Value {
+pub enum Value<O: PineOutput = DefaultPineOutput> {
     Number(f64),
     String(String),
     Bool(bool),
-    Na,                             // PineScript's N/A value
-    Array(Rc<RefCell<Vec<Value>>>), // Mutable shared array reference
-    Series(Series),                 // Time series - ID and current value only
+    Na,                                // PineScript's N/A value
+    Array(Rc<RefCell<Vec<Value<O>>>>), // Mutable shared array reference
+    Series(Series<O>),                 // Time series - ID and current value only
     Object {
         type_name: String, // The type name of this object (e.g., "InfoLabel")
-        fields: Rc<RefCell<HashMap<String, Value>>>, // Dictionary/Object with string keys
+        fields: Rc<RefCell<HashMap<String, Value<O>>>>, // Dictionary/Object with string keys
     },
     Function {
         params: Vec<pine_ast::FunctionParam>,
         body: Vec<Stmt>,
     },
-    BuiltinFunction(BuiltinFn), // Builtin function pointer
+    BuiltinFunction(BuiltinFn<O>), // Builtin function pointer
     Type {
         name: String,
         fields: Vec<TypeField>,
@@ -274,21 +115,21 @@ pub enum Value {
         field_name: String, // The specific field/member name (e.g., "buy")
         title: String,      // The title of this enum member
     }, // Enum member value
-    Color(Color),               // Color value
+    Color(Color),                  // Color value
     Matrix {
         element_type: String, // Type of elements: "int", "float", "string", "bool"
-        data: Rc<RefCell<Vec<Vec<Value>>>>, // 2D matrix - mutable shared reference to rows of columns
+        data: Rc<RefCell<Vec<Vec<Value<O>>>>>, // 2D matrix - mutable shared reference to rows of columns
     },
 }
 
-impl Value {
-    pub fn new_color(r: u8, g: u8, b: u8, t: u8) -> Value {
+impl<O: PineOutput> Value<O> {
+    pub fn new_color(r: u8, g: u8, b: u8, t: u8) -> Value<O> {
         Value::Color(Color::new(r, g, b, t))
     }
 }
 
 // Manual Debug impl since function pointers don't implement Debug
-impl std::fmt::Debug for Value {
+impl<O: PineOutput> std::fmt::Debug for Value<O> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::Number(n) => write!(f, "Number({:?})", n),
@@ -318,7 +159,7 @@ impl std::fmt::Debug for Value {
     }
 }
 
-impl PartialEq for Value {
+impl<O: PineOutput> PartialEq for Value<O> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Value::Number(a), Value::Number(b)) => (a - b).abs() < f64::EPSILON,
@@ -359,24 +200,24 @@ impl PartialEq for Value {
 
 /// Evaluated function argument
 #[derive(Debug, Clone)]
-pub enum EvaluatedArg {
-    Positional(Value),
-    Named { name: String, value: Value },
+pub enum EvaluatedArg<O: PineOutput = DefaultPineOutput> {
+    Positional(Value<O>),
+    Named { name: String, value: Value<O> },
 }
 
 /// Container for function call arguments including type parameters
 #[derive(Debug, Clone)]
-pub struct FunctionCallArgs {
+pub struct FunctionCallArgs<O: PineOutput = DefaultPineOutput> {
     pub type_args: Vec<String>,
-    pub args: Vec<EvaluatedArg>,
+    pub args: Vec<EvaluatedArg<O>>,
 }
 
-impl FunctionCallArgs {
-    pub fn new(type_args: Vec<String>, args: Vec<EvaluatedArg>) -> Self {
+impl<O: PineOutput> FunctionCallArgs<O> {
+    pub fn new(type_args: Vec<String>, args: Vec<EvaluatedArg<O>>) -> Self {
         Self { type_args, args }
     }
 
-    pub fn without_types(args: Vec<EvaluatedArg>) -> Self {
+    pub fn without_types(args: Vec<EvaluatedArg<O>>) -> Self {
         Self {
             type_args: vec![],
             args,
@@ -385,13 +226,15 @@ impl FunctionCallArgs {
 }
 
 /// Type signature for builtin functions (can be function pointers or closures)
-pub type BuiltinFn = Rc<dyn Fn(&mut Interpreter, FunctionCallArgs) -> Result<Value, RuntimeError>>;
+pub type BuiltinFn<O> =
+    Rc<dyn Fn(&mut Interpreter<O>, FunctionCallArgs<O>) -> Result<Value<O>, RuntimeError>>;
 
-impl Value {
+impl<O: PineOutput> Value<O> {
     pub fn as_number(&self) -> Result<f64, RuntimeError> {
         match self {
             Value::Number(n) => Ok(*n),
             Value::Bool(b) => Ok(if *b { 1.0 } else { 0.0 }),
+            Value::Series(series) => series.current.as_number(),
             _ => Err(RuntimeError::TypeError(format!(
                 "Expected number, got {:?}",
                 self
@@ -423,7 +266,7 @@ impl Value {
         }
     }
 
-    pub fn as_array(&self) -> Result<&Rc<RefCell<Vec<Value>>>, RuntimeError> {
+    pub fn as_array(&self) -> Result<&Rc<RefCell<Vec<Value<O>>>>, RuntimeError> {
         match self {
             Value::Array(arr) => Ok(arr),
             _ => Err(RuntimeError::TypeError(format!(
@@ -452,102 +295,25 @@ struct MethodDef {
     body: Vec<Stmt>,
 }
 
-#[derive(Default, Clone)]
-pub struct PineOutput {
-    /// Label storage for drawable objects
-    labels: HashMap<usize, Label>,
-    /// Next label ID
-    next_label_id: usize,
-    /// Box storage for drawable objects
-    boxes: HashMap<usize, PineBox>,
-    /// Next box ID
-    next_box_id: usize,
-    /// Plot outputs
-    pub plots: Vec<Plot>,
-    /// Plotarrow outputs
-    pub plotarrows: Vec<Plotarrow>,
-    /// Plotbar outputs
-    pub plotbars: Vec<Plotbar>,
-    /// Plotcandle outputs
-    pub plotcandles: Vec<Plotcandle>,
-    /// Plotchar outputs
-    pub plotchars: Vec<Plotchar>,
-    /// Plotshape outputs
-    pub plotshapes: Vec<Plotshape>,
-}
-
-impl PineOutput {
-    /// Clear all output data for a new iteration
-    pub fn clear(&mut self) {
-        self.labels.clear();
-        self.boxes.clear();
-        self.plots.clear();
-        self.plotarrows.clear();
-        self.plotbars.clear();
-        self.plotcandles.clear();
-        self.plotchars.clear();
-        self.plotshapes.clear();
-        // Reset ID counters
-        self.next_label_id = 0;
-        self.next_box_id = 0;
-    }
-
-    /// Add a label and return its ID
-    pub fn add_label(&mut self, label: Label) -> usize {
-        let id = self.next_label_id;
-        self.next_label_id += 1;
-        self.labels.insert(id, label);
-        id
-    }
-
-    /// Get a mutable reference to a label by ID
-    pub fn get_label_mut(&mut self, id: usize) -> Option<&mut Label> {
-        self.labels.get_mut(&id)
-    }
-
-    /// Delete a label by ID
-    pub fn delete_label(&mut self, id: usize) {
-        self.labels.remove(&id);
-    }
-
-    /// Add a box and return its ID
-    pub fn add_box(&mut self, box_obj: PineBox) -> usize {
-        let id = self.next_box_id;
-        self.next_box_id += 1;
-        self.boxes.insert(id, box_obj);
-        id
-    }
-
-    /// Get a mutable reference to a box by ID
-    pub fn get_box_mut(&mut self, id: usize) -> Option<&mut PineBox> {
-        self.boxes.get_mut(&id)
-    }
-
-    /// Delete a box by ID
-    pub fn delete_box(&mut self, id: usize) {
-        self.boxes.remove(&id);
-    }
-}
-
 /// The interpreter executes a program with a given bar
-pub struct Interpreter {
+pub struct Interpreter<O: PineOutput = DefaultPineOutput> {
     /// Local variables in the current scope
-    variables: HashMap<String, Variable>,
+    variables: HashMap<String, Variable<O>>,
     /// Builtin function registry
-    builtins: HashMap<String, BuiltinFn>,
+    builtins: HashMap<String, BuiltinFn<O>>,
     /// Method registry (method_name -> Vec<MethodDef>) - can have multiple methods with same name for different types
     methods: HashMap<String, Vec<MethodDef>>,
     /// Library loader for importing external libraries
     library_loader: Option<Box<dyn LibraryLoader>>,
     /// Historical data provider for series lookback
-    pub historical_provider: Option<Box<dyn HistoricalDataProvider>>,
+    pub historical_provider: Option<Box<dyn HistoricalDataProvider<O>>>,
     /// Exported items from this module (for library mode)
-    exports: HashMap<String, Value>,
-    /// Label storage for drawable objects
-    pub output: PineOutput,
+    exports: HashMap<String, Value<O>>,
+    /// Output storage for plots, labels, logs, etc.
+    pub output: O,
 }
 
-impl Interpreter {
+impl<O: PineOutput> Interpreter<O> {
     pub fn new() -> Self {
         Self {
             variables: HashMap::new(),
@@ -556,12 +322,12 @@ impl Interpreter {
             library_loader: None,
             historical_provider: None,
             exports: HashMap::new(),
-            output: PineOutput::default(),
+            output: O::default(),
         }
     }
 
     /// Create interpreter with custom builtins
-    pub fn with_builtins(builtins: HashMap<String, BuiltinFn>) -> Self {
+    pub fn with_builtins(builtins: HashMap<String, BuiltinFn<O>>) -> Self {
         Self {
             variables: HashMap::new(),
             methods: HashMap::new(),
@@ -569,7 +335,7 @@ impl Interpreter {
             library_loader: None,
             historical_provider: None,
             exports: HashMap::new(),
-            output: PineOutput::default(),
+            output: O::default(),
         }
     }
 
@@ -582,13 +348,13 @@ impl Interpreter {
             library_loader: Some(loader),
             historical_provider: None,
             exports: HashMap::new(),
-            output: PineOutput::default(),
+            output: O::default(),
         }
     }
 
     /// Create interpreter with custom builtins and library loader
     pub fn with_builtins_and_loader(
-        builtins: HashMap<String, BuiltinFn>,
+        builtins: HashMap<String, BuiltinFn<O>>,
         loader: Box<dyn LibraryLoader>,
     ) -> Self {
         Self {
@@ -598,12 +364,12 @@ impl Interpreter {
             library_loader: Some(loader),
             historical_provider: None,
             exports: HashMap::new(),
-            output: PineOutput::default(),
+            output: O::default(),
         }
     }
 
     /// Set the historical data provider
-    pub fn set_historical_provider(&mut self, provider: Box<dyn HistoricalDataProvider>) {
+    pub fn set_historical_provider(&mut self, provider: Box<dyn HistoricalDataProvider<O>>) {
         self.historical_provider = Some(provider);
     }
 
@@ -613,12 +379,12 @@ impl Interpreter {
     }
 
     /// Get the exported items from this interpreter (for library mode)
-    pub fn exports(&self) -> &HashMap<String, Value> {
+    pub fn exports(&self) -> &HashMap<String, Value<O>> {
         &self.exports
     }
 
     /// Execute a program with a single bar
-    pub fn execute(&mut self, program: &Program) -> Result<PineOutput, RuntimeError> {
+    pub fn execute(&mut self, program: &Program) -> Result<O, RuntimeError> {
         // Clear output from previous iteration
         self.output.clear();
 
@@ -631,12 +397,12 @@ impl Interpreter {
     }
 
     /// Get a variable value
-    pub fn get_variable(&self, name: &str) -> Option<&Value> {
+    pub fn get_variable(&self, name: &str) -> Option<&Value<O>> {
         self.variables.get(name).map(|var| &var.value)
     }
 
     /// Set a variable value (useful for loading objects and test setup)
-    pub fn set_variable(&mut self, name: &str, value: Value) {
+    pub fn set_variable(&mut self, name: &str, value: Value<O>) {
         self.variables.insert(
             name.to_string(),
             Variable {
@@ -647,7 +413,7 @@ impl Interpreter {
     }
 
     /// Set a const variable (cannot be reassigned)
-    pub fn set_const_variable(&mut self, name: &str, value: Value) {
+    pub fn set_const_variable(&mut self, name: &str, value: Value<O>) {
         self.variables.insert(
             name.to_string(),
             Variable {
@@ -702,7 +468,10 @@ impl Interpreter {
     }
 
     /// Helper to evaluate arguments and validate positional-before-named rule
-    fn evaluate_arguments(&mut self, args: &[Argument]) -> Result<Vec<EvaluatedArg>, RuntimeError> {
+    fn evaluate_arguments(
+        &mut self,
+        args: &[Argument],
+    ) -> Result<Vec<EvaluatedArg<O>>, RuntimeError> {
         let mut evaluated_args = Vec::new();
         let mut seen_named = false;
 
@@ -731,7 +500,7 @@ impl Interpreter {
         Ok(evaluated_args)
     }
 
-    fn execute_stmt(&mut self, stmt: &Stmt) -> Result<Option<Value>, RuntimeError> {
+    fn execute_stmt(&mut self, stmt: &Stmt) -> Result<Option<Value<O>>, RuntimeError> {
         match stmt {
             Stmt::VarDecl {
                 name,
@@ -1068,7 +837,7 @@ impl Interpreter {
                             }
 
                             // Create a namespace object containing the exported items
-                            let namespace = Value::Object {
+                            let namespace: Value<O> = Value::Object {
                                 type_name: alias.clone(),
                                 fields: Rc::new(RefCell::new(library_exports.clone())),
                             };
@@ -1217,7 +986,7 @@ impl Interpreter {
         Ok(LoopControl::None)
     }
 
-    fn eval_expr(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
+    fn eval_expr(&mut self, expr: &Expr) -> Result<Value<O>, RuntimeError> {
         match expr {
             Expr::Literal(lit) => Ok(self.eval_literal(lit)),
 
@@ -1361,7 +1130,8 @@ impl Interpreter {
                             method_defs.iter().find(|m| m.type_name == obj_type)
                         {
                             // Evaluate the other arguments
-                            let mut evaluated_args = vec![EvaluatedArg::Positional(obj_value)];
+                            let mut evaluated_args: Vec<EvaluatedArg<O>> =
+                                vec![EvaluatedArg::Positional(obj_value)];
                             evaluated_args.extend(self.evaluate_arguments(args)?);
 
                             // Call the method (treating it like a function)
@@ -1440,7 +1210,7 @@ impl Interpreter {
         }
     }
 
-    fn eval_literal(&self, lit: &Literal) -> Value {
+    fn eval_literal(&self, lit: &Literal) -> Value<O> {
         match lit {
             Literal::Number(n) => Value::Number(*n),
             Literal::String(s) => Value::String(s.clone()),
@@ -1452,10 +1222,10 @@ impl Interpreter {
 
     fn eval_binary_op(
         &self,
-        left: &Value,
+        left: &Value<O>,
         op: &BinOp,
-        right: &Value,
-    ) -> Result<Value, RuntimeError> {
+        right: &Value<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         match op {
             BinOp::Add => {
                 // String concatenation or numeric addition
@@ -1508,14 +1278,14 @@ impl Interpreter {
         }
     }
 
-    fn eval_unary_op(&self, op: &UnOp, val: &Value) -> Result<Value, RuntimeError> {
+    fn eval_unary_op(&self, op: &UnOp, val: &Value<O>) -> Result<Value<O>, RuntimeError> {
         match op {
             UnOp::Neg => Ok(Value::Number(-val.as_number()?)),
             UnOp::Not => Ok(Value::Bool(!val.as_bool()?)),
         }
     }
 
-    fn values_equal(&self, left: &Value, right: &Value) -> Result<bool, RuntimeError> {
+    fn values_equal(&self, left: &Value<O>, right: &Value<O>) -> Result<bool, RuntimeError> {
         match (left, right) {
             (Value::Number(l), Value::Number(r)) => Ok((l - r).abs() < f64::EPSILON),
             (Value::String(l), Value::String(r)) => Ok(l == r),
@@ -1560,8 +1330,8 @@ impl Interpreter {
         params: &[pine_ast::FunctionParam],
         body: &[Stmt],
         arg_exprs: &[Argument],
-        args: Vec<EvaluatedArg>,
-    ) -> Result<Value, RuntimeError> {
+        args: Vec<EvaluatedArg<O>>,
+    ) -> Result<Value<O>, RuntimeError> {
         // Extract positional arguments (user functions don't support named args yet)
         let mut positional_values = Vec::new();
         let mut positional_exprs = Vec::new();
@@ -1621,7 +1391,7 @@ impl Interpreter {
         }
 
         // Execute function body
-        let mut result = Value::Na;
+        let mut result: Value<O> = Value::Na;
         for stmt in body {
             if let Some(return_value) = self.execute_stmt(stmt)? {
                 result = return_value;
@@ -1638,7 +1408,7 @@ impl Interpreter {
     }
 
     /// Get the type name for an object value
-    fn get_object_type_name(&self, value: &Value) -> Result<String, RuntimeError> {
+    fn get_object_type_name(&self, value: &Value<O>) -> Result<String, RuntimeError> {
         match value {
             Value::Object { type_name, .. } => Ok(type_name.clone()),
             _ => Err(RuntimeError::TypeError(
@@ -1652,8 +1422,8 @@ impl Interpreter {
         &mut self,
         params: &[MethodParam],
         body: &[Stmt],
-        args: Vec<EvaluatedArg>,
-    ) -> Result<Value, RuntimeError> {
+        args: Vec<EvaluatedArg<O>>,
+    ) -> Result<Value<O>, RuntimeError> {
         // Save current variable state (for method scope)
         let saved_vars = self.variables.clone();
 
@@ -1694,7 +1464,7 @@ impl Interpreter {
         }
 
         // Execute method body
-        let mut result = Value::Na;
+        let mut result: Value<O> = Value::Na;
         for stmt in body {
             if let Some(return_value) = self.execute_stmt(stmt)? {
                 result = return_value;
@@ -1709,19 +1479,11 @@ impl Interpreter {
 
         Ok(result)
     }
-}
 
-impl Default for Interpreter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Interpreter {
     /// Create a constructor function for a user-defined type
-    fn create_constructor(type_name: String, fields: Vec<TypeField>) -> BuiltinFn {
+    fn create_constructor(type_name: String, fields: Vec<TypeField>) -> BuiltinFn<O> {
         Rc::new(
-            move |interp: &mut Interpreter, call_args: FunctionCallArgs| {
+            move |interp: &mut Interpreter<O>, call_args: FunctionCallArgs<O>| {
                 let mut instance_fields = HashMap::new();
 
                 // Match arguments to fields
@@ -1779,35 +1541,43 @@ impl Interpreter {
     }
 
     /// Creates a copy function for types that takes an object and returns a shallow copy
-    fn create_copy_function() -> BuiltinFn {
-        Rc::new(|_interp: &mut Interpreter, call_args: FunctionCallArgs| {
-            // Expect exactly one positional argument (the object to copy)
-            if call_args.args.len() != 1 {
-                return Err(RuntimeError::TypeError(
-                    "copy() expects exactly one argument".to_string(),
-                ));
-            }
-
-            match &call_args.args[0] {
-                EvaluatedArg::Positional(value) => {
-                    if let Value::Object { type_name, fields } = value {
-                        // Create a shallow copy of the object's fields
-                        let obj = fields.borrow();
-                        let copied_fields = obj.clone();
-                        Ok(Value::Object {
-                            type_name: type_name.clone(),
-                            fields: Rc::new(RefCell::new(copied_fields)),
-                        })
-                    } else {
-                        Err(RuntimeError::TypeError(
-                            "copy() expects an object argument".to_string(),
-                        ))
-                    }
+    fn create_copy_function() -> BuiltinFn<O> {
+        Rc::new(
+            |_interp: &mut Interpreter<O>, call_args: FunctionCallArgs<O>| {
+                // Expect exactly one positional argument (the object to copy)
+                if call_args.args.len() != 1 {
+                    return Err(RuntimeError::TypeError(
+                        "copy() expects exactly one argument".to_string(),
+                    ));
                 }
-                EvaluatedArg::Named { .. } => Err(RuntimeError::TypeError(
-                    "copy() does not accept named arguments".to_string(),
-                )),
-            }
-        })
+
+                match &call_args.args[0] {
+                    EvaluatedArg::Positional(value) => {
+                        if let Value::Object { type_name, fields } = value {
+                            // Create a shallow copy of the object's fields
+                            let obj = fields.borrow();
+                            let copied_fields = obj.clone();
+                            Ok(Value::Object {
+                                type_name: type_name.clone(),
+                                fields: Rc::new(RefCell::new(copied_fields)),
+                            })
+                        } else {
+                            Err(RuntimeError::TypeError(
+                                "copy() expects an object argument".to_string(),
+                            ))
+                        }
+                    }
+                    EvaluatedArg::Named { .. } => Err(RuntimeError::TypeError(
+                        "copy() does not accept named arguments".to_string(),
+                    )),
+                }
+            },
+        )
+    }
+}
+
+impl<O: PineOutput> Default for Interpreter<O> {
+    fn default() -> Self {
+        Self::new()
     }
 }

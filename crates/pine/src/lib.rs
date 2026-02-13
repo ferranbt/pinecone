@@ -6,9 +6,10 @@ pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
 use pine_ast::Program;
-use pine_interpreter::{Bar, Interpreter, RuntimeError};
+use pine_interpreter::{Bar, DefaultPineOutput, Interpreter, PineOutput, RuntimeError, Value};
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
+use std::collections::HashMap;
 
 /// Error type for Pine operations
 #[derive(Debug)]
@@ -52,17 +53,14 @@ impl From<ParserError> for Error {
 ///
 /// This represents a parsed PineScript program that maintains state
 /// across multiple bar executions, just like in TradingView.
-pub struct Script {
+pub struct Script<O: PineOutput = DefaultPineOutput> {
     program: Program,
-    interpreter: Interpreter,
+    interpreter: Interpreter<O>,
 }
 
-impl Script {
-    /// Compile PineScript source code into a Script with an optional custom logger
-    pub fn compile<L: pine_builtins::Logger + 'static>(
-        source: &str,
-        logger: Option<L>,
-    ) -> Result<Self, Error> {
+impl Script<DefaultPineOutput> {
+    /// Compile PineScript source code into a Script with default output
+    pub fn compile(source: &str) -> Result<Self, Error> {
         let mut lexer = Lexer::new(source);
         let tokens = lexer.tokenize()?;
 
@@ -72,13 +70,7 @@ impl Script {
 
         // Create interpreter and load builtin namespace objects
         let mut interpreter = Interpreter::new();
-        let mut namespaces = pine_builtins::register_namespace_objects();
-
-        // If a custom logger is provided, create log namespace with it
-        if let Some(custom_logger) = logger {
-            let log_namespace = pine_builtins::Log::new(custom_logger).register();
-            namespaces.insert("log".to_string(), log_namespace);
-        }
+        let namespaces = pine_builtins::register_namespace_objects();
 
         // Register namespace objects as const variables
         for (name, value) in namespaces {
@@ -90,12 +82,35 @@ impl Script {
             interpreter,
         })
     }
+}
 
-    /// Execute the script with a single bar
-    ///
-    /// This maintains interpreter state across multiple calls,
-    /// allowing variables to persist between bars.
-    pub fn execute(&mut self, bar: &Bar) -> Result<interpreter::PineOutput, Error> {
+impl<O: PineOutput> Script<O> {
+    pub fn compile_with_variables(
+        source: &str,
+        custom_variables: HashMap<String, Value<O>>,
+    ) -> Result<Self, Error> {
+        let mut lexer = Lexer::new(source);
+        let tokens = lexer.tokenize()?;
+
+        let mut parser = Parser::new(tokens);
+        let statements = parser.parse()?;
+        let program = Program::new(statements);
+
+        // Create interpreter with custom output type
+        let mut interpreter: Interpreter<O> = Interpreter::new();
+
+        // Register custom variables
+        for (name, value) in custom_variables {
+            interpreter.set_const_variable(&name, value);
+        }
+
+        Ok(Self {
+            program,
+            interpreter,
+        })
+    }
+
+    pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
         // Load bar data as Series variables so TA functions can access historical data
         use interpreter::{Series, Value};
 
@@ -154,7 +169,7 @@ impl Script {
     /// This is required for TA functions that need to look back at historical values.
     pub fn set_historical_provider(
         &mut self,
-        provider: Box<dyn pine_interpreter::HistoricalDataProvider>,
+        provider: Box<dyn pine_interpreter::HistoricalDataProvider<O>>,
     ) {
         self.interpreter.set_historical_provider(provider);
     }
@@ -167,7 +182,7 @@ impl Script {
     ///
     /// This allows direct access to the interpreter for advanced use cases like
     /// updating the historical provider state between bar executions.
-    pub fn interpreter_mut(&mut self) -> &mut Interpreter {
+    pub fn interpreter_mut(&mut self) -> &mut Interpreter<O> {
         &mut self.interpreter
     }
 }

@@ -1,37 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use pine::{builtins::LogLevel, builtins::Logger, Script};
+    use pine::Script;
     use pine_ast::Program;
-    use pine_interpreter::{Bar, HistoricalDataProvider, LibraryLoader, Value};
+    use pine_interpreter::{
+        Bar, DefaultPineOutput, HistoricalDataProvider, LibraryLoader, LogOutput, Value,
+    };
     use pine_lexer::Lexer;
     use pine_parser::Parser;
-    use std::cell::{Cell, RefCell};
+    use std::cell::Cell;
     use std::fs;
     use std::path::Path;
-    use std::rc::Rc;
-
-    /// A logger that captures output for testing
-    struct CapturingLogger {
-        output: Rc<RefCell<Vec<String>>>,
-    }
-
-    impl CapturingLogger {
-        fn new() -> (Self, Rc<RefCell<Vec<String>>>) {
-            let output = Rc::new(RefCell::new(Vec::new()));
-            (
-                Self {
-                    output: output.clone(),
-                },
-                output,
-            )
-        }
-    }
-
-    impl Logger for CapturingLogger {
-        fn log(&self, _level: LogLevel, msg: &str) {
-            self.output.borrow_mut().push(msg.to_string());
-        }
-    }
 
     /// Generate synthetic OHLCV bar data for testing
     fn generate_test_bars(count: usize) -> Vec<Bar> {
@@ -70,8 +48,12 @@ mod tests {
         }
     }
 
-    impl HistoricalDataProvider for TestHistoricalData {
-        fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value> {
+    impl HistoricalDataProvider<DefaultPineOutput> for TestHistoricalData {
+        fn get_historical(
+            &self,
+            series_id: &str,
+            offset: usize,
+        ) -> Option<Value<DefaultPineOutput>> {
             let current_index = self.current_index.get();
 
             if current_index < offset {
@@ -179,10 +161,9 @@ mod tests {
     }
 
     fn execute_pine_script_with_logger(source: &str) -> eyre::Result<Vec<String>> {
-        let (logger, output) = CapturingLogger::new();
         let library_loader = TestLibraryLoader::new();
 
-        let mut script = Script::compile(source, Some(logger))?;
+        let mut script = Script::compile(source)?;
 
         // Generate historical bar data for TA functions
         let bars = generate_test_bars(200);
@@ -194,10 +175,14 @@ mod tests {
         script.set_library_loader(Box::new(library_loader));
 
         // Execute with the last bar
-        let _pine_output = script.execute(&bars[bars.len() - 1])?;
+        let pine_output = script.execute(&bars[bars.len() - 1])?;
 
-        // Clone the log output before returning
-        let result = output.borrow().clone();
+        // Extract log messages from output
+        let result = pine_output
+            .get_logs()
+            .iter()
+            .map(|log| log.message.clone())
+            .collect();
         Ok(result)
     }
 
