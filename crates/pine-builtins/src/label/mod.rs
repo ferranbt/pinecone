@@ -36,8 +36,8 @@ impl LabelNew {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         // Create a label struct
         let label = Label {
-            x: self.x.clone(),
-            y: self.y.clone(),
+            x: self.x.as_number()?,
+            y: self.y.as_number()?,
             text: self.text.clone(),
             xloc: self.xloc.clone(),
             yloc: self.yloc.clone(),
@@ -73,7 +73,7 @@ impl LabelSetX {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        label.x = self.x.clone();
+        label.x = self.x.as_number()?;
         Ok(Value::Na)
     }
 }
@@ -93,7 +93,7 @@ impl LabelSetY {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        label.y = self.y.clone();
+        label.y = self.y.as_number()?;
         Ok(Value::Na)
     }
 }
@@ -114,8 +114,8 @@ impl LabelSetXy {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        label.x = self.x.clone();
-        label.y = self.y.clone();
+        label.x = self.x.as_number()?;
+        label.y = self.y.as_number()?;
         Ok(Value::Na)
     }
 }
@@ -136,7 +136,7 @@ impl LabelSetXloc {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        label.x = self.x.clone();
+        label.x = self.x.as_number()?;
         label.xloc = self.xloc.clone();
         Ok(Value::Na)
     }
@@ -336,7 +336,7 @@ impl LabelGetX {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        Ok(label.x.clone())
+        Ok(Value::Number(label.x))
     }
 }
 
@@ -354,7 +354,7 @@ impl LabelGetY {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        Ok(label.y.clone())
+        Ok(Value::Number(label.y))
     }
 }
 

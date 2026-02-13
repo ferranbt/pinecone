@@ -96,8 +96,8 @@ impl Color {
 /// Represents a label drawable object
 #[derive(Clone, Debug)]
 pub struct Label {
-    pub x: Value,
-    pub y: Value,
+    pub x: f64,
+    pub y: f64,
     pub text: String,
     pub xloc: String,
     pub yloc: String,
@@ -113,10 +113,10 @@ pub struct Label {
 /// Represents a box drawable object
 #[derive(Clone, Debug)]
 pub struct PineBox {
-    pub left: Value,
-    pub top: Value,
-    pub right: Value,
-    pub bottom: Value,
+    pub left: f64,
+    pub top: f64,
+    pub right: f64,
+    pub bottom: f64,
     pub border_color: Option<Color>,
     pub border_width: f64,
     pub border_style: String,
@@ -135,7 +135,7 @@ pub struct PineBox {
 /// Represents a plot output
 #[derive(Clone, Debug)]
 pub struct Plot {
-    pub series: Value,
+    pub series: f64,
     pub title: String,
     pub color: Option<Color>,
     pub linewidth: f64,
@@ -156,7 +156,7 @@ pub struct Plot {
 /// Represents a plotarrow output
 #[derive(Clone, Debug)]
 pub struct Plotarrow {
-    pub series: Value,
+    pub series: f64,
     pub title: String,
     pub colorup: Option<Color>,
     pub colordown: Option<Color>,
@@ -174,10 +174,10 @@ pub struct Plotarrow {
 /// Represents a plotbar output
 #[derive(Clone, Debug)]
 pub struct Plotbar {
-    pub open: Value,
-    pub high: Value,
-    pub low: Value,
-    pub close: Value,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
     pub title: String,
     pub color: Option<Color>,
     pub editable: bool,
@@ -191,10 +191,10 @@ pub struct Plotbar {
 /// Represents a plotcandle output
 #[derive(Clone, Debug)]
 pub struct Plotcandle {
-    pub open: Value,
-    pub high: Value,
-    pub low: Value,
-    pub close: Value,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
     pub title: String,
     pub color: Option<Color>,
     pub wickcolor: Option<Color>,
@@ -210,7 +210,7 @@ pub struct Plotcandle {
 /// Represents a plotchar output
 #[derive(Clone, Debug)]
 pub struct Plotchar {
-    pub series: Value,
+    pub series: f64,
     pub title: String,
     pub char: String,
     pub location: String,
@@ -230,7 +230,7 @@ pub struct Plotchar {
 /// Represents a plotshape output
 #[derive(Clone, Debug)]
 pub struct Plotshape {
-    pub series: Value,
+    pub series: f64,
     pub title: String,
     pub style: String,
     pub location: String,
@@ -392,6 +392,7 @@ impl Value {
         match self {
             Value::Number(n) => Ok(*n),
             Value::Bool(b) => Ok(if *b { 1.0 } else { 0.0 }),
+            Value::Series(series) => series.current.as_number(),
             _ => Err(RuntimeError::TypeError(format!(
                 "Expected number, got {:?}",
                 self

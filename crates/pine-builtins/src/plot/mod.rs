@@ -47,7 +47,7 @@ struct Plot {
 impl Plot {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let plot = PlotOutput {
-            series: self.series.clone(),
+            series: self.series.as_number()?,
             title: self.title.clone(),
             color: self.color.clone(),
             linewidth: self.linewidth,
@@ -104,7 +104,7 @@ struct Plotarrow {
 impl Plotarrow {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let plotarrow = PlotarrowOutput {
-            series: self.series.clone(),
+            series: self.series.as_number()?,
             title: self.title.clone(),
             colorup: self.colorup.clone(),
             colordown: self.colordown.clone(),
@@ -153,10 +153,10 @@ struct Plotbar {
 impl Plotbar {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let plotbar = PlotbarOutput {
-            open: self.open.clone(),
-            high: self.high.clone(),
-            low: self.low.clone(),
-            close: self.close.clone(),
+            open: self.open.as_number()?,
+            high: self.high.as_number()?,
+            low: self.low.as_number()?,
+            close: self.close.as_number()?,
             title: self.title.clone(),
             color: self.color.clone(),
             editable: self.editable,
@@ -205,10 +205,10 @@ struct Plotcandle {
 impl Plotcandle {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let plotcandle = PlotcandleOutput {
-            open: self.open.clone(),
-            high: self.high.clone(),
-            low: self.low.clone(),
-            close: self.close.clone(),
+            open: self.open.as_number()?,
+            high: self.high.as_number()?,
+            low: self.low.as_number()?,
+            close: self.close.as_number()?,
             title: self.title.clone(),
             color: self.color.clone(),
             wickcolor: self.wickcolor.clone(),
@@ -264,7 +264,7 @@ struct Plotchar {
 impl Plotchar {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let plotchar = PlotcharOutput {
-            series: self.series.clone(),
+            series: self.series.as_number()?,
             title: self.title.clone(),
             char: self.char.clone(),
             location: self.location.clone(),
@@ -324,7 +324,7 @@ struct Plotshape {
 impl Plotshape {
     fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
         let plotshape = PlotshapeOutput {
-            series: self.series.clone(),
+            series: self.series.as_number()?,
             title: self.title.clone(),
             style: self.style.clone(),
             location: self.location.clone(),
