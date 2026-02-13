@@ -4,6 +4,13 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+fn color_to_value(color: &Option<Color>) -> Value {
+    match color {
+        Some(c) => Value::Color(c.clone()),
+        None => Value::Na,
+    }
+}
+
 /// label.new() - Creates a new label object
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.new")]
@@ -41,15 +48,9 @@ impl LabelNew {
         fields.insert("text".to_string(), Value::String(self.text.clone()));
         fields.insert("xloc".to_string(), Value::String(self.xloc.clone()));
         fields.insert("yloc".to_string(), Value::String(self.yloc.clone()));
-        fields.insert("color".to_string(), match &self.color {
-            Some(c) => Value::Color(c.clone()),
-            None => Value::Na,
-        });
+        fields.insert("color".to_string(), color_to_value(&self.color));
         fields.insert("style".to_string(), Value::String(self.style.clone()));
-        fields.insert("textcolor".to_string(), match &self.textcolor {
-            Some(c) => Value::Color(c.clone()),
-            None => Value::Na,
-        });
+        fields.insert("textcolor".to_string(), color_to_value(&self.textcolor));
         fields.insert("size".to_string(), Value::String(self.size.clone()));
         fields.insert("textalign".to_string(), Value::String(self.textalign.clone()));
         fields.insert("tooltip".to_string(), self.tooltip.clone().map(Value::String).unwrap_or(Value::Na));

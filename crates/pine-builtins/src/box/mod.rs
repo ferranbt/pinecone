@@ -4,6 +4,13 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+fn color_to_value(color: &Option<Color>) -> Value {
+    match color {
+        Some(c) => Value::Color(c.clone()),
+        None => Value::Na,
+    }
+}
+
 /// box.new() - Creates a new box object
 #[derive(BuiltinFunction)]
 #[builtin(name = "box.new")]
@@ -47,24 +54,15 @@ impl BoxNew {
         fields.insert("top".to_string(), self.top.clone());
         fields.insert("right".to_string(), self.right.clone());
         fields.insert("bottom".to_string(), self.bottom.clone());
-        fields.insert("border_color".to_string(), match &self.border_color {
-            Some(c) => Value::Color(c.clone()),
-            None => Value::Na,
-        });
+        fields.insert("border_color".to_string(), color_to_value(&self.border_color));
         fields.insert("border_width".to_string(), Value::Number(self.border_width));
         fields.insert("border_style".to_string(), Value::String(self.border_style.clone()));
         fields.insert("extend".to_string(), Value::String(self.extend.clone()));
         fields.insert("xloc".to_string(), Value::String(self.xloc.clone()));
-        fields.insert("bgcolor".to_string(), match &self.bgcolor {
-            Some(c) => Value::Color(c.clone()),
-            None => Value::Na,
-        });
+        fields.insert("bgcolor".to_string(), color_to_value(&self.bgcolor));
         fields.insert("text".to_string(), Value::String(self.text.clone()));
         fields.insert("text_size".to_string(), Value::Number(self.text_size));
-        fields.insert("text_color".to_string(), match &self.text_color {
-            Some(c) => Value::Color(c.clone()),
-            None => Value::Na,
-        });
+        fields.insert("text_color".to_string(), color_to_value(&self.text_color));
         fields.insert("text_halign".to_string(), Value::String(self.text_halign.clone()));
         fields.insert("text_valign".to_string(), Value::String(self.text_valign.clone()));
         fields.insert("text_wrap".to_string(), Value::String(self.text_wrap.clone()));
