@@ -7,9 +7,7 @@ use std::rc::Rc;
 pub use pine_interpreter::Bar;
 pub use pine_interpreter::BuiltinFn;
 pub use pine_interpreter::EvaluatedArg;
-
-// Re-export log types for custom logger support
-pub use log::{DefaultLogger, Log, LogLevel, Logger};
+pub use pine_interpreter::LogLevel;
 
 // Namespace modules
 mod array;
@@ -160,6 +158,7 @@ pub fn register_namespace_objects() -> HashMap<String, Value> {
     namespaces.insert("color".to_string(), color::register());
     namespaces.insert("currency".to_string(), currency::register());
     namespaces.insert("label".to_string(), label::register());
+    namespaces.insert("log".to_string(), log::register());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("matrix".to_string(), matrix::register());
     namespaces.insert("str".to_string(), str::register());

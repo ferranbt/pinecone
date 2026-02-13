@@ -58,11 +58,8 @@ pub struct Script {
 }
 
 impl Script {
-    /// Compile PineScript source code into a Script with an optional custom logger
-    pub fn compile<L: pine_builtins::Logger + 'static>(
-        source: &str,
-        logger: Option<L>,
-    ) -> Result<Self, Error> {
+    /// Compile PineScript source code into a Script
+    pub fn compile(source: &str) -> Result<Self, Error> {
         let mut lexer = Lexer::new(source);
         let tokens = lexer.tokenize()?;
 
@@ -72,13 +69,7 @@ impl Script {
 
         // Create interpreter and load builtin namespace objects
         let mut interpreter = Interpreter::new();
-        let mut namespaces = pine_builtins::register_namespace_objects();
-
-        // If a custom logger is provided, create log namespace with it
-        if let Some(custom_logger) = logger {
-            let log_namespace = pine_builtins::Log::new(custom_logger).register();
-            namespaces.insert("log".to_string(), log_namespace);
-        }
+        let namespaces = pine_builtins::register_namespace_objects();
 
         // Register namespace objects as const variables
         for (name, value) in namespaces {

@@ -453,6 +453,21 @@ struct MethodDef {
     body: Vec<Stmt>,
 }
 
+/// Log level
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogLevel {
+    Info,
+    Warning,
+    Error,
+}
+
+/// A log entry with level and message
+#[derive(Debug, Clone)]
+pub struct LogEntry {
+    pub level: LogLevel,
+    pub message: String,
+}
+
 #[derive(Default, Clone)]
 pub struct PineOutput {
     /// Label storage for drawable objects
@@ -475,6 +490,8 @@ pub struct PineOutput {
     pub plotchars: Vec<Plotchar>,
     /// Plotshape outputs
     pub plotshapes: Vec<Plotshape>,
+    /// Log entries
+    pub logs: Vec<LogEntry>,
 }
 
 impl PineOutput {
@@ -488,9 +505,15 @@ impl PineOutput {
         self.plotcandles.clear();
         self.plotchars.clear();
         self.plotshapes.clear();
+        self.logs.clear();
         // Reset ID counters
         self.next_label_id = 0;
         self.next_box_id = 0;
+    }
+
+    /// Add a log entry
+    pub fn add_log(&mut self, level: LogLevel, message: String) {
+        self.logs.push(LogEntry { level, message });
     }
 
     /// Add a label and return its ID
