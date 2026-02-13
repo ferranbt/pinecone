@@ -93,6 +93,23 @@ impl Color {
     }
 }
 
+/// Represents a label drawable object
+#[derive(Clone, Debug)]
+pub struct Label {
+    pub x: Value,
+    pub y: Value,
+    pub text: String,
+    pub xloc: String,
+    pub yloc: String,
+    pub color: Option<Color>,
+    pub style: String,
+    pub textcolor: Option<Color>,
+    pub size: String,
+    pub textalign: String,
+    pub tooltip: Option<String>,
+    pub text_font_family: String,
+}
+
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value {
@@ -120,7 +137,7 @@ pub enum Value {
         field_name: String, // The specific field/member name (e.g., "buy")
         title: String,      // The title of this enum member
     }, // Enum member value
-    Color(Color), // Color value
+    Color(Color),               // Color value
     Matrix {
         element_type: String, // Type of elements: "int", "float", "string", "bool"
         data: Rc<RefCell<Vec<Vec<Value>>>>, // 2D matrix - mutable shared reference to rows of columns
@@ -152,7 +169,11 @@ impl std::fmt::Debug for Value {
                 field_name,
                 ..
             } => write!(f, "Enum({}::{})", enum_name, field_name),
-            Value::Color(color) => write!(f, "Color(rgba({}, {}, {}, {}))", color.r, color.g, color.b, color.t),
+            Value::Color(color) => write!(
+                f,
+                "Color(rgba({}, {}, {}, {}))",
+                color.r, color.g, color.b, color.t
+            ),
             Value::Matrix { element_type, data } => {
                 write!(f, "Matrix<{}>({:?})", element_type, data)
             }
@@ -191,10 +212,7 @@ impl PartialEq for Value {
                 },
             ) => a_enum == b_enum && a_field == b_field,
             // Colors compare by all components
-            (
-                Value::Color(c1),
-                Value::Color(c2),
-            ) => c1 == c2,
+            (Value::Color(c1), Value::Color(c2)) => c1 == c2,
             // Matrices compare by reference (Rc pointer equality)
             (Value::Matrix { data: a, .. }, Value::Matrix { data: b, .. }) => Rc::ptr_eq(a, b),
             _ => false,
@@ -297,6 +315,34 @@ struct MethodDef {
     body: Vec<Stmt>,
 }
 
+#[derive(Default)]
+pub struct PineOutput {
+    /// Label storage for drawable objects
+    labels: HashMap<usize, Label>,
+    /// Next label ID
+    next_label_id: usize,
+}
+
+impl PineOutput {
+    /// Add a label and return its ID
+    pub fn add_label(&mut self, label: Label) -> usize {
+        let id = self.next_label_id;
+        self.next_label_id += 1;
+        self.labels.insert(id, label);
+        id
+    }
+
+    /// Get a mutable reference to a label by ID
+    pub fn get_label_mut(&mut self, id: usize) -> Option<&mut Label> {
+        self.labels.get_mut(&id)
+    }
+
+    /// Delete a label by ID
+    pub fn delete_label(&mut self, id: usize) {
+        self.labels.remove(&id);
+    }
+}
+
 /// The interpreter executes a program with a given bar
 pub struct Interpreter {
     /// Local variables in the current scope
@@ -311,6 +357,8 @@ pub struct Interpreter {
     pub historical_provider: Option<Box<dyn HistoricalDataProvider>>,
     /// Exported items from this module (for library mode)
     exports: HashMap<String, Value>,
+    /// Label storage for drawable objects
+    pub output: PineOutput,
 }
 
 impl Interpreter {
@@ -322,6 +370,7 @@ impl Interpreter {
             library_loader: None,
             historical_provider: None,
             exports: HashMap::new(),
+            output: PineOutput::default(),
         }
     }
 
@@ -334,6 +383,7 @@ impl Interpreter {
             library_loader: None,
             historical_provider: None,
             exports: HashMap::new(),
+            output: PineOutput::default(),
         }
     }
 
@@ -346,6 +396,7 @@ impl Interpreter {
             library_loader: Some(loader),
             historical_provider: None,
             exports: HashMap::new(),
+            output: PineOutput::default(),
         }
     }
 
@@ -361,6 +412,7 @@ impl Interpreter {
             library_loader: Some(loader),
             historical_provider: None,
             exports: HashMap::new(),
+            output: PineOutput::default(),
         }
     }
 
