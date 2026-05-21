@@ -12,9 +12,9 @@ pine-lexer.workspace = true
 pine-ast.workspace = true
 eyre.workspace = true
 clap.workspace = true
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-thiserror = "2.0"
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 walkdir = "2"
