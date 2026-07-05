@@ -69,6 +69,8 @@ enum LoopControl {
 struct Variable<O: PineOutput = DefaultPineOutput> {
     value: Value<O>,
     is_const: bool,
+    /// true when declared with `var`/`varip` — this variable survives function call boundaries
+    is_var_persistent: bool,
 }
 
 /// Represents a single bar/candle of market data
@@ -311,6 +313,21 @@ pub struct Interpreter<O: PineOutput = DefaultPineOutput> {
     exports: HashMap<String, Value<O>>,
     /// Output storage for plots, labels, logs, etc.
     pub output: O,
+    /// Per-variable history for user-computed series (`var` declarations).
+    /// history[len-1] = previous bar, history[len-2] = two bars ago, etc.
+    /// Populated on each `Stmt::Assignment`; supports Pine's `name[n]` lookback.
+    pub user_series_history: HashMap<String, Vec<Value<O>>>,
+    /// Persistent local state for user-defined functions, keyed by function name.
+    /// Pine functions maintain local variable state across calls (all bars), not just
+    /// `var`-declared variables. This mirrors TradingView Pine Script semantics where
+    /// `o[1]` inside a function returns the previous bar's value of the local `o`.
+    function_local_state: HashMap<String, HashMap<String, Variable<O>>>,
+    /// Names of `var`/`varip` declarations whose initializer already ran.
+    /// Pine `var` initializes only the FIRST time execution reaches the
+    /// declaration (once ever, not per bar/iteration). Tracked separately
+    /// from `variables` so a `var` declaration can shadow a pre-existing
+    /// host-injected variable (e.g. `var close = 10` over the builtin series).
+    var_decls_initialized: std::collections::HashSet<String>,
 }
 
 impl<O: PineOutput> Interpreter<O> {
@@ -323,6 +340,9 @@ impl<O: PineOutput> Interpreter<O> {
             historical_provider: None,
             exports: HashMap::new(),
             output: O::default(),
+            user_series_history: HashMap::new(),
+            function_local_state: HashMap::new(),
+            var_decls_initialized: std::collections::HashSet::new(),
         }
     }
 
@@ -336,6 +356,9 @@ impl<O: PineOutput> Interpreter<O> {
             historical_provider: None,
             exports: HashMap::new(),
             output: O::default(),
+            user_series_history: HashMap::new(),
+            function_local_state: HashMap::new(),
+            var_decls_initialized: std::collections::HashSet::new(),
         }
     }
 
@@ -349,6 +372,9 @@ impl<O: PineOutput> Interpreter<O> {
             historical_provider: None,
             exports: HashMap::new(),
             output: O::default(),
+            user_series_history: HashMap::new(),
+            function_local_state: HashMap::new(),
+            var_decls_initialized: std::collections::HashSet::new(),
         }
     }
 
@@ -365,6 +391,9 @@ impl<O: PineOutput> Interpreter<O> {
             historical_provider: None,
             exports: HashMap::new(),
             output: O::default(),
+            user_series_history: HashMap::new(),
+            function_local_state: HashMap::new(),
+            var_decls_initialized: std::collections::HashSet::new(),
         }
     }
 
@@ -408,6 +437,7 @@ impl<O: PineOutput> Interpreter<O> {
             Variable {
                 value,
                 is_const: false,
+                is_var_persistent: false,
             },
         );
     }
@@ -419,6 +449,7 @@ impl<O: PineOutput> Interpreter<O> {
             Variable {
                 value,
                 is_const: true,
+                is_var_persistent: false,
             },
         );
     }
@@ -508,35 +539,95 @@ impl<O: PineOutput> Interpreter<O> {
                 type_annotation: _,
                 initializer,
                 is_varip: _, // TODO: implement varip behavior (requires stateful execution)
+                is_var_persistent,
             } => {
+                // Pine `var`/`varip` semantics: the initializer runs only the
+                // FIRST time execution reaches this declaration (once ever).
+                // Tracked in var_decls_initialized rather than by name
+                // existence, so `var close = 10` correctly shadows a
+                // pre-existing host-injected builtin variable.
+                if *is_var_persistent {
+                    if self.var_decls_initialized.contains(name) {
+                        return Ok(None);
+                    }
+                    self.var_decls_initialized.insert(name.clone());
+                }
+                // Non-`var` declarations (e.g. `ha_bull_4h = expr`) re-execute on every bar.
+                // Push the previous value to history so `name[1]` lookbacks work, exactly as
+                // the Assignment handler does for `:=` reassignments.
+                if !*is_var_persistent {
+                    if let Some(existing) = self.variables.get(name) {
+                        let hist = self.user_series_history.entry(name.clone()).or_default();
+                        hist.push(existing.value.clone());
+                        if hist.len() > 500 {
+                            hist.drain(..hist.len() - 500);
+                        }
+                    }
+                }
                 let value = if let Some(init_expr) = initializer {
                     self.eval_expr(init_expr)?
                 } else {
                     Value::Na
                 };
                 let is_const = matches!(type_qualifier, Some(pine_ast::TypeQualifier::Const));
-                self.variables
-                    .insert(name.clone(), Variable { value, is_const });
+                self.variables.insert(
+                    name.clone(),
+                    Variable {
+                        value,
+                        is_const,
+                        is_var_persistent: *is_var_persistent,
+                    },
+                );
                 Ok(None)
             }
 
             Stmt::Assignment { target, value } => {
-                let val = self.eval_expr(value)?;
-
-                match target {
-                    Expr::Variable(name) => {
-                        // Check if variable is const
-                        if let Some(var) = self.variables.get(name) {
-                            if var.is_const {
-                                return Err(RuntimeError::ConstReassignment(name.clone()));
+                // Pine `var`-persistent variables: push their current (previous-bar) value to
+                // history BEFORE evaluating the RHS so that [1] lookback in the expression
+                // sees the correct previous-bar value.  Non-var variables push after eval
+                // (their old value was already pushed by VarDecl, or there is no VarDecl).
+                if let Expr::Variable(name) = target {
+                    if let Some(var) = self.variables.get(name) {
+                        if var.is_var_persistent {
+                            let hist = self.user_series_history.entry(name.clone()).or_default();
+                            hist.push(var.value.clone());
+                            if hist.len() > 500 {
+                                hist.drain(..hist.len() - 500);
                             }
                         }
+                    }
+                }
+
+                let val = self.eval_expr(value)?;
+                match target {
+                    Expr::Variable(name) => {
+                        // Preserve the existing variable's flags (const, persistent).
+                        let (is_const, is_var_persistent) =
+                            if let Some(var) = self.variables.get(name) {
+                                if var.is_const {
+                                    return Err(RuntimeError::ConstReassignment(name.clone()));
+                                }
+                                if !var.is_var_persistent {
+                                    // Non-var: push current value to history after eval (Pine [n] lookback).
+                                    let hist =
+                                        self.user_series_history.entry(name.clone()).or_default();
+                                    hist.push(var.value.clone());
+                                    if hist.len() > 500 {
+                                        hist.drain(..hist.len() - 500);
+                                    }
+                                }
+                                // var-persistent: already pushed before eval above.
+                                (false, var.is_var_persistent)
+                            } else {
+                                (false, false)
+                            };
 
                         self.variables.insert(
                             name.clone(),
                             Variable {
                                 value: val,
-                                is_const: false,
+                                is_const,
+                                is_var_persistent,
                             },
                         );
                         Ok(None)
@@ -578,12 +669,21 @@ impl<O: PineOutput> Interpreter<O> {
                 if let Value::Array(arr_ref) = val {
                     let arr = arr_ref.borrow();
                     for (i, name) in names.iter().enumerate() {
+                        // Push current value to history before overwriting (supports [n] lookback).
+                        if let Some(var) = self.variables.get(name) {
+                            let hist = self.user_series_history.entry(name.clone()).or_default();
+                            hist.push(var.value.clone());
+                            if hist.len() > 500 {
+                                hist.drain(..hist.len() - 500);
+                            }
+                        }
                         let element_val = arr.get(i).cloned().unwrap_or(Value::Na);
                         self.variables.insert(
                             name.clone(),
                             Variable {
                                 value: element_val,
                                 is_const: false,
+                                is_var_persistent: false,
                             },
                         );
                     }
@@ -659,6 +759,7 @@ impl<O: PineOutput> Interpreter<O> {
                         Variable {
                             value: Value::Number(i as f64),
                             is_const: false,
+                            is_var_persistent: false,
                         },
                     );
 
@@ -691,6 +792,7 @@ impl<O: PineOutput> Interpreter<O> {
                             Variable {
                                 value: Value::Number(index as f64),
                                 is_const: false,
+                                is_var_persistent: false,
                             },
                         );
                     }
@@ -701,6 +803,7 @@ impl<O: PineOutput> Interpreter<O> {
                         Variable {
                             value: item.clone(),
                             is_const: false,
+                            is_var_persistent: false,
                         },
                     );
 
@@ -746,6 +849,7 @@ impl<O: PineOutput> Interpreter<O> {
                     Variable {
                         value: type_value.clone(),
                         is_const: false,
+                        is_var_persistent: false,
                     },
                 );
 
@@ -783,6 +887,7 @@ impl<O: PineOutput> Interpreter<O> {
                     Variable {
                         value: enum_object.clone(),
                         is_const: false,
+                        is_var_persistent: false,
                     },
                 );
 
@@ -846,6 +951,7 @@ impl<O: PineOutput> Interpreter<O> {
                                 Variable {
                                     value: namespace,
                                     is_const: false,
+                                    is_var_persistent: false,
                                 },
                             );
                         }
@@ -921,6 +1027,7 @@ impl<O: PineOutput> Interpreter<O> {
                     Variable {
                         value: func_value.clone(),
                         is_const: false,
+                        is_var_persistent: false,
                     },
                 );
 
@@ -1059,8 +1166,35 @@ impl<O: PineOutput> Interpreter<O> {
             }
 
             Expr::Index { expr, index } => {
-                let val = self.eval_expr(expr)?;
                 let index_val = self.eval_expr(index)?.as_number()? as usize;
+
+                // For user-computed variables with tracked history, look up
+                // user_series_history: history[len-1] = previous bar. A tracked
+                // variable with insufficient depth yields na (warm-up), never a
+                // fall-through to Number indexing. Variables WITHOUT tracked
+                // history (e.g. builtin Series like `close` fed by the host)
+                // fall through to the Series/Array indexing below.
+                if index_val > 0 {
+                    if let Expr::Variable(var_name) = expr.as_ref() {
+                        if let Some(h) = self.user_series_history.get(var_name) {
+                            return Ok(if h.len() >= index_val {
+                                h[h.len() - index_val].clone()
+                            } else {
+                                Value::Na
+                            });
+                        }
+                        // Non-Series plain values with no history (a user var
+                        // assigned only this bar) still index as na rather
+                        // than erroring below.
+                        if let Some(var) = self.variables.get(var_name) {
+                            if !matches!(var.value, Value::Series(_) | Value::Array(_)) {
+                                return Ok(Value::Na);
+                            }
+                        }
+                    }
+                }
+
+                let val = self.eval_expr(expr)?;
 
                 match val {
                     Value::Array(arr_ref) => {
@@ -1154,7 +1288,12 @@ impl<O: PineOutput> Interpreter<O> {
                 // Call the function based on its type
                 match callee_value {
                     Value::Function { params, body } => {
-                        self.call_user_function(&params, &body, args, evaluated_args)
+                        let fn_name = if let Expr::Variable(name) = callee.as_ref() {
+                            Some(name.clone())
+                        } else {
+                            None
+                        };
+                        self.call_user_function(&params, &body, args, evaluated_args, fn_name)
                     }
                     Value::BuiltinFunction(builtin_fn) => {
                         // Pass type_args from the parsed call expression
@@ -1331,6 +1470,7 @@ impl<O: PineOutput> Interpreter<O> {
         body: &[Stmt],
         arg_exprs: &[Argument],
         args: Vec<EvaluatedArg<O>>,
+        fn_name: Option<String>,
     ) -> Result<Value<O>, RuntimeError> {
         // Extract positional arguments (user functions don't support named args yet)
         let mut positional_values = Vec::new();
@@ -1378,6 +1518,21 @@ impl<O: PineOutput> Interpreter<O> {
         // Save current variable state (for function scope)
         let saved_vars = self.variables.clone();
 
+        // Restore this function's local state from the previous bar's execution.
+        // Pine functions are stateful: all local variables (not just `var`) persist
+        // across calls so that series indexing like `o[1]` works inside functions.
+        let param_names: std::collections::HashSet<&str> =
+            params.iter().map(|p| p.name.as_str()).collect();
+        if let Some(ref name) = fn_name {
+            if let Some(local_state) = self.function_local_state.get(name) {
+                for (var_name, var) in local_state {
+                    if !param_names.contains(var_name.as_str()) {
+                        self.variables.insert(var_name.clone(), var.clone());
+                    }
+                }
+            }
+        }
+
         // Bind parameters to arguments with appropriate const flag
         for (param, value) in params.iter().zip(positional_values.iter()) {
             let is_const = matches!(param.type_qualifier, Some(pine_ast::TypeQualifier::Const));
@@ -1386,6 +1541,7 @@ impl<O: PineOutput> Interpreter<O> {
                 Variable {
                     value: value.clone(),
                     is_const,
+                    is_var_persistent: false,
                 },
             );
         }
@@ -1401,8 +1557,28 @@ impl<O: PineOutput> Interpreter<O> {
             }
         }
 
-        // Restore variable state
-        self.variables = saved_vars;
+        // Restore outer scope, but re-insert any var-persistent variables created inside the
+        // function body (Pine function-local `var` declarations survive across calls).
+        // Capture outer-scope keys before moving saved_vars so we can distinguish
+        // function-local `var` vars (not in outer scope) from outer-scope ones.
+        let outer_keys: std::collections::HashSet<String> = saved_vars.keys().cloned().collect();
+        let fn_vars = std::mem::replace(&mut self.variables, saved_vars);
+
+        // Save this function's local (non-parameter) variables for the next bar's call.
+        if let Some(ref name) = fn_name {
+            let local_state: HashMap<String, Variable<O>> = fn_vars
+                .iter()
+                .filter(|(k, _)| !param_names.contains(k.as_str()))
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect();
+            self.function_local_state.insert(name.clone(), local_state);
+        }
+
+        for (name, var) in fn_vars {
+            if var.is_var_persistent && !outer_keys.contains(&name) {
+                self.variables.insert(name, var);
+            }
+        }
 
         Ok(result)
     }
@@ -1459,6 +1635,7 @@ impl<O: PineOutput> Interpreter<O> {
                 Variable {
                     value: param_value,
                     is_const: false,
+                    is_var_persistent: false,
                 },
             );
         }
@@ -1474,8 +1651,14 @@ impl<O: PineOutput> Interpreter<O> {
             }
         }
 
-        // Restore variable state
-        self.variables = saved_vars;
+        // Restore outer scope, preserving any method-local `var` declarations.
+        // Unconditional insert: saved_vars holds the old value; we must overwrite with updated.
+        let method_vars = std::mem::replace(&mut self.variables, saved_vars);
+        for (name, var) in method_vars {
+            if var.is_var_persistent {
+                self.variables.insert(name, var);
+            }
+        }
 
         Ok(result)
     }

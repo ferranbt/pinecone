@@ -269,4 +269,48 @@ mod tests {
             Ok(())
         }
     }
+
+    /// Execute a script once per bar (Script keeps interpreter state across
+    /// execute() calls) and return the LAST log message emitted.
+    fn last_log_after_bars(source: &str, bar_count: usize) -> eyre::Result<String> {
+        let mut script = Script::compile(source)?;
+        let bars = generate_test_bars(bar_count);
+        let mut last = None;
+        for bar in &bars {
+            let out = script.execute(bar)?;
+            if let Some(log) = out.get_logs().last() {
+                last = Some(log.message.clone());
+            }
+        }
+        last.ok_or_else(|| eyre::eyre!("script produced no log output"))
+    }
+
+    /// Pine `var` semantics: the initializer runs only the first time
+    /// execution reaches the declaration; the variable persists across bars.
+    #[test]
+    fn test_var_persists_across_bars() -> eyre::Result<()> {
+        let src = "var count = 0\ncount := count + 1\nlog.info(count)";
+        assert_eq!(last_log_after_bars(src, 3)?, "3");
+        Ok(())
+    }
+
+    /// Series lookback on a `var` variable inside its own reassignment RHS:
+    /// the previous value must be pushed to history BEFORE the RHS is
+    /// evaluated, so acc[1] sees the previous bar's committed value.
+    #[test]
+    fn test_var_history_pushed_before_rhs_eval() -> eyre::Result<()> {
+        let src = "var acc = 0.0\nacc := acc[1] + 1.0\nlog.info(acc)";
+        assert_eq!(last_log_after_bars(src, 3)?, "3");
+        Ok(())
+    }
+
+    /// Pine functions keep local variable state across calls: a `var`
+    /// declared inside a function body initializes once and persists.
+    #[test]
+    fn test_function_local_var_persists_across_bars() -> eyre::Result<()> {
+        let src =
+            "f_counter() =>\n    var n = 0\n    n := n + 1\n    n\nc = f_counter()\nlog.info(c)";
+        assert_eq!(last_log_after_bars(src, 3)?, "3");
+        Ok(())
+    }
 }

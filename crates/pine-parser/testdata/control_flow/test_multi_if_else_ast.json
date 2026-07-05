@@ -24,7 +24,8 @@
                 "Number": 1.0
               }
             },
-            "is_varip": false
+            "is_varip": false,
+            "is_var_persistent": false
           }
         },
         {
@@ -36,7 +37,8 @@
                 "Number": 2.0
               }
             },
-            "is_varip": false
+            "is_varip": false,
+            "is_var_persistent": false
           }
         }
       ],
@@ -56,7 +58,8 @@
                 }
               }
             },
-            "is_varip": false
+            "is_varip": false,
+            "is_var_persistent": false
           }
         },
         {
@@ -73,7 +76,8 @@
                 }
               }
             },
-            "is_varip": false
+            "is_varip": false,
+            "is_var_persistent": false
           }
         }
       ]

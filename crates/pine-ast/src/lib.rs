@@ -117,7 +117,11 @@ pub enum Stmt {
         type_qualifier: Option<TypeQualifier>,
         type_annotation: Option<String>,
         initializer: Option<Expr>,
-        is_varip: bool, // true for varip, false for var
+        is_varip: bool, // true for varip, false for var/non-var
+        /// true when the `var` or `varip` keyword was present — initialize once, retain across bars.
+        /// false for plain `float x = expr` — re-evaluate every bar.
+        #[serde(default)]
+        is_var_persistent: bool,
     },
     Assignment {
         target: Expr, // Can be Variable or MemberAccess

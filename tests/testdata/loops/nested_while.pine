@@ -1,10 +1,13 @@
 // Test nested while loops
 
-// Nested while loop
+// Nested while loop. The inner counter is a plain (non-var) declaration so
+// it re-initializes on every outer iteration — `var j` would initialize only
+// once ever (see var_init_once_in_loop.pine) and the inner loop would run
+// only during the first outer iteration.
 var i = 0
 var sum = 0
 while i < 3
-    var j = 0
+    j = 0
     while j < 2
         sum := sum + i * j
         j := j + 1

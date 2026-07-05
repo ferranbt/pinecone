@@ -8,7 +8,8 @@
           "Number": 10.0
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": true
     }
   },
   {
@@ -20,7 +21,8 @@
           "Number": 5.0
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": true
     }
   },
   {
@@ -47,7 +49,8 @@
           "else_expr": null
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   }
 ]

@@ -8,7 +8,8 @@
           "Number": 0.0
         }
       },
-      "is_varip": true
+      "is_varip": true,
+      "is_var_persistent": true
     }
   },
   {

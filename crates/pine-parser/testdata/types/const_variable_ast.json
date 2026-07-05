@@ -9,7 +9,8 @@
           "Number": 10.0
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   },
   {
@@ -22,7 +23,8 @@
           "String": "hello"
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   }
 ]

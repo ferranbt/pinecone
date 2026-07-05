@@ -8,7 +8,8 @@
           "String": "test"
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   },
   {
@@ -20,7 +21,8 @@
           "Number": 10.0
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   },
   {
@@ -32,7 +34,8 @@
           "Number": 99.99
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   },
   {
@@ -42,7 +45,8 @@
       "initializer": {
         "Literal": "Na"
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   },
   {
@@ -52,7 +56,8 @@
       "initializer": {
         "Literal": "Na"
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   }
 ]

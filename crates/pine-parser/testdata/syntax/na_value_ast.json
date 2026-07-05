@@ -6,7 +6,8 @@
       "initializer": {
         "Literal": "Na"
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": true
     }
   },
   {
@@ -28,7 +29,8 @@
           }
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": true
     }
   }
 ]

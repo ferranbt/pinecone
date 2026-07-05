@@ -28,7 +28,8 @@
           }
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   },
   {
@@ -60,7 +61,8 @@
           }
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   },
   {
@@ -92,7 +94,8 @@
           }
         }
       },
-      "is_varip": false
+      "is_varip": false,
+      "is_var_persistent": false
     }
   }
 ]
