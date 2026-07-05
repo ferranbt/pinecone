@@ -1538,8 +1538,31 @@ impl Parser {
                     break;
                 }
 
-                // Skip newlines after comma
-                self.skip_newlines_and_indent();
+                // Skip newlines after comma. The previous argument's value may have
+                // used an indented continuation (multiline ternary), leaving a closing
+                // Dedent in the stream before the next argument. Consume any such
+                // Dedents, then consume an optional Indent if the next argument is
+                // itself on an indented line.
+                self.skip_newlines();
+                while self.check(&TokenType::Dedent) {
+                    // Only consume Dedents that are not the argument list's own
+                    // closing Dedent (which would be immediately followed by RParen).
+                    let consumed = self.try_parse(|p| {
+                        p.advance(); // consume Dedent
+                        if p.check(&TokenType::RParen) {
+                            Err(ParserError::UnexpectedToken(
+                                p.peek().typ.clone(),
+                                p.peek().line,
+                            ))
+                        } else {
+                            Ok(())
+                        }
+                    });
+                    if consumed.is_none() {
+                        break;
+                    }
+                }
+                self.match_token(&[TokenType::Indent]);
             }
         }
 
@@ -1717,6 +1740,17 @@ mod tests {
         } else {
             Err(eyre::eyre!("Expected expression statement".to_string()))
         }
+    }
+
+    #[test]
+    fn test_multiline_ternary_named_argument() {
+        // A named argument whose value is a ternary wrapped onto an indented
+        // continuation line leaves a closing Dedent in the token stream after
+        // the comma; arguments() must consume it before the next argument.
+        let src = "x = f(a = 1,\n    b = cond ? 1 :\n        2,\n    c = 3)\ny = 1";
+        let tokens = Lexer::new(src).tokenize().unwrap();
+        let stmts = Parser::new(tokens).parse().unwrap();
+        assert_eq!(stmts.len(), 2, "expected x decl + y decl: {:?}", stmts);
     }
 
     #[test]
