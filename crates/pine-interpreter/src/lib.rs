@@ -230,11 +230,26 @@ pub type BuiltinFn<O> =
     Rc<dyn Fn(&mut Interpreter<O>, FunctionCallArgs<O>) -> Result<Value<O>, RuntimeError>>;
 
 impl<O: PineOutput> Value<O> {
+    /// Extract as f64. Na → NaN (propagates via IEEE 754). Type mismatch → Err.
+    /// For external callers (builtins, adapters). Internal operator code uses `to_number`.
     pub fn as_number(&self) -> Result<f64, RuntimeError> {
+        self.to_number().map(|opt| opt.unwrap_or(f64::NAN))
+    }
+
+    /// Extract as bool. Na → false (Pine v6: booleans are never na). Type mismatch → Err.
+    /// For external callers. Internal conditional code uses `truthy_for_condition`.
+    pub fn as_bool(&self) -> Result<bool, RuntimeError> {
+        Ok(self.to_bool()?.unwrap_or(false))
+    }
+
+    /// Returns Ok(None) when self is Na so callers can propagate na correctly.
+    /// Returns Err for genuine type mismatches (e.g. passing a string to arithmetic).
+    pub fn to_number(&self) -> Result<Option<f64>, RuntimeError> {
         match self {
-            Value::Number(n) => Ok(*n),
-            Value::Bool(b) => Ok(if *b { 1.0 } else { 0.0 }),
-            Value::Series(series) => series.current.as_number(),
+            Value::Number(n) => Ok(Some(*n)),
+            Value::Bool(b) => Ok(Some(if *b { 1.0 } else { 0.0 })),
+            Value::Series(series) => series.current.to_number(),
+            Value::Na => Ok(None),
             _ => Err(RuntimeError::TypeError(format!(
                 "Expected number, got {:?}",
                 self
@@ -242,15 +257,24 @@ impl<O: PineOutput> Value<O> {
         }
     }
 
-    pub fn as_bool(&self) -> Result<bool, RuntimeError> {
+    /// Returns Ok(None) when self is Na. Returns Err for type mismatches.
+    pub fn to_bool(&self) -> Result<Option<bool>, RuntimeError> {
         match self {
-            Value::Bool(b) => Ok(*b),
-            Value::Number(n) => Ok(*n != 0.0),
+            Value::Bool(b) => Ok(Some(*b)),
+            // NaN must not become true: `n != 0.0` is true for NaN in IEEE 754.
+            Value::Number(n) => Ok(Some(*n != 0.0 && !n.is_nan())),
+            Value::Na => Ok(None),
             _ => Err(RuntimeError::TypeError(format!(
                 "Expected bool, got {:?}",
                 self
             ))),
         }
+    }
+
+    /// For conditional boundaries only (if, while, ternary).
+    /// Pine v6: na in a condition takes the false/else branch.
+    pub fn truthy_for_condition(&self) -> Result<bool, RuntimeError> {
+        Ok(self.to_bool()?.unwrap_or(false))
     }
 
     pub fn as_string(&self) -> Result<String, RuntimeError> {
@@ -607,7 +631,7 @@ impl<O: PineOutput> Interpreter<O> {
                 else_branch,
             } => {
                 let cond_value = self.eval_expr(condition)?;
-                if cond_value.as_bool()? {
+                if cond_value.truthy_for_condition()? {
                     for stmt in then_branch {
                         self.execute_stmt(stmt)?;
                     }
@@ -616,7 +640,7 @@ impl<O: PineOutput> Interpreter<O> {
                     let mut executed = false;
                     for (else_if_cond, else_if_body) in else_if_branches {
                         let else_if_value = self.eval_expr(else_if_cond)?;
-                        if else_if_value.as_bool()? {
+                        if else_if_value.truthy_for_condition()? {
                             for stmt in else_if_body {
                                 self.execute_stmt(stmt)?;
                             }
@@ -716,7 +740,7 @@ impl<O: PineOutput> Interpreter<O> {
             Stmt::While { condition, body } => {
                 loop {
                     let cond_value = self.eval_expr(condition)?;
-                    if !cond_value.as_bool()? {
+                    if !cond_value.truthy_for_condition()? {
                         break;
                     }
 
@@ -947,14 +971,14 @@ impl<O: PineOutput> Interpreter<O> {
                     else_branch,
                 } => {
                     let cond_value = self.eval_expr(condition)?;
-                    let branch = if cond_value.as_bool()? {
+                    let branch = if cond_value.truthy_for_condition()? {
                         then_branch
                     } else {
                         // Try each else if branch
                         let mut matched_branch = None;
                         for (else_if_cond, else_if_body) in else_if_branches {
                             let else_if_value = self.eval_expr(else_if_cond)?;
-                            if else_if_value.as_bool()? {
+                            if else_if_value.truthy_for_condition()? {
                                 matched_branch = Some(else_if_body);
                                 break;
                             }
@@ -1019,7 +1043,7 @@ impl<O: PineOutput> Interpreter<O> {
                 else_expr,
             } => {
                 let cond_val = self.eval_expr(condition)?;
-                if cond_val.as_bool()? {
+                if cond_val.truthy_for_condition()? {
                     self.eval_expr(then_expr)
                 } else {
                     self.eval_expr(else_expr)
@@ -1033,13 +1057,13 @@ impl<O: PineOutput> Interpreter<O> {
                 else_expr,
             } => {
                 let cond_val = self.eval_expr(condition)?;
-                if cond_val.as_bool()? {
+                if cond_val.truthy_for_condition()? {
                     self.eval_expr(then_expr)
                 } else {
                     // Try each else if branch
                     for (else_if_cond, else_if_expr) in else_if_branches {
                         let else_if_val = self.eval_expr(else_if_cond)?;
-                        if else_if_val.as_bool()? {
+                        if else_if_val.truthy_for_condition()? {
                             return self.eval_expr(else_if_expr);
                         }
                     }
@@ -1161,6 +1185,14 @@ impl<O: PineOutput> Interpreter<O> {
                         let call_args = FunctionCallArgs::new(type_args.clone(), evaluated_args);
                         (builtin_fn)(self, call_args)
                     }
+                    // Pine's `na` is a keyword that doubles as a function: na(x) → is x na?
+                    Value::Na => {
+                        let is_na = matches!(
+                            evaluated_args.first(),
+                            Some(EvaluatedArg::Positional(Value::Na)) | None
+                        );
+                        Ok(Value::Bool(is_na))
+                    }
                     _ => Err(RuntimeError::TypeError(
                         "Attempted to call a non-function value".to_string(),
                     )),
@@ -1236,52 +1268,93 @@ impl<O: PineOutput> Interpreter<O> {
                         right.as_string()?
                     )))
                 } else {
-                    Ok(Value::Number(left.as_number()? + right.as_number()?))
+                    match (left.to_number()?, right.to_number()?) {
+                        (Some(l), Some(r)) => Ok(Value::Number(l + r)),
+                        _ => Ok(Value::Na),
+                    }
                 }
             }
 
-            BinOp::Sub => Ok(Value::Number(left.as_number()? - right.as_number()?)),
+            BinOp::Sub => match (left.to_number()?, right.to_number()?) {
+                (Some(l), Some(r)) => Ok(Value::Number(l - r)),
+                _ => Ok(Value::Na),
+            },
 
-            BinOp::Mul => Ok(Value::Number(left.as_number()? * right.as_number()?)),
+            BinOp::Mul => match (left.to_number()?, right.to_number()?) {
+                (Some(l), Some(r)) => Ok(Value::Number(l * r)),
+                _ => Ok(Value::Na),
+            },
 
-            BinOp::Div => {
-                let divisor = right.as_number()?;
-                if divisor == 0.0 {
-                    return Err(RuntimeError::DivisionByZero);
+            BinOp::Div => match (left.to_number()?, right.to_number()?) {
+                (Some(l), Some(r)) => {
+                    if r == 0.0 {
+                        return Err(RuntimeError::DivisionByZero);
+                    }
+                    Ok(Value::Number(l / r))
                 }
-                Ok(Value::Number(left.as_number()? / divisor))
-            }
+                _ => Ok(Value::Na),
+            },
 
-            BinOp::Mod => {
-                let divisor = right.as_number()?;
-                if divisor == 0.0 {
-                    return Err(RuntimeError::DivisionByZero);
+            BinOp::Mod => match (left.to_number()?, right.to_number()?) {
+                (Some(l), Some(r)) => {
+                    if r == 0.0 {
+                        return Err(RuntimeError::DivisionByZero);
+                    }
+                    Ok(Value::Number(l % r))
                 }
-                Ok(Value::Number(left.as_number()? % divisor))
-            }
+                _ => Ok(Value::Na),
+            },
 
             BinOp::Eq => Ok(Value::Bool(self.values_equal(left, right)?)),
 
             BinOp::NotEq => Ok(Value::Bool(!self.values_equal(left, right)?)),
 
-            BinOp::Less => Ok(Value::Bool(left.as_number()? < right.as_number()?)),
+            BinOp::Less => match (left.to_number()?, right.to_number()?) {
+                (Some(l), Some(r)) => Ok(Value::Bool(l < r)),
+                _ => Ok(Value::Na),
+            },
 
-            BinOp::Greater => Ok(Value::Bool(left.as_number()? > right.as_number()?)),
+            BinOp::Greater => match (left.to_number()?, right.to_number()?) {
+                (Some(l), Some(r)) => Ok(Value::Bool(l > r)),
+                _ => Ok(Value::Na),
+            },
 
-            BinOp::LessEq => Ok(Value::Bool(left.as_number()? <= right.as_number()?)),
+            BinOp::LessEq => match (left.to_number()?, right.to_number()?) {
+                (Some(l), Some(r)) => Ok(Value::Bool(l <= r)),
+                _ => Ok(Value::Na),
+            },
 
-            BinOp::GreaterEq => Ok(Value::Bool(left.as_number()? >= right.as_number()?)),
+            BinOp::GreaterEq => match (left.to_number()?, right.to_number()?) {
+                (Some(l), Some(r)) => Ok(Value::Bool(l >= r)),
+                _ => Ok(Value::Na),
+            },
 
-            BinOp::And => Ok(Value::Bool(left.as_bool()? && right.as_bool()?)),
+            // Three-valued logic: false absorbs na; true and na → na.
+            BinOp::And => match (left.to_bool()?, right.to_bool()?) {
+                (Some(false), _) | (_, Some(false)) => Ok(Value::Bool(false)),
+                (Some(true), Some(true)) => Ok(Value::Bool(true)),
+                _ => Ok(Value::Na),
+            },
 
-            BinOp::Or => Ok(Value::Bool(left.as_bool()? || right.as_bool()?)),
+            // Three-valued logic: true absorbs na; false or na → na.
+            BinOp::Or => match (left.to_bool()?, right.to_bool()?) {
+                (Some(true), _) | (_, Some(true)) => Ok(Value::Bool(true)),
+                (Some(false), Some(false)) => Ok(Value::Bool(false)),
+                _ => Ok(Value::Na),
+            },
         }
     }
 
     fn eval_unary_op(&self, op: &UnOp, val: &Value<O>) -> Result<Value<O>, RuntimeError> {
         match op {
-            UnOp::Neg => Ok(Value::Number(-val.as_number()?)),
-            UnOp::Not => Ok(Value::Bool(!val.as_bool()?)),
+            UnOp::Neg => match val.to_number()? {
+                Some(n) => Ok(Value::Number(-n)),
+                None => Ok(Value::Na),
+            },
+            UnOp::Not => match val.to_bool()? {
+                Some(b) => Ok(Value::Bool(!b)),
+                None => Ok(Value::Na),
+            },
         }
     }
 
