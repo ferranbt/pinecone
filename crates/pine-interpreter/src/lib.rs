@@ -1305,9 +1305,24 @@ impl<O: PineOutput> Interpreter<O> {
                 _ => Ok(Value::Na),
             },
 
-            BinOp::Eq => Ok(Value::Bool(self.values_equal(left, right)?)),
+            // Pine semantics: a comparison with an `na` operand yields `na`
+            // (including `na == na` — testing for na requires the na() function).
+            // The relational arms below already return Value::Na; Eq/NotEq must
+            // not leak a structural bool through values_equal, otherwise e.g.
+            // `dayofweek != dayofweek[1]` evaluates true on the first bar.
+            BinOp::Eq => {
+                if matches!(left, Value::Na) || matches!(right, Value::Na) {
+                    return Ok(Value::Na);
+                }
+                Ok(Value::Bool(self.values_equal(left, right)?))
+            }
 
-            BinOp::NotEq => Ok(Value::Bool(!self.values_equal(left, right)?)),
+            BinOp::NotEq => {
+                if matches!(left, Value::Na) || matches!(right, Value::Na) {
+                    return Ok(Value::Na);
+                }
+                Ok(Value::Bool(!self.values_equal(left, right)?))
+            }
 
             BinOp::Less => match (left.to_number()?, right.to_number()?) {
                 (Some(l), Some(r)) => Ok(Value::Bool(l < r)),
