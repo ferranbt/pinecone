@@ -1292,10 +1292,13 @@ impl<O: PineOutput> Interpreter<O> {
                 _ => Ok(Value::Na),
             },
 
+            // Pine semantics: a zero divisor yields `na`, not an error — `x / 0`
+            // and `x % 0` evaluate to `na` just as an na operand does (`na`
+            // dividends are already caught by the `_` arm below).
             BinOp::Div => match (left.to_number()?, right.to_number()?) {
                 (Some(l), Some(r)) => {
                     if r == 0.0 {
-                        return Err(RuntimeError::DivisionByZero);
+                        return Ok(Value::Na);
                     }
                     Ok(Value::Number(l / r))
                 }
@@ -1305,7 +1308,7 @@ impl<O: PineOutput> Interpreter<O> {
             BinOp::Mod => match (left.to_number()?, right.to_number()?) {
                 (Some(l), Some(r)) => {
                     if r == 0.0 {
-                        return Err(RuntimeError::DivisionByZero);
+                        return Ok(Value::Na);
                     }
                     Ok(Value::Number(l % r))
                 }
