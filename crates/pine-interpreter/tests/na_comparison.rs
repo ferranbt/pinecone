@@ -26,6 +26,25 @@ fn run_and_get(src: &str, var: &str) -> Value {
         .unwrap_or_else(|| panic!("variable {var} not found"))
 }
 
+// `na` is float NaN; NaN can also reach Eq/NotEq wrapped as a
+// `Value::Number(NaN)` (e.g. ta.* functions return `Number(NaN)` for
+// all-NaN windows) rather than `Value::Na`. Seed such a value into a
+// variable so a script-level comparison exercises that path.
+fn run_and_get_with_nan(src: &str, var: &str) -> Value {
+    let tokens = pine_lexer::Lexer::new(src).tokenize().expect("lex failed");
+    let stmts = pine_parser::Parser::new(tokens)
+        .parse()
+        .expect("parse failed");
+    let program = pine_parser::Program::new(stmts);
+    let mut interp: Interpreter = Interpreter::new();
+    interp.set_variable("nanv", Value::Number(f64::NAN));
+    interp.execute(&program).expect("execute failed");
+    interp
+        .get_variable(var)
+        .cloned()
+        .unwrap_or_else(|| panic!("variable {var} not found"))
+}
+
 #[test]
 fn neq_with_na_operand_is_na() {
     assert_eq!(run_and_get("x = 1 != na", "x"), Value::Na);
@@ -45,6 +64,25 @@ fn eq_neq_without_na_still_boolean() {
     assert_eq!(run_and_get("x = 1 != 1", "x"), Value::Bool(false));
     assert_eq!(run_and_get("x = 1 != 2", "x"), Value::Bool(true));
     assert_eq!(run_and_get("x = \"a\" == \"a\"", "x"), Value::Bool(true));
+}
+
+#[test]
+fn eq_neq_with_nan_number_operand_is_na() {
+    // Same rule as `na`, but the NaN arrives inside a `Value::Number`.
+    assert_eq!(run_and_get_with_nan("x = nanv == nanv", "x"), Value::Na);
+    assert_eq!(run_and_get_with_nan("x = nanv != nanv", "x"), Value::Na);
+    assert_eq!(run_and_get_with_nan("x = 1 == nanv", "x"), Value::Na);
+    assert_eq!(run_and_get_with_nan("x = nanv != 1", "x"), Value::Na);
+}
+
+#[test]
+fn nan_neq_ternary_takes_else_branch() {
+    // With both operands NaN the condition is na (falsy), so the ternary
+    // must take the else branch, matching TradingView.
+    assert_eq!(
+        run_and_get_with_nan("x = nanv != nanv ? 1.0 : 2.0", "x"),
+        Value::Number(2.0)
+    );
 }
 
 #[test]

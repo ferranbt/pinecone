@@ -337,6 +337,13 @@ pub struct Interpreter<O: PineOutput = DefaultPineOutput> {
     pub output: O,
 }
 
+/// Pine `na` is float NaN. NaN can also reach `==`/`!=` wrapped as a
+/// `Value::Number(NaN)` (ta.* functions return `Number(NaN)` for all-NaN
+/// windows) rather than `Value::Na` — both forms make the comparison yield na.
+fn is_na_operand<O: PineOutput>(v: &Value<O>) -> bool {
+    matches!(v, Value::Na) || matches!(v, Value::Number(n) if n.is_nan())
+}
+
 impl<O: PineOutput> Interpreter<O> {
     pub fn new() -> Self {
         Self {
@@ -1307,18 +1314,20 @@ impl<O: PineOutput> Interpreter<O> {
 
             // Pine semantics: a comparison with an `na` operand yields `na`
             // (including `na == na` — testing for na requires the na() function).
-            // The relational arms below already return Value::Na; Eq/NotEq must
-            // not leak a structural bool through values_equal, otherwise e.g.
+            // `is_na_operand` also treats a `Value::Number(NaN)` as na (ta.*
+            // windows return `Number(NaN)`, not `Value::Na`). The relational
+            // arms below already return Value::Na; Eq/NotEq must not leak a
+            // structural bool through values_equal, otherwise e.g.
             // `dayofweek != dayofweek[1]` evaluates true on the first bar.
             BinOp::Eq => {
-                if matches!(left, Value::Na) || matches!(right, Value::Na) {
+                if is_na_operand(left) || is_na_operand(right) {
                     return Ok(Value::Na);
                 }
                 Ok(Value::Bool(self.values_equal(left, right)?))
             }
 
             BinOp::NotEq => {
-                if matches!(left, Value::Na) || matches!(right, Value::Na) {
+                if is_na_operand(left) || is_na_operand(right) {
                     return Ok(Value::Na);
                 }
                 Ok(Value::Bool(!self.values_equal(left, right)?))
