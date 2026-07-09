@@ -1314,10 +1314,10 @@ impl<O: PineOutput> Interpreter<O> {
 
             // Pine semantics: a comparison with an `na` operand yields `na`
             // (including `na == na` — testing for na requires the na() function).
-            // `is_na_operand` also treats a `Value::Number(NaN)` as na (ta.*
-            // windows return `Number(NaN)`, not `Value::Na`). The relational
-            // arms below already return Value::Na; Eq/NotEq must not leak a
-            // structural bool through values_equal, otherwise e.g.
+            // `is_na_operand` also treats a `Value::Number(NaN)` as na (a
+            // computed NaN such as math.sqrt(-1.0), or a ta.* window that
+            // returns `Number(NaN)` rather than `Value::Na`). Eq/NotEq must not
+            // leak a structural bool through values_equal, otherwise e.g.
             // `dayofweek != dayofweek[1]` evaluates true on the first bar.
             BinOp::Eq => {
                 if is_na_operand(left) || is_na_operand(right) {
@@ -1333,25 +1333,50 @@ impl<O: PineOutput> Interpreter<O> {
                 Ok(Value::Bool(!self.values_equal(left, right)?))
             }
 
-            BinOp::Less => match (left.to_number()?, right.to_number()?) {
-                (Some(l), Some(r)) => Ok(Value::Bool(l < r)),
-                _ => Ok(Value::Na),
-            },
+            // Relational arms need the same guard: to_number() maps `Value::Na`
+            // to None (caught by the match) but passes `Number(NaN)` through as
+            // Some(NaN), where a raw float comparison yields false — a
+            // structural bool that e.g. `not` then flips to true, instead of
+            // the `na` TradingView produces.
+            BinOp::Less => {
+                if is_na_operand(left) || is_na_operand(right) {
+                    return Ok(Value::Na);
+                }
+                match (left.to_number()?, right.to_number()?) {
+                    (Some(l), Some(r)) => Ok(Value::Bool(l < r)),
+                    _ => Ok(Value::Na),
+                }
+            }
 
-            BinOp::Greater => match (left.to_number()?, right.to_number()?) {
-                (Some(l), Some(r)) => Ok(Value::Bool(l > r)),
-                _ => Ok(Value::Na),
-            },
+            BinOp::Greater => {
+                if is_na_operand(left) || is_na_operand(right) {
+                    return Ok(Value::Na);
+                }
+                match (left.to_number()?, right.to_number()?) {
+                    (Some(l), Some(r)) => Ok(Value::Bool(l > r)),
+                    _ => Ok(Value::Na),
+                }
+            }
 
-            BinOp::LessEq => match (left.to_number()?, right.to_number()?) {
-                (Some(l), Some(r)) => Ok(Value::Bool(l <= r)),
-                _ => Ok(Value::Na),
-            },
+            BinOp::LessEq => {
+                if is_na_operand(left) || is_na_operand(right) {
+                    return Ok(Value::Na);
+                }
+                match (left.to_number()?, right.to_number()?) {
+                    (Some(l), Some(r)) => Ok(Value::Bool(l <= r)),
+                    _ => Ok(Value::Na),
+                }
+            }
 
-            BinOp::GreaterEq => match (left.to_number()?, right.to_number()?) {
-                (Some(l), Some(r)) => Ok(Value::Bool(l >= r)),
-                _ => Ok(Value::Na),
-            },
+            BinOp::GreaterEq => {
+                if is_na_operand(left) || is_na_operand(right) {
+                    return Ok(Value::Na);
+                }
+                match (left.to_number()?, right.to_number()?) {
+                    (Some(l), Some(r)) => Ok(Value::Bool(l >= r)),
+                    _ => Ok(Value::Na),
+                }
+            }
 
             // Three-valued logic: false absorbs na; true and na → na.
             BinOp::And => match (left.to_bool()?, right.to_bool()?) {

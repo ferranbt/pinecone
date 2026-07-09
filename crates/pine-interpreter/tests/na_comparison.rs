@@ -76,6 +76,39 @@ fn eq_neq_with_nan_number_operand_is_na() {
 }
 
 #[test]
+fn relational_with_na_operand_is_na() {
+    assert_eq!(run_and_get("x = na < 1", "x"), Value::Na);
+    assert_eq!(run_and_get("x = 1 < na", "x"), Value::Na);
+    assert_eq!(run_and_get("x = na > 1", "x"), Value::Na);
+    assert_eq!(run_and_get("x = 1 > na", "x"), Value::Na);
+    assert_eq!(run_and_get("x = na <= 1", "x"), Value::Na);
+    assert_eq!(run_and_get("x = na >= 1", "x"), Value::Na);
+}
+
+#[test]
+fn relational_with_nan_number_operand_is_na() {
+    // Same rule as `na`, but the NaN arrives inside a `Value::Number` (e.g. a
+    // computed NaN such as math.sqrt(-1.0), or a ta.* all-NaN window). Without
+    // the guard, raw float comparison yields Bool(false), which `not` then
+    // flips truthy — the opposite of na (falsy).
+    assert_eq!(run_and_get_with_nan("x = nanv < 1", "x"), Value::Na);
+    assert_eq!(run_and_get_with_nan("x = 1 < nanv", "x"), Value::Na);
+    assert_eq!(run_and_get_with_nan("x = nanv > 1", "x"), Value::Na);
+    assert_eq!(run_and_get_with_nan("x = 1 > nanv", "x"), Value::Na);
+    assert_eq!(run_and_get_with_nan("x = nanv <= 1", "x"), Value::Na);
+    assert_eq!(run_and_get_with_nan("x = nanv >= 1", "x"), Value::Na);
+}
+
+#[test]
+fn relational_without_na_still_boolean() {
+    assert_eq!(run_and_get("x = 1 < 2", "x"), Value::Bool(true));
+    assert_eq!(run_and_get("x = 2 < 1", "x"), Value::Bool(false));
+    assert_eq!(run_and_get("x = 2 > 1", "x"), Value::Bool(true));
+    assert_eq!(run_and_get("x = 1 <= 1", "x"), Value::Bool(true));
+    assert_eq!(run_and_get("x = 1 >= 2", "x"), Value::Bool(false));
+}
+
+#[test]
 fn nan_neq_ternary_takes_else_branch() {
     // With both operands NaN the condition is na (falsy), so the ternary
     // must take the else branch, matching TradingView.
