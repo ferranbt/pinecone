@@ -1,0 +1,32 @@
+// Pine semantics: division or modulo by zero yields `na`, not an error.
+// Arithmetic never aborts; the script continues with an `na` result.
+
+// Division by zero yields na
+a = 10 / 0
+log.info(a)
+
+// Modulo by zero yields na
+b = 10 % 0
+log.info(b)
+
+// Zero divided by zero yields na
+c = 0 / 0
+log.info(c)
+
+// An na dividend short-circuits to na before the divisor is inspected
+d = na / 0
+log.info(d)
+
+// Non-zero divisors are unaffected
+e = 6 / 3
+log.info(e)
+f = 7 % 4
+log.info(f)
+
+// Expected output:
+// na
+// na
+// na
+// na
+// 2
+// 3

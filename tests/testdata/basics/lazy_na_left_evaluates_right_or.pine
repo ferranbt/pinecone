@@ -1,0 +1,7 @@
+// An na left operand cannot decide `or` alone, so the right operand IS
+// evaluated (its value is needed to choose between na and true). Reaching the
+// undefined `boom` errors, proving the operand was not skipped.
+cond = na
+x = cond or boom
+
+// Expected error: not found

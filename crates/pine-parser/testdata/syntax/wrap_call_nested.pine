@@ -1,0 +1,11 @@
+//@version=6
+
+// Nested calls wrapped across lines: closing the inner parenthesis does not end
+// the outer call's line. The whole expression is one logical line regardless of
+// the varied indentation at each level.
+x = f(
+    g(
+        1
+    ),
+    2
+)
