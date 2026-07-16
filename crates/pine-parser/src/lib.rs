@@ -1743,66 +1743,6 @@ mod tests {
     }
 
     #[test]
-    fn test_line_wrapped_bool_expression() {
-        // Pine line-wrapping: continuation lines indented by a non-multiple
-        // of 4 spaces join the previous logical line. Bare `and`/`or` at the
-        // start of a continuation line is the canonical Pine style:
-        //   can_trade = a < 2
-        //            and b
-        //            and c
-        let src = "can_trade = x < 2\n         and y\n         and z\nnext_var = 1";
-        let tokens = Lexer::new(src).tokenize().unwrap();
-        let stmts = Parser::new(tokens).parse().unwrap();
-        assert_eq!(
-            stmts.len(),
-            2,
-            "wrapped expression must parse as ONE statement: {:?}",
-            stmts
-        );
-        if let Stmt::VarDecl {
-            name, initializer, ..
-        } = &stmts[0]
-        {
-            assert_eq!(name, "can_trade");
-            // Initializer must be ((x < 2) and y) and z.
-            let init = initializer.as_ref().unwrap();
-            assert!(
-                matches!(init, Expr::Binary { op: BinOp::And, .. }),
-                "wrapped initializer must be an And chain, got {:?}",
-                init
-            );
-        } else {
-            panic!("Expected VarDecl, got {:?}", stmts[0]);
-        }
-    }
-
-    #[test]
-    fn test_line_wrapped_ternary_inside_block() {
-        // Wrapped ternary on a continuation line inside an if-block
-        // (block indent 4; continuation indent 15 — not a multiple of 4).
-        let src = "if cond\n    s = a > 0 ? 1 :\n               b < 0 ? 2 : 3\nq = 1";
-        let tokens = Lexer::new(src).tokenize().unwrap();
-        let stmts = Parser::new(tokens).parse().unwrap();
-        assert_eq!(stmts.len(), 2, "expected if-stmt + q decl: {:?}", stmts);
-        assert!(
-            matches!(&stmts[0], Stmt::If { .. }),
-            "first stmt must be If: {:?}",
-            stmts[0]
-        );
-    }
-
-    #[test]
-    fn test_multiline_ternary_named_argument() {
-        // A named argument whose value is a ternary wrapped onto an indented
-        // continuation line leaves a closing Dedent in the token stream after
-        // the comma; arguments() must consume it before the next argument.
-        let src = "x = f(a = 1,\n    b = cond ? 1 :\n        2,\n    c = 3)\ny = 1";
-        let tokens = Lexer::new(src).tokenize().unwrap();
-        let stmts = Parser::new(tokens).parse().unwrap();
-        assert_eq!(stmts.len(), 2, "expected x decl + y decl: {:?}", stmts);
-    }
-
-    #[test]
     fn test_literals() {
         // Numbers
         let expr = parse_expr("42").unwrap();

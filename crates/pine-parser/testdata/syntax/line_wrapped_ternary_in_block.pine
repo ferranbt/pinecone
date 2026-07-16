@@ -1,0 +1,12 @@
+//@version=4
+
+// Line wrapping inside a local block: the block indent is 4, while the
+// continuation indents (9 and 15) are not multiples of 4, so those lines join
+// the previous logical line instead of opening a nested block.
+if cond
+    v = x < 2
+         and y
+    s = a > 0 ? 1 :
+               b < 0 ? 2 : 3
+
+q = 1
