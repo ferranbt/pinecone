@@ -1,0 +1,11 @@
+//@version=4
+
+// A named argument whose value is a ternary wrapped onto an indented
+// continuation line leaves a closing Dedent in the token stream after the
+// comma; the argument list must consume it before the next argument.
+x = f(a = 1,
+    b = cond ? 1 :
+        2,
+    c = 3)
+
+y = 1
