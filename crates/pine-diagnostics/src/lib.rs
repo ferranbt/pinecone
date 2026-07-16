@@ -28,13 +28,9 @@ impl fmt::Display for Severity {
 /// A single finding from any analysis phase.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
-    /// Stable identifier of the rule/check that produced this, e.g. `"eq-na"`
-    /// or `"undeclared-variable"`.
     pub rule: &'static str,
     pub severity: Severity,
     pub message: String,
-    /// 1-based `(line, column)` of the offending node, when it carries a
-    /// location. `None` for nodes that don't track one yet.
     pub pos: Option<(u32, u32)>,
 }
 
