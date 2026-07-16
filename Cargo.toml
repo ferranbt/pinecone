@@ -10,6 +10,7 @@ members = [
     "crates/pine-interpreter",
     "crates/pine-builtin-macro",
     "crates/pine-builtins",
+    "crates/pine-lint",
     "crates/pine",
     "crates/pine-reference",
     "tests",
@@ -24,6 +25,7 @@ pine-ast = { path = "crates/pine-ast" }
 pine-interpreter = { path = "crates/pine-interpreter" }
 pine-builtin-macro = { path = "crates/pine-builtin-macro" }
 pine-builtins = { path = "crates/pine-builtins" }
+pine-lint = { path = "crates/pine-lint" }
 pine = { path = "crates/pine" }
 pine-reference = { path = "crates/pine-reference" }
 eyre = "0.6"

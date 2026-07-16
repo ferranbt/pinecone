@@ -1,4 +1,4 @@
-pub use pine_ast::{Argument, BinOp, Expr, Literal, Program, Stmt, UnOp, VarKind};
+pub use pine_ast::{Argument, BinOp, Expr, Literal, Loc, Program, Stmt, UnOp, VarKind};
 use pine_lexer::{Token, TokenType};
 use thiserror::Error;
 
@@ -903,7 +903,9 @@ impl Parser {
                     TokenType::SlashAssign,
                 ]) {
                     // Compound assignment: x += 5 is equivalent to x := x + 5
-                    let op = p.tokens[p.current - 1]
+                    let op_tok = &p.tokens[p.current - 1];
+                    let op_loc = Loc::new(op_tok.line as u32, op_tok.column as u32);
+                    let op = op_tok
                         .typ
                         .to_binop()
                         .expect("compound assign token should convert to binop");
@@ -914,6 +916,7 @@ impl Parser {
                         left: Box::new(Expr::Variable(name.clone())),
                         op,
                         right: Box::new(right),
+                        loc: op_loc,
                     };
                     Ok(Stmt::Assignment {
                         target: Expr::Variable(name.clone()),
@@ -1282,7 +1285,9 @@ impl Parser {
                 break;
             }
 
-            let op = self.tokens[self.current - 1]
+            let op_tok = &self.tokens[self.current - 1];
+            let op_loc = Loc::new(op_tok.line as u32, op_tok.column as u32);
+            let op = op_tok
                 .typ
                 .to_binop()
                 .expect("matched operator token should convert to binop");
@@ -1295,6 +1300,7 @@ impl Parser {
                 left: Box::new(expr),
                 op,
                 right: Box::new(right),
+                loc: op_loc,
             };
         }
 
@@ -1381,7 +1387,9 @@ impl Parser {
                 break;
             }
 
-            let op = self.tokens[self.current - 1]
+            let op_tok = &self.tokens[self.current - 1];
+            let op_loc = Loc::new(op_tok.line as u32, op_tok.column as u32);
+            let op = op_tok
                 .typ
                 .to_binop()
                 .expect("term token should convert to binop");
@@ -1392,6 +1400,7 @@ impl Parser {
                 left: Box::new(expr),
                 op,
                 right: Box::new(right),
+                loc: op_loc,
             };
         }
 
@@ -1477,6 +1486,8 @@ impl Parser {
 
                 // After type args, we must have a function call
                 if self.match_token(&[TokenType::LParen]) {
+                    let lparen = &self.tokens[self.current - 1];
+                    let call_loc = Loc::new(lparen.line as u32, lparen.column as u32);
                     let id = self.next_call_id();
                     let args = self.arguments()?;
                     self.consume(TokenType::RParen, "Expected ')'")?;
@@ -1485,6 +1496,7 @@ impl Parser {
                         type_args,
                         args,
                         id,
+                        loc: call_loc,
                     };
                 } else {
                     // Not a function call, just break
@@ -1492,6 +1504,8 @@ impl Parser {
                 }
             } else if self.match_token(&[TokenType::LParen]) {
                 // Function call without type arguments
+                let lparen = &self.tokens[self.current - 1];
+                let call_loc = Loc::new(lparen.line as u32, lparen.column as u32);
                 let id = self.next_call_id();
                 let args = self.arguments()?;
                 self.consume(TokenType::RParen, "Expected ')'")?;
@@ -1500,6 +1514,7 @@ impl Parser {
                     type_args: vec![],
                     args,
                     id,
+                    loc: call_loc,
                 };
             } else {
                 break;
@@ -1809,7 +1824,10 @@ mod tests {
     fn test_arithmetic_expressions() {
         // Addition
         let expr = parse_expr("2 + 3").unwrap();
-        if let Expr::Binary { left, op, right } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Literal(Literal::Number(2.0)));
             assert_eq!(op, BinOp::Add);
             assert_eq!(*right, Expr::Literal(Literal::Number(3.0)));
@@ -1821,6 +1839,7 @@ mod tests {
             left,
             op: op1,
             right,
+            ..
         } = expr
         {
             assert_eq!(*left, Expr::Literal(Literal::Number(2.0)));
@@ -1829,6 +1848,7 @@ mod tests {
                 left: l2,
                 op: op2,
                 right: r2,
+                ..
             } = *right
             {
                 assert_eq!(*l2, Expr::Literal(Literal::Number(3.0)));
@@ -1839,7 +1859,10 @@ mod tests {
 
         // Division
         let expr = parse_expr("10 / 2").unwrap();
-        if let Expr::Binary { left, op, right } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Literal(Literal::Number(10.0)));
             assert_eq!(op, BinOp::Div);
             assert_eq!(*right, Expr::Literal(Literal::Number(2.0)));
@@ -1847,7 +1870,10 @@ mod tests {
 
         // Subtraction
         let expr = parse_expr("5 - 3").unwrap();
-        if let Expr::Binary { left, op, right } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Literal(Literal::Number(5.0)));
             assert_eq!(op, BinOp::Sub);
             assert_eq!(*right, Expr::Literal(Literal::Number(3.0)));
@@ -1858,7 +1884,10 @@ mod tests {
     fn test_comparison_expressions() {
         // Greater than
         let expr = parse_expr("close > open").unwrap();
-        if let Expr::Binary { left, op, right } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Variable("close".to_string()));
             assert_eq!(op, BinOp::Greater);
             assert_eq!(*right, Expr::Variable("open".to_string()));
@@ -1866,7 +1895,10 @@ mod tests {
 
         // Less than
         let expr = parse_expr("rsi < 30").unwrap();
-        if let Expr::Binary { left, op, right } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Variable("rsi".to_string()));
             assert_eq!(op, BinOp::Less);
             assert_eq!(*right, Expr::Literal(Literal::Number(30.0)));
@@ -1874,7 +1906,10 @@ mod tests {
 
         // Equality
         let expr = parse_expr("x == 5").unwrap();
-        if let Expr::Binary { left, op, right } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Variable("x".to_string()));
             assert_eq!(op, BinOp::Eq);
             assert_eq!(*right, Expr::Literal(Literal::Number(5.0)));
@@ -1958,7 +1993,10 @@ mod tests {
 
         // PineScript: sma(close, 14) > sma(close, 28)
         let expr = parse_expr("sma(close, 14) > sma(close, 28)").unwrap();
-        if let Expr::Binary { left, op, right } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(op, BinOp::Greater);
             assert!(matches!(*left, Expr::Call { .. }));
             assert!(matches!(*right, Expr::Call { .. }));
@@ -1970,6 +2008,7 @@ mod tests {
             left,
             op: div_op,
             right,
+            ..
         } = expr
         {
             assert_eq!(div_op, BinOp::Div);

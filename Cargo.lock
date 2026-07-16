@@ -1409,6 +1409,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pine-lint"
+version = "0.1.0"
+dependencies = [
+ "pine-ast",
+ "pine-lexer",
+ "pine-parser",
+]
+
+[[package]]
 name = "pine-parser"
 version = "0.1.0"
 dependencies = [

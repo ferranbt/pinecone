@@ -15,6 +15,42 @@ fn is_zero_u32(n: &u32) -> bool {
     *n == 0
 }
 
+/// Source location (1-based line and column) attached to select AST nodes for
+/// diagnostics.
+///
+/// `Loc` is intentionally transparent to equality and serialization: two nodes
+/// that differ only in location compare **equal**, and the position is **never**
+/// written to the serialized AST (the field carries `#[serde(skip)]`).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Loc {
+    pub line: u32,
+    pub column: u32,
+}
+
+impl Loc {
+    pub fn new(line: u32, column: u32) -> Self {
+        Self { line, column }
+    }
+
+    /// The tracked `(line, column)`, or `None` when unknown (line `0`).
+    pub fn position(&self) -> Option<(u32, u32)> {
+        (self.line != 0).then_some((self.line, self.column))
+    }
+
+    /// The tracked line, or `None` when unknown (line `0`).
+    pub fn line(&self) -> Option<u32> {
+        (self.line != 0).then_some(self.line)
+    }
+}
+
+// Location must not participate in structural equality: an AST compared against
+// a snapshot (which never stores a line) must still match.
+impl PartialEq for Loc {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
 /// Type qualifier for variables and parameters
 /// Hierarchy: const < input < simple < series (const is the weakest)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -65,6 +101,8 @@ pub enum Expr {
         left: Box<Expr>,
         op: BinOp,
         right: Box<Expr>,
+        #[serde(skip)]
+        loc: Loc,
     },
     Unary {
         op: UnOp,
@@ -77,6 +115,8 @@ pub enum Expr {
         args: Vec<Argument>,
         #[serde(default, skip_serializing_if = "is_zero_u32")]
         id: u32,
+        #[serde(skip)]
+        loc: Loc,
     },
     Index {
         expr: Box<Expr>,

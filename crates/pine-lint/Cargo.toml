@@ -1,0 +1,11 @@
+[package]
+name = "pine-lint"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pine-ast = { workspace = true }
+
+[dev-dependencies]
+pine-lexer = { workspace = true }
+pine-parser = { workspace = true }
