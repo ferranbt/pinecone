@@ -1,0 +1,40 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+// Pine v6 na propagation semantics
+
+// Arithmetic with na propagates na
+x = na
+y = x + 1
+log.info(y)
+
+// Comparison with na yields na
+b = x > 0
+log.info(b)
+
+// Three-valued logic: false absorbs na
+c = false and x > 0
+log.info(c)
+
+// Three-valued logic: true absorbs na
+d = true or x > 0
+log.info(d)
+
+// na doubles as a function: na(x) tests for na
+e = na(x)
+log.info(e)
+
+// An na condition takes the false/else branch; if-expression
+// without an else yields na
+f = if x > 0
+    1
+log.info(f)
+
+// Expected output:
+// na
+// na
+// false
+// true
+// true
+// na
