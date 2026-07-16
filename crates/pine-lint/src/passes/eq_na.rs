@@ -7,9 +7,9 @@
 
 use pine_ast::{BinOp, Expr, Literal};
 
-use crate::diagnostic::Diagnostic;
 use crate::pass::LintPass;
-use crate::visitor::{walk_expr, Visitor};
+use pine_ast::visitor::{walk_expr, Visitor};
+use pine_diagnostics::Diagnostic;
 
 const RULE: &str = "eq-na";
 

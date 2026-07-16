@@ -4,7 +4,7 @@ use pine_ast::Program;
 use pine_lexer::Lexer;
 use pine_parser::Parser;
 
-use crate::diagnostic::Diagnostic;
+use pine_diagnostics::Diagnostic;
 
 /// Lint a Pine snippet and return only the diagnostics for `rule`, in order.
 /// Panics on lex/parse errors.

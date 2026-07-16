@@ -1,0 +1,4 @@
+close := 5
+
+// Expected error:
+// error [reassign-builtin]: cannot reassign built-in `close`

@@ -1,13 +1,18 @@
-//! Diagnostics emitted by lint passes.
+//! A single diagnostic type shared across the Pine toolchain.
+//!
+//! Both `pine-sema` (which reports errors) and `pine-lint` (which reports
+//! warnings) emit this same [`Diagnostic`], so a consumer can collect, sort,
+//! and render findings from every phase through one code path. `Severity`
+//! — not the crate that produced it — decides how a finding is treated.
 
 use std::fmt;
 
 /// How serious a finding is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
-    /// Almost certainly a bug; the script will misbehave or fail to compile.
+    /// The program is invalid; it should not be executed.
     Error,
-    /// Suspicious or non-idiomatic, but not necessarily wrong.
+    /// Legal but suspect or non-idiomatic; does not block execution.
     Warning,
 }
 
@@ -20,15 +25,12 @@ impl fmt::Display for Severity {
     }
 }
 
-/// A single lint finding.
+/// A single finding from any analysis phase.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
-    /// Stable identifier of the rule that produced this, e.g. `"eq-na"`.
     pub rule: &'static str,
     pub severity: Severity,
     pub message: String,
-    /// 1-based `(line, column)` of the offending node, when it carries a
-    /// location. `None` for nodes that don't yet track a [`pine_ast::Loc`].
     pub pos: Option<(u32, u32)>,
 }
 

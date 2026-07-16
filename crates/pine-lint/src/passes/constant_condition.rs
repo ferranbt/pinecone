@@ -12,9 +12,9 @@
 
 use pine_ast::{Expr, Literal, Stmt};
 
-use crate::diagnostic::Diagnostic;
 use crate::pass::LintPass;
-use crate::visitor::{walk_expr, walk_stmt, Visitor};
+use pine_ast::visitor::{walk_expr, walk_stmt, Visitor};
+use pine_diagnostics::Diagnostic;
 
 const RULE: &str = "constant-condition";
 

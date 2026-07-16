@@ -1,0 +1,5 @@
+x = f(1)
+f(a) => a * 2
+
+// Expected error:
+// error [unknown-function] 1:6: unknown function `f`

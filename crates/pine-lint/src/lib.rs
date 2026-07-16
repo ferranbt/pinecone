@@ -24,14 +24,12 @@
 //! assert_eq!(diagnostics[0].rule, "eq-na");
 //! ```
 
-mod diagnostic;
 mod pass;
 mod passes;
-mod visitor;
 
 #[cfg(test)]
 mod test_util;
 
-pub use diagnostic::{Diagnostic, Severity};
 pub use pass::{lint, lint_with, LintPass};
-pub use visitor::{walk_block, walk_expr, walk_program, walk_stmt, Visitor};
+pub use pine_ast::visitor::{walk_block, walk_expr, walk_program, walk_stmt, Visitor};
+pub use pine_diagnostics::{Diagnostic, Severity};

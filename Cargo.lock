@@ -1347,9 +1347,11 @@ dependencies = [
  "eyre",
  "pine-ast",
  "pine-builtins",
+ "pine-diagnostics",
  "pine-interpreter",
  "pine-lexer",
  "pine-parser",
+ "pine-sema",
 ]
 
 [[package]]
@@ -1375,6 +1377,10 @@ dependencies = [
  "pine-builtin-macro",
  "pine-interpreter",
 ]
+
+[[package]]
+name = "pine-diagnostics"
+version = "0.1.0"
 
 [[package]]
 name = "pine-integration-tests"
@@ -1413,6 +1419,7 @@ name = "pine-lint"
 version = "0.1.0"
 dependencies = [
  "pine-ast",
+ "pine-diagnostics",
  "pine-lexer",
  "pine-parser",
 ]
@@ -1444,6 +1451,16 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+]
+
+[[package]]
+name = "pine-sema"
+version = "0.1.0"
+dependencies = [
+ "pine-ast",
+ "pine-diagnostics",
+ "pine-lexer",
+ "pine-parser",
 ]
 
 [[package]]

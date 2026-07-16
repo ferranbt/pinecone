@@ -1,0 +1,6 @@
+if close > open
+    t = 1
+x = t
+
+// Expected error:
+// error [undeclared-variable]: undeclared variable `t`

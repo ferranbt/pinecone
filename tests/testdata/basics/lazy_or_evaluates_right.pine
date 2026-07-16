@@ -1,6 +1,7 @@
 // A false left operand does not decide `or`, so the right operand IS evaluated.
-// Here that reaches the undefined `boom`, which errors — proving the operand
-// was not skipped.
-x = false or boom
+// Here that reaches an out-of-bounds array access, which errors — proving the
+// operand was not skipped.
+arr = array.new_float(0, 0.0)
+x = false or (array.get(arr, 0) > 0)
 
-// Expected error: not found
+// Expected error: Index out of bounds

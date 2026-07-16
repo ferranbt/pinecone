@@ -6,6 +6,7 @@ pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
 use pine_ast::Program;
+use pine_diagnostics::Diagnostic;
 use pine_interpreter::{Bar, DefaultPineOutput, Interpreter, PineOutput, RuntimeError, Value};
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
@@ -17,6 +18,9 @@ pub enum Error {
     Lexer(LexerError),
     Parser(ParserError),
     Runtime(RuntimeError),
+    /// Semantic analysis failed; the program is invalid. Carries every
+    /// diagnostic found.
+    Sema(Vec<Diagnostic>),
 }
 
 impl std::fmt::Display for Error {
@@ -25,6 +29,16 @@ impl std::fmt::Display for Error {
             Error::Lexer(e) => write!(f, "Lexer error: {}", e),
             Error::Parser(e) => write!(f, "Parser error: {}", e),
             Error::Runtime(e) => write!(f, "Runtime error: {}", e),
+            // One diagnostic per line, so multiple errors are simply appended.
+            Error::Sema(diags) => {
+                for (i, d) in diags.iter().enumerate() {
+                    if i > 0 {
+                        writeln!(f)?;
+                    }
+                    write!(f, "{}", d)?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -67,6 +81,12 @@ impl Script<DefaultPineOutput> {
         let mut parser = Parser::new(tokens);
         let statements = parser.parse()?;
         let program = Program::new(statements);
+
+        // Semantic pre-check: reject invalid programs before execution.
+        let diagnostics = pine_sema::analyze(&program);
+        if !diagnostics.is_empty() {
+            return Err(Error::Sema(diagnostics));
+        }
 
         // Create interpreter and load builtin namespace objects
         let mut interpreter = Interpreter::new();

@@ -3,4 +3,5 @@
 var x = 10
 var y = undefinedVar
 
-// Expected error: Variable 'undefinedVar' not found
+// Expected error:
+// error [undeclared-variable]: undeclared variable `undefinedVar`

@@ -3,4 +3,5 @@
 var x = 10
 break
 
-// Expected error: Break statement outside of loop
+// Expected error:
+// error [break-outside-loop]: `break` is only valid inside a loop
