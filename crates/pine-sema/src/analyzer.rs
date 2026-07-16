@@ -10,8 +10,8 @@
 use pine_ast::{Argument, Expr, Program, Stmt};
 
 use crate::builtins::{is_builtin, is_global_only};
-use pine_diagnostics::Diagnostic;
 use crate::scope::{ScopeStack, SymbolKind};
+use pine_diagnostics::Diagnostic;
 
 pub struct Analyzer {
     scopes: ScopeStack,
@@ -37,8 +37,6 @@ impl Analyzer {
         }
         self.diagnostics
     }
-
-    // -- helpers ----------------------------------------------------------
 
     fn emit(&mut self, rule: &'static str, pos: Option<(u32, u32)>, message: impl Into<String>) {
         self.diagnostics.push(Diagnostic::error(rule, pos, message));
@@ -99,8 +97,6 @@ impl Analyzer {
         self.scopes.pop();
     }
 
-    // -- statements -------------------------------------------------------
-
     fn check_stmt(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::VarDecl {
@@ -115,7 +111,9 @@ impl Analyzer {
                     self.emit(
                         "duplicate-declaration",
                         None,
-                        format!("`{name}` is already declared in this scope (use `:=` to reassign)"),
+                        format!(
+                            "`{name}` is already declared in this scope (use `:=` to reassign)"
+                        ),
                     );
                 }
             }
@@ -246,15 +244,15 @@ impl Analyzer {
                 None => self.emit(
                     "invalid-assignment",
                     None,
-                    format!("cannot assign to undeclared variable `{name}` (declare it with `=` first)"),
+                    format!(
+                        "cannot assign to undeclared variable `{name}` (declare it with `=` first)"
+                    ),
                 ),
             },
             // `obj.field := …` or `arr[i] := …`: validate the object/index.
             other => self.check_expr(other),
         }
     }
-
-    // -- expressions ------------------------------------------------------
 
     fn check_expr(&mut self, expr: &Expr) {
         match expr {
@@ -280,7 +278,11 @@ impl Analyzer {
                         );
                     }
                     if self.scopes.resolve(fname).is_none() && !is_builtin(fname) {
-                        self.emit("unknown-function", pos, format!("unknown function `{fname}`"));
+                        self.emit(
+                            "unknown-function",
+                            pos,
+                            format!("unknown function `{fname}`"),
+                        );
                     }
                 } else {
                     self.check_expr(callee);
@@ -360,4 +362,3 @@ impl Default for Analyzer {
         Self::new()
     }
 }
-
