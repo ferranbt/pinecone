@@ -1,0 +1,50 @@
+[
+  {
+    "VarDecl": {
+      "name": "can_trade",
+      "type_annotation": null,
+      "initializer": {
+        "Binary": {
+          "left": {
+            "Binary": {
+              "left": {
+                "Binary": {
+                  "left": {
+                    "Variable": "x"
+                  },
+                  "op": "Less",
+                  "right": {
+                    "Literal": {
+                      "Number": 2.0
+                    }
+                  }
+                }
+              },
+              "op": "And",
+              "right": {
+                "Variable": "y"
+              }
+            }
+          },
+          "op": "And",
+          "right": {
+            "Variable": "z"
+          }
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "next_var",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 1.0
+        }
+      },
+      "is_varip": false
+    }
+  }
+]

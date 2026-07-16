@@ -1,0 +1,8 @@
+//@version=6
+
+// A wrapped expression enclosed in parentheses (not a call) may also use
+// 4-space indentation. The parentheses, not the indentation, group the
+// expression across lines.
+percentChange = (
+    (closeDiff)
+    / close[1] * 100  )

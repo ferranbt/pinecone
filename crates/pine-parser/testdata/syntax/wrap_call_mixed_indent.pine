@@ -1,0 +1,12 @@
+//@version=6
+
+// Pine line wrapping: inside a function call's parentheses, each wrapped line
+// may use ANY indentation (here 1, 3, 4 and 8 spaces), including multiples of
+// 4. The whole call is a single logical line. Trailing comments on wrapped
+// lines are allowed. (From the TradingView "Line wrapping" reference.)
+plot(
+ percentChange, title = "Percent change",
+   color = (percentChange >= 0 ? color.green : color.red),
+    linewidth = 8,
+        style = plot.style_histogram, format = format.percent
+)

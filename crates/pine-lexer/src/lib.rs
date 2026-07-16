@@ -116,6 +116,7 @@ pub struct Lexer {
     column: usize,
     indent_stack: Vec<usize>,   // Stack of indentation levels
     pending_tokens: Vec<Token>, // Queue for Indent/Dedent tokens
+    paren_depth: usize,         // Open parentheses; while > 0, layout tokens are suppressed
 }
 
 impl Lexer {
@@ -127,6 +128,7 @@ impl Lexer {
             column: 1,
             indent_stack: vec![0], // Start with base indentation level
             pending_tokens: vec![],
+            paren_depth: 0,
         }
     }
 
@@ -714,40 +716,63 @@ impl Lexer {
                     break;
                 }
 
-                // Handle indent/dedent
-                // SAFETY: indent_stack is initialized with vec![0] and we never pop the last element
-                let current_indent = *self.indent_stack.last().unwrap();
-                let line = saved_line;
-                let col = saved_col;
+                if self.paren_depth > 0 {
+                    // Inside parentheses, Pine allows a wrapped line to use any
+                    // indentation, including a multiple of 4. Ignore this line's
+                    // indentation entirely: emit no Indent/Dedent and leave the
+                    // indent stack untouched. The Newline that would have ended
+                    // the previous line is suppressed where it is produced.
+                } else if indent_level % 4 != 0 {
+                    // Pine line-wrapping: a line indented by a non-multiple of
+                    // 4 spaces continues the previous logical line (Pine
+                    // reserves 4-space multiples for local blocks). Join it to
+                    // the previous line: drop the Newline that ended it and
+                    // leave the indent stack untouched.
+                    if matches!(
+                        tokens.last(),
+                        Some(Token {
+                            typ: TokenType::Newline,
+                            ..
+                        })
+                    ) {
+                        tokens.pop();
+                    }
+                } else {
+                    // Handle indent/dedent
+                    // SAFETY: indent_stack is initialized with vec![0] and we never pop the last element
+                    let current_indent = *self.indent_stack.last().unwrap();
+                    let line = saved_line;
+                    let col = saved_col;
 
-                if indent_level > current_indent {
-                    // Indent
-                    self.indent_stack.push(indent_level);
-                    tokens.push(Token {
-                        typ: TokenType::Indent,
-                        lexeme: String::new(),
-                        line,
-                        column: col,
-                    });
-                } else if indent_level < current_indent {
-                    // Dedent - possibly multiple levels
-                    // SAFETY: checked by len() > 1
-                    while self.indent_stack.len() > 1
-                        && *self.indent_stack.last().unwrap() > indent_level
-                    {
-                        self.indent_stack.pop();
+                    if indent_level > current_indent {
+                        // Indent
+                        self.indent_stack.push(indent_level);
                         tokens.push(Token {
-                            typ: TokenType::Dedent,
+                            typ: TokenType::Indent,
                             lexeme: String::new(),
                             line,
                             column: col,
                         });
-                    }
+                    } else if indent_level < current_indent {
+                        // Dedent - possibly multiple levels
+                        // SAFETY: checked by len() > 1
+                        while self.indent_stack.len() > 1
+                            && *self.indent_stack.last().unwrap() > indent_level
+                        {
+                            self.indent_stack.pop();
+                            tokens.push(Token {
+                                typ: TokenType::Dedent,
+                                lexeme: String::new(),
+                                line,
+                                column: col,
+                            });
+                        }
 
-                    // Check for indentation error
-                    // SAFETY: indent_stack always has at least one element
-                    if *self.indent_stack.last().unwrap() != indent_level {
-                        return Err(LexerError::IndentationError { line });
+                        // Check for indentation error
+                        // SAFETY: indent_stack always has at least one element
+                        if *self.indent_stack.last().unwrap() != indent_level {
+                            return Err(LexerError::IndentationError { line });
+                        }
                     }
                 }
             }
@@ -755,10 +780,23 @@ impl Lexer {
             // Get next token
             let token = self.next_token()?;
 
+            // Track parenthesis nesting so layout tokens can be suppressed
+            // inside a parenthesised expression (Pine line-wrapping rule).
+            match token.typ {
+                TokenType::LParen => self.paren_depth += 1,
+                TokenType::RParen => self.paren_depth = self.paren_depth.saturating_sub(1),
+                _ => {}
+            }
+
             // Check if this is a newline
             if matches!(token.typ, TokenType::Newline) {
                 at_line_start = true;
-                tokens.push(token);
+                // Inside parentheses a newline does not terminate the logical
+                // line, so drop it; the following line's indentation is ignored
+                // by the layout block above.
+                if self.paren_depth == 0 {
+                    tokens.push(token);
+                }
             } else if matches!(token.typ, TokenType::Eof) {
                 // Emit dedents for all remaining levels
                 while self.indent_stack.len() > 1 {
@@ -788,6 +826,81 @@ impl Lexer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_line_wrapping_non_multiple_of_4_joins_lines() -> eyre::Result<()> {
+        // Pine line-wrapping rule: a line indented by a non-multiple of 4
+        // spaces continues the previous logical line (4-space multiples are
+        // reserved for local blocks). The wrapped lines must produce NO
+        // Newline before the continuation and NO Indent/Dedent tokens.
+        let mut lexer = Lexer::new("a = x < 2\n         and y\nb = 1");
+        let tokens = lexer.tokenize()?;
+        assert!(
+            !tokens
+                .iter()
+                .any(|t| matches!(t.typ, TokenType::Indent | TokenType::Dedent)),
+            "wrapped continuation must not emit Indent/Dedent: {:?}",
+            tokens.iter().map(|t| &t.typ).collect::<Vec<_>>()
+        );
+        // `a = x < 2 and y` must be one logical line: the only Newline comes
+        // after `y` (plus optionally after `b = 1`).
+        let and_pos = tokens
+            .iter()
+            .position(|t| matches!(t.typ, TokenType::And))
+            .expect("And token present");
+        assert!(
+            !tokens[..and_pos]
+                .iter()
+                .any(|t| matches!(t.typ, TokenType::Newline)),
+            "no Newline may precede the continuation's `and`: {:?}",
+            tokens.iter().map(|t| &t.typ).collect::<Vec<_>>()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_block_indent_multiple_of_4_still_indents() -> eyre::Result<()> {
+        let mut lexer = Lexer::new("if cond\n    x = 1\ny = 2");
+        let tokens = lexer.tokenize()?;
+        assert!(
+            tokens.iter().any(|t| matches!(t.typ, TokenType::Indent)),
+            "4-space block body must still emit Indent"
+        );
+        assert!(
+            tokens.iter().any(|t| matches!(t.typ, TokenType::Dedent)),
+            "return to column 0 must still emit Dedent"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_parens_suppress_layout_at_any_indent() -> eyre::Result<()> {
+        // Inside parentheses a wrapped line may use any indentation, including a
+        // multiple of 4. The whole call is one logical line: no Newline, Indent
+        // or Dedent appears between `(` and `)`.
+        let mut lexer = Lexer::new("plot(\n    a,\n        b\n)");
+        let tokens = lexer.tokenize()?;
+        assert!(matches!(&tokens[0].typ, TokenType::Ident(s) if s == "plot"));
+        assert!(matches!(tokens[1].typ, TokenType::LParen));
+        assert!(matches!(&tokens[2].typ, TokenType::Ident(s) if s == "a"));
+        assert!(matches!(tokens[3].typ, TokenType::Comma));
+        assert!(matches!(&tokens[4].typ, TokenType::Ident(s) if s == "b"));
+        assert!(matches!(tokens[5].typ, TokenType::RParen));
+        assert!(matches!(tokens[6].typ, TokenType::Eof));
+        Ok(())
+    }
+
+    #[test]
+    fn test_newline_after_closing_paren_terminates() -> eyre::Result<()> {
+        // The Newline after the closing paren still terminates the statement,
+        // so a following statement stays separate.
+        let mut lexer = Lexer::new("x = f(\n    a\n)\ny = 1");
+        let tokens = lexer.tokenize()?;
+        assert!(matches!(tokens[5].typ, TokenType::RParen));
+        assert!(matches!(tokens[6].typ, TokenType::Newline));
+        assert!(matches!(&tokens[7].typ, TokenType::Ident(s) if s == "y"));
+        Ok(())
+    }
 
     #[test]
     fn test_literals() -> eyre::Result<()> {

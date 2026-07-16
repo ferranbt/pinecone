@@ -1497,9 +1497,6 @@ impl Parser {
     fn arguments(&mut self) -> Result<Vec<Argument>, ParserError> {
         let mut args = vec![];
 
-        // Skip leading newlines in argument list
-        self.skip_newlines_and_indent();
-
         if !self.check(&TokenType::RParen) {
             loop {
                 // Check for named argument: name=value
@@ -1531,20 +1528,11 @@ impl Parser {
                     args.push(Argument::Positional(expr));
                 }
 
-                // Skip newlines after each argument
-                self.skip_newlines();
-
                 if !self.match_token(&[TokenType::Comma]) {
                     break;
                 }
-
-                // Skip newlines after comma
-                self.skip_newlines_and_indent();
             }
         }
-
-        // Skip trailing newlines and dedent before closing paren
-        self.skip_newlines_and_dedent();
 
         Ok(args)
     }
