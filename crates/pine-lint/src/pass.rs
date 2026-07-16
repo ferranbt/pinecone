@@ -2,9 +2,9 @@
 
 use pine_ast::Program;
 
-use pine_diagnostics::Diagnostic;
 use crate::passes;
 use pine_ast::visitor::Visitor;
+use pine_diagnostics::Diagnostic;
 
 /// A single check.
 ///

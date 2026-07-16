@@ -57,7 +57,11 @@ impl Diagnostic {
         Self::new(rule, Severity::Error, pos, message)
     }
 
-    pub fn warning(rule: &'static str, pos: Option<(u32, u32)>, message: impl Into<String>) -> Self {
+    pub fn warning(
+        rule: &'static str,
+        pos: Option<(u32, u32)>,
+        message: impl Into<String>,
+    ) -> Self {
         Self::new(rule, Severity::Warning, pos, message)
     }
 
