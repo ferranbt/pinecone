@@ -1,0 +1,27 @@
+// Methods keep local state across bars, per CALL SITE — like plain functions.
+// A `var` inside a method initializes once and accumulates across bars, and two
+// call sites of the same method keep independent state. So both counters log
+// 1, 2, 3 across the three bars.
+
+// Bars: 3
+type Ctr
+    int dummy = 0
+
+method tick(Ctr this) =>
+    var n = 0
+    n := n + 1
+    n
+
+c = Ctr.new()
+a = c.tick()
+b = c.tick()
+log.info(a)
+log.info(b)
+
+// Expected output:
+// 1
+// 1
+// 2
+// 2
+// 3
+// 3
