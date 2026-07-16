@@ -210,18 +210,29 @@ pub enum EvaluatedArg<O: PineOutput = DefaultPineOutput> {
 pub struct FunctionCallArgs<O: PineOutput = DefaultPineOutput> {
     pub type_args: Vec<String>,
     pub args: Vec<EvaluatedArg<O>>,
+    pub call_id: u32,
 }
 
 impl<O: PineOutput> FunctionCallArgs<O> {
     pub fn new(type_args: Vec<String>, args: Vec<EvaluatedArg<O>>) -> Self {
-        Self { type_args, args }
+        Self {
+            type_args,
+            args,
+            call_id: 0,
+        }
     }
 
     pub fn without_types(args: Vec<EvaluatedArg<O>>) -> Self {
         Self {
             type_args: vec![],
             args,
+            call_id: 0,
         }
+    }
+
+    pub fn with_call_id(mut self, call_id: u32) -> Self {
+        self.call_id = call_id;
+        self
     }
 }
 
@@ -1159,6 +1170,7 @@ impl<O: PineOutput> Interpreter<O> {
                 callee,
                 type_args,
                 args,
+                id,
             } => {
                 // Check if this is a method call (object.method())
                 if let Expr::MemberAccess { object, member } = callee.as_ref() {
@@ -1201,8 +1213,10 @@ impl<O: PineOutput> Interpreter<O> {
                         self.call_user_function(&params, &body, args, evaluated_args)
                     }
                     Value::BuiltinFunction(builtin_fn) => {
-                        // Pass type_args from the parsed call expression
-                        let call_args = FunctionCallArgs::new(type_args.clone(), evaluated_args);
+                        // Pass type_args from the parsed call expression, and the
+                        // call node's lexical id for per-call-site builtin state.
+                        let call_args = FunctionCallArgs::new(type_args.clone(), evaluated_args)
+                            .with_call_id(*id);
                         (builtin_fn)(self, call_args)
                     }
                     // Pine's `na` is a keyword that doubles as a function: na(x) → is x na?

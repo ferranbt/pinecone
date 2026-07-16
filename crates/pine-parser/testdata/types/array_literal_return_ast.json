@@ -63,7 +63,8 @@
           "callee": {
             "Variable": "getValue"
           },
-          "args": []
+          "args": [],
+          "id": 1
         }
       },
       "is_varip": false
@@ -81,7 +82,8 @@
           "callee": {
             "Variable": "getValue"
           },
-          "args": []
+          "args": [],
+          "id": 2
         }
       }
     }
