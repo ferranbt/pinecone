@@ -20,10 +20,7 @@ fn is_zero_u32(n: &u32) -> bool {
 ///
 /// `Loc` is intentionally transparent to equality and serialization: two nodes
 /// that differ only in location compare **equal**, and the position is **never**
-/// written to the serialized AST (the field carries `#[serde(skip)]`). This
-/// keeps the committed `_ast.json` snapshots and the parser's `PartialEq`-based
-/// tests stable, while still letting tooling such as `pine-lint` report where a
-/// node originated. A line of `0` means "unknown / not tracked".
+/// written to the serialized AST (the field carries `#[serde(skip)]`).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Loc {
     pub line: u32,
