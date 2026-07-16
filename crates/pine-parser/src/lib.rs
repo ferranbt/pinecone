@@ -1,4 +1,4 @@
-pub use pine_ast::{Argument, BinOp, Expr, Literal, Program, Stmt, UnOp};
+pub use pine_ast::{Argument, BinOp, Expr, Literal, Program, Stmt, UnOp, VarKind};
 use pine_lexer::{Token, TokenType};
 use thiserror::Error;
 
@@ -418,14 +418,14 @@ impl Parser {
         let type_qualifier = self.parse_optional_type_qualifier();
 
         // Check for var or varip keyword (can be followed by type annotation)
-        let (is_varip, is_var_persistent) = if self.match_token(&[TokenType::Varip]) {
-            (true, true)
+        let var_kind = if self.match_token(&[TokenType::Varip]) {
+            VarKind::Varip
         } else if self.match_token(&[TokenType::Var]) {
-            (false, true)
+            VarKind::Var
         } else if type_qualifier.is_some() {
             // If we have a type qualifier but no var/varip, it's still a variable declaration
             // e.g., const int x = 5
-            (false, false)
+            VarKind::Plain
         } else {
             // Not a var/varip declaration, continue to other statement types
             return self.check_type_annotated_declaration();
@@ -433,12 +433,7 @@ impl Parser {
 
         // Check if followed by type annotation: var int x = ..., var float y = ..., var label l = ...
         let type_annotation = self.parse_optional_type_annotation();
-        self.typed_var_declaration_with_qualifier(
-            type_qualifier,
-            type_annotation,
-            is_varip,
-            is_var_persistent,
-        )
+        self.typed_var_declaration_with_qualifier(type_qualifier, type_annotation, var_kind)
     }
 
     fn check_type_annotated_declaration(&mut self) -> Result<Stmt, ParserError> {
@@ -462,12 +457,12 @@ impl Parser {
             let type_name = self.tokens[self.current - 1].lexeme.clone();
             // Check for array type: int[] or float[]
             let type_name = self.parse_array_suffix(type_name)?;
-            return self.typed_var_declaration(Some(type_name), false);
+            return self.typed_var_declaration(Some(type_name), VarKind::Plain);
         }
 
         // Check for identifier type with optional []: string x = ..., string[] x = ...
         if let Some(type_annotation) = self.parse_optional_type_annotation() {
-            return self.typed_var_declaration(Some(type_annotation), false);
+            return self.typed_var_declaration(Some(type_annotation), VarKind::Plain);
         }
 
         self.statement()
@@ -737,17 +732,16 @@ impl Parser {
     fn typed_var_declaration(
         &mut self,
         type_annotation: Option<String>,
-        is_varip: bool,
+        var_kind: VarKind,
     ) -> Result<Stmt, ParserError> {
-        self.typed_var_declaration_with_qualifier(None, type_annotation, is_varip, false)
+        self.typed_var_declaration_with_qualifier(None, type_annotation, var_kind)
     }
 
     fn typed_var_declaration_with_qualifier(
         &mut self,
         type_qualifier: Option<pine_ast::TypeQualifier>,
         type_annotation: Option<String>,
-        is_varip: bool,
-        is_var_persistent: bool,
+        var_kind: VarKind,
     ) -> Result<Stmt, ParserError> {
         let name = self.expect_identifier()?;
 
@@ -762,8 +756,7 @@ impl Parser {
             type_qualifier,
             type_annotation,
             initializer,
-            is_varip,
-            is_var_persistent,
+            var_kind,
         })
     }
 
@@ -876,8 +869,7 @@ impl Parser {
                     type_qualifier: None,
                     type_annotation: None,
                     initializer,
-                    is_varip: false,
-                    is_var_persistent: false,
+                    var_kind: VarKind::Plain,
                 });
             }
 
@@ -894,8 +886,7 @@ impl Parser {
                         type_qualifier: None,
                         type_annotation: None,
                         initializer,
-                        is_varip: false,
-                        is_var_persistent: false,
+                        var_kind: VarKind::Plain,
                     })
                 } else if p.match_token(&[TokenType::ColonAssign]) {
                     // This is a reassignment with :=
@@ -1923,19 +1914,17 @@ mod tests {
             type_qualifier,
             type_annotation,
             initializer,
-            is_varip,
-            is_var_persistent,
+            var_kind,
         } = &stmts[0]
         {
             assert_eq!(name, "x");
             assert_eq!(*type_qualifier, None);
             assert_eq!(*type_annotation, None);
-            assert!(*is_var_persistent, "var x = 10 must be persistent");
+            assert_eq!(*var_kind, VarKind::Var, "var x = 10 must be Var");
             assert_eq!(
                 initializer.as_ref().unwrap(),
                 &Expr::Literal(Literal::Number(10.0))
             );
-            assert!(!(*is_varip));
         } else {
             panic!("Expected VarDecl");
         }

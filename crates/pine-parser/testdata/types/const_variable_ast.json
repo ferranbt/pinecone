@@ -8,9 +8,7 @@
         "Literal": {
           "Number": 10.0
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   },
   {
@@ -22,9 +20,7 @@
         "Literal": {
           "String": "hello"
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   }
 ]

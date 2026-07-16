@@ -25,6 +25,30 @@ pub enum TypeQualifier {
     Series,
 }
 
+/// How a variable declaration behaves across bars.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum VarKind {
+    /// `x = expr` — the initializer is re-evaluated on every bar.
+    #[default]
+    Plain,
+    /// `var x = expr` — the initializer runs once; the value persists across bars.
+    Var,
+    /// `varip x = expr` — like `Var`, but also updates intrabar in realtime.
+    Varip,
+}
+
+impl VarKind {
+    /// `var`/`varip`: initialize once and retain the value across bars.
+    pub fn is_persistent(self) -> bool {
+        !matches!(self, VarKind::Plain)
+    }
+
+    /// Used by serde to omit the field for plain declarations.
+    fn is_plain(&self) -> bool {
+        matches!(self, VarKind::Plain)
+    }
+}
+
 /// Function argument - can be positional or named
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Argument {
@@ -124,11 +148,8 @@ pub enum Stmt {
         type_qualifier: Option<TypeQualifier>,
         type_annotation: Option<String>,
         initializer: Option<Expr>,
-        is_varip: bool, // true for varip, false for var/non-var
-        /// true when the `var` or `varip` keyword was present — initialize once, retain across bars.
-        /// false for plain `float x = expr` — re-evaluate every bar.
-        #[serde(default)]
-        is_var_persistent: bool,
+        #[serde(default, skip_serializing_if = "VarKind::is_plain")]
+        var_kind: VarKind,
     },
     Assignment {
         target: Expr, // Can be Variable or MemberAccess

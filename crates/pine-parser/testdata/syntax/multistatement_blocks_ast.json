@@ -21,9 +21,7 @@
               "Literal": {
                 "Number": 1.0
               }
-            },
-            "is_varip": false,
-            "is_var_persistent": false
+            }
           }
         },
         {
@@ -34,9 +32,7 @@
               "Literal": {
                 "Number": 2.0
               }
-            },
-            "is_varip": false,
-            "is_var_persistent": false
+            }
           }
         },
         {
@@ -47,9 +43,7 @@
               "Literal": {
                 "Number": 3.0
               }
-            },
-            "is_varip": false,
-            "is_var_persistent": false
+            }
           }
         }
       ],
@@ -79,9 +73,7 @@
               "Literal": {
                 "Number": 1.0
               }
-            },
-            "is_varip": false,
-            "is_var_persistent": false
+            }
           }
         },
         {
@@ -92,9 +84,7 @@
               "Literal": {
                 "Number": 2.0
               }
-            },
-            "is_varip": false,
-            "is_var_persistent": false
+            }
           }
         }
       ],
@@ -113,9 +103,7 @@
                   }
                 }
               }
-            },
-            "is_varip": false,
-            "is_var_persistent": false
+            }
           }
         },
         {
@@ -131,9 +119,7 @@
                   }
                 }
               }
-            },
-            "is_varip": false,
-            "is_var_persistent": false
+            }
           }
         }
       ]

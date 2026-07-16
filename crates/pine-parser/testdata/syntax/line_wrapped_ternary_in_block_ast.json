@@ -29,8 +29,7 @@
                   "Variable": "y"
                 }
               }
-            },
-            "is_varip": false
+            }
           }
         },
         {
@@ -85,8 +84,7 @@
                   }
                 }
               }
-            },
-            "is_varip": false
+            }
           }
         }
       ],
@@ -102,8 +100,7 @@
         "Literal": {
           "Number": 1.0
         }
-      },
-      "is_varip": false
+      }
     }
   }
 ]

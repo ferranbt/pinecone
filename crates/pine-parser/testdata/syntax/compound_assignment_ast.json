@@ -7,9 +7,7 @@
         "Literal": {
           "Number": 10.0
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   },
   {
@@ -100,9 +98,7 @@
         "Literal": {
           "Number": 0.0
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   },
   {
@@ -133,9 +129,7 @@
         "Literal": {
           "Number": 100.0
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   },
   {

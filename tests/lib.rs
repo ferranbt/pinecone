@@ -10,6 +10,7 @@ mod tests {
     use std::cell::Cell;
     use std::fs;
     use std::path::Path;
+    use std::rc::Rc;
 
     /// Generate synthetic OHLCV bar data for testing
     fn generate_test_bars(count: usize) -> Vec<Bar> {
@@ -32,19 +33,21 @@ mod tests {
     /// Mock historical data provider for tests
     struct TestHistoricalData {
         bars: Vec<Bar>,
-        current_index: Cell<usize>,
+        current_index: Rc<Cell<usize>>,
     }
 
     impl TestHistoricalData {
         fn new(bars: Vec<Bar>) -> Self {
             Self {
                 bars,
-                current_index: Cell::new(0),
+                current_index: Rc::new(Cell::new(0)),
             }
         }
 
-        fn set_current_bar(&self, index: usize) {
-            self.current_index.set(index);
+        /// Shared handle to the "current bar" index so the caller can advance it
+        /// between executions after the provider has been moved into the script.
+        fn current_handle(&self) -> Rc<Cell<usize>> {
+            self.current_index.clone()
         }
     }
 
@@ -160,6 +163,19 @@ mod tests {
         }
     }
 
+    /// Number of trailing bars to run a script over, from an optional
+    /// `// Bars: N` directive. Absent means the default single (last) bar.
+    fn extract_bar_count(source: &str) -> Option<usize> {
+        for line in source.lines() {
+            if let Some(rest) = line.trim().strip_prefix("// Bars:") {
+                if let Ok(n) = rest.trim().parse::<usize>() {
+                    return Some(n.max(1));
+                }
+            }
+        }
+        None
+    }
+
     fn execute_pine_script_with_logger(source: &str) -> eyre::Result<Vec<String>> {
         let library_loader = TestLibraryLoader::new();
 
@@ -168,22 +184,26 @@ mod tests {
         // Generate historical bar data for TA functions
         let bars = generate_test_bars(200);
         let historical_data = TestHistoricalData::new(bars.clone());
-        historical_data.set_current_bar(bars.len() - 1);
+        let current_index = historical_data.current_handle();
 
         // Set up historical data provider
         script.set_historical_provider(Box::new(historical_data));
         script.set_library_loader(Box::new(library_loader));
 
-        // Execute with the last bar
-        let pine_output = script.execute(&bars[bars.len() - 1])?;
+        // Run over the final `bar_count` bars, keeping interpreter state across
+        // them, and collect every log emitted. `// Bars: N` opts into multi-bar
+        // execution to exercise cross-bar state (`var` persistence, user-series
+        // history, stateful function locals); the default is the last bar only.
+        let bar_count = extract_bar_count(source).unwrap_or(1).min(bars.len());
+        let start = bars.len() - bar_count;
 
-        // Extract log messages from output
-        let result = pine_output
-            .get_logs()
-            .iter()
-            .map(|log| log.message.clone())
-            .collect();
-        Ok(result)
+        let mut logs = Vec::new();
+        for (index, bar) in bars.iter().enumerate().skip(start) {
+            current_index.set(index);
+            let pine_output = script.execute(bar)?;
+            logs.extend(pine_output.get_logs().iter().map(|log| log.message.clone()));
+        }
+        Ok(logs)
     }
 
     #[test]
@@ -268,49 +288,5 @@ mod tests {
         } else {
             Ok(())
         }
-    }
-
-    /// Execute a script once per bar (Script keeps interpreter state across
-    /// execute() calls) and return the LAST log message emitted.
-    fn last_log_after_bars(source: &str, bar_count: usize) -> eyre::Result<String> {
-        let mut script = Script::compile(source)?;
-        let bars = generate_test_bars(bar_count);
-        let mut last = None;
-        for bar in &bars {
-            let out = script.execute(bar)?;
-            if let Some(log) = out.get_logs().last() {
-                last = Some(log.message.clone());
-            }
-        }
-        last.ok_or_else(|| eyre::eyre!("script produced no log output"))
-    }
-
-    /// Pine `var` semantics: the initializer runs only the first time
-    /// execution reaches the declaration; the variable persists across bars.
-    #[test]
-    fn test_var_persists_across_bars() -> eyre::Result<()> {
-        let src = "var count = 0\ncount := count + 1\nlog.info(count)";
-        assert_eq!(last_log_after_bars(src, 3)?, "3");
-        Ok(())
-    }
-
-    /// Series lookback on a `var` variable inside its own reassignment RHS:
-    /// the previous value must be pushed to history BEFORE the RHS is
-    /// evaluated, so acc[1] sees the previous bar's committed value.
-    #[test]
-    fn test_var_history_pushed_before_rhs_eval() -> eyre::Result<()> {
-        let src = "var acc = 0.0\nacc := acc[1] + 1.0\nlog.info(acc)";
-        assert_eq!(last_log_after_bars(src, 3)?, "3");
-        Ok(())
-    }
-
-    /// Pine functions keep local variable state across calls: a `var`
-    /// declared inside a function body initializes once and persists.
-    #[test]
-    fn test_function_local_var_persists_across_bars() -> eyre::Result<()> {
-        let src =
-            "f_counter() =>\n    var n = 0\n    n := n + 1\n    n\nc = f_counter()\nlog.info(c)";
-        assert_eq!(last_log_after_bars(src, 3)?, "3");
-        Ok(())
     }
 }

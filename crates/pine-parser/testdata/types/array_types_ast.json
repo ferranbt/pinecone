@@ -24,9 +24,7 @@
           ],
           "id": 1
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   },
   {
@@ -54,9 +52,7 @@
           ],
           "id": 2
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   },
   {
@@ -84,9 +80,7 @@
           ],
           "id": 3
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   }
 ]

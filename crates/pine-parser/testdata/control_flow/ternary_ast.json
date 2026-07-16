@@ -30,8 +30,7 @@
           }
         }
       },
-      "is_varip": false,
-      "is_var_persistent": true
+      "var_kind": "Var"
     }
   },
   {
@@ -51,8 +50,7 @@
           }
         }
       },
-      "is_varip": false,
-      "is_var_persistent": true
+      "var_kind": "Var"
     }
   }
 ]

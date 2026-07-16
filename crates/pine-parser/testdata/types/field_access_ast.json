@@ -48,9 +48,7 @@
           ],
           "id": 1
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   },
   {
@@ -64,9 +62,7 @@
           },
           "member": "x"
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   },
   {
@@ -80,9 +76,7 @@
           },
           "member": "y"
         }
-      },
-      "is_varip": false,
-      "is_var_persistent": false
+      }
     }
   }
 ]

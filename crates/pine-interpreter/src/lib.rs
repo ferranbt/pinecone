@@ -580,15 +580,17 @@ impl<O: PineOutput> Interpreter<O> {
                 type_qualifier,
                 type_annotation: _,
                 initializer,
-                is_varip: _, // TODO: implement varip behavior (requires stateful execution)
-                is_var_persistent,
+                // varip's intrabar-update behavior is not yet implemented; it
+                // persists across bars exactly like var (is_persistent()).
+                var_kind,
             } => {
+                let is_var_persistent = var_kind.is_persistent();
                 // Pine `var`/`varip` semantics: the initializer runs only the
                 // FIRST time execution reaches this declaration (once ever).
                 // Tracked in var_decls_initialized rather than by name
                 // existence, so `var close = 10` correctly shadows a
                 // pre-existing host-injected builtin variable.
-                if *is_var_persistent {
+                if is_var_persistent {
                     if self.var_decls_initialized.contains(name) {
                         return Ok(None);
                     }
@@ -597,7 +599,7 @@ impl<O: PineOutput> Interpreter<O> {
                 // Non-`var` declarations (e.g. `ha_bull_4h = expr`) re-execute on every bar.
                 // Push the previous value to history so `name[1]` lookbacks work, exactly as
                 // the Assignment handler does for `:=` reassignments.
-                if !*is_var_persistent {
+                if !is_var_persistent {
                     if let Some(existing) = self.variables.get(name) {
                         let hist = self.user_series_history.entry(name.clone()).or_default();
                         hist.push(existing.value.clone());
@@ -617,7 +619,7 @@ impl<O: PineOutput> Interpreter<O> {
                     Variable {
                         value,
                         is_const,
-                        is_var_persistent: *is_var_persistent,
+                        is_var_persistent,
                     },
                 );
                 Ok(None)
