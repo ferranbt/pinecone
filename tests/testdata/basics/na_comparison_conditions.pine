@@ -1,0 +1,26 @@
+// Pine semantics: a comparison that yields na is falsy as a condition, so it
+// takes the false/else branch. Regression guard: Eq/NotEq once returned a
+// structural bool (`1 != na` -> true), which leaked truthiness into `if`
+// conditions -- e.g. `dayofweek != dayofweek[1]` fired on a series' first bar,
+// where `[1]` is na.
+
+// An na != comparison used as a ternary condition takes the else branch
+log.info(1 != na ? 10 : 20)
+
+// A computed NaN comparison used as a ternary condition takes the else branch
+nanv = math.sqrt(-1.0)
+log.info(nanv != nanv ? 1.0 : 2.0)
+
+// Mirrors the day-boundary pattern: with `prev` na, the comparison is na
+// (falsy), so the guarded branch must not run and x stays 0.
+prev = na
+flag = 1 != prev
+x = 0
+if flag
+    x := 1
+log.info(x)
+
+// Expected output:
+// 20
+// 2
+// 0
