@@ -1,0 +1,9 @@
+//@version=6
+
+// A wrapped argument indented deeper than the previous one (4 then 8 spaces)
+// inside a call. Both indents are multiples of 4, which at top level would open
+// nested blocks; inside parentheses they are just continuation lines.
+x = f(
+    a,
+        b
+)
