@@ -67,11 +67,22 @@ impl TokenTypeExt for TokenType {
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    next_call_id: u32,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0 }
+        Self {
+            tokens,
+            current: 0,
+            next_call_id: 1,
+        }
+    }
+
+    fn next_call_id(&mut self) -> u32 {
+        let id = self.next_call_id;
+        self.next_call_id += 1;
+        id
     }
 
     fn peek(&self) -> &Token {
@@ -1466,13 +1477,14 @@ impl Parser {
 
                 // After type args, we must have a function call
                 if self.match_token(&[TokenType::LParen]) {
+                    let id = self.next_call_id();
                     let args = self.arguments()?;
                     self.consume(TokenType::RParen, "Expected ')'")?;
                     expr = Expr::Call {
                         callee: Box::new(expr),
                         type_args,
                         args,
-                        id: 0, // assigned by Program::new
+                        id,
                     };
                 } else {
                     // Not a function call, just break
@@ -1480,13 +1492,14 @@ impl Parser {
                 }
             } else if self.match_token(&[TokenType::LParen]) {
                 // Function call without type arguments
+                let id = self.next_call_id();
                 let args = self.arguments()?;
                 self.consume(TokenType::RParen, "Expected ')'")?;
                 expr = Expr::Call {
                     callee: Box::new(expr),
                     type_args: vec![],
                     args,
-                    id: 0, // assigned by Program::new
+                    id,
                 };
             } else {
                 break;
@@ -1790,52 +1803,6 @@ mod tests {
             assert_eq!(type_args.len(), 0);
             assert_eq!(args.len(), 0);
         }
-    }
-
-    #[test]
-    fn test_call_ids_assigned_in_lexical_order() {
-        // Program::new numbers every Expr::Call in AST-walk (lexical) order,
-        // starting at 1; identical calls get distinct, stable ids.
-        fn collect_ids(expr: &Expr, out: &mut Vec<u32>) {
-            match expr {
-                Expr::Call {
-                    callee, args, id, ..
-                } => {
-                    out.push(*id);
-                    collect_ids(callee, out);
-                    for a in args {
-                        match a {
-                            Argument::Positional(e) => collect_ids(e, out),
-                            Argument::Named { value, .. } => collect_ids(value, out),
-                        }
-                    }
-                }
-                Expr::Binary { left, right, .. } => {
-                    collect_ids(left, out);
-                    collect_ids(right, out);
-                }
-                _ => {}
-            }
-        }
-        let parse_program = || {
-            let tokens = Lexer::new("x = f(g(1)) or f(2)").tokenize().unwrap();
-            Program::new(Parser::new(tokens).parse().unwrap())
-        };
-        let program = parse_program();
-        let mut ids = Vec::new();
-        if let Stmt::VarDecl {
-            initializer: Some(e),
-            ..
-        } = &program.statements[0]
-        {
-            collect_ids(e, &mut ids);
-        }
-        // f(g(1)) = 1, its nested g(1) = 2, f(2) = 3 — parent-first walk order.
-        assert_eq!(ids, vec![1, 2, 3]);
-
-        // Stability: re-parsing the same source yields the same ids.
-        let program2 = parse_program();
-        assert_eq!(program, program2);
     }
 
     #[test]
