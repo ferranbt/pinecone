@@ -1497,9 +1497,6 @@ impl Parser {
     fn arguments(&mut self) -> Result<Vec<Argument>, ParserError> {
         let mut args = vec![];
 
-        // Skip leading newlines in argument list
-        self.skip_newlines_and_indent();
-
         if !self.check(&TokenType::RParen) {
             loop {
                 // Check for named argument: name=value
@@ -1531,43 +1528,11 @@ impl Parser {
                     args.push(Argument::Positional(expr));
                 }
 
-                // Skip newlines after each argument
-                self.skip_newlines();
-
                 if !self.match_token(&[TokenType::Comma]) {
                     break;
                 }
-
-                // Skip newlines after comma. The previous argument's value may have
-                // used an indented continuation (multiline ternary), leaving a closing
-                // Dedent in the stream before the next argument. Consume any such
-                // Dedents, then consume an optional Indent if the next argument is
-                // itself on an indented line.
-                self.skip_newlines();
-                while self.check(&TokenType::Dedent) {
-                    // Only consume Dedents that are not the argument list's own
-                    // closing Dedent (which would be immediately followed by RParen).
-                    let consumed = self.try_parse(|p| {
-                        p.advance(); // consume Dedent
-                        if p.check(&TokenType::RParen) {
-                            Err(ParserError::UnexpectedToken(
-                                p.peek().typ.clone(),
-                                p.peek().line,
-                            ))
-                        } else {
-                            Ok(())
-                        }
-                    });
-                    if consumed.is_none() {
-                        break;
-                    }
-                }
-                self.match_token(&[TokenType::Indent]);
             }
         }
-
-        // Skip trailing newlines and dedent before closing paren
-        self.skip_newlines_and_dedent();
 
         Ok(args)
     }

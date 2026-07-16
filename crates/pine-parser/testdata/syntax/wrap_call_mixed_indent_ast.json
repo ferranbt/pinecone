@@ -1,0 +1,102 @@
+[
+  {
+    "Expression": {
+      "Call": {
+        "callee": {
+          "Variable": "plot"
+        },
+        "args": [
+          {
+            "Positional": {
+              "Variable": "percentChange"
+            }
+          },
+          {
+            "Named": {
+              "name": "title",
+              "value": {
+                "Literal": {
+                  "String": "Percent change"
+                }
+              }
+            }
+          },
+          {
+            "Named": {
+              "name": "color",
+              "value": {
+                "Ternary": {
+                  "condition": {
+                    "Binary": {
+                      "left": {
+                        "Variable": "percentChange"
+                      },
+                      "op": "GreaterEq",
+                      "right": {
+                        "Literal": {
+                          "Number": 0.0
+                        }
+                      }
+                    }
+                  },
+                  "then_expr": {
+                    "MemberAccess": {
+                      "object": {
+                        "Variable": "color"
+                      },
+                      "member": "green"
+                    }
+                  },
+                  "else_expr": {
+                    "MemberAccess": {
+                      "object": {
+                        "Variable": "color"
+                      },
+                      "member": "red"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "Named": {
+              "name": "linewidth",
+              "value": {
+                "Literal": {
+                  "Number": 8.0
+                }
+              }
+            }
+          },
+          {
+            "Named": {
+              "name": "style",
+              "value": {
+                "MemberAccess": {
+                  "object": {
+                    "Variable": "plot"
+                  },
+                  "member": "style_histogram"
+                }
+              }
+            }
+          },
+          {
+            "Named": {
+              "name": "format",
+              "value": {
+                "MemberAccess": {
+                  "object": {
+                    "Variable": "format"
+                  },
+                  "member": "percent"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+]

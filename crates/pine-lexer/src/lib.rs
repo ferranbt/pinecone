@@ -116,6 +116,7 @@ pub struct Lexer {
     column: usize,
     indent_stack: Vec<usize>,   // Stack of indentation levels
     pending_tokens: Vec<Token>, // Queue for Indent/Dedent tokens
+    paren_depth: usize,         // Open parentheses; while > 0, layout tokens are suppressed
 }
 
 impl Lexer {
@@ -127,6 +128,7 @@ impl Lexer {
             column: 1,
             indent_stack: vec![0], // Start with base indentation level
             pending_tokens: vec![],
+            paren_depth: 0,
         }
     }
 
@@ -714,7 +716,13 @@ impl Lexer {
                     break;
                 }
 
-                if indent_level % 4 != 0 {
+                if self.paren_depth > 0 {
+                    // Inside parentheses, Pine allows a wrapped line to use any
+                    // indentation, including a multiple of 4. Ignore this line's
+                    // indentation entirely: emit no Indent/Dedent and leave the
+                    // indent stack untouched. The Newline that would have ended
+                    // the previous line is suppressed where it is produced.
+                } else if indent_level % 4 != 0 {
                     // Pine line-wrapping: a line indented by a non-multiple of
                     // 4 spaces continues the previous logical line (Pine
                     // reserves 4-space multiples for local blocks). Join it to
@@ -772,10 +780,23 @@ impl Lexer {
             // Get next token
             let token = self.next_token()?;
 
+            // Track parenthesis nesting so layout tokens can be suppressed
+            // inside a parenthesised expression (Pine line-wrapping rule).
+            match token.typ {
+                TokenType::LParen => self.paren_depth += 1,
+                TokenType::RParen => self.paren_depth = self.paren_depth.saturating_sub(1),
+                _ => {}
+            }
+
             // Check if this is a newline
             if matches!(token.typ, TokenType::Newline) {
                 at_line_start = true;
-                tokens.push(token);
+                // Inside parentheses a newline does not terminate the logical
+                // line, so drop it; the following line's indentation is ignored
+                // by the layout block above.
+                if self.paren_depth == 0 {
+                    tokens.push(token);
+                }
             } else if matches!(token.typ, TokenType::Eof) {
                 // Emit dedents for all remaining levels
                 while self.indent_stack.len() > 1 {
@@ -849,6 +870,35 @@ mod tests {
             tokens.iter().any(|t| matches!(t.typ, TokenType::Dedent)),
             "return to column 0 must still emit Dedent"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_parens_suppress_layout_at_any_indent() -> eyre::Result<()> {
+        // Inside parentheses a wrapped line may use any indentation, including a
+        // multiple of 4. The whole call is one logical line: no Newline, Indent
+        // or Dedent appears between `(` and `)`.
+        let mut lexer = Lexer::new("plot(\n    a,\n        b\n)");
+        let tokens = lexer.tokenize()?;
+        assert!(matches!(&tokens[0].typ, TokenType::Ident(s) if s == "plot"));
+        assert!(matches!(tokens[1].typ, TokenType::LParen));
+        assert!(matches!(&tokens[2].typ, TokenType::Ident(s) if s == "a"));
+        assert!(matches!(tokens[3].typ, TokenType::Comma));
+        assert!(matches!(&tokens[4].typ, TokenType::Ident(s) if s == "b"));
+        assert!(matches!(tokens[5].typ, TokenType::RParen));
+        assert!(matches!(tokens[6].typ, TokenType::Eof));
+        Ok(())
+    }
+
+    #[test]
+    fn test_newline_after_closing_paren_terminates() -> eyre::Result<()> {
+        // The Newline after the closing paren still terminates the statement,
+        // so a following statement stays separate.
+        let mut lexer = Lexer::new("x = f(\n    a\n)\ny = 1");
+        let tokens = lexer.tokenize()?;
+        assert!(matches!(tokens[5].typ, TokenType::RParen));
+        assert!(matches!(tokens[6].typ, TokenType::Newline));
+        assert!(matches!(&tokens[7].typ, TokenType::Ident(s) if s == "y"));
         Ok(())
     }
 
