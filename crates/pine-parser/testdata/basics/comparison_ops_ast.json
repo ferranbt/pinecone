@@ -13,8 +13,7 @@
             "Variable": "open"
           }
         }
-      },
-      "is_varip": false
+      }
     }
   },
   {
@@ -31,8 +30,7 @@
             "Variable": "open"
           }
         }
-      },
-      "is_varip": false
+      }
     }
   },
   {
@@ -69,8 +67,7 @@
             }
           }
         }
-      },
-      "is_varip": false
+      }
     }
   }
 ]

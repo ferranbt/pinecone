@@ -15,8 +15,7 @@
                   "Literal": {
                     "Number": 10.0
                   }
-                },
-                "is_varip": false
+                }
               }
             },
             {
@@ -27,8 +26,7 @@
                   "Literal": {
                     "Number": 20.0
                   }
-                },
-                "is_varip": false
+                }
               }
             },
             {
@@ -50,8 +48,7 @@
             }
           ]
         }
-      },
-      "is_varip": false
+      }
     }
   },
   {
@@ -66,8 +63,7 @@
           "args": [],
           "id": 1
         }
-      },
-      "is_varip": false
+      }
     }
   },
   {

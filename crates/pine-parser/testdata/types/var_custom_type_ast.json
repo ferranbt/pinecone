@@ -34,7 +34,7 @@
           "id": 1
         }
       },
-      "is_varip": false
+      "var_kind": "Var"
     }
   }
 ]

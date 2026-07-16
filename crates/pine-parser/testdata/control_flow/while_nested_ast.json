@@ -8,7 +8,7 @@
           "Number": 0.0
         }
       },
-      "is_varip": false
+      "var_kind": "Var"
     }
   },
   {
@@ -20,7 +20,7 @@
           "Number": 0.0
         }
       },
-      "is_varip": false
+      "var_kind": "Var"
     }
   },
   {
@@ -48,7 +48,7 @@
                 "Number": 0.0
               }
             },
-            "is_varip": false
+            "var_kind": "Var"
           }
         },
         {

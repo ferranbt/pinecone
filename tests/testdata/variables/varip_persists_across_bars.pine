@@ -1,0 +1,12 @@
+// varip persists across bars like var; the intrabar-update distinction only
+// matters in realtime, which this bar-by-bar harness does not exercise.
+
+// Bars: 3
+varip count = 0
+count := count + 1
+log.info(count)
+
+// Expected output:
+// 1
+// 2
+// 3

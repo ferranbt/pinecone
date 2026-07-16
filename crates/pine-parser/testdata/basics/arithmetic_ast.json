@@ -24,7 +24,7 @@
           }
         }
       },
-      "is_varip": false
+      "var_kind": "Var"
     }
   },
   {
@@ -42,7 +42,7 @@
           }
         }
       },
-      "is_varip": false
+      "var_kind": "Var"
     }
   },
   {
@@ -62,7 +62,7 @@
           }
         }
       },
-      "is_varip": false
+      "var_kind": "Var"
     }
   }
 ]

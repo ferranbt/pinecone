@@ -1,0 +1,22 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+// Pine `var` semantics inside a loop body: the initializer runs only the
+// FIRST time execution reaches the declaration (once ever) — NOT once per
+// iteration. After the first outer iteration leaves j at 2, `var j = 0` is
+// skipped, so the inner loop never runs again and sum stays 0 + 0*1 = 0.
+
+var i = 0
+var sum = 0
+while i < 3
+    var j = 0
+    while j < 2
+        sum := sum + i * j
+        j := j + 1
+    i := i + 1
+
+log.info(sum)
+
+// Expected output:
+// 0

@@ -48,8 +48,7 @@
           ],
           "id": 1
         }
-      },
-      "is_varip": false
+      }
     }
   },
   {
@@ -63,8 +62,7 @@
           },
           "member": "x"
         }
-      },
-      "is_varip": false
+      }
     }
   },
   {
@@ -78,8 +76,7 @@
           },
           "member": "y"
         }
-      },
-      "is_varip": false
+      }
     }
   }
 ]

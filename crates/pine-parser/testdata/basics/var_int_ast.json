@@ -13,7 +13,7 @@
           }
         }
       },
-      "is_varip": false
+      "var_kind": "Var"
     }
   },
   {
@@ -25,7 +25,7 @@
           "Number": 3.14
         }
       },
-      "is_varip": false
+      "var_kind": "Var"
     }
   }
 ]

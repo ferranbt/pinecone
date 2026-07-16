@@ -1,0 +1,17 @@
+// Pine functions keep local state across calls: a `var` declared inside a
+// function body initializes once and persists across bars, so the local counter
+// accumulates each time the function is called.
+
+// Bars: 3
+f_counter() =>
+    var n = 0
+    n := n + 1
+    n
+
+c = f_counter()
+log.info(c)
+
+// Expected output:
+// 1
+// 2
+// 3

@@ -1,0 +1,14 @@
+// Series lookback on a `var` variable inside its own reassignment: the previous
+// value must be committed to history BEFORE the RHS is evaluated, so `acc[1]`
+// sees the previous bar's value. (Getting this order wrong lags every recursive
+// series, e.g. Heikin-Ashi, by one bar.)
+
+// Bars: 3
+var acc = 0.0
+acc := acc[1] + 1.0
+log.info(acc)
+
+// Expected output:
+// 1
+// 2
+// 3

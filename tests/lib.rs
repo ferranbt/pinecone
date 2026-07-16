@@ -10,6 +10,7 @@ mod tests {
     use std::cell::Cell;
     use std::fs;
     use std::path::Path;
+    use std::rc::Rc;
 
     /// Generate synthetic OHLCV bar data for testing
     fn generate_test_bars(count: usize) -> Vec<Bar> {
@@ -32,19 +33,21 @@ mod tests {
     /// Mock historical data provider for tests
     struct TestHistoricalData {
         bars: Vec<Bar>,
-        current_index: Cell<usize>,
+        current_index: Rc<Cell<usize>>,
     }
 
     impl TestHistoricalData {
         fn new(bars: Vec<Bar>) -> Self {
             Self {
                 bars,
-                current_index: Cell::new(0),
+                current_index: Rc::new(Cell::new(0)),
             }
         }
 
-        fn set_current_bar(&self, index: usize) {
-            self.current_index.set(index);
+        /// Shared handle to the "current bar" index so the caller can advance it
+        /// between executions after the provider has been moved into the script.
+        fn current_handle(&self) -> Rc<Cell<usize>> {
+            self.current_index.clone()
         }
     }
 
@@ -160,6 +163,19 @@ mod tests {
         }
     }
 
+    /// Number of trailing bars to run a script over, from an optional
+    /// `// Bars: N` directive. Absent means the default single (last) bar.
+    fn extract_bar_count(source: &str) -> Option<usize> {
+        for line in source.lines() {
+            if let Some(rest) = line.trim().strip_prefix("// Bars:") {
+                if let Ok(n) = rest.trim().parse::<usize>() {
+                    return Some(n.max(1));
+                }
+            }
+        }
+        None
+    }
+
     fn execute_pine_script_with_logger(source: &str) -> eyre::Result<Vec<String>> {
         let library_loader = TestLibraryLoader::new();
 
@@ -168,22 +184,26 @@ mod tests {
         // Generate historical bar data for TA functions
         let bars = generate_test_bars(200);
         let historical_data = TestHistoricalData::new(bars.clone());
-        historical_data.set_current_bar(bars.len() - 1);
+        let current_index = historical_data.current_handle();
 
         // Set up historical data provider
         script.set_historical_provider(Box::new(historical_data));
         script.set_library_loader(Box::new(library_loader));
 
-        // Execute with the last bar
-        let pine_output = script.execute(&bars[bars.len() - 1])?;
+        // Run over the final `bar_count` bars, keeping interpreter state across
+        // them, and collect every log emitted. `// Bars: N` opts into multi-bar
+        // execution to exercise cross-bar state (`var` persistence, user-series
+        // history, stateful function locals); the default is the last bar only.
+        let bar_count = extract_bar_count(source).unwrap_or(1).min(bars.len());
+        let start = bars.len() - bar_count;
 
-        // Extract log messages from output
-        let result = pine_output
-            .get_logs()
-            .iter()
-            .map(|log| log.message.clone())
-            .collect();
-        Ok(result)
+        let mut logs = Vec::new();
+        for (index, bar) in bars.iter().enumerate().skip(start) {
+            current_index.set(index);
+            let pine_output = script.execute(bar)?;
+            logs.extend(pine_output.get_logs().iter().map(|log| log.message.clone()));
+        }
+        Ok(logs)
     }
 
     #[test]
