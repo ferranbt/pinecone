@@ -1,0 +1,10 @@
+//@version=6
+
+// The recommended consistent style: one argument per wrapped line, each
+// indented by 4 spaces, with the closing parenthesis on its own line. A
+// 4-space indent inside parentheses does not open a block.
+lengthInput = input.int(
+    defval = 10,
+    title = "Show last",
+    minval = 1
+)

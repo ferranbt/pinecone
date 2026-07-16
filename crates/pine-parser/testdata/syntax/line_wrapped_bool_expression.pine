@@ -1,0 +1,10 @@
+//@version=4
+
+// Pine line-wrapping: continuation lines indented by a non-multiple of 4
+// spaces join the previous logical line. A bare `and`/`or` at the start of a
+// continuation line is the canonical Pine style.
+can_trade = x < 2
+         and y
+         and z
+
+next_var = 1
