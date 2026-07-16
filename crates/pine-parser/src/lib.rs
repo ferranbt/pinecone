@@ -67,11 +67,22 @@ impl TokenTypeExt for TokenType {
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    next_call_id: u32,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0 }
+        Self {
+            tokens,
+            current: 0,
+            next_call_id: 1,
+        }
+    }
+
+    fn next_call_id(&mut self) -> u32 {
+        let id = self.next_call_id;
+        self.next_call_id += 1;
+        id
     }
 
     fn peek(&self) -> &Token {
@@ -1475,12 +1486,14 @@ impl Parser {
 
                 // After type args, we must have a function call
                 if self.match_token(&[TokenType::LParen]) {
+                    let id = self.next_call_id();
                     let args = self.arguments()?;
                     self.consume(TokenType::RParen, "Expected ')'")?;
                     expr = Expr::Call {
                         callee: Box::new(expr),
                         type_args,
                         args,
+                        id,
                     };
                 } else {
                     // Not a function call, just break
@@ -1488,12 +1501,14 @@ impl Parser {
                 }
             } else if self.match_token(&[TokenType::LParen]) {
                 // Function call without type arguments
+                let id = self.next_call_id();
                 let args = self.arguments()?;
                 self.consume(TokenType::RParen, "Expected ')'")?;
                 expr = Expr::Call {
                     callee: Box::new(expr),
                     type_args: vec![],
                     args,
+                    id,
                 };
             } else {
                 break;
@@ -1505,9 +1520,6 @@ impl Parser {
 
     fn arguments(&mut self) -> Result<Vec<Argument>, ParserError> {
         let mut args = vec![];
-
-        // Skip leading newlines in argument list
-        self.skip_newlines_and_indent();
 
         if !self.check(&TokenType::RParen) {
             loop {
@@ -1540,20 +1552,11 @@ impl Parser {
                     args.push(Argument::Positional(expr));
                 }
 
-                // Skip newlines after each argument
-                self.skip_newlines();
-
                 if !self.match_token(&[TokenType::Comma]) {
                     break;
                 }
-
-                // Skip newlines after comma
-                self.skip_newlines_and_indent();
             }
         }
-
-        // Skip trailing newlines and dedent before closing paren
-        self.skip_newlines_and_dedent();
 
         Ok(args)
     }
@@ -1778,6 +1781,7 @@ mod tests {
             callee,
             type_args,
             args,
+            ..
         } = expr
         {
             assert_eq!(*callee, Expr::Variable("sma".to_string()));
@@ -1801,6 +1805,7 @@ mod tests {
             callee,
             type_args,
             args,
+            ..
         } = expr
         {
             assert_eq!(*callee, Expr::Variable("foo".to_string()));

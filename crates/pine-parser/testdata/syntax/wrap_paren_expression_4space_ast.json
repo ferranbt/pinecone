@@ -1,16 +1,17 @@
 [
   {
     "VarDecl": {
-      "name": "x",
+      "name": "percentChange",
       "type_annotation": null,
       "initializer": {
-        "Call": {
-          "callee": {
-            "Literal": "Na"
-          },
-          "args": [
-            {
-              "Positional": {
+        "Binary": {
+          "left": {
+            "Binary": {
+              "left": {
+                "Variable": "closeDiff"
+              },
+              "op": "Div",
+              "right": {
                 "Index": {
                   "expr": {
                     "Variable": "close"
@@ -23,12 +24,16 @@
                 }
               }
             }
-          ],
-          "id": 1
+          },
+          "op": "Mul",
+          "right": {
+            "Literal": {
+              "Number": 100.0
+            }
+          }
         }
       },
-      "is_varip": false,
-      "is_var_persistent": false
+      "is_varip": false
     }
   }
 ]

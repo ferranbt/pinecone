@@ -1,0 +1,29 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": {
+            "Variable": "f"
+          },
+          "args": [
+            {
+              "Positional": {
+                "Variable": "a"
+              }
+            },
+            {
+              "Positional": {
+                "Variable": "b"
+              }
+            }
+          ],
+          "id": 1
+        }
+      },
+      "is_varip": false
+    }
+  }
+]

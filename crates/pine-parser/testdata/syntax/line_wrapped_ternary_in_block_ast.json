@@ -1,0 +1,109 @@
+[
+  {
+    "If": {
+      "condition": {
+        "Variable": "cond"
+      },
+      "then_branch": [
+        {
+          "VarDecl": {
+            "name": "v",
+            "type_annotation": null,
+            "initializer": {
+              "Binary": {
+                "left": {
+                  "Binary": {
+                    "left": {
+                      "Variable": "x"
+                    },
+                    "op": "Less",
+                    "right": {
+                      "Literal": {
+                        "Number": 2.0
+                      }
+                    }
+                  }
+                },
+                "op": "And",
+                "right": {
+                  "Variable": "y"
+                }
+              }
+            },
+            "is_varip": false
+          }
+        },
+        {
+          "VarDecl": {
+            "name": "s",
+            "type_annotation": null,
+            "initializer": {
+              "Ternary": {
+                "condition": {
+                  "Binary": {
+                    "left": {
+                      "Variable": "a"
+                    },
+                    "op": "Greater",
+                    "right": {
+                      "Literal": {
+                        "Number": 0.0
+                      }
+                    }
+                  }
+                },
+                "then_expr": {
+                  "Literal": {
+                    "Number": 1.0
+                  }
+                },
+                "else_expr": {
+                  "Ternary": {
+                    "condition": {
+                      "Binary": {
+                        "left": {
+                          "Variable": "b"
+                        },
+                        "op": "Less",
+                        "right": {
+                          "Literal": {
+                            "Number": 0.0
+                          }
+                        }
+                      }
+                    },
+                    "then_expr": {
+                      "Literal": {
+                        "Number": 2.0
+                      }
+                    },
+                    "else_expr": {
+                      "Literal": {
+                        "Number": 3.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "is_varip": false
+          }
+        }
+      ],
+      "else_if_branches": [],
+      "else_branch": null
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "q",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 1.0
+        }
+      },
+      "is_varip": false
+    }
+  }
+]

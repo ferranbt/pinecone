@@ -1,0 +1,73 @@
+[
+  {
+    "VarDecl": {
+      "name": "x",
+      "type_annotation": null,
+      "initializer": {
+        "Call": {
+          "callee": {
+            "Variable": "f"
+          },
+          "args": [
+            {
+              "Named": {
+                "name": "a",
+                "value": {
+                  "Literal": {
+                    "Number": 1.0
+                  }
+                }
+              }
+            },
+            {
+              "Named": {
+                "name": "b",
+                "value": {
+                  "Ternary": {
+                    "condition": {
+                      "Variable": "cond"
+                    },
+                    "then_expr": {
+                      "Literal": {
+                        "Number": 1.0
+                      }
+                    },
+                    "else_expr": {
+                      "Literal": {
+                        "Number": 2.0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "Named": {
+                "name": "c",
+                "value": {
+                  "Literal": {
+                    "Number": 3.0
+                  }
+                }
+              }
+            }
+          ],
+          "id": 1
+        }
+      },
+      "is_varip": false
+    }
+  },
+  {
+    "VarDecl": {
+      "name": "y",
+      "type_annotation": null,
+      "initializer": {
+        "Literal": {
+          "Number": 1.0
+        }
+      },
+      "is_varip": false
+    }
+  }
+]

@@ -38,7 +38,8 @@
                 }
               }
             }
-          ]
+          ],
+          "id": 1
         }
       },
       "is_varip": false,
@@ -77,7 +78,8 @@
                 }
               }
             }
-          ]
+          ],
+          "id": 2
         }
       },
       "is_varip": false,
@@ -102,7 +104,8 @@
             "string",
             "int"
           ],
-          "args": []
+          "args": [],
+          "id": 3
         }
       },
       "is_varip": false,

@@ -10,6 +10,11 @@ fn skip_none<T>(opt: &Option<T>) -> bool {
     opt.is_none()
 }
 
+// Helper function for serde to skip unassigned call-site ids
+fn is_zero_u32(n: &u32) -> bool {
+    *n == 0
+}
+
 /// Type qualifier for variables and parameters
 /// Hierarchy: const < input < simple < series (const is the weakest)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -46,6 +51,8 @@ pub enum Expr {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         type_args: Vec<String>, // Type arguments like <int>, <float>
         args: Vec<Argument>,
+        #[serde(default, skip_serializing_if = "is_zero_u32")]
+        id: u32,
     },
     Index {
         expr: Box<Expr>,

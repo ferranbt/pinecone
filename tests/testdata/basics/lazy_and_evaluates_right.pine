@@ -1,0 +1,6 @@
+// A true left operand does not decide `and`, so the right operand IS evaluated.
+// Here that reaches the undefined `boom`, which errors — proving the operand
+// was not skipped.
+x = true and boom
+
+// Expected error: not found

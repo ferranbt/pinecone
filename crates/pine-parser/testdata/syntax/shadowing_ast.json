@@ -19,7 +19,8 @@
                 "Variable": "close"
               }
             }
-          ]
+          ],
+          "id": 1
         }
       },
       "is_varip": false,
@@ -46,7 +47,8 @@
                 "Variable": "close"
               }
             }
-          ]
+          ],
+          "id": 2
         }
       },
       "is_varip": false,
