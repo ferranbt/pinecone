@@ -1035,6 +1035,19 @@ impl<O: PineOutput> Interpreter<O> {
 
             Expr::Binary { left, op, right } => {
                 let left_val = self.eval_expr(left)?;
+                // Pine `and`/`or` are lazy: when the left operand alone decides
+                // the result (false-and / true-or), the right operand is NOT
+                // evaluated — side effects inside it (e.g. stateful ta.* calls)
+                // must not run. The three-valued na results are unchanged:
+                // false absorbs na in `and`, true absorbs na in `or`, and an
+                // na left operand still requires the right operand's value.
+                if matches!(op, BinOp::And | BinOp::Or) {
+                    match (op, left_val.to_bool()?) {
+                        (BinOp::And, Some(false)) => return Ok(Value::Bool(false)),
+                        (BinOp::Or, Some(true)) => return Ok(Value::Bool(true)),
+                        _ => {}
+                    }
+                }
                 let right_val = self.eval_expr(right)?;
                 self.eval_binary_op(&left_val, op, &right_val)
             }

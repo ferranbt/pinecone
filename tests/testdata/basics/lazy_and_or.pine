@@ -1,0 +1,40 @@
+// Pine `and`/`or` are lazy: when the left operand alone decides the result
+// (false-and / true-or) the right operand is not evaluated. Here the right
+// operand `boom` is undefined, so the script only completes if that operand is
+// truly skipped. The three-valued na results are unchanged.
+
+// Left operand decides, so the undefined right operand is skipped
+log.info(true or boom)
+log.info(false and boom)
+
+// Left operand does not decide, so the right operand is evaluated (its value
+// is needed) and the result is correct
+log.info(false or true)
+log.info(true and false)
+
+// An na left operand cannot decide alone, so the right operand's value decides
+cond = na
+log.info(cond or true)
+log.info(cond and true)
+
+// Three-valued results are unchanged by laziness
+log.info(true or na)
+log.info(false or na)
+log.info(na or false)
+log.info(false and na)
+log.info(true and na)
+log.info(na and false)
+
+// Expected output:
+// true
+// false
+// true
+// false
+// true
+// na
+// true
+// na
+// na
+// false
+// na
+// false
