@@ -1,11 +1,13 @@
 // Pine `and`/`or` are lazy: when the left operand alone decides the result
 // (false-and / true-or) the right operand is not evaluated. Here the right
-// operand `boom` is undefined, so the script only completes if that operand is
-// truly skipped. The three-valued na results are unchanged.
+// operand is an out-of-bounds array access that errors if evaluated, so the
+// script only completes if that operand is truly skipped. The three-valued na
+// results are unchanged.
+arr = array.new_float(0, 0.0)
 
-// Left operand decides, so the undefined right operand is skipped
-log.info(true or boom)
-log.info(false and boom)
+// Left operand decides, so the erroring right operand is skipped
+log.info(true or (array.get(arr, 0) > 0))
+log.info(false and (array.get(arr, 0) > 0))
 
 // Left operand does not decide, so the right operand is evaluated (its value
 // is needed) and the result is correct

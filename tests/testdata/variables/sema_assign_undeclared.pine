@@ -1,0 +1,4 @@
+x := 5
+
+// Expected error:
+// error [invalid-assignment]: cannot assign to undeclared variable `x` (declare it with `=` first)

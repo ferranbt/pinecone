@@ -24,14 +24,16 @@
 //! assert_eq!(diagnostics[0].rule, "eq-na");
 //! ```
 
-mod diagnostic;
 mod pass;
 mod passes;
-mod visitor;
 
 #[cfg(test)]
 mod test_util;
 
-pub use diagnostic::{Diagnostic, Severity};
 pub use pass::{lint, lint_with, LintPass};
-pub use visitor::{walk_block, walk_expr, walk_program, walk_stmt, Visitor};
+// The diagnostic type is shared across the toolchain; re-exported for
+// convenience so existing `pine_lint::Diagnostic` paths keep working.
+pub use pine_diagnostics::{Diagnostic, Severity};
+// The AST traversal now lives in `pine-ast` so both `pine-lint` and `pine-sema`
+// can share one walker; re-exported here for convenience.
+pub use pine_ast::visitor::{walk_block, walk_expr, walk_program, walk_stmt, Visitor};

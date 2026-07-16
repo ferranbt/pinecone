@@ -6,11 +6,13 @@ rust-version = "1.83"
 members = [
     "crates/pine-lexer",
     "crates/pine-ast",
+    "crates/pine-diagnostics",
     "crates/pine-parser",
     "crates/pine-interpreter",
     "crates/pine-builtin-macro",
     "crates/pine-builtins",
     "crates/pine-lint",
+    "crates/pine-sema",
     "crates/pine",
     "crates/pine-reference",
     "tests",
@@ -22,10 +24,12 @@ resolver = "2"
 pine-lexer = { path = "crates/pine-lexer" }
 pine-parser = { path = "crates/pine-parser" }
 pine-ast = { path = "crates/pine-ast" }
+pine-diagnostics = { path = "crates/pine-diagnostics" }
 pine-interpreter = { path = "crates/pine-interpreter" }
 pine-builtin-macro = { path = "crates/pine-builtin-macro" }
 pine-builtins = { path = "crates/pine-builtins" }
 pine-lint = { path = "crates/pine-lint" }
+pine-sema = { path = "crates/pine-sema" }
 pine = { path = "crates/pine" }
 pine-reference = { path = "crates/pine-reference" }
 eyre = "0.6"

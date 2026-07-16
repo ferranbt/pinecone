@@ -1,7 +1,8 @@
 // An na left operand cannot decide `or` alone, so the right operand IS
 // evaluated (its value is needed to choose between na and true). Reaching the
-// undefined `boom` errors, proving the operand was not skipped.
+// out-of-bounds array access errors, proving the operand was not skipped.
+arr = array.new_float(0, 0.0)
 cond = na
-x = cond or boom
+x = cond or (array.get(arr, 0) > 0)
 
-// Expected error: not found
+// Expected error: Index out of bounds

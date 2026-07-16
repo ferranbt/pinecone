@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+pub mod visitor;
+pub use visitor::{walk_block, walk_expr, walk_program, walk_stmt, Visitor};
+
 // Helper function for serde to skip false values
 fn is_false(b: &bool) -> bool {
     !b

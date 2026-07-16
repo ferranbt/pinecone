@@ -11,7 +11,7 @@
 //! diagnostics) as it walks. The `?Sized` bounds on the `walk_*` functions let
 //! them drive a `dyn Visitor`, which the lint driver relies on.
 
-use pine_ast::{Argument, Expr, Program, Stmt};
+use crate::{Argument, Expr, Program, Stmt};
 
 /// A read-only traversal over the AST.
 ///

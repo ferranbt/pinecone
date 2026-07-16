@@ -3,4 +3,5 @@
 var x = 10
 continue
 
-// Expected error: Continue statement outside of loop
+// Expected error:
+// error [break-outside-loop]: `continue` is only valid inside a loop

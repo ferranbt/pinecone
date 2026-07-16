@@ -2,4 +2,5 @@
 
 color := "test"  // This should fail
 
-// Expected error: Cannot reassign const variable 'color'
+// Expected error:
+// error [reassign-builtin]: cannot reassign built-in `color`

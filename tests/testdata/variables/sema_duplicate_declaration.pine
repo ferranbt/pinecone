@@ -1,0 +1,5 @@
+x = 1
+x = 2
+
+// Expected error:
+// error [duplicate-declaration]: `x` is already declared in this scope (use `:=` to reassign)

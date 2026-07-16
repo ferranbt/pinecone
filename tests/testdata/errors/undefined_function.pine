@@ -2,4 +2,5 @@
 
 var x = undefinedFunction(10)
 
-// Expected error: Variable 'undefinedFunction' not found
+// Expected error:
+// error [unknown-function] 3:26: unknown function `undefinedFunction`

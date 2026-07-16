@@ -84,49 +84,54 @@ mod tests {
 
     enum ExpectedResult {
         Output(Vec<String>),
-        Error(String),
+        Error(Vec<String>),
     }
 
-    /// Extract expected output from comments at the end of a Pine script
+    /// Extract the expected result from the `// Expected output:` or
+    /// `// Expected error:` marker and the comment lines that follow it.
     fn extract_expected_result(source: &str) -> eyre::Result<ExpectedResult> {
         if source.contains("// Expected output:") {
-            let mut expected = Vec::new();
-            let mut in_expected_section = false;
-
-            for line in source.lines() {
-                let trimmed = line.trim();
-
-                // Check if we've reached the "Expected output:" marker
-                if trimmed == "// Expected output:" {
-                    in_expected_section = true;
-                    continue;
-                }
-
-                // If we're in the expected section and line starts with //, extract the value
-                if in_expected_section {
-                    if let Some(stripped) = trimmed.strip_prefix("//") {
-                        let value = stripped.trim();
-                        if !value.is_empty() {
-                            expected.push(value.to_string());
-                        }
-                    } else if !trimmed.is_empty() && !trimmed.starts_with("//") {
-                        // Stop if we hit a non-comment line
-                        break;
-                    }
-                }
-            }
-            Ok(ExpectedResult::Output(expected))
+            Ok(ExpectedResult::Output(collect_expected_block(
+                source,
+                "// Expected output:",
+            )))
         } else if source.contains("// Expected error:") {
-            for line in source.lines() {
-                let trimmed = line.trim();
-                if let Some(stripped) = trimmed.strip_prefix("// Expected error:") {
-                    return Ok(ExpectedResult::Error(stripped.trim().to_string()));
+            Ok(ExpectedResult::Error(collect_expected_block(
+                source,
+                "// Expected error:",
+            )))
+        } else {
+            Err(eyre::eyre!("failed to decode expected result"))
+        }
+    }
+
+    /// Collect an expected block: any inline text after `marker`, plus the
+    /// following `//` comment lines, stopping at the first non-comment line.
+    fn collect_expected_block(source: &str, marker: &str) -> Vec<String> {
+        let mut lines = Vec::new();
+        let mut in_section = false;
+        for line in source.lines() {
+            let trimmed = line.trim();
+            if let Some(rest) = trimmed.strip_prefix(marker) {
+                in_section = true;
+                let rest = rest.trim();
+                if !rest.is_empty() {
+                    lines.push(rest.to_string());
+                }
+                continue;
+            }
+            if in_section {
+                if let Some(stripped) = trimmed.strip_prefix("//") {
+                    let value = stripped.trim();
+                    if !value.is_empty() {
+                        lines.push(value.to_string());
+                    }
+                } else if !trimmed.is_empty() {
+                    break;
                 }
             }
-            Err(eyre::eyre!("expected error but output not found"))
-        } else {
-            Err(eyre::eyre!("failed to decode expected error"))
         }
+        lines
     }
 
     /// Library loader that loads from testdata/libraries directory
@@ -270,6 +275,7 @@ mod tests {
                     has_failed = true;
                 }
                 (ExpectedResult::Error(expected_error), Err(err)) => {
+                    let expected_error = expected_error.join("\n");
                     if err.to_string().contains(&expected_error) {
                         println!("✅ {}", relative_path);
                     } else {
