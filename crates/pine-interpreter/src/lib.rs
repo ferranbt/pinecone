@@ -1166,7 +1166,7 @@ impl<O: PineOutput> Interpreter<O> {
                 }
             }
 
-            Expr::Binary { left, op, right } => {
+            Expr::Binary { left, op, right, .. } => {
                 let left_val = self.eval_expr(left)?;
                 // Pine `and`/`or` are lazy: when the left operand alone decides
                 // the result (false-and / true-or), the right operand is NOT
@@ -1320,6 +1320,7 @@ impl<O: PineOutput> Interpreter<O> {
                 type_args,
                 args,
                 id,
+                ..
             } => {
                 // Check if this is a method call (object.method())
                 if let Expr::MemberAccess { object, member } = callee.as_ref() {
