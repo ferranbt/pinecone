@@ -352,17 +352,24 @@ pub struct Interpreter<O: PineOutput = DefaultPineOutput> {
     /// history[len-1] = previous bar, history[len-2] = two bars ago, etc.
     /// Populated on each `Stmt::Assignment`; supports Pine's `name[n]` lookback.
     pub user_series_history: HashMap<String, Vec<Value<O>>>,
-    /// Persistent local state for user-defined functions, keyed by function name.
-    /// Pine functions maintain local variable state across calls (all bars), not just
-    /// `var`-declared variables. This mirrors TradingView Pine Script semantics where
-    /// `o[1]` inside a function returns the previous bar's value of the local `o`.
-    function_local_state: HashMap<String, HashMap<String, Variable<O>>>,
-    /// Names of `var`/`varip` declarations whose initializer already ran.
-    /// Pine `var` initializes only the FIRST time execution reaches the
-    /// declaration (once ever, not per bar/iteration). Tracked separately
-    /// from `variables` so a `var` declaration can shadow a pre-existing
-    /// host-injected variable (e.g. `var close = 10` over the builtin series).
-    var_decls_initialized: std::collections::HashSet<String>,
+    /// Persistent local state for user-defined functions, keyed by the call
+    /// site's stable lexical id (`Expr::Call::id`). Keying by call site — not
+    /// by function name — means two calls to the same function keep independent
+    /// state, mirroring TradingView (e.g. `o[1]` inside a function returns the
+    /// previous bar's value of that call site's local `o`). A `call_id` of 0
+    /// (a call with no stable identity) is not persisted.
+    function_local_state: HashMap<u32, HashMap<String, Variable<O>>>,
+    /// `var`/`varip` declarations whose initializer already ran, keyed by
+    /// (call-site id, name). Pine `var` initializes only the FIRST time
+    /// execution reaches the declaration (once ever, not per bar/iteration).
+    /// The call-site id (0 at top level) scopes it per call site, so the same
+    /// function-local `var` at two call sites initializes independently.
+    /// Tracked separately from `variables` so a `var` declaration can shadow a
+    /// pre-existing host-injected variable (e.g. `var close = 10`).
+    var_decls_initialized: std::collections::HashSet<(u32, String)>,
+    /// Lexical id of the call site currently executing (0 at top level). Scopes
+    /// `var` init-once tracking to the active call site.
+    current_call_id: u32,
 }
 
 /// Pine `na` is float NaN. NaN can also reach `==`/`!=` wrapped as a
@@ -385,6 +392,7 @@ impl<O: PineOutput> Interpreter<O> {
             user_series_history: HashMap::new(),
             function_local_state: HashMap::new(),
             var_decls_initialized: std::collections::HashSet::new(),
+            current_call_id: 0,
         }
     }
 
@@ -401,6 +409,7 @@ impl<O: PineOutput> Interpreter<O> {
             user_series_history: HashMap::new(),
             function_local_state: HashMap::new(),
             var_decls_initialized: std::collections::HashSet::new(),
+            current_call_id: 0,
         }
     }
 
@@ -417,6 +426,7 @@ impl<O: PineOutput> Interpreter<O> {
             user_series_history: HashMap::new(),
             function_local_state: HashMap::new(),
             var_decls_initialized: std::collections::HashSet::new(),
+            current_call_id: 0,
         }
     }
 
@@ -436,6 +446,7 @@ impl<O: PineOutput> Interpreter<O> {
             user_series_history: HashMap::new(),
             function_local_state: HashMap::new(),
             var_decls_initialized: std::collections::HashSet::new(),
+            current_call_id: 0,
         }
     }
 
@@ -587,14 +598,16 @@ impl<O: PineOutput> Interpreter<O> {
                 let is_var_persistent = var_kind.is_persistent();
                 // Pine `var`/`varip` semantics: the initializer runs only the
                 // FIRST time execution reaches this declaration (once ever).
-                // Tracked in var_decls_initialized rather than by name
-                // existence, so `var close = 10` correctly shadows a
-                // pre-existing host-injected builtin variable.
+                // Scoped by the current call site (0 at top level) so the same
+                // function-local `var` at two call sites initializes
+                // independently. Tracked separately from `variables` so a `var`
+                // declaration can shadow a pre-existing host-injected builtin.
                 if is_var_persistent {
-                    if self.var_decls_initialized.contains(name) {
+                    let init_key = (self.current_call_id, name.clone());
+                    if self.var_decls_initialized.contains(&init_key) {
                         return Ok(None);
                     }
-                    self.var_decls_initialized.insert(name.clone());
+                    self.var_decls_initialized.insert(init_key);
                 }
                 // Non-`var` declarations (e.g. `ha_bull_4h = expr`) re-execute on every bar.
                 // Push the previous value to history so `name[1]` lookbacks work, exactly as
@@ -1346,12 +1359,9 @@ impl<O: PineOutput> Interpreter<O> {
                 // Call the function based on its type
                 match callee_value {
                     Value::Function { params, body } => {
-                        let fn_name = if let Expr::Variable(name) = callee.as_ref() {
-                            Some(name.clone())
-                        } else {
-                            None
-                        };
-                        self.call_user_function(&params, &body, args, evaluated_args, fn_name)
+                        // Thread the call site's lexical id so function-local
+                        // state persists per call site, not per function name.
+                        self.call_user_function(&params, &body, args, evaluated_args, *id)
                     }
                     Value::BuiltinFunction(builtin_fn) => {
                         // Pass type_args from the parsed call expression, and the
@@ -1624,7 +1634,7 @@ impl<O: PineOutput> Interpreter<O> {
         body: &[Stmt],
         arg_exprs: &[Argument],
         args: Vec<EvaluatedArg<O>>,
-        fn_name: Option<String>,
+        call_id: u32,
     ) -> Result<Value<O>, RuntimeError> {
         // Extract positional arguments (user functions don't support named args yet)
         let mut positional_values = Vec::new();
@@ -1677,8 +1687,8 @@ impl<O: PineOutput> Interpreter<O> {
         // across calls so that series indexing like `o[1]` works inside functions.
         let param_names: std::collections::HashSet<&str> =
             params.iter().map(|p| p.name.as_str()).collect();
-        if let Some(ref name) = fn_name {
-            if let Some(local_state) = self.function_local_state.get(name) {
+        if call_id != 0 {
+            if let Some(local_state) = self.function_local_state.get(&call_id) {
                 for (var_name, var) in local_state {
                     if !param_names.contains(var_name.as_str()) {
                         self.variables.insert(var_name.clone(), var.clone());
@@ -1700,7 +1710,12 @@ impl<O: PineOutput> Interpreter<O> {
             );
         }
 
-        // Execute function body
+        // Execute function body under this call site's id, so `var` init-once
+        // tracking is scoped to the call site. Restored afterwards to support
+        // nested/recursive calls. (Like the scope restore below, an error just
+        // propagates and aborts the script.)
+        let prev_call_id = self.current_call_id;
+        self.current_call_id = call_id;
         let mut result: Value<O> = Value::Na;
         for stmt in body {
             if let Some(return_value) = self.execute_stmt(stmt)? {
@@ -1710,28 +1725,21 @@ impl<O: PineOutput> Interpreter<O> {
                 result = self.eval_expr(expr)?;
             }
         }
+        self.current_call_id = prev_call_id;
 
-        // Restore outer scope, but re-insert any var-persistent variables created inside the
-        // function body (Pine function-local `var` declarations survive across calls).
-        // Capture outer-scope keys before moving saved_vars so we can distinguish
-        // function-local `var` vars (not in outer scope) from outer-scope ones.
-        let outer_keys: std::collections::HashSet<String> = saved_vars.keys().cloned().collect();
+        // Restore the outer scope. This call site's locals (including
+        // function-local `var`s) live only in function_local_state, keyed by
+        // call_id — they are NOT leaked into the outer/global scope, so two call
+        // sites of the same function keep independent state.
         let fn_vars = std::mem::replace(&mut self.variables, saved_vars);
 
-        // Save this function's local (non-parameter) variables for the next bar's call.
-        if let Some(ref name) = fn_name {
+        // Save this call site's local (non-parameter) variables for its next call.
+        if call_id != 0 {
             let local_state: HashMap<String, Variable<O>> = fn_vars
-                .iter()
+                .into_iter()
                 .filter(|(k, _)| !param_names.contains(k.as_str()))
-                .map(|(k, v)| (k.clone(), v.clone()))
                 .collect();
-            self.function_local_state.insert(name.clone(), local_state);
-        }
-
-        for (name, var) in fn_vars {
-            if var.is_var_persistent && !outer_keys.contains(&name) {
-                self.variables.insert(name, var);
-            }
+            self.function_local_state.insert(call_id, local_state);
         }
 
         Ok(result)

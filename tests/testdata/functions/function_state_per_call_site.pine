@@ -1,0 +1,24 @@
+// Function-local state is per CALL SITE, not per function name. Each call site
+// of the same stateful function keeps its own independent `var` state, matching
+// TradingView. Here two calls to the same counter each advance their own count,
+// so both log 1, 2, 3 across the three bars (rather than sharing one counter
+// that would advance 1..6).
+
+// Bars: 3
+f_counter() =>
+    var n = 0
+    n := n + 1
+    n
+
+a = f_counter()
+b = f_counter()
+log.info(a)
+log.info(b)
+
+// Expected output:
+// 1
+// 1
+// 2
+// 2
+// 3
+// 3
