@@ -71,7 +71,10 @@ mod tests {
 
     #[test]
     fn flags_literal_conditions_only() {
-        assert_eq!(for_rule("if true\n    x = 1\n", "constant-condition").len(), 1);
+        assert_eq!(
+            for_rule("if true\n    x = 1\n", "constant-condition").len(),
+            1
+        );
         assert!(for_rule("if close > open\n    x = 1\n", "constant-condition").is_empty());
     }
 }

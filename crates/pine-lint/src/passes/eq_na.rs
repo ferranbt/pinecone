@@ -32,7 +32,11 @@ impl Visitor for EqNa {
         } = expr
         {
             if is_na(left) || is_na(right) {
-                let suggestion = if *op == BinOp::Eq { "na(x)" } else { "not na(x)" };
+                let suggestion = if *op == BinOp::Eq {
+                    "na(x)"
+                } else {
+                    "not na(x)"
+                };
                 let operator = if *op == BinOp::Eq { "==" } else { "!=" };
                 self.diagnostics.push(Diagnostic::error(
                     RULE,

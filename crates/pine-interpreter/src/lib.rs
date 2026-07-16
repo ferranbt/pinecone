@@ -1166,7 +1166,9 @@ impl<O: PineOutput> Interpreter<O> {
                 }
             }
 
-            Expr::Binary { left, op, right, .. } => {
+            Expr::Binary {
+                left, op, right, ..
+            } => {
                 let left_val = self.eval_expr(left)?;
                 // Pine `and`/`or` are lazy: when the left operand alone decides
                 // the result (false-and / true-or), the right operand is NOT

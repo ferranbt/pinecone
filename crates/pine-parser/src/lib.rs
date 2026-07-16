@@ -1824,7 +1824,10 @@ mod tests {
     fn test_arithmetic_expressions() {
         // Addition
         let expr = parse_expr("2 + 3").unwrap();
-        if let Expr::Binary { left, op, right, .. } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Literal(Literal::Number(2.0)));
             assert_eq!(op, BinOp::Add);
             assert_eq!(*right, Expr::Literal(Literal::Number(3.0)));
@@ -1856,7 +1859,10 @@ mod tests {
 
         // Division
         let expr = parse_expr("10 / 2").unwrap();
-        if let Expr::Binary { left, op, right, .. } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Literal(Literal::Number(10.0)));
             assert_eq!(op, BinOp::Div);
             assert_eq!(*right, Expr::Literal(Literal::Number(2.0)));
@@ -1864,7 +1870,10 @@ mod tests {
 
         // Subtraction
         let expr = parse_expr("5 - 3").unwrap();
-        if let Expr::Binary { left, op, right, .. } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Literal(Literal::Number(5.0)));
             assert_eq!(op, BinOp::Sub);
             assert_eq!(*right, Expr::Literal(Literal::Number(3.0)));
@@ -1875,7 +1884,10 @@ mod tests {
     fn test_comparison_expressions() {
         // Greater than
         let expr = parse_expr("close > open").unwrap();
-        if let Expr::Binary { left, op, right, .. } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Variable("close".to_string()));
             assert_eq!(op, BinOp::Greater);
             assert_eq!(*right, Expr::Variable("open".to_string()));
@@ -1883,7 +1895,10 @@ mod tests {
 
         // Less than
         let expr = parse_expr("rsi < 30").unwrap();
-        if let Expr::Binary { left, op, right, .. } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Variable("rsi".to_string()));
             assert_eq!(op, BinOp::Less);
             assert_eq!(*right, Expr::Literal(Literal::Number(30.0)));
@@ -1891,7 +1906,10 @@ mod tests {
 
         // Equality
         let expr = parse_expr("x == 5").unwrap();
-        if let Expr::Binary { left, op, right, .. } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(*left, Expr::Variable("x".to_string()));
             assert_eq!(op, BinOp::Eq);
             assert_eq!(*right, Expr::Literal(Literal::Number(5.0)));
@@ -1975,7 +1993,10 @@ mod tests {
 
         // PineScript: sma(close, 14) > sma(close, 28)
         let expr = parse_expr("sma(close, 14) > sma(close, 28)").unwrap();
-        if let Expr::Binary { left, op, right, .. } = expr {
+        if let Expr::Binary {
+            left, op, right, ..
+        } = expr
+        {
             assert_eq!(op, BinOp::Greater);
             assert!(matches!(*left, Expr::Call { .. }));
             assert!(matches!(*right, Expr::Call { .. }));

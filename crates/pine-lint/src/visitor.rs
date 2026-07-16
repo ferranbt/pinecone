@@ -78,9 +78,7 @@ pub fn walk_stmt<V: Visitor + ?Sized>(v: &mut V, stmt: &Stmt) {
                 walk_block(v, body);
             }
         }
-        Stmt::For {
-            from, to, body, ..
-        } => {
+        Stmt::For { from, to, body, .. } => {
             v.visit_expr(from);
             v.visit_expr(to);
             walk_block(v, body);
