@@ -210,11 +210,6 @@ pub enum EvaluatedArg<O: PineOutput = DefaultPineOutput> {
 pub struct FunctionCallArgs<O: PineOutput = DefaultPineOutput> {
     pub type_args: Vec<String>,
     pub args: Vec<EvaluatedArg<O>>,
-    /// Stable lexical id of the `Expr::Call` node being evaluated (0 when the
-    /// call did not originate from a numbered AST, e.g. hand-built test args).
-    /// Built-ins with per-call-site state key it on this: execution-order
-    /// counting cannot identify call sites once lazy `and`/`or` or untaken
-    /// `if`/ternary branches skip calls on some bars.
     pub call_id: u32,
 }
 
