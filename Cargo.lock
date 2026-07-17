@@ -1397,6 +1397,7 @@ dependencies = [
  "eyre",
  "pine",
  "pine-ast",
+ "pine-core",
  "pine-interpreter",
  "pine-lexer",
  "pine-parser",

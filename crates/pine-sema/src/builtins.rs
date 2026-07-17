@@ -126,6 +126,11 @@ const FUNCTIONS: &[&str] = &[
     "color",
     "string",
     "line",
+    "timestamp",
+    // Script declarations. Every script opens with exactly one of these.
+    "indicator",
+    "strategy",
+    "library",
 ];
 
 /// Functions that Pine only permits at **global** scope (never inside `if`,
