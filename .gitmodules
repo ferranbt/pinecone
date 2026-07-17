@@ -1,3 +1,0 @@
-[submodule "crates/pine-parser/tradingview-pinescript-indicators"]
-	path = crates/pine-parser/tradingview-pinescript-indicators
-	url = https://github.com/everget/tradingview-pinescript-indicators.git

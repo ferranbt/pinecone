@@ -4,8 +4,13 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
-[lib]
-path = "lib.rs"
+[[test]]
+name = "integration"
+path = "integration.rs"
+
+[[test]]
+name = "corpus"
+path = "corpus.rs"
 
 [dependencies]
 pine.workspace = true
@@ -13,5 +18,6 @@ pine-interpreter.workspace = true
 pine-lexer.workspace = true
 pine-parser.workspace = true
 pine-ast.workspace = true
+pine-core.workspace = true
 eyre.workspace = true
 walkdir = "2"

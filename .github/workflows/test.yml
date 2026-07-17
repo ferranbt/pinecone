@@ -34,11 +34,6 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Pull submodules
-        run: |
-          git submodule init
-          git submodule update
-
       - name: Run tests
         run: cargo test --lib
 
@@ -51,13 +46,20 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Pull submodules
-        run: |
-          git submodule init
-          git submodule update
-
       - name: Run integration tests
-        run: cargo test -p pine-integration-tests -- --nocapture
+        run: cargo test -p pine-integration-tests --test integration -- --nocapture
+
+  corpus-tests:
+    name: Run corpus tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Run corpus tests
+        run: cargo test -p pine-integration-tests --test corpus -- --nocapture
 
   examples:
     name: Build Examples
