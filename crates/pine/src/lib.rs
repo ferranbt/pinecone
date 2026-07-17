@@ -6,6 +6,7 @@ pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
 use pine_ast::Program;
+use pine_core::{PineVersion, VersionError};
 use pine_diagnostics::Diagnostic;
 use pine_interpreter::{Bar, DefaultPineOutput, Interpreter, PineOutput, RuntimeError, Value};
 use pine_lexer::{Lexer, LexerError};
@@ -21,6 +22,9 @@ pub enum Error {
     /// Semantic analysis failed; the program is invalid. Carries every
     /// diagnostic found.
     Sema(Vec<Diagnostic>),
+    /// The script's `//@version=N` annotation names a version this toolchain
+    /// cannot compile.
+    Version(VersionError),
 }
 
 impl std::fmt::Display for Error {
@@ -29,6 +33,7 @@ impl std::fmt::Display for Error {
             Error::Lexer(e) => write!(f, "Lexer error: {}", e),
             Error::Parser(e) => write!(f, "Parser error: {}", e),
             Error::Runtime(e) => write!(f, "Runtime error: {}", e),
+            Error::Version(e) => write!(f, "Version error: {}", e),
             // One diagnostic per line, so multiple errors are simply appended.
             Error::Sema(diags) => {
                 for (i, d) in diags.iter().enumerate() {
@@ -63,6 +68,12 @@ impl From<ParserError> for Error {
     }
 }
 
+impl From<VersionError> for Error {
+    fn from(e: VersionError) -> Self {
+        Error::Version(e)
+    }
+}
+
 /// A compiled PineScript program that can be executed multiple times
 ///
 /// This represents a parsed PineScript program that maintains state
@@ -75,6 +86,8 @@ pub struct Script<O: PineOutput = DefaultPineOutput> {
 impl Script<DefaultPineOutput> {
     /// Compile PineScript source code into a Script with default output
     pub fn compile(source: &str) -> Result<Self, Error> {
+        let _version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+
         let mut lexer = Lexer::new(source);
         let tokens = lexer.tokenize()?;
 
@@ -109,6 +122,8 @@ impl<O: PineOutput> Script<O> {
         source: &str,
         custom_variables: HashMap<String, Value<O>>,
     ) -> Result<Self, Error> {
+        let _version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+
         let mut lexer = Lexer::new(source);
         let tokens = lexer.tokenize()?;
 

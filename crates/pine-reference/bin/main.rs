@@ -1,9 +1,13 @@
 use clap::{Parser, Subcommand};
+use pine_core::{PineVersion, VersionError};
 
 #[derive(Parser)]
 #[command(name = "pine-reference")]
 #[command(about = "Pine Script reference documentation tool", long_about = None)]
 struct Cli {
+    #[arg(long, global = true, default_value_t = PineVersion::LATEST.number())]
+    pine_version: u8,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -21,12 +25,14 @@ enum Commands {
 
 fn main() -> eyre::Result<()> {
     let cli = Cli::parse();
+    let version = PineVersion::from_number(cli.pine_version)
+        .ok_or(VersionError::Unsupported(cli.pine_version))?;
 
     match &cli.command {
         Commands::Download => {
-            pine_reference::download_and_save_reference()?;
+            pine_reference::download_and_save_reference(version)?;
         }
-        Commands::Query { path } => match pine_reference::query(path.as_deref())? {
+        Commands::Query { path } => match pine_reference::query(version, path.as_deref())? {
             pine_reference::QueryResult::List(items) => {
                 for item in items {
                     println!("{}", item);
