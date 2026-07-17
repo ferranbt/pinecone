@@ -1,9 +1,7 @@
 //! Checks the compiler front-end against a corpus of real-world Pine scripts
 //! from public repositories.
 //!
-//! The corpus is cloned on demand (it is gitignored). `Script::compile` runs the
-//! lexer, parser and sema but never executes, so this needs no market data — it
-//! only asks "can we parse and understand this script?".
+//! The corpus is cloned on demand (it is gitignored).
 
 use pine::Script;
 use pine_core::PineVersion;
