@@ -144,5 +144,6 @@ pub fn register() -> Value {
     Value::Object {
         type_name: "array".to_string(),
         fields: Rc::new(RefCell::new(array_ns)),
+        call: None,
     }
 }

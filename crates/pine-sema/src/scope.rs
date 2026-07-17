@@ -18,6 +18,8 @@ pub enum SymbolKind {
     Enum,
     /// An import alias (`import foo/bar/1 as alias`).
     Import,
+    /// A predefined name supplied by the host (`close`, `ta`, `plot`).
+    Builtin,
 }
 
 impl SymbolKind {
@@ -29,19 +31,31 @@ impl SymbolKind {
             SymbolKind::Type => "type",
             SymbolKind::Enum => "enum",
             SymbolKind::Import => "import",
+            SymbolKind::Builtin => "built-in",
         }
     }
 }
 
 /// A stack of scopes; the last element is the innermost (current) scope.
 pub struct ScopeStack {
+    /// Predefined names supplied by the host. Outside every scope, so a script
+    /// may shadow them.
+    builtins: HashMap<String, SymbolKind>,
     scopes: Vec<HashMap<String, SymbolKind>>,
 }
 
 impl ScopeStack {
-    /// Create a stack with a single (global) scope already open.
-    pub fn new() -> Self {
+    /// Create a stack with `builtins` as the outermost names and an empty
+    /// global scope open.
+    ///
+    /// Built-ins deliberately sit *outside* the global scope so a script can
+    /// shadow one (`var close = 10`) without it counting as a redeclaration.
+    pub fn new<'a>(builtins: impl IntoIterator<Item = &'a str>) -> Self {
         Self {
+            builtins: builtins
+                .into_iter()
+                .map(|name| (name.to_string(), SymbolKind::Builtin))
+                .collect(),
             scopes: vec![HashMap::new()],
         }
     }
@@ -72,17 +86,13 @@ impl ScopeStack {
         scope.insert(name.to_string(), kind)
     }
 
-    /// Resolve `name` against all enclosing scopes, innermost first.
+    /// Resolve `name` against all enclosing scopes, innermost first, falling
+    /// back to the built-ins.
     pub fn resolve(&self, name: &str) -> Option<SymbolKind> {
         self.scopes
             .iter()
             .rev()
             .find_map(|scope| scope.get(name).copied())
-    }
-}
-
-impl Default for ScopeStack {
-    fn default() -> Self {
-        Self::new()
+            .or_else(|| self.builtins.get(name).copied())
     }
 }

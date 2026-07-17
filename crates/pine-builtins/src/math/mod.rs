@@ -546,5 +546,6 @@ pub fn register() -> Value {
     Value::Object {
         type_name: "math".to_string(),
         fields: Rc::new(RefCell::new(math_ns)),
+        call: None,
     }
 }

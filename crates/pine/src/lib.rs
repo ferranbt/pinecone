@@ -74,6 +74,20 @@ impl From<VersionError> for Error {
     }
 }
 
+/// The series every script can reference, refreshed on each bar: the bar's own
+/// OHLCV plus the values Pine derives from them.
+fn bar_series(bar: &Bar) -> [(&'static str, f64); 7] {
+    [
+        ("open", bar.open),
+        ("high", bar.high),
+        ("low", bar.low),
+        ("close", bar.close),
+        ("volume", bar.volume),
+        ("hl2", (bar.high + bar.low) / 2.0),
+        ("ohlc4", (bar.open + bar.high + bar.low + bar.close) / 4.0),
+    ]
+}
+
 /// A compiled PineScript program that can be executed multiple times
 ///
 /// This represents a parsed PineScript program that maintains state
@@ -95,12 +109,6 @@ impl Script<DefaultPineOutput> {
         let statements = parser.parse()?;
         let program = Program::new(statements);
 
-        // Semantic pre-check: reject invalid programs before execution.
-        let diagnostics = pine_sema::analyze(&program);
-        if !diagnostics.is_empty() {
-            return Err(Error::Sema(diagnostics));
-        }
-
         // Create interpreter and load builtin namespace objects
         let mut interpreter = Interpreter::new();
         let namespaces = pine_builtins::register_namespace_objects();
@@ -108,6 +116,20 @@ impl Script<DefaultPineOutput> {
         // Register namespace objects as const variables
         for (name, value) in namespaces {
             interpreter.set_const_variable(&name, value);
+        }
+
+        // The per-bar series exist from the start; `execute` refreshes their
+        // values on every bar.
+        for (name, _) in bar_series(&Bar::default()) {
+            interpreter.set_variable(name, Value::Na);
+        }
+
+        // Semantic pre-check: reject invalid programs before execution. Nothing
+        // has run yet, so the interpreter's registered variables are exactly the
+        // predefined names a script may reference.
+        let diagnostics = pine_sema::analyze(&program, interpreter.variable_names());
+        if !diagnostics.is_empty() {
+            return Err(Error::Sema(diagnostics));
         }
 
         Ok(Self {
@@ -149,41 +171,15 @@ impl<O: PineOutput> Script<O> {
         // Load bar data as Series variables so TA functions can access historical data
         use interpreter::{Series, Value};
 
-        self.interpreter.set_variable(
-            "open",
-            Value::Series(Series {
-                id: "open".to_string(),
-                current: Box::new(Value::Number(bar.open)),
-            }),
-        );
-        self.interpreter.set_variable(
-            "high",
-            Value::Series(Series {
-                id: "high".to_string(),
-                current: Box::new(Value::Number(bar.high)),
-            }),
-        );
-        self.interpreter.set_variable(
-            "low",
-            Value::Series(Series {
-                id: "low".to_string(),
-                current: Box::new(Value::Number(bar.low)),
-            }),
-        );
-        self.interpreter.set_variable(
-            "close",
-            Value::Series(Series {
-                id: "close".to_string(),
-                current: Box::new(Value::Number(bar.close)),
-            }),
-        );
-        self.interpreter.set_variable(
-            "volume",
-            Value::Series(Series {
-                id: "volume".to_string(),
-                current: Box::new(Value::Number(bar.volume)),
-            }),
-        );
+        for (name, value) in bar_series(bar) {
+            self.interpreter.set_variable(
+                name,
+                Value::Series(Series {
+                    id: name.to_string(),
+                    current: Box::new(Value::Number(value)),
+                }),
+            );
+        }
 
         let output = self.interpreter.execute(&self.program)?;
         Ok(output)

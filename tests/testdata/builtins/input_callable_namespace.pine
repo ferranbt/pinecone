@@ -1,0 +1,21 @@
+// `input` is both callable and a namespace: input(...) and input.int(...).
+// Every input returns its defval until a user overrides it.
+//@version=6
+flag = input(true, title = 'Include Weekends')
+amplitude = input.int(2, title = 'Amplitude', group = 'Calculation')
+factor = input.float(1.5, title = 'Factor', step = 0.1)
+name = input.string('Daily', title = 'Type', options = ['Daily', 'Hourly'])
+shown = input.bool(false, title = 'Show')
+
+log.info(str.tostring(flag))
+log.info(str.tostring(amplitude))
+log.info(str.tostring(factor))
+log.info(name)
+log.info(str.tostring(shown))
+
+// Expected output:
+// true
+// 2
+// 1.5
+// Daily
+// false

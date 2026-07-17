@@ -186,5 +186,6 @@ pub fn register() -> Value {
     Value::Object {
         type_name: "color".to_string(),
         fields: Rc::new(RefCell::new(color_ns)),
+        call: None,
     }
 }

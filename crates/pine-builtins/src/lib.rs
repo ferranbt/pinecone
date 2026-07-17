@@ -14,7 +14,10 @@ pub use pine_interpreter::LogLevel;
 mod array;
 mod r#box;
 mod color;
+mod constants;
 mod currency;
+mod hline;
+mod input;
 mod label;
 mod log;
 mod math;
@@ -163,6 +166,7 @@ pub fn register_namespace_objects() -> HashMap<String, Value<DefaultPineOutput>>
     namespaces.insert("currency".to_string(), currency::register());
     namespaces.insert("label".to_string(), label::register());
     namespaces.insert("log".to_string(), log::register::<DefaultPineOutput>());
+    namespaces.insert("input".to_string(), input::register());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("matrix".to_string(), matrix::register());
     namespaces.insert("str".to_string(), str::register());
@@ -202,6 +206,66 @@ pub fn register_namespace_objects() -> HashMap<String, Value<DefaultPineOutput>>
     // Register plot functions
     for (name, func) in plot::register_plot_functions() {
         namespaces.insert(name, func);
+    }
+
+    // Constant-only namespaces (size.small, shape.circle, ...)
+    for (name, value) in constants::register::<DefaultPineOutput>() {
+        namespaces.insert(name, value);
+    }
+
+    namespaces.insert("hline".to_string(), hline::register());
+
+    // Chart context we do not model yet; members are na.
+    namespaces.insert(
+        "barstate".to_string(),
+        constants::stub_namespace(
+            "barstate",
+            &[
+                "isconfirmed",
+                "isfirst",
+                "ishistory",
+                "islast",
+                "islastconfirmedhistory",
+                "isnew",
+                "isrealtime",
+            ],
+        ),
+    );
+    namespaces.insert(
+        "timeframe".to_string(),
+        constants::stub_namespace(
+            "timeframe",
+            &[
+                "isdaily",
+                "isdwm",
+                "isintraday",
+                "isminutes",
+                "ismonthly",
+                "isseconds",
+                "isticks",
+                "isweekly",
+                "main_period",
+                "multiplier",
+                "period",
+            ],
+        ),
+    );
+
+    // `time` is both the bar's timestamp and the `time(timeframe)` function.
+    // `Bar` carries no timestamp yet, so it is na for now.
+    namespaces.insert("time".to_string(), Value::Na);
+
+    // Accepted but not producing chart output yet.
+    for name in [
+        "indicator",
+        "alertcondition",
+        "fill",
+        "bgcolor",
+        "barcolor",
+        "timestamp",
+    ] {
+        let stub: BuiltinFn<DefaultPineOutput> = Rc::new(|_ctx, _args| Ok(Value::Na));
+        namespaces.insert(name.to_string(), Value::BuiltinFunction(stub));
     }
 
     namespaces

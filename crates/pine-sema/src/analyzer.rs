@@ -9,9 +9,19 @@
 
 use pine_ast::{Argument, Expr, Program, Stmt};
 
-use crate::builtins::{is_builtin, is_global_only};
 use crate::scope::{ScopeStack, SymbolKind};
 use pine_diagnostics::Diagnostic;
+
+/// Functions Pine only permits at global scope (never inside `if`, loops, or
+/// function bodies). This is a language rule, not a registry of what exists.
+const GLOBAL_ONLY_FUNCTIONS: &[&str] = &[
+    "plot",
+    "plotshape",
+    "plotchar",
+    "plotcandle",
+    "plotbar",
+    "plotarrow",
+];
 
 pub struct Analyzer {
     scopes: ScopeStack,
@@ -22,9 +32,12 @@ pub struct Analyzer {
 }
 
 impl Analyzer {
-    pub fn new() -> Self {
+    /// Create an analyzer whose global scope already holds `builtins` — the
+    /// predefined names the host provides. Sema does not know what a built-in
+    /// *is*; it only resolves references against the names it is given.
+    pub fn new<'a>(builtins: impl IntoIterator<Item = &'a str>) -> Self {
         Self {
-            scopes: ScopeStack::new(),
+            scopes: ScopeStack::new(builtins),
             diagnostics: Vec::new(),
             loop_depth: 0,
         }
@@ -231,15 +244,15 @@ impl Analyzer {
         match target {
             Expr::Variable(name) => match self.scopes.resolve(name) {
                 Some(SymbolKind::Var) => {}
+                Some(SymbolKind::Builtin) => self.emit(
+                    "reassign-builtin",
+                    None,
+                    format!("cannot reassign built-in `{name}`"),
+                ),
                 Some(other) => self.emit(
                     "invalid-assignment",
                     None,
                     format!("cannot assign to `{name}`, it is a {}", other.noun()),
-                ),
-                None if is_builtin(name) => self.emit(
-                    "reassign-builtin",
-                    None,
-                    format!("cannot reassign built-in `{name}`"),
                 ),
                 None => self.emit(
                     "invalid-assignment",
@@ -257,7 +270,7 @@ impl Analyzer {
     fn check_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Variable(name) => {
-                if self.scopes.resolve(name).is_none() && !is_builtin(name) {
+                if self.scopes.resolve(name).is_none() {
                     self.emit(
                         "undeclared-variable",
                         None,
@@ -270,14 +283,14 @@ impl Analyzer {
             } => {
                 if let Expr::Variable(fname) = callee.as_ref() {
                     let pos = loc.position();
-                    if is_global_only(fname) && !self.scopes.at_global() {
+                    if GLOBAL_ONLY_FUNCTIONS.contains(&fname.as_str()) && !self.scopes.at_global() {
                         self.emit(
                             "global-scope-required",
                             pos,
                             format!("`{fname}` may only be called in the global scope"),
                         );
                     }
-                    if self.scopes.resolve(fname).is_none() && !is_builtin(fname) {
+                    if self.scopes.resolve(fname).is_none() {
                         self.emit(
                             "unknown-function",
                             pos,
@@ -357,8 +370,3 @@ impl Analyzer {
     }
 }
 
-impl Default for Analyzer {
-    fn default() -> Self {
-        Self::new()
-    }
-}

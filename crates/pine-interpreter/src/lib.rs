@@ -102,6 +102,9 @@ pub enum Value<O: PineOutput = DefaultPineOutput> {
     Object {
         type_name: String, // The type name of this object (e.g., "InfoLabel")
         fields: Rc<RefCell<HashMap<String, Value<O>>>>, // Dictionary/Object with string keys
+        /// Set when the object is also callable, like `input(...)` alongside
+        /// `input.int(...)`. `None` for user-defined objects.
+        call: Option<BuiltinFn<O>>,
     },
     Function {
         params: Vec<pine_ast::FunctionParam>,
@@ -140,7 +143,7 @@ impl<O: PineOutput> std::fmt::Debug for Value<O> {
             Value::Na => write!(f, "Na"),
             Value::Array(a) => write!(f, "Array({:?})", a),
             Value::Series(s) => write!(f, "Series({:?})", s),
-            Value::Object { type_name, fields } => write!(f, "Object({}:{:?})", type_name, fields),
+            Value::Object { type_name, fields, .. } => write!(f, "Object({}:{:?})", type_name, fields),
             Value::Function { params, .. } => write!(f, "Function({} params)", params.len()),
             Value::BuiltinFunction(_) => write!(f, "BuiltinFunction"),
             Value::Type { name, .. } => write!(f, "Type({})", name),
@@ -481,6 +484,11 @@ impl<O: PineOutput> Interpreter<O> {
     /// Get a variable value
     pub fn get_variable(&self, name: &str) -> Option<&Value<O>> {
         self.variables.get(name).map(|var| &var.value)
+    }
+
+    /// Names of every registered variable.
+    pub fn variable_names(&self) -> impl Iterator<Item = &str> {
+        self.variables.keys().map(String::as_str)
     }
 
     /// Set a variable value (useful for loading objects and test setup)
@@ -938,6 +946,7 @@ impl<O: PineOutput> Interpreter<O> {
                 let enum_object = Value::Object {
                     type_name: name.clone(),
                     fields: Rc::new(RefCell::new(enum_fields)),
+                    call: None,
                 };
                 self.variables.insert(
                     name.clone(),
@@ -1002,6 +1011,7 @@ impl<O: PineOutput> Interpreter<O> {
                             let namespace: Value<O> = Value::Object {
                                 type_name: alias.clone(),
                                 fields: Rc::new(RefCell::new(library_exports.clone())),
+                                call: None,
                             };
                             self.variables.insert(
                                 alias.clone(),
@@ -1372,6 +1382,15 @@ impl<O: PineOutput> Interpreter<O> {
                     Value::BuiltinFunction(builtin_fn) => {
                         // Pass type_args from the parsed call expression, and the
                         // call node's lexical id for per-call-site builtin state.
+                        let call_args = FunctionCallArgs::new(type_args.clone(), evaluated_args)
+                            .with_call_id(*id);
+                        (builtin_fn)(self, call_args)
+                    }
+                    // A namespace that is also callable, e.g. `input(...)`.
+                    Value::Object {
+                        call: Some(builtin_fn),
+                        ..
+                    } => {
                         let call_args = FunctionCallArgs::new(type_args.clone(), evaluated_args)
                             .with_call_id(*id);
                         (builtin_fn)(self, call_args)
@@ -1891,6 +1910,7 @@ impl<O: PineOutput> Interpreter<O> {
                 Ok(Value::Object {
                     type_name: type_name.clone(),
                     fields: Rc::new(RefCell::new(instance_fields)),
+                    call: None,
                 })
             },
         )
@@ -1909,13 +1929,14 @@ impl<O: PineOutput> Interpreter<O> {
 
                 match &call_args.args[0] {
                     EvaluatedArg::Positional(value) => {
-                        if let Value::Object { type_name, fields } = value {
+                        if let Value::Object { type_name, fields, .. } = value {
                             // Create a shallow copy of the object's fields
                             let obj = fields.borrow();
                             let copied_fields = obj.clone();
                             Ok(Value::Object {
                                 type_name: type_name.clone(),
                                 fields: Rc::new(RefCell::new(copied_fields)),
+                                call: None,
                             })
                         } else {
                             Err(RuntimeError::TypeError(

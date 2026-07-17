@@ -23,5 +23,6 @@ pub fn register() -> Value {
     Value::Object {
         type_name: "currency".to_string(),
         fields: Rc::new(RefCell::new(members)),
+        call: None,
     }
 }

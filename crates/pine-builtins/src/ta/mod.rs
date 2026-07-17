@@ -151,5 +151,6 @@ pub fn register() -> Value {
     Value::Object {
         type_name: "ta".to_string(),
         fields: Rc::new(RefCell::new(ta_ns)),
+        call: None,
     }
 }
