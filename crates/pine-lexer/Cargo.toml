@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+pine-core = { workspace = true }
 eyre = { workspace = true }
 thiserror = { workspace = true }

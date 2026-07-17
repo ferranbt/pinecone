@@ -49,6 +49,23 @@ const CONSTANT_NAMESPACES: &[(&str, &[&str])] = &[
         "format",
         &["inherit", "mintick", "percent", "price", "volume"],
     ),
+    (
+        "barmerge",
+        &["gaps_off", "gaps_on", "lookahead_off", "lookahead_on"],
+    ),
+    ("extend", &["both", "left", "none", "right"]),
+    ("order", &["ascending", "descending"]),
+    ("xloc", &["bar_index", "bar_time"]),
+    (
+        "text",
+        &[
+            "align_bottom",
+            "align_center",
+            "align_left",
+            "align_right",
+            "align_top",
+        ],
+    ),
 ];
 
 /// Build one namespace of string constants.

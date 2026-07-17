@@ -149,6 +149,36 @@ impl Fixnan {
     }
 }
 
+/// Functions v4 exposes bare that v5 moved into a namespace, as
+/// `(namespace, member)`. Both spellings share one implementation.
+const V4_FLAT_ALIASES: &[(&str, &str)] = &[
+    ("math", "abs"),
+    ("math", "asin"),
+    ("math", "cos"),
+    ("math", "exp"),
+    ("math", "floor"),
+    ("math", "max"),
+    ("math", "min"),
+    ("math", "pow"),
+    ("math", "round"),
+    ("math", "sin"),
+    ("math", "sqrt"),
+    ("math", "sum"),
+    ("str", "tonumber"),
+    ("str", "tostring"),
+    ("ta", "change"),
+    ("ta", "crossover"),
+    ("ta", "crossunder"),
+    ("ta", "dev"),
+    ("ta", "ema"),
+    ("ta", "highest"),
+    ("ta", "lowest"),
+    ("ta", "roc"),
+    ("ta", "rsi"),
+    ("ta", "sma"),
+    ("ta", "variance"),
+];
+
 /// Register all builtin namespaces as objects and global functions
 /// Returns namespace objects to be loaded as variables (e.g., "array", "str", "ta")
 /// and global builtin functions (e.g., "na")
@@ -215,6 +245,23 @@ pub fn register_namespace_objects() -> HashMap<String, Value<DefaultPineOutput>>
 
     namespaces.insert("hline".to_string(), hline::register());
 
+    // `line` is a namespace (`line.new()`) that is also callable in v4.
+    // Drawing is not implemented, so the members return na.
+    namespaces.insert(
+        "line".to_string(),
+        callable_stub_namespace(
+            "line",
+            &[
+                "delete", "get_price", "get_x1", "get_x2", "get_y1", "get_y2", "new", "set_color",
+                "set_extend", "set_style", "set_width", "set_x1", "set_x2", "set_xloc", "set_xy1",
+                "set_xy2", "set_y1", "set_y2",
+            ],
+        ),
+    );
+
+    // `bar_index` is the bar counter; we do not track it yet.
+    namespaces.insert("bar_index".to_string(), Value::Na);
+
     // Chart context we do not model yet; members are na.
     namespaces.insert(
         "barstate".to_string(),
@@ -251,24 +298,92 @@ pub fn register_namespace_objects() -> HashMap<String, Value<DefaultPineOutput>>
         ),
     );
 
+    // v5 moved these into namespaces (`sma` -> `ta.sma`). v4 scripts call them
+    // bare, so alias them to the very same implementation.
+    let aliases: Vec<(String, Value<DefaultPineOutput>)> = V4_FLAT_ALIASES
+        .iter()
+        .filter_map(|(namespace, member)| {
+            let Some(Value::Object { fields, .. }) = namespaces.get(*namespace) else {
+                return None;
+            };
+            let value = fields.borrow().get(*member)?.clone();
+            Some((member.to_string(), value))
+        })
+        .collect();
+    for (name, value) in aliases {
+        namespaces.insert(name, value);
+    }
+
     // `time` is both the bar's timestamp and the `time(timeframe)` function.
     // `Bar` carries no timestamp yet, so it is na for now.
     namespaces.insert("time".to_string(), Value::Na);
 
-    // Accepted but not producing chart output yet.
+    // Symbol information; not modelled, so members are na.
+    namespaces.insert(
+        "syminfo".to_string(),
+        constants::stub_namespace(
+            "syminfo",
+            &[
+                "basecurrency",
+                "currency",
+                "description",
+                "mintick",
+                "pointvalue",
+                "prefix",
+                "root",
+                "session",
+                "ticker",
+                "tickerid",
+                "timezone",
+                "type",
+            ],
+        ),
+    );
+
+    // Accepted but not producing chart output yet. `study` is v4's `indicator`,
+    // `security` is v4's `request.security`; the rest are v4 `ta.*` functions we
+    // have not implemented.
     for name in [
         "indicator",
+        "study",
         "alertcondition",
         "fill",
         "bgcolor",
         "barcolor",
         "timestamp",
+        "timenow",
+        "security",
+        "cum",
+        "mfi",
+        "stoch",
+        "pvt",
+        "percentile_nearest_rank",
+        "valuewhen",
     ] {
         let stub: BuiltinFn<DefaultPineOutput> = Rc::new(|_ctx, _args| Ok(Value::Na));
         namespaces.insert(name.to_string(), Value::BuiltinFunction(stub));
     }
 
     namespaces
+}
+
+/// A namespace whose members are functions returning na, and which is itself
+/// callable. For built-ins we accept but have not implemented.
+fn callable_stub_namespace(name: &str, members: &[&str]) -> Value<DefaultPineOutput> {
+    fn stub() -> BuiltinFn<DefaultPineOutput> {
+        Rc::new(|_ctx, _args| Ok(Value::Na))
+    }
+
+    let fields = members
+        .iter()
+        .map(|m| (m.to_string(), Value::BuiltinFunction(stub())))
+        .collect();
+
+    Value::Object {
+        type_name: name.to_string(),
+        fields: std::rc::Rc::new(std::cell::RefCell::new(fields)),
+        call: Some(stub()),
+    }
 }
 
 #[cfg(test)]
@@ -407,3 +522,4 @@ mod tests {
         assert_eq!(result, Value::Number(0.0));
     }
 }
+

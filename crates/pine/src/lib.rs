@@ -76,7 +76,7 @@ impl From<VersionError> for Error {
 
 /// The series every script can reference, refreshed on each bar: the bar's own
 /// OHLCV plus the values Pine derives from them.
-fn bar_series(bar: &Bar) -> [(&'static str, f64); 7] {
+fn bar_series(bar: &Bar) -> [(&'static str, f64); 8] {
     [
         ("open", bar.open),
         ("high", bar.high),
@@ -84,6 +84,7 @@ fn bar_series(bar: &Bar) -> [(&'static str, f64); 7] {
         ("close", bar.close),
         ("volume", bar.volume),
         ("hl2", (bar.high + bar.low) / 2.0),
+        ("hlc3", (bar.high + bar.low + bar.close) / 3.0),
         ("ohlc4", (bar.open + bar.high + bar.low + bar.close) / 4.0),
     ]
 }
@@ -100,9 +101,11 @@ pub struct Script<O: PineOutput = DefaultPineOutput> {
 impl Script<DefaultPineOutput> {
     /// Compile PineScript source code into a Script with default output
     pub fn compile(source: &str) -> Result<Self, Error> {
-        let _version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+        let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
 
-        let mut lexer = Lexer::new(source);
+        // Which words are keywords depends on the version: `type` is an
+        // ordinary identifier in v4 but a keyword from v5 on.
+        let mut lexer = Lexer::with_version(source, version);
         let tokens = lexer.tokenize()?;
 
         let mut parser = Parser::new(tokens);
@@ -144,9 +147,11 @@ impl<O: PineOutput> Script<O> {
         source: &str,
         custom_variables: HashMap<String, Value<O>>,
     ) -> Result<Self, Error> {
-        let _version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+        let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
 
-        let mut lexer = Lexer::new(source);
+        // Which words are keywords depends on the version: `type` is an
+        // ordinary identifier in v4 but a keyword from v5 on.
+        let mut lexer = Lexer::with_version(source, version);
         let tokens = lexer.tokenize()?;
 
         let mut parser = Parser::new(tokens);

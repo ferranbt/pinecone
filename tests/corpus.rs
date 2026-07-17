@@ -64,8 +64,9 @@ fn test_corpus() -> eyre::Result<()> {
             let path = entry.path();
             let source = fs::read_to_string(path)?;
 
-            // Only v6 is supported for now.
-            if PineVersion::detect(&source) != Ok(Some(PineVersion::V6)) {
+            // Skip scripts we do not target: no version annotation, or one this
+            // toolchain does not support (v3 and older).
+            if !matches!(PineVersion::detect(&source), Ok(Some(_))) {
                 continue;
             }
 

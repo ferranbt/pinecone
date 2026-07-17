@@ -1,3 +1,4 @@
+use pine_core::PineVersion;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -117,10 +118,17 @@ pub struct Lexer {
     indent_stack: Vec<usize>,   // Stack of indentation levels
     pending_tokens: Vec<Token>, // Queue for Indent/Dedent tokens
     paren_depth: usize,         // Open parentheses; while > 0, layout tokens are suppressed
+    version: PineVersion,       // Which words are keywords depends on the version
 }
 
 impl Lexer {
+    /// Lex as the latest supported version. Use [`Lexer::with_version`] when the
+    /// script declares an older one.
     pub fn new(input: &str) -> Self {
+        Self::with_version(input, PineVersion::LATEST)
+    }
+
+    pub fn with_version(input: &str, version: PineVersion) -> Self {
         Self {
             input: input.chars().collect(),
             current: 0,
@@ -129,6 +137,7 @@ impl Lexer {
             indent_stack: vec![0], // Start with base indentation level
             pending_tokens: vec![],
             paren_depth: 0,
+            version,
         }
     }
 
@@ -221,6 +230,13 @@ impl Lexer {
 
         // Check for keywords
         let typ = match ident.as_str() {
+            // These became keywords in v5. In v4 they are ordinary identifiers,
+            // e.g. `input(title = "Length", type = input.integer)`.
+            "type" | "enum" | "method" | "export" | "import" | "switch" | "while"
+                if self.version < PineVersion::V5 =>
+            {
+                TokenType::Ident(ident.clone())
+            }
             "var" => TokenType::Var,
             "varip" => TokenType::Varip,
             "const" => TokenType::Const,
