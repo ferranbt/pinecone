@@ -47,7 +47,7 @@ jobs:
           toolchain: stable
 
       - name: Run integration tests
-        run: cargo test -p pine-integration-tests --test test_integration_scripts -- --nocapture
+        run: cargo test -p pine-integration-tests --test integration -- --nocapture
 
   corpus-tests:
     name: Run corpus tests
@@ -58,7 +58,7 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Run integration tests
+      - name: Run corpus tests
         run: cargo test -p pine-integration-tests --test corpus -- --nocapture
 
   examples:
