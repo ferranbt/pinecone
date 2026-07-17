@@ -81,13 +81,12 @@ impl From<VersionError> for Error {
 pub struct Script<O: PineOutput = DefaultPineOutput> {
     program: Program,
     interpreter: Interpreter<O>,
-    version: PineVersion,
 }
 
 impl Script<DefaultPineOutput> {
     /// Compile PineScript source code into a Script with default output
     pub fn compile(source: &str) -> Result<Self, Error> {
-        let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+        let _version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
 
         let mut lexer = Lexer::new(source);
         let tokens = lexer.tokenize()?;
@@ -114,7 +113,6 @@ impl Script<DefaultPineOutput> {
         Ok(Self {
             program,
             interpreter,
-            version,
         })
     }
 }
@@ -124,7 +122,7 @@ impl<O: PineOutput> Script<O> {
         source: &str,
         custom_variables: HashMap<String, Value<O>>,
     ) -> Result<Self, Error> {
-        let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+        let _version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
 
         let mut lexer = Lexer::new(source);
         let tokens = lexer.tokenize()?;
@@ -144,13 +142,7 @@ impl<O: PineOutput> Script<O> {
         Ok(Self {
             program,
             interpreter,
-            version,
         })
-    }
-
-    /// The Pine language version this script targets.
-    pub fn version(&self) -> PineVersion {
-        self.version
     }
 
     pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {

@@ -3,8 +3,6 @@
 use std::fmt;
 use thiserror::Error;
 
-/// Why a script's `//@version=N` annotation could not be resolved.
-///
 /// A *missing* annotation is deliberately not represented here — that is
 /// `Ok(None)` from [`PineVersion::detect`], because choosing what to assume is
 /// the caller's policy, not a failure to resolve.
@@ -117,7 +115,6 @@ mod tests {
 
     #[test]
     fn distinguishes_missing_from_unsupported() {
-        // No annotation is not a failure — the caller picks a default.
         assert_eq!(PineVersion::detect("x = 1\n"), Ok(None));
         assert_eq!(
             PineVersion::detect("//@version=3\n"),

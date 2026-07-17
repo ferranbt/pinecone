@@ -15,8 +15,6 @@ fn get_spec_dir(version: PineVersion) -> eyre::Result<PathBuf> {
 }
 
 pub fn download_and_save_reference(version: PineVersion) -> eyre::Result<()> {
-    // Built from the version number rather than `Display`, so the URL and
-    // filename can't silently break if the human-facing formatting changes.
     let reference_url = format!(
         "https://www.tradingview.com/pine-script-reference/v{}/",
         version.number()
