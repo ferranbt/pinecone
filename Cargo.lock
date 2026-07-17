@@ -1347,6 +1347,7 @@ dependencies = [
  "eyre",
  "pine-ast",
  "pine-builtins",
+ "pine-core",
  "pine-diagnostics",
  "pine-interpreter",
  "pine-lexer",
@@ -1376,6 +1377,13 @@ version = "0.1.0"
 dependencies = [
  "pine-builtin-macro",
  "pine-interpreter",
+]
+
+[[package]]
+name = "pine-core"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
 ]
 
 [[package]]
@@ -1447,6 +1455,7 @@ dependencies = [
  "eyre",
  "headless_chrome",
  "htmd",
+ "pine-core",
  "scraper",
  "serde",
  "serde_json",

@@ -1,0 +1,6 @@
+// A version this toolchain cannot compile must be rejected, not silently
+// treated as current Pine.
+//@version=3
+x = 1
+
+// Expected error: unsupported Pine version 3

@@ -1,23 +1,34 @@
 use comrak::nodes::{AstNode, NodeValue};
 use comrak::{parse_document, Arena, Options};
 use headless_chrome::Browser;
+use pine_core::PineVersion;
 use scraper::{Html, Selector};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-const PINE_REFERENCE_URL: &str = "https://www.tradingview.com/pine-script-reference/v6/";
-const REFERENCE_MARKDOWN: &str = include_str!("../spec/v6.md");
+fn get_spec_dir(version: PineVersion) -> eyre::Result<PathBuf> {
+    let spec_dir = Path::new("crates/pine-reference/spec");
+    fs::create_dir_all(spec_dir)?;
 
-/// Downloads the Pine Script reference page and saves it to spec/v6.md
-pub fn download_and_save_reference() -> eyre::Result<()> {
+    Ok(spec_dir.join(format!("v{}.md", version.number())))
+}
+
+pub fn download_and_save_reference(version: PineVersion) -> eyre::Result<()> {
+    // Built from the version number rather than `Display`, so the URL and
+    // filename can't silently break if the human-facing formatting changes.
+    let reference_url = format!(
+        "https://www.tradingview.com/pine-script-reference/v{}/",
+        version.number()
+    );
+
     let browser = Browser::default().map_err(|e| eyre::eyre!("Failed to start browser: {}", e))?;
     let tab = browser
         .new_tab()
         .map_err(|e| eyre::eyre!("Failed to open tab: {}", e))?;
 
-    tab.navigate_to(PINE_REFERENCE_URL)
-        .map_err(|e| eyre::eyre!("Failed to navigate: {}", e))?;
+    tab.navigate_to(&reference_url)
+        .map_err(|e| eyre::eyre!("Failed to navigate to {reference_url}: {}", e))?;
 
     // Wait for actual content items to load
     tab.wait_for_element_with_custom_timeout("#var_ask", Duration::from_secs(60))
@@ -47,10 +58,7 @@ pub fn download_and_save_reference() -> eyre::Result<()> {
     let markdown = markdown_parts.join("\n\n");
 
     // Write to file
-    let spec_dir = Path::new("crates/pine-reference/spec");
-    fs::create_dir_all(spec_dir)?;
-
-    let output_path = spec_dir.join("v6.md");
+    let output_path = get_spec_dir(version)?;
     fs::write(&output_path, markdown)?;
 
     eprintln!("Successfully wrote reference to {:?}", output_path);
@@ -138,8 +146,11 @@ pub enum QueryResult {
 ///   Some("Variables") -> List all items under Variables
 ///   Some("Variables.bar") -> List items starting with "bar" (bar_index, barstate.*)
 ///   Some("Variables.ask") -> Content of Variables.ask if exact match
-pub fn query(path: Option<&str>) -> eyre::Result<QueryResult> {
-    let sections = parse_markdown_sections(REFERENCE_MARKDOWN)?;
+pub fn query(version: PineVersion, path: Option<&str>) -> eyre::Result<QueryResult> {
+    let spec_path = get_spec_dir(version)?;
+    let spec_content = fs::read_to_string(spec_path)?;
+
+    let sections = parse_markdown_sections(&spec_content)?;
 
     match path {
         None => {

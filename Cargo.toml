@@ -4,6 +4,7 @@ rust-version = "1.83"
 
 [workspace]
 members = [
+    "crates/pine-core",
     "crates/pine-lexer",
     "crates/pine-ast",
     "crates/pine-diagnostics",
@@ -21,6 +22,7 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
+pine-core = { path = "crates/pine-core" }
 pine-lexer = { path = "crates/pine-lexer" }
 pine-parser = { path = "crates/pine-parser" }
 pine-ast = { path = "crates/pine-ast" }
