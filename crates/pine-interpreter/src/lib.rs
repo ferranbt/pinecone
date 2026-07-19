@@ -9,6 +9,7 @@ pub use output::{
 // Note: impl_output_traits_delegate! macro is automatically exported at crate root by #[macro_export]
 
 use pine_ast::{Argument, BinOp, Expr, Literal, MethodParam, Program, Stmt, TypeField, UnOp};
+use pine_core::BarState;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -83,6 +84,7 @@ pub struct Bar {
     pub volume: f64,
     /// Bar open time, UNIX milliseconds. This is Pine's `time`.
     pub time: i64,
+    pub state: BarState,
 }
 
 /// Represents a time series with an identifier and current value

@@ -1,4 +1,5 @@
 use pine::Script;
+use pine_core::BarState;
 use pine_interpreter::{Bar, HistoricalDataProvider, Value};
 use std::cell::Cell;
 
@@ -29,6 +30,11 @@ pub fn generate_bars(count: usize) -> Vec<Bar> {
             close,
             volume,
             time: bars.len() as i64 * step_ms,
+            state: match bars.len() {
+                0 => BarState::First,
+                i if i == count - 1 => BarState::Last,
+                _ => BarState::History,
+            },
         });
 
         price = close;

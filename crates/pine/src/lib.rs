@@ -174,6 +174,9 @@ impl<O: PineOutput> Script<O> {
     }
 
     pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
+        let (name, value) = pine_builtins::register_bar_state(bar);
+        self.interpreter.set_const_variable(name, value);
+
         // `timeframe.change` compares this bar against the previous one.
         self.interpreter.set_bar_time(bar.time);
 

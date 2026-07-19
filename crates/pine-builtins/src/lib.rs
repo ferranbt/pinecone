@@ -11,8 +11,11 @@ pub use pine_interpreter::DefaultPineOutput;
 pub use pine_interpreter::EvaluatedArg;
 pub use pine_interpreter::LogLevel;
 
+pub use bars::register_bar_state;
+
 // Namespace modules
 mod array;
+mod bars;
 mod r#box;
 mod color;
 mod constants;
@@ -262,22 +265,10 @@ pub fn register_namespace_objects(timeframe: Timeframe) -> HashMap<String, Value
     // `bar_index` is the bar counter; we do not track it yet.
     namespaces.insert("bar_index".to_string(), Value::Na);
 
-    // Chart context we do not model yet; members are na.
-    namespaces.insert(
-        "barstate".to_string(),
-        constants::stub_namespace(
-            "barstate",
-            &[
-                "isconfirmed",
-                "isfirst",
-                "ishistory",
-                "islast",
-                "islastconfirmedhistory",
-                "isnew",
-                "isrealtime",
-            ],
-        ),
-    );
+    // `barstate` describes the bar being executed, so it is registered per bar
+    // by `register_bar_state` rather than here.
+    let (name, value) = bars::register_bar_state(&Bar::default());
+    namespaces.insert(name.to_string(), value);
 
     // v5 moved these into namespaces (`sma` -> `ta.sma`). v4 scripts call them
     // bare, so alias them to the very same implementation.

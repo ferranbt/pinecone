@@ -2,7 +2,7 @@
 mod tests {
     use pine::Script;
     use pine_ast::Program;
-    use pine_core::Timeframe;
+    use pine_core::{BarState, Timeframe};
     use pine_interpreter::{
         Bar, DefaultPineOutput, HistoricalDataProvider, LibraryLoader, LogOutput, Value,
     };
@@ -29,6 +29,11 @@ mod tests {
                 close: base + 2.0,
                 volume: 1000.0 + (i as f64 * 10.0),
                 time: i as i64 * step_ms,
+                state: match i {
+                    0 => BarState::First,
+                    i if i == count - 1 => BarState::Last,
+                    _ => BarState::History,
+                },
             });
         }
 
