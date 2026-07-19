@@ -9,7 +9,6 @@ use std::rc::Rc;
 
 /// plot() - Plots a series of data on the chart
 #[derive(BuiltinFunction)]
-#[builtin(name = "plot")]
 struct Plot {
     series: Value,
     #[arg(default = "")]
@@ -72,7 +71,6 @@ impl Plot {
 
 /// plotarrow() - Plots up and down arrows on the chart
 #[derive(BuiltinFunction)]
-#[builtin(name = "plotarrow")]
 struct Plotarrow {
     series: Value,
     #[arg(default = "")]
@@ -126,7 +124,6 @@ impl Plotarrow {
 
 /// plotbar() - Plots OHLC bars on the chart
 #[derive(BuiltinFunction)]
-#[builtin(name = "plotbar")]
 struct Plotbar {
     open: Value,
     high: Value,
@@ -174,7 +171,6 @@ impl Plotbar {
 
 /// plotcandle() - Plots candlestick chart
 #[derive(BuiltinFunction)]
-#[builtin(name = "plotcandle")]
 struct Plotcandle {
     open: Value,
     high: Value,
@@ -228,7 +224,6 @@ impl Plotcandle {
 
 /// plotchar() - Plots visual shapes on the chart using ASCII characters
 #[derive(BuiltinFunction)]
-#[builtin(name = "plotchar")]
 struct Plotchar {
     series: Value,
     #[arg(default = "")]
@@ -288,7 +283,6 @@ impl Plotchar {
 
 /// plotshape() - Plots visual shapes on the chart
 #[derive(BuiltinFunction)]
-#[builtin(name = "plotshape")]
 struct Plotshape {
     series: Value,
     #[arg(default = "")]

@@ -3,7 +3,6 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// math.abs(number) - Returns absolute value
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.abs")]
 struct MathAbs {
     number: f64,
 }
@@ -16,7 +15,6 @@ impl MathAbs {
 
 /// math.ceil(number) - Rounds up to nearest integer
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.ceil")]
 struct MathCeil {
     number: f64,
 }
@@ -29,7 +27,6 @@ impl MathCeil {
 
 /// math.floor(number) - Rounds down to nearest integer
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.floor")]
 struct MathFloor {
     number: f64,
 }
@@ -42,7 +39,6 @@ impl MathFloor {
 
 /// math.round(number) - Rounds to nearest integer
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.round")]
 struct MathRound {
     number: f64,
     #[arg(default = 0.0)]
@@ -64,7 +60,6 @@ impl MathRound {
 
 /// math.sign(number) - Returns -1, 0, or 1
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.sign")]
 struct MathSign {
     number: f64,
 }
@@ -84,7 +79,6 @@ impl MathSign {
 
 /// math.sqrt(number) - Returns square root
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.sqrt")]
 struct MathSqrt {
     number: f64,
 }
@@ -97,7 +91,6 @@ impl MathSqrt {
 
 /// math.exp(number) - Returns e^number
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.exp")]
 struct MathExp {
     number: f64,
 }
@@ -110,7 +103,6 @@ impl MathExp {
 
 /// math.log(number) - Returns natural logarithm
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.log")]
 struct MathLog {
     number: f64,
 }
@@ -123,7 +115,6 @@ impl MathLog {
 
 /// math.log10(number) - Returns base-10 logarithm
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.log10")]
 struct MathLog10 {
     number: f64,
 }
@@ -138,7 +129,6 @@ impl MathLog10 {
 
 /// math.sin(number) - Returns sine
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.sin")]
 struct MathSin {
     number: f64,
 }
@@ -151,7 +141,6 @@ impl MathSin {
 
 /// math.cos(number) - Returns cosine
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.cos")]
 struct MathCos {
     number: f64,
 }
@@ -164,7 +153,6 @@ impl MathCos {
 
 /// math.tan(number) - Returns tangent
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.tan")]
 struct MathTan {
     number: f64,
 }
@@ -177,7 +165,6 @@ impl MathTan {
 
 /// math.asin(number) - Returns arcsine
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.asin")]
 struct MathAsin {
     number: f64,
 }
@@ -190,7 +177,6 @@ impl MathAsin {
 
 /// math.acos(number) - Returns arccosine
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.acos")]
 struct MathAcos {
     number: f64,
 }
@@ -203,7 +189,6 @@ impl MathAcos {
 
 /// math.atan(number) - Returns arctangent
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.atan")]
 struct MathAtan {
     number: f64,
 }
@@ -216,7 +201,6 @@ impl MathAtan {
 
 /// math.toradians(number) - Converts degrees to radians
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.toradians")]
 struct MathToRadians {
     number: f64,
 }
@@ -229,7 +213,6 @@ impl MathToRadians {
 
 /// math.todegrees(number) - Converts radians to degrees
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.todegrees")]
 struct MathToDegrees {
     number: f64,
 }
@@ -244,7 +227,6 @@ impl MathToDegrees {
 
 /// math.pow(base, exponent) - Returns base^exponent
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.pow")]
 struct MathPow {
     base: f64,
     exponent: f64,
@@ -260,7 +242,6 @@ impl MathPow {
 
 /// math.min(...) - Returns minimum of all arguments (requires at least 2)
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.min")]
 struct MathMin {
     #[arg(variadic)]
     values: Vec<Value>,
@@ -295,7 +276,6 @@ impl MathMin {
 
 /// math.max(...) - Returns maximum of all arguments (requires at least 2)
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.max")]
 struct MathMax {
     #[arg(variadic)]
     values: Vec<Value>,
@@ -330,7 +310,6 @@ impl MathMax {
 
 /// math.avg(...) - Returns average of all arguments (requires at least 1)
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.avg")]
 struct MathAvg {
     #[arg(variadic)]
     values: Vec<Value>,
@@ -372,7 +351,6 @@ impl MathAvg {
 
 /// math.sum(...) - Returns sum of all arguments (requires at least 1)
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.sum")]
 struct MathSum {
     #[arg(variadic)]
     values: Vec<Value>,
@@ -408,7 +386,6 @@ impl MathSum {
 
 /// math.random() - Returns random number between 0 and 1
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.random")]
 struct MathRandom {
     #[arg(default = 0.0)]
     _seed: f64,

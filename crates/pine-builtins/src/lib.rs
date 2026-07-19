@@ -1,4 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
+use pine_core::Timeframe;
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -26,12 +27,12 @@ mod plot;
 mod str;
 mod ta;
 mod time;
+mod timeframe;
 
 // Global utility functions - defined first so they can be referenced in register function
 
 /// na(value) - Returns true if the value is na, false otherwise
 #[derive(BuiltinFunction)]
-#[builtin(name = "na")]
 struct Na {
     value: Value,
 }
@@ -44,7 +45,6 @@ impl Na {
 
 /// bool(x) - Converts value to bool
 #[derive(BuiltinFunction)]
-#[builtin(name = "bool")]
 struct Bool {
     x: Value,
 }
@@ -62,7 +62,6 @@ impl Bool {
 
 /// int(x) - Converts value to int (truncates float)
 #[derive(BuiltinFunction)]
-#[builtin(name = "int")]
 struct Int {
     x: Value,
 }
@@ -83,7 +82,6 @@ impl Int {
 
 /// float(x) - Converts value to float
 #[derive(BuiltinFunction)]
-#[builtin(name = "float")]
 struct Float {
     x: Value,
 }
@@ -104,7 +102,6 @@ impl Float {
 
 /// nz(source, replacement) - Replaces na values with default or replacement value
 #[derive(BuiltinFunction)]
-#[builtin(name = "nz")]
 struct Nz {
     source: Value,
     #[arg(default = Value::Number(0.0))]
@@ -128,7 +125,6 @@ impl Nz {
 
 /// fixnan(source) - Replaces NaN values with previous nearest non-NaN value
 #[derive(BuiltinFunction)]
-#[builtin(name = "fixnan")]
 struct Fixnan {
     source: Value,
 }
@@ -186,7 +182,7 @@ const V4_FLAT_ALIASES: &[(&str, &str)] = &[
 ///
 /// This uses DefaultPineOutput for now. Full generic support will be added when the
 /// BuiltinFunction macro is updated to support generic output types.
-pub fn register_namespace_objects() -> HashMap<String, Value<DefaultPineOutput>> {
+pub fn register_namespace_objects(timeframe: Timeframe) -> HashMap<String, Value<DefaultPineOutput>> {
     let mut namespaces = HashMap::new();
 
     // Register namespace objects
@@ -244,6 +240,10 @@ pub fn register_namespace_objects() -> HashMap<String, Value<DefaultPineOutput>>
     }
 
     namespaces.insert("hline".to_string(), hline::register());
+    namespaces.insert(
+        "timeframe".to_string(),
+        timeframe::register(timeframe),
+    );
 
     // `line` is a namespace (`line.new()`) that is also callable in v4.
     // Drawing is not implemented, so the members return na.
@@ -275,25 +275,6 @@ pub fn register_namespace_objects() -> HashMap<String, Value<DefaultPineOutput>>
                 "islastconfirmedhistory",
                 "isnew",
                 "isrealtime",
-            ],
-        ),
-    );
-    namespaces.insert(
-        "timeframe".to_string(),
-        constants::stub_namespace(
-            "timeframe",
-            &[
-                "isdaily",
-                "isdwm",
-                "isintraday",
-                "isminutes",
-                "ismonthly",
-                "isseconds",
-                "isticks",
-                "isweekly",
-                "main_period",
-                "multiplier",
-                "period",
             ],
         ),
     );

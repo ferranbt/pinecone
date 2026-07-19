@@ -1376,6 +1376,7 @@ name = "pine-builtins"
 version = "0.1.0"
 dependencies = [
  "pine-builtin-macro",
+ "pine-core",
  "pine-interpreter",
 ]
 
@@ -1410,6 +1411,7 @@ version = "0.1.0"
 dependencies = [
  "eyre",
  "pine-ast",
+ "pine-core",
  "pine-lexer",
  "pine-parser",
  "thiserror",
@@ -1482,6 +1484,7 @@ dependencies = [
  "pine",
  "pine-ast",
  "pine-builtins",
+ "pine-core",
  "pine-interpreter",
  "pine-lexer",
  "pine-parser",

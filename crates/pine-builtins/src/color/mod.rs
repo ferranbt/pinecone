@@ -3,7 +3,6 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// color.new(color, transp) - Applies transparency to a color
 #[derive(BuiltinFunction)]
-#[builtin(name = "color.new")]
 struct ColorNew {
     color: Value,
     transp: f64,
@@ -19,7 +18,6 @@ impl ColorNew {
 
 /// color.rgb(red, green, blue, transp) - Creates a color from RGB components
 #[derive(BuiltinFunction)]
-#[builtin(name = "color.rgb")]
 struct ColorRgb {
     red: f64,
     green: f64,
@@ -40,7 +38,6 @@ impl ColorRgb {
 
 /// color.r(color) - Retrieves the red component of a color
 #[derive(BuiltinFunction)]
-#[builtin(name = "color.r")]
 struct ColorR {
     color: Value,
 }
@@ -54,7 +51,6 @@ impl ColorR {
 
 /// color.g(color) - Retrieves the green component of a color
 #[derive(BuiltinFunction)]
-#[builtin(name = "color.g")]
 struct ColorG {
     color: Value,
 }
@@ -68,7 +64,6 @@ impl ColorG {
 
 /// color.b(color) - Retrieves the blue component of a color
 #[derive(BuiltinFunction)]
-#[builtin(name = "color.b")]
 struct ColorB {
     color: Value,
 }
@@ -82,7 +77,6 @@ impl ColorB {
 
 /// color.t(color) - Retrieves the transparency of a color
 #[derive(BuiltinFunction)]
-#[builtin(name = "color.t")]
 struct ColorT {
     color: Value,
 }
@@ -97,7 +91,6 @@ impl ColorT {
 /// color.from_gradient(value, bottom_value, top_value, bottom_color, top_color)
 /// - Creates a gradient color based on value position
 #[derive(BuiltinFunction)]
-#[builtin(name = "color.from_gradient")]
 struct ColorFromGradient {
     value: f64,
     bottom_value: f64,

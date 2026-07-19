@@ -71,7 +71,7 @@ fn test_corpus() -> eyre::Result<()> {
             }
 
             let relative_path = path.strip_prefix(&corpus_dir).unwrap_or(path);
-            match Script::compile(&source) {
+            match Script::compile(&source, None) {
                 Ok(_) => println!("✅ {}", relative_path.display()),
                 Err(err) => {
                     println!("❌ {}\n{}\n", relative_path.display(), err);

@@ -6,7 +6,6 @@ use std::rc::Rc;
 
 /// label.new() - Creates a new label object
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.new")]
 struct LabelNew {
     x: Value,
     y: Value,
@@ -60,7 +59,6 @@ impl LabelNew {
 
 /// label.set_x() - Sets the x coordinate of a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_x")]
 struct LabelSetX {
     id: f64,
     x: Value,
@@ -80,7 +78,6 @@ impl LabelSetX {
 
 /// label.set_y() - Sets the y coordinate of a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_y")]
 struct LabelSetY {
     id: f64,
     y: Value,
@@ -100,7 +97,6 @@ impl LabelSetY {
 
 /// label.set_xy() - Sets the x and y coordinates of a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_xy")]
 struct LabelSetXy {
     id: f64,
     x: Value,
@@ -122,7 +118,6 @@ impl LabelSetXy {
 
 /// label.set_xloc() - Sets the x location mode and coordinate
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_xloc")]
 struct LabelSetXloc {
     id: f64,
     x: Value,
@@ -144,7 +139,6 @@ impl LabelSetXloc {
 
 /// label.set_yloc() - Sets the y location mode
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_yloc")]
 struct LabelSetYloc {
     id: f64,
     yloc: String,
@@ -164,7 +158,6 @@ impl LabelSetYloc {
 
 /// label.set_color() - Sets the label color
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_color")]
 struct LabelSetColor {
     id: f64,
     color: Color,
@@ -184,7 +177,6 @@ impl LabelSetColor {
 
 /// label.set_style() - Sets the label style
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_style")]
 struct LabelSetStyle {
     id: f64,
     style: String,
@@ -204,7 +196,6 @@ impl LabelSetStyle {
 
 /// label.set_text() - Sets the label text
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_text")]
 struct LabelSetText {
     id: f64,
     text: String,
@@ -224,7 +215,6 @@ impl LabelSetText {
 
 /// label.set_textcolor() - Sets the label text color
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_textcolor")]
 struct LabelSetTextcolor {
     id: f64,
     textcolor: Color,
@@ -244,7 +234,6 @@ impl LabelSetTextcolor {
 
 /// label.set_size() - Sets the label size
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_size")]
 struct LabelSetSize {
     id: f64,
     size: String,
@@ -264,7 +253,6 @@ impl LabelSetSize {
 
 /// label.set_textalign() - Sets the label text alignment
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_textalign")]
 struct LabelSetTextalign {
     id: f64,
     textalign: String,
@@ -284,7 +272,6 @@ impl LabelSetTextalign {
 
 /// label.set_tooltip() - Sets the label tooltip
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_tooltip")]
 struct LabelSetTooltip {
     id: f64,
     tooltip: String,
@@ -304,7 +291,6 @@ impl LabelSetTooltip {
 
 /// label.set_text_font_family() - Sets the label text font family
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_text_font_family")]
 struct LabelSetTextFontFamily {
     id: f64,
     text_font_family: String,
@@ -324,7 +310,6 @@ impl LabelSetTextFontFamily {
 
 /// label.get_x() - Gets the x coordinate of a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.get_x")]
 struct LabelGetX {
     id: f64,
 }
@@ -342,7 +327,6 @@ impl LabelGetX {
 
 /// label.get_y() - Gets the y coordinate of a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.get_y")]
 struct LabelGetY {
     id: f64,
 }
@@ -360,7 +344,6 @@ impl LabelGetY {
 
 /// label.get_text() - Gets the text of a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.get_text")]
 struct LabelGetText {
     id: f64,
 }
@@ -378,7 +361,6 @@ impl LabelGetText {
 
 /// label.delete() - Deletes a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.delete")]
 struct LabelDelete {
     id: f64,
 }
@@ -393,7 +375,6 @@ impl LabelDelete {
 
 /// label.copy() - Copies a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.copy")]
 struct LabelCopy {
     id: f64,
 }

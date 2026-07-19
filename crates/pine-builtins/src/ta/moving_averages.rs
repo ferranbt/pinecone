@@ -3,7 +3,6 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// ta.sma(source, length) - Simple Moving Average
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.sma")]
 pub struct TaSma {
     source: Value,
     length: f64,
@@ -32,7 +31,6 @@ impl TaSma {
 
 /// ta.ema(source, length) - Exponential Moving Average
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.ema")]
 pub struct TaEma {
     source: Value,
     length: f64,
@@ -110,7 +108,6 @@ impl TaEma {
 
 /// ta.rma(source, length) - Rolling Moving Average (Wilder's Smoothing)
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.rma")]
 pub struct TaRma {
     source: Value,
     length: f64,
@@ -188,7 +185,6 @@ impl TaRma {
 
 /// ta.wma(source, length) - Weighted Moving Average
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.wma")]
 pub struct TaWma {
     source: Value,
     length: f64,
@@ -257,7 +253,6 @@ impl TaWma {
 /// ta.vwma(source, length) - Volume Weighted Moving Average
 /// Note: Requires volume series to be available in context
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.vwma")]
 pub struct TaVwma {
     source: Value,
     length: f64,
@@ -309,7 +304,6 @@ impl TaVwma {
 
 /// ta.hma(source, length) - Hull Moving Average
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.hma")]
 pub struct TaHma {
     source: Value,
     length: f64,
@@ -375,7 +369,6 @@ impl TaHma {
 
 /// ta.swma(source) - Symmetrically Weighted Moving Average (4-bar)
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.swma")]
 pub struct TaSwma {
     source: Value,
 }

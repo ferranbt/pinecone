@@ -3,7 +3,6 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// year(time) - Returns year for given UNIX time in milliseconds
 #[derive(BuiltinFunction)]
-#[builtin(name = "year")]
 struct Year {
     time: f64,
 }
@@ -22,7 +21,6 @@ impl Year {
 
 /// month(time) - Returns month (1-12) for given UNIX time
 #[derive(BuiltinFunction)]
-#[builtin(name = "month")]
 struct Month {
     time: f64,
 }
@@ -43,7 +41,6 @@ impl Month {
 
 /// dayofmonth(time) - Returns day of month (1-31)
 #[derive(BuiltinFunction)]
-#[builtin(name = "dayofmonth")]
 struct DayOfMonth {
     time: f64,
 }
@@ -62,7 +59,6 @@ impl DayOfMonth {
 
 /// dayofweek(time) - Returns day of week (1=Sunday, 7=Saturday)
 #[derive(BuiltinFunction)]
-#[builtin(name = "dayofweek")]
 struct DayOfWeek {
     time: f64,
 }
@@ -82,7 +78,6 @@ impl DayOfWeek {
 
 /// hour(time) - Returns hour (0-23)
 #[derive(BuiltinFunction)]
-#[builtin(name = "hour")]
 struct Hour {
     time: f64,
 }
@@ -98,7 +93,6 @@ impl Hour {
 
 /// minute(time) - Returns minute (0-59)
 #[derive(BuiltinFunction)]
-#[builtin(name = "minute")]
 struct Minute {
     time: f64,
 }
@@ -114,7 +108,6 @@ impl Minute {
 
 /// second(time) - Returns second (0-59)
 #[derive(BuiltinFunction)]
-#[builtin(name = "second")]
 struct Second {
     time: f64,
 }

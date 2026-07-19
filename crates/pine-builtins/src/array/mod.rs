@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 /// array.new<type>() - Creates a new typed array (generic version)
 #[derive(BuiltinFunction)]
-#[builtin(name = "array.new", type_params = 1)]
+#[builtin(type_params = 1)]
 struct ArrayNew {
     #[type_param]
     element_type: String,
@@ -35,7 +35,6 @@ impl ArrayNew {
 
 /// array.new_float() - Creates a new float array (backward compatibility)
 #[derive(BuiltinFunction)]
-#[builtin(name = "array.new_float")]
 struct ArrayNewFloat {
     size: f64,
     initial_value: Value,
@@ -50,7 +49,6 @@ impl ArrayNewFloat {
 }
 
 #[derive(BuiltinFunction)]
-#[builtin(name = "array.clear")]
 struct ArrayClear {
     array: Value,
 }
@@ -64,7 +62,6 @@ impl ArrayClear {
 }
 
 #[derive(BuiltinFunction)]
-#[builtin(name = "array.push")]
 struct ArrayPush {
     array: Value,
     value: Value,
@@ -79,7 +76,6 @@ impl ArrayPush {
 }
 
 #[derive(BuiltinFunction)]
-#[builtin(name = "array.get")]
 struct ArrayGet {
     array: Value,
     index: f64,
@@ -97,7 +93,6 @@ impl ArrayGet {
 }
 
 #[derive(BuiltinFunction)]
-#[builtin(name = "array.size")]
 struct ArraySize {
     array: Value,
 }

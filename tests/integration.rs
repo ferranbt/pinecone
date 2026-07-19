@@ -2,6 +2,7 @@
 mod tests {
     use pine::Script;
     use pine_ast::Program;
+    use pine_core::Timeframe;
     use pine_interpreter::{
         Bar, DefaultPineOutput, HistoricalDataProvider, LibraryLoader, LogOutput, Value,
     };
@@ -16,6 +17,9 @@ mod tests {
     fn generate_test_bars(count: usize) -> Vec<Bar> {
         let mut bars = Vec::with_capacity(count);
 
+        // Bars are contiguous, one timeframe apart, starting at the epoch.
+        let step_ms = Timeframe::default().in_seconds() * 1_000;
+
         for i in 0..count {
             let base = 100.0 + (i as f64);
             bars.push(Bar {
@@ -24,6 +28,7 @@ mod tests {
                 low: base - 5.0,
                 close: base + 2.0,
                 volume: 1000.0 + (i as f64 * 10.0),
+                time: i as i64 * step_ms,
             });
         }
 
@@ -184,7 +189,7 @@ mod tests {
     fn execute_pine_script_with_logger(source: &str) -> eyre::Result<Vec<String>> {
         let library_loader = TestLibraryLoader::new();
 
-        let mut script = Script::compile(source)?;
+        let mut script = Script::compile(source, None)?;
 
         // Generate historical bar data for TA functions
         let bars = generate_test_bars(200);

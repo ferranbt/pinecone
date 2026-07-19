@@ -5,10 +5,11 @@ pub use pine_interpreter as interpreter;
 pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
+use interpreter::{Series, Value};
 use pine_ast::Program;
-use pine_core::{PineVersion, VersionError};
+use pine_core::{PineVersion, Timeframe, VersionError};
 use pine_diagnostics::Diagnostic;
-use pine_interpreter::{Bar, DefaultPineOutput, Interpreter, PineOutput, RuntimeError, Value};
+use pine_interpreter::{Bar, DefaultPineOutput, Interpreter, PineOutput, RuntimeError};
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
 use std::collections::HashMap;
@@ -100,7 +101,7 @@ pub struct Script<O: PineOutput = DefaultPineOutput> {
 
 impl Script<DefaultPineOutput> {
     /// Compile PineScript source code into a Script with default output
-    pub fn compile(source: &str) -> Result<Self, Error> {
+    pub fn compile(source: &str, timeframe: Option<Timeframe>) -> Result<Self, Error> {
         let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
 
         // Which words are keywords depends on the version: `type` is an
@@ -114,7 +115,7 @@ impl Script<DefaultPineOutput> {
 
         // Create interpreter and load builtin namespace objects
         let mut interpreter = Interpreter::new();
-        let namespaces = pine_builtins::register_namespace_objects();
+        let namespaces = pine_builtins::register_namespace_objects(timeframe.unwrap_or_default());
 
         // Register namespace objects as const variables
         for (name, value) in namespaces {
@@ -173,8 +174,8 @@ impl<O: PineOutput> Script<O> {
     }
 
     pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
-        // Load bar data as Series variables so TA functions can access historical data
-        use interpreter::{Series, Value};
+        // `timeframe.change` compares this bar against the previous one.
+        self.interpreter.set_bar_time(bar.time);
 
         for (name, value) in bar_series(bar) {
             self.interpreter.set_variable(

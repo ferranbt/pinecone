@@ -4,7 +4,6 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 /// ta.tr(handle_na) - True Range
 /// True range is max(high - low, abs(high - close[1]), abs(low - close[1]))
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.tr")]
 pub struct TaTr {
     #[arg(default = false)]
     handle_na: bool,
@@ -87,7 +86,6 @@ impl TaTr {
 
 /// ta.atr(length) - Average True Range
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.atr")]
 pub struct TaAtr {
     length: f64,
 }
@@ -247,7 +245,6 @@ impl TaAtr {
 /// ta.bb(series, length, mult) - Bollinger Bands
 /// Returns [middle, upper, lower] bands
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.bb")]
 pub struct TaBb {
     series: Value,
     length: f64,

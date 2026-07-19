@@ -4,10 +4,13 @@ use syn::{parse_macro_input, Data, DeriveInput, Field, Fields, Meta};
 
 /// Derive macro for builtin functions
 ///
+/// A definition only says what the builtin *does*. The name it is bound to —
+/// and whether that is a namespace member or a bare global — is decided per
+/// version by the registry.
+///
 /// Example:
 /// ```ignore
 /// #[derive(BuiltinFunction)]
-/// #[builtin(name = "array.new_float")]
 /// struct ArrayNewFloat {
 ///     size: f64,
 ///     initial_value: Value,
@@ -15,7 +18,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Field, Fields, Meta};
 ///
 /// // With type parameters:
 /// #[derive(BuiltinFunction)]
-/// #[builtin(name = "matrix.new", type_params = 1)]
+/// #[builtin(type_params = 1)]
 /// struct MatrixNew {
 ///     #[type_param]
 ///     element_type: String,
@@ -34,8 +37,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Field, Fields, Meta};
 pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    // Parse the function name and type params count from attributes
-    let (function_name, type_params_count) = parse_builtin_attributes(&input);
+    let type_params_count = parse_builtin_attributes(&input);
 
     let struct_name = &input.ident;
 
@@ -83,31 +85,22 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
 
                 instance.execute(ctx)
             }
-
-            pub fn name() -> &'static str {
-                #function_name
-            }
         }
     };
 
     TokenStream::from(expanded)
 }
 
-fn parse_builtin_attributes(input: &DeriveInput) -> (String, usize) {
-    let mut function_name = None;
+/// A builtin definition says nothing about where it lives — the name it is
+/// bound to, and whether that is a namespace member or a bare global, is chosen
+/// per version by the registry.
+fn parse_builtin_attributes(input: &DeriveInput) -> usize {
     let mut type_params_count = 0;
 
     for attr in &input.attrs {
         if let Meta::List(meta_list) = &attr.meta {
             if meta_list.path.is_ident("builtin") {
                 let tokens_str = meta_list.tokens.to_string();
-
-                // Parse name
-                if let Some(start) = tokens_str.find('"') {
-                    if let Some(end) = tokens_str[start + 1..].find('"') {
-                        function_name = Some(tokens_str[start + 1..start + 1 + end].to_string());
-                    }
-                }
 
                 // Parse type_params
                 if let Some(type_params_pos) = tokens_str.find("type_params") {
@@ -125,9 +118,7 @@ fn parse_builtin_attributes(input: &DeriveInput) -> (String, usize) {
         }
     }
 
-    let function_name =
-        function_name.expect("BuiltinFunction requires a #[builtin(name = \"...\")] attribute");
-    (function_name, type_params_count)
+    type_params_count
 }
 
 fn generate_type_param_extraction(

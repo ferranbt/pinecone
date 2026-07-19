@@ -3,7 +3,6 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// ta.rsi(source, length) - Relative Strength Index
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.rsi")]
 pub struct TaRsi {
     source: Value,
     length: f64,
@@ -63,7 +62,6 @@ impl TaRsi {
 
 /// ta.cci(source, length) - Commodity Channel Index
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.cci")]
 pub struct TaCci {
     source: Value,
     length: f64,
@@ -103,7 +101,6 @@ impl TaCci {
 
 /// ta.mom(source, length) - Momentum
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.mom")]
 pub struct TaMom {
     source: Value,
     length: f64,
@@ -127,7 +124,6 @@ impl TaMom {
 
 /// ta.roc(source, length) - Rate of Change
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.roc")]
 pub struct TaRoc {
     source: Value,
     length: f64,
@@ -158,7 +154,6 @@ impl TaRoc {
 
 /// ta.cmo(source, length) - Chande Momentum Oscillator
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.cmo")]
 pub struct TaCmo {
     source: Value,
     length: f64,
@@ -204,7 +199,6 @@ impl TaCmo {
 
 /// ta.linreg(source, length, offset) - Linear Regression
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.linreg")]
 pub struct TaLinreg {
     source: Value,
     length: f64,

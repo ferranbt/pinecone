@@ -6,7 +6,6 @@ use std::rc::Rc;
 
 /// box.new() - Creates a new box object
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.new")]
 struct BoxNew {
     left: Value,
     top: Value,
@@ -73,7 +72,6 @@ impl BoxNew {
 
 /// box.set_left() - Sets the left coordinate
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_left")]
 struct BoxSetLeft {
     id: f64,
     left: Value,
@@ -93,7 +91,6 @@ impl BoxSetLeft {
 
 /// box.set_top() - Sets the top coordinate
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_top")]
 struct BoxSetTop {
     id: f64,
     top: Value,
@@ -113,7 +110,6 @@ impl BoxSetTop {
 
 /// box.set_right() - Sets the right coordinate
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_right")]
 struct BoxSetRight {
     id: f64,
     right: Value,
@@ -133,7 +129,6 @@ impl BoxSetRight {
 
 /// box.set_bottom() - Sets the bottom coordinate
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_bottom")]
 struct BoxSetBottom {
     id: f64,
     bottom: Value,
@@ -153,7 +148,6 @@ impl BoxSetBottom {
 
 /// box.set_lefttop() - Sets the left and top coordinates
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_lefttop")]
 struct BoxSetLefttop {
     id: f64,
     left: Value,
@@ -175,7 +169,6 @@ impl BoxSetLefttop {
 
 /// box.set_rightbottom() - Sets the right and bottom coordinates
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_rightbottom")]
 struct BoxSetRightbottom {
     id: f64,
     right: Value,
@@ -197,7 +190,6 @@ impl BoxSetRightbottom {
 
 /// box.set_border_color() - Sets the border color
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_border_color")]
 struct BoxSetBorderColor {
     id: f64,
     color: Color,
@@ -217,7 +209,6 @@ impl BoxSetBorderColor {
 
 /// box.set_border_width() - Sets the border width
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_border_width")]
 struct BoxSetBorderWidth {
     id: f64,
     width: f64,
@@ -237,7 +228,6 @@ impl BoxSetBorderWidth {
 
 /// box.set_border_style() - Sets the border style
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_border_style")]
 struct BoxSetBorderStyle {
     id: f64,
     style: String,
@@ -257,7 +247,6 @@ impl BoxSetBorderStyle {
 
 /// box.set_extend() - Sets the extend property
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_extend")]
 struct BoxSetExtend {
     id: f64,
     extend: String,
@@ -277,7 +266,6 @@ impl BoxSetExtend {
 
 /// box.set_bgcolor() - Sets the background color
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_bgcolor")]
 struct BoxSetBgcolor {
     id: f64,
     color: Color,
@@ -297,7 +285,6 @@ impl BoxSetBgcolor {
 
 /// box.set_text() - Sets the text
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_text")]
 struct BoxSetText {
     id: f64,
     text: String,
@@ -317,7 +304,6 @@ impl BoxSetText {
 
 /// box.set_text_color() - Sets the text color
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_text_color")]
 struct BoxSetTextColor {
     id: f64,
     color: Color,
@@ -337,7 +323,6 @@ impl BoxSetTextColor {
 
 /// box.set_text_size() - Sets the text size
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_text_size")]
 struct BoxSetTextSize {
     id: f64,
     size: f64,
@@ -357,7 +342,6 @@ impl BoxSetTextSize {
 
 /// box.set_text_halign() - Sets the text horizontal alignment
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_text_halign")]
 struct BoxSetTextHalign {
     id: f64,
     halign: String,
@@ -377,7 +361,6 @@ impl BoxSetTextHalign {
 
 /// box.set_text_valign() - Sets the text vertical alignment
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_text_valign")]
 struct BoxSetTextValign {
     id: f64,
     valign: String,
@@ -397,7 +380,6 @@ impl BoxSetTextValign {
 
 /// box.set_text_wrap() - Sets the text wrap mode
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_text_wrap")]
 struct BoxSetTextWrap {
     id: f64,
     wrap: String,
@@ -417,7 +399,6 @@ impl BoxSetTextWrap {
 
 /// box.set_text_font_family() - Sets the text font family
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_text_font_family")]
 struct BoxSetTextFontFamily {
     id: f64,
     font_family: String,
@@ -437,7 +418,6 @@ impl BoxSetTextFontFamily {
 
 /// box.set_xloc() - Sets the xloc mode
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.set_xloc")]
 struct BoxSetXloc {
     id: f64,
     left: Value,
@@ -461,7 +441,6 @@ impl BoxSetXloc {
 
 /// box.get_left() - Gets the left coordinate
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.get_left")]
 struct BoxGetLeft {
     id: f64,
 }
@@ -479,7 +458,6 @@ impl BoxGetLeft {
 
 /// box.get_top() - Gets the top coordinate
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.get_top")]
 struct BoxGetTop {
     id: f64,
 }
@@ -497,7 +475,6 @@ impl BoxGetTop {
 
 /// box.get_right() - Gets the right coordinate
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.get_right")]
 struct BoxGetRight {
     id: f64,
 }
@@ -515,7 +492,6 @@ impl BoxGetRight {
 
 /// box.get_bottom() - Gets the bottom coordinate
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.get_bottom")]
 struct BoxGetBottom {
     id: f64,
 }
@@ -533,7 +509,6 @@ impl BoxGetBottom {
 
 /// box.delete() - Deletes a box
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.delete")]
 struct BoxDelete {
     id: f64,
 }
@@ -548,7 +523,6 @@ impl BoxDelete {
 
 /// box.copy() - Copies a box
 #[derive(BuiltinFunction)]
-#[builtin(name = "box.copy")]
 struct BoxCopy {
     id: f64,
 }

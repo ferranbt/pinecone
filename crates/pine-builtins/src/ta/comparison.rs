@@ -3,7 +3,6 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// ta.change(source, length) - Difference between current and N bars ago
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.change")]
 pub struct TaChange {
     source: Value,
     #[arg(default = 1.0)]
@@ -49,7 +48,6 @@ impl TaChange {
 
 /// ta.highest(source, length) - Highest value over N bars
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.highest")]
 pub struct TaHighest {
     source: Value,
     length: f64,
@@ -77,7 +75,6 @@ impl TaHighest {
 
 /// ta.lowest(source, length) - Lowest value over N bars
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.lowest")]
 pub struct TaLowest {
     source: Value,
     length: f64,
@@ -105,7 +102,6 @@ impl TaLowest {
 
 /// ta.cross(source1, source2) - True if two series crossed
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.cross")]
 pub struct TaCross {
     source1: Value,
     source2: Value,
@@ -130,7 +126,6 @@ impl TaCross {
 
 /// ta.crossover(source1, source2) - True if source1 crossed over source2
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.crossover")]
 pub struct TaCrossover {
     source1: Value,
     source2: Value,
@@ -154,7 +149,6 @@ impl TaCrossover {
 
 /// ta.crossunder(source1, source2) - True if source1 crossed under source2
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.crossunder")]
 pub struct TaCrossunder {
     source1: Value,
     source2: Value,
@@ -178,7 +172,6 @@ impl TaCrossunder {
 
 /// ta.rising(source, length) - Test if source is rising for length bars
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.rising")]
 pub struct TaRising {
     source: Value,
     length: f64,
@@ -211,7 +204,6 @@ impl TaRising {
 
 /// ta.falling(source, length) - Test if source is falling for length bars
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.falling")]
 pub struct TaFalling {
     source: Value,
     length: f64,
@@ -244,7 +236,6 @@ impl TaFalling {
 
 /// ta.highestbars(source, length) - Offset to highest value (0 = current bar)
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.highestbars")]
 pub struct TaHighestbars {
     source: Value,
     length: f64,
@@ -283,7 +274,6 @@ impl TaHighestbars {
 
 /// ta.lowestbars(source, length) - Offset to lowest value (0 = current bar)
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.lowestbars")]
 pub struct TaLowestbars {
     source: Value,
     length: f64,

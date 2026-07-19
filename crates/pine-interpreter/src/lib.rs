@@ -81,6 +81,8 @@ pub struct Bar {
     pub low: f64,
     pub close: f64,
     pub volume: f64,
+    /// Bar open time, UNIX milliseconds. This is Pine's `time`.
+    pub time: i64,
 }
 
 /// Represents a time series with an identifier and current value
@@ -143,7 +145,9 @@ impl<O: PineOutput> std::fmt::Debug for Value<O> {
             Value::Na => write!(f, "Na"),
             Value::Array(a) => write!(f, "Array({:?})", a),
             Value::Series(s) => write!(f, "Series({:?})", s),
-            Value::Object { type_name, fields, .. } => write!(f, "Object({}:{:?})", type_name, fields),
+            Value::Object {
+                type_name, fields, ..
+            } => write!(f, "Object({}:{:?})", type_name, fields),
             Value::Function { params, .. } => write!(f, "Function({} params)", params.len()),
             Value::BuiltinFunction(_) => write!(f, "BuiltinFunction"),
             Value::Type { name, .. } => write!(f, "Type({})", name),
@@ -341,6 +345,9 @@ pub struct Interpreter<O: PineOutput = DefaultPineOutput> {
     variables: HashMap<String, Variable<O>>,
     /// Builtin function registry
     builtins: HashMap<String, BuiltinFn<O>>,
+    /// Open time of the bar being executed, and of the one before it.
+    bar_time: i64,
+    previous_bar_time: Option<i64>,
     /// Method registry (method_name -> Vec<MethodDef>) - can have multiple methods with same name for different types
     methods: HashMap<String, Vec<MethodDef>>,
     /// Library loader for importing external libraries
@@ -388,6 +395,8 @@ impl<O: PineOutput> Interpreter<O> {
             variables: HashMap::new(),
             methods: HashMap::new(),
             builtins: HashMap::new(),
+            bar_time: 0,
+            previous_bar_time: None,
             library_loader: None,
             historical_provider: None,
             exports: HashMap::new(),
@@ -405,6 +414,8 @@ impl<O: PineOutput> Interpreter<O> {
             variables: HashMap::new(),
             methods: HashMap::new(),
             builtins,
+            bar_time: 0,
+            previous_bar_time: None,
             library_loader: None,
             historical_provider: None,
             exports: HashMap::new(),
@@ -422,6 +433,8 @@ impl<O: PineOutput> Interpreter<O> {
             variables: HashMap::new(),
             methods: HashMap::new(),
             builtins: HashMap::new(),
+            bar_time: 0,
+            previous_bar_time: None,
             library_loader: Some(loader),
             historical_provider: None,
             exports: HashMap::new(),
@@ -442,6 +455,8 @@ impl<O: PineOutput> Interpreter<O> {
             variables: HashMap::new(),
             methods: HashMap::new(),
             builtins,
+            bar_time: 0,
+            previous_bar_time: None,
             library_loader: Some(loader),
             historical_provider: None,
             exports: HashMap::new(),
@@ -479,6 +494,24 @@ impl<O: PineOutput> Interpreter<O> {
 
         // Return a clone of the output
         Ok(self.output.clone())
+    }
+
+    /// Open time of the bar being executed, UNIX milliseconds.
+    pub fn bar_time(&self) -> i64 {
+        self.bar_time
+    }
+
+    /// Open time of the previous bar, or `None` on the first one.
+    pub fn previous_bar_time(&self) -> Option<i64> {
+        self.previous_bar_time
+    }
+
+    /// Move to a new bar, remembering the one just executed.
+    pub fn set_bar_time(&mut self, time: i64) {
+        if self.bar_time != time {
+            self.previous_bar_time = Some(self.bar_time);
+        }
+        self.bar_time = time;
     }
 
     /// Get a variable value
@@ -1929,7 +1962,10 @@ impl<O: PineOutput> Interpreter<O> {
 
                 match &call_args.args[0] {
                     EvaluatedArg::Positional(value) => {
-                        if let Value::Object { type_name, fields, .. } = value {
+                        if let Value::Object {
+                            type_name, fields, ..
+                        } = value
+                        {
                             // Create a shallow copy of the object's fields
                             let obj = fields.borrow();
                             let copied_fields = obj.clone();

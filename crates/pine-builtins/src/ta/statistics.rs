@@ -3,7 +3,6 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// ta.stdev(source, length) - Standard Deviation
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.stdev")]
 pub struct TaStdev {
     source: Value,
     length: f64,
@@ -48,7 +47,6 @@ impl TaStdev {
 
 /// ta.variance(source, length) - Variance
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.variance")]
 pub struct TaVariance {
     source: Value,
     length: f64,
@@ -92,7 +90,6 @@ impl TaVariance {
 
 /// ta.median(source, length) - Median value
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.median")]
 pub struct TaMedian {
     source: Value,
     length: f64,
@@ -131,7 +128,6 @@ impl TaMedian {
 
 /// ta.dev(source, length) - Mean Absolute Deviation
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.dev")]
 pub struct TaDev {
     source: Value,
     length: f64,

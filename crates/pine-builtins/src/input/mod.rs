@@ -18,7 +18,6 @@ const MEMBERS: &[&str] = &[
 /// affects the result.
 #[allow(dead_code)]
 #[derive(BuiltinFunction)]
-#[builtin(name = "input")]
 struct Input {
     defval: Value,
     #[arg(default = Value::Na)]

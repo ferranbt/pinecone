@@ -19,5 +19,6 @@ pine-lexer.workspace = true
 pine-parser.workspace = true
 pine-ast.workspace = true
 pine-core.workspace = true
+
 eyre.workspace = true
 walkdir = "2"

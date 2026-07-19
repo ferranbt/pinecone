@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 /// matrix.new<type>() - Creates a new typed matrix
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.new", type_params = 1)]
+#[builtin(type_params = 1)]
 struct MatrixNew {
     #[type_param]
     element_type: String,
@@ -53,7 +53,6 @@ impl MatrixNew {
 
 /// matrix.get() - Gets an element from the matrix
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.get")]
 struct MatrixGet {
     id: Value,
     row: f64,
@@ -84,7 +83,6 @@ impl MatrixGet {
 
 /// matrix.set() - Sets an element in the matrix
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.set")]
 struct MatrixSet {
     id: Value,
     row: f64,
@@ -117,7 +115,6 @@ impl MatrixSet {
 
 /// matrix.rows() - Returns the number of rows
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.rows")]
 struct MatrixRows {
     id: Value,
 }
@@ -136,7 +133,6 @@ impl MatrixRows {
 
 /// matrix.columns() - Returns the number of columns
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.columns")]
 struct MatrixColumns {
     id: Value,
 }
@@ -160,7 +156,6 @@ impl MatrixColumns {
 
 /// matrix.elements_count() - Returns total number of elements
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.elements_count")]
 struct MatrixElementsCount {
     id: Value,
 }
@@ -180,7 +175,6 @@ impl MatrixElementsCount {
 
 /// matrix.fill() - Fills the matrix with a value
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.fill")]
 struct MatrixFill {
     id: Value,
     value: Value,
@@ -206,7 +200,6 @@ impl MatrixFill {
 
 /// matrix.copy() - Creates a copy of the matrix
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.copy")]
 struct MatrixCopy {
     id: Value,
 }
@@ -229,7 +222,6 @@ impl MatrixCopy {
 
 /// matrix.add_row() - Adds a row to the matrix
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.add_row")]
 struct MatrixAddRow {
     id: Value,
     row: f64,
@@ -275,7 +267,6 @@ impl MatrixAddRow {
 
 /// matrix.add_col() - Adds a column to the matrix
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.add_col")]
 struct MatrixAddCol {
     id: Value,
     column: f64,
@@ -319,7 +310,6 @@ impl MatrixAddCol {
 
 /// matrix.transpose() - Transposes the matrix
 #[derive(BuiltinFunction)]
-#[builtin(name = "matrix.transpose")]
 struct MatrixTranspose {
     id: Value,
 }

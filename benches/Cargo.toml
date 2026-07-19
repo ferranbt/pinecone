@@ -35,3 +35,4 @@ pine-parser.workspace = true
 pine-interpreter.workspace = true
 pine-builtins.workspace = true
 pine-ast.workspace = true
+pine-core.workspace = true

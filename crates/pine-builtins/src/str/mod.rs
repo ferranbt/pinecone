@@ -5,7 +5,6 @@ use std::rc::Rc;
 
 /// str.length(string) - Returns the length of a string
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.length")]
 struct StrLength {
     string: String,
 }
@@ -18,7 +17,6 @@ impl StrLength {
 
 /// str.lower(source) - Converts string to lowercase
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.lower")]
 struct StrLower {
     source: String,
 }
@@ -31,7 +29,6 @@ impl StrLower {
 
 /// str.upper(source) - Converts string to uppercase
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.upper")]
 struct StrUpper {
     source: String,
 }
@@ -44,7 +41,6 @@ impl StrUpper {
 
 /// str.contains(source, str) - Checks if source contains substring
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.contains")]
 struct StrContains {
     source: String,
     str: String,
@@ -58,7 +54,6 @@ impl StrContains {
 
 /// str.startswith(source, str) - Checks if source starts with substring
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.startswith")]
 struct StrStartsWith {
     source: String,
     str: String,
@@ -72,7 +67,6 @@ impl StrStartsWith {
 
 /// str.endswith(source, str) - Checks if source ends with substring
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.endswith")]
 struct StrEndsWith {
     source: String,
     str: String,
@@ -86,7 +80,6 @@ impl StrEndsWith {
 
 /// str.substring(source, begin_pos, end_pos) - Extracts substring
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.substring")]
 struct StrSubstring {
     source: String,
     begin_pos: f64,
@@ -116,7 +109,6 @@ impl StrSubstring {
 
 /// str.replace(source, target, replacement, occurrence) - Replaces Nth occurrence
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.replace")]
 struct StrReplace {
     source: String,
     target: String,
@@ -145,7 +137,6 @@ impl StrReplace {
 
 /// str.replace_all(source, target, replacement) - Replaces all occurrences
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.replace_all")]
 struct StrReplaceAll {
     source: String,
     target: String,
@@ -162,7 +153,6 @@ impl StrReplaceAll {
 
 /// str.split(string, separator) - Splits string into array
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.split")]
 struct StrSplit {
     string: String,
     separator: String,
@@ -181,7 +171,6 @@ impl StrSplit {
 
 /// str.tonumber(string) - Converts string to number
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.tonumber")]
 struct StrToNumber {
     string: String,
 }
@@ -197,7 +186,6 @@ impl StrToNumber {
 
 /// str.tostring(value) - Converts value to string
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.tostring")]
 struct StrToString {
     value: Value,
 }
@@ -236,7 +224,6 @@ impl StrToString {
 
 /// str.pos(source, str) - Returns position of substring
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.pos")]
 struct StrPos {
     source: String,
     str: String,
@@ -253,7 +240,6 @@ impl StrPos {
 
 /// str.repeat(source, count) - Repeats string count times
 #[derive(BuiltinFunction)]
-#[builtin(name = "str.repeat")]
 struct StrRepeat {
     source: String,
     count: f64,
