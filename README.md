@@ -15,14 +15,14 @@ Pinecone executes PineScript code (TradingView's scripting language) with suppor
 ## Example
 
 ```rust
-use pine::Script;
+use pine::ScriptBuilder;
 
-let script = Script::compile(r#"
+let script = ScriptBuilder::with_code(r#"
     fast_ma = ta.sma(close, 10)
     slow_ma = ta.sma(close, 20)
     plot(fast_ma, color=color.blue)
     plot(slow_ma, color=color.red)
-"#)?;
+"#).compile()?;
 
 let output = script.execute(&bar)?;
 ```
