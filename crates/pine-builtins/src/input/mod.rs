@@ -56,7 +56,13 @@ impl<O: PineOutput + InputOutput> InputInt<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         // Constraints and dropdown options refine the settings UI only; they do
         // not change the value handed to the script.
-        let _ = (self.minval, self.maxval, self.step, &self.tooltip, &self.options);
+        let _ = (
+            self.minval,
+            self.maxval,
+            self.step,
+            &self.tooltip,
+            &self.options,
+        );
         ctx.output.add_input(Input {
             kind: "int".to_string(),
             title: self.title.clone(),
@@ -90,7 +96,13 @@ struct InputFloat<O: PineOutput + InputOutput> {
 
 impl<O: PineOutput + InputOutput> InputFloat<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let _ = (self.minval, self.maxval, self.step, &self.tooltip, &self.options);
+        let _ = (
+            self.minval,
+            self.maxval,
+            self.step,
+            &self.tooltip,
+            &self.options,
+        );
         ctx.output.add_input(Input {
             kind: "float".to_string(),
             title: self.title.clone(),
