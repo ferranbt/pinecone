@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 
 /// year(time) - Returns year for given UNIX time in milliseconds
 #[derive(BuiltinFunction)]
@@ -9,7 +9,7 @@ struct Year {
 }
 
 impl Year {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         // Convert milliseconds to seconds
         let secs = (self.time / 1000.0) as i64;
 
@@ -28,7 +28,7 @@ struct Month {
 }
 
 impl Month {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         // Simplified implementation - proper implementation needs date/time library
         let secs = (self.time / 1000.0) as i64;
         let days_since_epoch = secs / (24 * 60 * 60);
@@ -49,7 +49,7 @@ struct DayOfMonth {
 }
 
 impl DayOfMonth {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let secs = (self.time / 1000.0) as i64;
         let days_since_epoch = secs / (24 * 60 * 60);
 
@@ -68,7 +68,7 @@ struct DayOfWeek {
 }
 
 impl DayOfWeek {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let secs = (self.time / 1000.0) as i64;
         let days_since_epoch = secs / (24 * 60 * 60);
 
@@ -88,7 +88,7 @@ struct Hour {
 }
 
 impl Hour {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let secs = (self.time / 1000.0) as i64;
         let hour = (secs / 3600) % 24;
 
@@ -104,7 +104,7 @@ struct Minute {
 }
 
 impl Minute {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let secs = (self.time / 1000.0) as i64;
         let minute = (secs / 60) % 60;
 
@@ -120,7 +120,7 @@ struct Second {
 }
 
 impl Second {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let secs = (self.time / 1000.0) as i64;
         let second = secs % 60;
 
@@ -128,37 +128,37 @@ impl Second {
     }
 }
 
-pub fn register_time_functions() -> Vec<(String, Value)> {
+pub fn register_time_functions<O: PineOutput>() -> Vec<(String, Value<O>)> {
     use std::rc::Rc;
 
     vec![
         (
             "year".to_string(),
-            Value::BuiltinFunction(Rc::new(Year::builtin_fn)),
+            Value::BuiltinFunction(Rc::new(Year::builtin_fn::<O>)),
         ),
         (
             "month".to_string(),
-            Value::BuiltinFunction(Rc::new(Month::builtin_fn)),
+            Value::BuiltinFunction(Rc::new(Month::builtin_fn::<O>)),
         ),
         (
             "dayofmonth".to_string(),
-            Value::BuiltinFunction(Rc::new(DayOfMonth::builtin_fn)),
+            Value::BuiltinFunction(Rc::new(DayOfMonth::builtin_fn::<O>)),
         ),
         (
             "dayofweek".to_string(),
-            Value::BuiltinFunction(Rc::new(DayOfWeek::builtin_fn)),
+            Value::BuiltinFunction(Rc::new(DayOfWeek::builtin_fn::<O>)),
         ),
         (
             "hour".to_string(),
-            Value::BuiltinFunction(Rc::new(Hour::builtin_fn)),
+            Value::BuiltinFunction(Rc::new(Hour::builtin_fn::<O>)),
         ),
         (
             "minute".to_string(),
-            Value::BuiltinFunction(Rc::new(Minute::builtin_fn)),
+            Value::BuiltinFunction(Rc::new(Minute::builtin_fn::<O>)),
         ),
         (
             "second".to_string(),
-            Value::BuiltinFunction(Rc::new(Second::builtin_fn)),
+            Value::BuiltinFunction(Rc::new(Second::builtin_fn::<O>)),
         ),
     ]
 }

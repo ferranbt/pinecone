@@ -1,16 +1,16 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 
 /// color.new(color, transp) - Applies transparency to a color
 #[derive(BuiltinFunction)]
 #[builtin(name = "color.new")]
-struct ColorNew {
-    color: Value,
+struct ColorNew<O: PineOutput> {
+    color: Value<O>,
     transp: f64,
 }
 
-impl ColorNew {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ColorNew<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let mut color = self.color.as_color()?;
         color.t = self.transp.clamp(0.0, 100.0) as u8;
         Ok(Value::Color(color))
@@ -29,7 +29,7 @@ struct ColorRgb {
 }
 
 impl ColorRgb {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let r = self.red.clamp(0.0, 255.0) as u8;
         let g = self.green.clamp(0.0, 255.0) as u8;
         let b = self.blue.clamp(0.0, 255.0) as u8;
@@ -41,12 +41,12 @@ impl ColorRgb {
 /// color.r(color) - Retrieves the red component of a color
 #[derive(BuiltinFunction)]
 #[builtin(name = "color.r")]
-struct ColorR {
-    color: Value,
+struct ColorR<O: PineOutput> {
+    color: Value<O>,
 }
 
-impl ColorR {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ColorR<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let color = self.color.as_color()?;
         Ok(Value::Number(color.r as f64))
     }
@@ -55,12 +55,12 @@ impl ColorR {
 /// color.g(color) - Retrieves the green component of a color
 #[derive(BuiltinFunction)]
 #[builtin(name = "color.g")]
-struct ColorG {
-    color: Value,
+struct ColorG<O: PineOutput> {
+    color: Value<O>,
 }
 
-impl ColorG {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ColorG<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let color = self.color.as_color()?;
         Ok(Value::Number(color.g as f64))
     }
@@ -69,12 +69,12 @@ impl ColorG {
 /// color.b(color) - Retrieves the blue component of a color
 #[derive(BuiltinFunction)]
 #[builtin(name = "color.b")]
-struct ColorB {
-    color: Value,
+struct ColorB<O: PineOutput> {
+    color: Value<O>,
 }
 
-impl ColorB {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ColorB<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let color = self.color.as_color()?;
         Ok(Value::Number(color.b as f64))
     }
@@ -83,12 +83,12 @@ impl ColorB {
 /// color.t(color) - Retrieves the transparency of a color
 #[derive(BuiltinFunction)]
 #[builtin(name = "color.t")]
-struct ColorT {
-    color: Value,
+struct ColorT<O: PineOutput> {
+    color: Value<O>,
 }
 
-impl ColorT {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ColorT<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let color = self.color.as_color()?;
         Ok(Value::Number(color.t as f64))
     }
@@ -98,16 +98,16 @@ impl ColorT {
 /// - Creates a gradient color based on value position
 #[derive(BuiltinFunction)]
 #[builtin(name = "color.from_gradient")]
-struct ColorFromGradient {
+struct ColorFromGradient<O: PineOutput> {
     value: f64,
     bottom_value: f64,
     top_value: f64,
-    bottom_color: Value,
-    top_color: Value,
+    bottom_color: Value<O>,
+    top_color: Value<O>,
 }
 
-impl ColorFromGradient {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ColorFromGradient<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let c1 = self.bottom_color.as_color()?;
         let c2 = self.top_color.as_color()?;
 
@@ -130,39 +130,40 @@ impl ColorFromGradient {
 }
 
 /// Register all color namespace functions and return the namespace object
-pub fn register() -> Value {
+pub fn register<O: PineOutput>() -> Value<O> {
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    let mut color_ns = std::collections::HashMap::new();
+    let mut color_ns: std::collections::HashMap<String, Value<O>> =
+        std::collections::HashMap::new();
 
     color_ns.insert(
         "new".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorNew::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ColorNew::<O>::builtin_fn)),
     );
     color_ns.insert(
         "rgb".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorRgb::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ColorRgb::builtin_fn::<O>)),
     );
     color_ns.insert(
         "r".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorR::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ColorR::<O>::builtin_fn)),
     );
     color_ns.insert(
         "g".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorG::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ColorG::<O>::builtin_fn)),
     );
     color_ns.insert(
         "b".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorB::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ColorB::<O>::builtin_fn)),
     );
     color_ns.insert(
         "t".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorT::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ColorT::<O>::builtin_fn)),
     );
     color_ns.insert(
         "from_gradient".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorFromGradient::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ColorFromGradient::<O>::builtin_fn)),
     );
 
     color_ns.insert("aqua".to_string(), Value::new_color(0, 255, 255, 0));

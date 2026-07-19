@@ -1,11 +1,11 @@
-use pine_interpreter::Value;
+use pine_interpreter::{PineOutput, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Register the currency namespace with all currency constants
-pub fn register() -> Value {
-    let mut members = HashMap::new();
+pub fn register<O: PineOutput>() -> Value<O> {
+    let mut members: HashMap<String, Value<O>> = HashMap::new();
 
     // All currency constants as string values
     let currencies = [

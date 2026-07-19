@@ -1,17 +1,17 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 
 /// ta.change(source, length) - Difference between current and N bars ago
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.change")]
-pub struct TaChange {
-    source: Value,
+pub struct TaChange<O: PineOutput> {
+    source: Value<O>,
     #[arg(default = 1.0)]
     length: f64,
 }
 
-impl TaChange {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaChange<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
 
         if let Value::Series(series) = &self.source {
@@ -50,13 +50,13 @@ impl TaChange {
 /// ta.highest(source, length) - Highest value over N bars
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.highest")]
-pub struct TaHighest {
-    source: Value,
+pub struct TaHighest<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaHighest {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaHighest<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -78,13 +78,13 @@ impl TaHighest {
 /// ta.lowest(source, length) - Lowest value over N bars
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.lowest")]
-pub struct TaLowest {
-    source: Value,
+pub struct TaLowest<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaLowest {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaLowest<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -106,13 +106,13 @@ impl TaLowest {
 /// ta.cross(source1, source2) - True if two series crossed
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.cross")]
-pub struct TaCross {
-    source1: Value,
-    source2: Value,
+pub struct TaCross<O: PineOutput> {
+    source1: Value<O>,
+    source2: Value<O>,
 }
 
-impl TaCross {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaCross<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let vals1 = ctx.get_series_values(&self.source1, 2)?;
         let vals2 = ctx.get_series_values(&self.source2, 2)?;
 
@@ -131,13 +131,13 @@ impl TaCross {
 /// ta.crossover(source1, source2) - True if source1 crossed over source2
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.crossover")]
-pub struct TaCrossover {
-    source1: Value,
-    source2: Value,
+pub struct TaCrossover<O: PineOutput> {
+    source1: Value<O>,
+    source2: Value<O>,
 }
 
-impl TaCrossover {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaCrossover<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let vals1 = ctx.get_series_values(&self.source1, 2)?;
         let vals2 = ctx.get_series_values(&self.source2, 2)?;
 
@@ -155,13 +155,13 @@ impl TaCrossover {
 /// ta.crossunder(source1, source2) - True if source1 crossed under source2
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.crossunder")]
-pub struct TaCrossunder {
-    source1: Value,
-    source2: Value,
+pub struct TaCrossunder<O: PineOutput> {
+    source1: Value<O>,
+    source2: Value<O>,
 }
 
-impl TaCrossunder {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaCrossunder<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let vals1 = ctx.get_series_values(&self.source1, 2)?;
         let vals2 = ctx.get_series_values(&self.source2, 2)?;
 
@@ -179,13 +179,13 @@ impl TaCrossunder {
 /// ta.rising(source, length) - Test if source is rising for length bars
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.rising")]
-pub struct TaRising {
-    source: Value,
+pub struct TaRising<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaRising {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaRising<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Ok(Value::Bool(false));
@@ -212,13 +212,13 @@ impl TaRising {
 /// ta.falling(source, length) - Test if source is falling for length bars
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.falling")]
-pub struct TaFalling {
-    source: Value,
+pub struct TaFalling<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaFalling {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaFalling<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Ok(Value::Bool(false));
@@ -245,13 +245,13 @@ impl TaFalling {
 /// ta.highestbars(source, length) - Offset to highest value (0 = current bar)
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.highestbars")]
-pub struct TaHighestbars {
-    source: Value,
+pub struct TaHighestbars<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaHighestbars {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaHighestbars<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -284,13 +284,13 @@ impl TaHighestbars {
 /// ta.lowestbars(source, length) - Offset to lowest value (0 = current bar)
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.lowestbars")]
-pub struct TaLowestbars {
-    source: Value,
+pub struct TaLowestbars<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaLowestbars {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaLowestbars<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(

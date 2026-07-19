@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -7,7 +7,7 @@ use std::rc::Rc;
 /// matrix.new<type>() - Creates a new typed matrix
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.new", type_params = 1)]
-struct MatrixNew {
+struct MatrixNew<O: PineOutput> {
     #[type_param]
     element_type: String,
     #[arg(default = 0.0)]
@@ -15,11 +15,11 @@ struct MatrixNew {
     #[arg(default = 0.0)]
     columns: f64,
     #[arg(default = Value::Na)]
-    initial_value: Value,
+    initial_value: Value<O>,
 }
 
-impl MatrixNew {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixNew<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let rows = self.rows as usize;
         let columns = self.columns as usize;
 
@@ -54,14 +54,14 @@ impl MatrixNew {
 /// matrix.get() - Gets an element from the matrix
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.get")]
-struct MatrixGet {
-    id: Value,
+struct MatrixGet<O: PineOutput> {
+    id: Value<O>,
     row: f64,
     column: f64,
 }
 
-impl MatrixGet {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixGet<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let matrix = match &self.id {
             Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
@@ -85,15 +85,15 @@ impl MatrixGet {
 /// matrix.set() - Sets an element in the matrix
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.set")]
-struct MatrixSet {
-    id: Value,
+struct MatrixSet<O: PineOutput> {
+    id: Value<O>,
     row: f64,
     column: f64,
-    value: Value,
+    value: Value<O>,
 }
 
-impl MatrixSet {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixSet<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let matrix = match &self.id {
             Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
@@ -118,12 +118,12 @@ impl MatrixSet {
 /// matrix.rows() - Returns the number of rows
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.rows")]
-struct MatrixRows {
-    id: Value,
+struct MatrixRows<O: PineOutput> {
+    id: Value<O>,
 }
 
-impl MatrixRows {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixRows<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let matrix = match &self.id {
             Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
@@ -137,12 +137,12 @@ impl MatrixRows {
 /// matrix.columns() - Returns the number of columns
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.columns")]
-struct MatrixColumns {
-    id: Value,
+struct MatrixColumns<O: PineOutput> {
+    id: Value<O>,
 }
 
-impl MatrixColumns {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixColumns<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let matrix = match &self.id {
             Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
@@ -161,12 +161,12 @@ impl MatrixColumns {
 /// matrix.elements_count() - Returns total number of elements
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.elements_count")]
-struct MatrixElementsCount {
-    id: Value,
+struct MatrixElementsCount<O: PineOutput> {
+    id: Value<O>,
 }
 
-impl MatrixElementsCount {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixElementsCount<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let matrix = match &self.id {
             Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
@@ -181,13 +181,13 @@ impl MatrixElementsCount {
 /// matrix.fill() - Fills the matrix with a value
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.fill")]
-struct MatrixFill {
-    id: Value,
-    value: Value,
+struct MatrixFill<O: PineOutput> {
+    id: Value<O>,
+    value: Value<O>,
 }
 
-impl MatrixFill {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixFill<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let matrix = match &self.id {
             Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
@@ -207,12 +207,12 @@ impl MatrixFill {
 /// matrix.copy() - Creates a copy of the matrix
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.copy")]
-struct MatrixCopy {
-    id: Value,
+struct MatrixCopy<O: PineOutput> {
+    id: Value<O>,
 }
 
-impl MatrixCopy {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixCopy<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let (matrix, element_type) = match &self.id {
             Value::Matrix { data, element_type } => (data, element_type.clone()),
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
@@ -230,15 +230,15 @@ impl MatrixCopy {
 /// matrix.add_row() - Adds a row to the matrix
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.add_row")]
-struct MatrixAddRow {
-    id: Value,
+struct MatrixAddRow<O: PineOutput> {
+    id: Value<O>,
     row: f64,
     #[arg(default = Value::Na)]
-    array_id: Value,
+    array_id: Value<O>,
 }
 
-impl MatrixAddRow {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixAddRow<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let matrix = match &self.id {
             Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
@@ -276,15 +276,15 @@ impl MatrixAddRow {
 /// matrix.add_col() - Adds a column to the matrix
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.add_col")]
-struct MatrixAddCol {
-    id: Value,
+struct MatrixAddCol<O: PineOutput> {
+    id: Value<O>,
     column: f64,
     #[arg(default = Value::Na)]
-    array_id: Value,
+    array_id: Value<O>,
 }
 
-impl MatrixAddCol {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixAddCol<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let matrix = match &self.id {
             Value::Matrix { data, .. } => data,
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
@@ -320,12 +320,12 @@ impl MatrixAddCol {
 /// matrix.transpose() - Transposes the matrix
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.transpose")]
-struct MatrixTranspose {
-    id: Value,
+struct MatrixTranspose<O: PineOutput> {
+    id: Value<O>,
 }
 
-impl MatrixTranspose {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MatrixTranspose<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let (matrix, element_type) = match &self.id {
             Value::Matrix { data, element_type } => (data, element_type.clone()),
             _ => return Err(RuntimeError::TypeError("Expected matrix".to_string())),
@@ -357,52 +357,52 @@ impl MatrixTranspose {
 }
 
 /// Register the matrix namespace with all functions
-pub fn register() -> Value {
-    let mut members = HashMap::new();
+pub fn register<O: PineOutput>() -> Value<O> {
+    let mut members: HashMap<String, Value<O>> = HashMap::new();
 
     members.insert(
         "new".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixNew::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixNew::<O>::builtin_fn)),
     );
     members.insert(
         "get".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixGet::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixGet::<O>::builtin_fn)),
     );
     members.insert(
         "set".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixSet::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixSet::<O>::builtin_fn)),
     );
     members.insert(
         "rows".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixRows::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixRows::<O>::builtin_fn)),
     );
     members.insert(
         "columns".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixColumns::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixColumns::<O>::builtin_fn)),
     );
     members.insert(
         "elements_count".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixElementsCount::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixElementsCount::<O>::builtin_fn)),
     );
     members.insert(
         "fill".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixFill::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixFill::<O>::builtin_fn)),
     );
     members.insert(
         "copy".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixCopy::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixCopy::<O>::builtin_fn)),
     );
     members.insert(
         "add_row".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixAddRow::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixAddRow::<O>::builtin_fn)),
     );
     members.insert(
         "add_col".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixAddCol::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixAddCol::<O>::builtin_fn)),
     );
     members.insert(
         "transpose".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixTranspose::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MatrixTranspose::<O>::builtin_fn)),
     );
 
     Value::Object {

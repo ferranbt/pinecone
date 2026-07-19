@@ -1,16 +1,16 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 
 /// ta.rsi(source, length) - Relative Strength Index
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.rsi")]
-pub struct TaRsi {
-    source: Value,
+pub struct TaRsi<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaRsi {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaRsi<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -64,13 +64,13 @@ impl TaRsi {
 /// ta.cci(source, length) - Commodity Channel Index
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.cci")]
-pub struct TaCci {
-    source: Value,
+pub struct TaCci<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaCci {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaCci<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -104,13 +104,13 @@ impl TaCci {
 /// ta.mom(source, length) - Momentum
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.mom")]
-pub struct TaMom {
-    source: Value,
+pub struct TaMom<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaMom {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaMom<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
 
         // Momentum is just current - value N bars ago
@@ -128,13 +128,13 @@ impl TaMom {
 /// ta.roc(source, length) - Rate of Change
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.roc")]
-pub struct TaRoc {
-    source: Value,
+pub struct TaRoc<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaRoc {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaRoc<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
 
         // ROC = ((current - previous) / previous) * 100
@@ -159,13 +159,13 @@ impl TaRoc {
 /// ta.cmo(source, length) - Chande Momentum Oscillator
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.cmo")]
-pub struct TaCmo {
-    source: Value,
+pub struct TaCmo<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaCmo {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaCmo<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -205,15 +205,15 @@ impl TaCmo {
 /// ta.linreg(source, length, offset) - Linear Regression
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.linreg")]
-pub struct TaLinreg {
-    source: Value,
+pub struct TaLinreg<O: PineOutput> {
+    source: Value<O>,
     length: f64,
     #[arg(default = 0.0)]
     offset: f64,
 }
 
-impl TaLinreg {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaLinreg<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(

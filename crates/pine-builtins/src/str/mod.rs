@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -11,7 +11,7 @@ struct StrLength {
 }
 
 impl StrLength {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.string.len() as f64))
     }
 }
@@ -24,7 +24,7 @@ struct StrLower {
 }
 
 impl StrLower {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::String(self.source.to_lowercase()))
     }
 }
@@ -37,7 +37,7 @@ struct StrUpper {
 }
 
 impl StrUpper {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::String(self.source.to_uppercase()))
     }
 }
@@ -51,7 +51,7 @@ struct StrContains {
 }
 
 impl StrContains {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Bool(self.source.contains(&self.str)))
     }
 }
@@ -65,7 +65,7 @@ struct StrStartsWith {
 }
 
 impl StrStartsWith {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Bool(self.source.starts_with(&self.str)))
     }
 }
@@ -79,7 +79,7 @@ struct StrEndsWith {
 }
 
 impl StrEndsWith {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Bool(self.source.ends_with(&self.str)))
     }
 }
@@ -95,7 +95,7 @@ struct StrSubstring {
 }
 
 impl StrSubstring {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let begin = self.begin_pos as usize;
         let end = if self.end_pos < 0.0 {
             self.source.len()
@@ -126,7 +126,7 @@ struct StrReplace {
 }
 
 impl StrReplace {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let occurrence = self.occurrence as usize;
         let mut result = self.source.clone();
 
@@ -153,7 +153,7 @@ struct StrReplaceAll {
 }
 
 impl StrReplaceAll {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::String(
             self.source.replace(&self.target, &self.replacement),
         ))
@@ -169,8 +169,8 @@ struct StrSplit {
 }
 
 impl StrSplit {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
-        let parts: Vec<Value> = self
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let parts: Vec<Value<O>> = self
             .string
             .split(&self.separator)
             .map(|s| Value::String(s.to_string()))
@@ -187,7 +187,7 @@ struct StrToNumber {
 }
 
 impl StrToNumber {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         match self.string.trim().parse::<f64>() {
             Ok(num) => Ok(Value::Number(num)),
             Err(_) => Ok(Value::Na),
@@ -198,12 +198,12 @@ impl StrToNumber {
 /// str.tostring(value) - Converts value to string
 #[derive(BuiltinFunction)]
 #[builtin(name = "str.tostring")]
-struct StrToString {
-    value: Value,
+struct StrToString<O: PineOutput> {
+    value: Value<O>,
 }
 
-impl StrToString {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> StrToString<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let result = match &self.value {
             Value::String(s) => s.clone(),
             Value::Number(n) => n.to_string(),
@@ -243,7 +243,7 @@ struct StrPos {
 }
 
 impl StrPos {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         match self.source.find(&self.str) {
             Some(pos) => Ok(Value::Number(pos as f64)),
             None => Ok(Value::Number(-1.0)),
@@ -260,73 +260,73 @@ struct StrRepeat {
 }
 
 impl StrRepeat {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let count = self.count.max(0.0) as usize;
         Ok(Value::String(self.source.repeat(count)))
     }
 }
 
 /// Register all str namespace functions and return the namespace object
-pub fn register() -> Value {
+pub fn register<O: PineOutput>() -> Value<O> {
     use std::cell::RefCell;
 
-    let mut str_ns = std::collections::HashMap::new();
+    let mut str_ns: std::collections::HashMap<String, Value<O>> = std::collections::HashMap::new();
 
     str_ns.insert(
         "length".to_string(),
-        Value::BuiltinFunction(Rc::new(StrLength::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrLength::builtin_fn::<O>)),
     );
     str_ns.insert(
         "lower".to_string(),
-        Value::BuiltinFunction(Rc::new(StrLower::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrLower::builtin_fn::<O>)),
     );
     str_ns.insert(
         "upper".to_string(),
-        Value::BuiltinFunction(Rc::new(StrUpper::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrUpper::builtin_fn::<O>)),
     );
     str_ns.insert(
         "contains".to_string(),
-        Value::BuiltinFunction(Rc::new(StrContains::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrContains::builtin_fn::<O>)),
     );
     str_ns.insert(
         "startswith".to_string(),
-        Value::BuiltinFunction(Rc::new(StrStartsWith::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrStartsWith::builtin_fn::<O>)),
     );
     str_ns.insert(
         "endswith".to_string(),
-        Value::BuiltinFunction(Rc::new(StrEndsWith::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrEndsWith::builtin_fn::<O>)),
     );
     str_ns.insert(
         "substring".to_string(),
-        Value::BuiltinFunction(Rc::new(StrSubstring::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrSubstring::builtin_fn::<O>)),
     );
     str_ns.insert(
         "replace".to_string(),
-        Value::BuiltinFunction(Rc::new(StrReplace::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrReplace::builtin_fn::<O>)),
     );
     str_ns.insert(
         "replace_all".to_string(),
-        Value::BuiltinFunction(Rc::new(StrReplaceAll::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrReplaceAll::builtin_fn::<O>)),
     );
     str_ns.insert(
         "split".to_string(),
-        Value::BuiltinFunction(Rc::new(StrSplit::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrSplit::builtin_fn::<O>)),
     );
     str_ns.insert(
         "tonumber".to_string(),
-        Value::BuiltinFunction(Rc::new(StrToNumber::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrToNumber::builtin_fn::<O>)),
     );
     str_ns.insert(
         "tostring".to_string(),
-        Value::BuiltinFunction(Rc::new(StrToString::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrToString::<O>::builtin_fn)),
     );
     str_ns.insert(
         "pos".to_string(),
-        Value::BuiltinFunction(Rc::new(StrPos::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrPos::builtin_fn::<O>)),
     );
     str_ns.insert(
         "repeat".to_string(),
-        Value::BuiltinFunction(Rc::new(StrRepeat::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(StrRepeat::builtin_fn::<O>)),
     );
 
     Value::Object {

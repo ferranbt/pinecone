@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::PineOutput;
+use pine_interpreter::{BoxOutput, LabelOutput, LogOutput, PineOutput, PlotOutput};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -13,7 +13,6 @@ pub use pine_interpreter::LogLevel;
 
 // Namespace modules
 mod array;
-/*
 mod r#box;
 mod color;
 mod currency;
@@ -31,12 +30,12 @@ mod time;
 /// na(value) - Returns true if the value is na, false otherwise
 #[derive(BuiltinFunction)]
 #[builtin(name = "na")]
-struct Na {
-    value: Value,
+struct Na<O: PineOutput> {
+    value: Value<O>,
 }
 
-impl Na {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> Na<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Bool(matches!(self.value, Value::Na)))
     }
 }
@@ -44,12 +43,12 @@ impl Na {
 /// bool(x) - Converts value to bool
 #[derive(BuiltinFunction)]
 #[builtin(name = "bool")]
-struct Bool {
-    x: Value,
+struct Bool<O: PineOutput> {
+    x: Value<O>,
 }
 
-impl Bool {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> Bool<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         match &self.x {
             Value::Bool(b) => Ok(Value::Bool(*b)),
             Value::Number(n) => Ok(Value::Bool(*n != 0.0)),
@@ -62,12 +61,12 @@ impl Bool {
 /// int(x) - Converts value to int (truncates float)
 #[derive(BuiltinFunction)]
 #[builtin(name = "int")]
-struct Int {
-    x: Value,
+struct Int<O: PineOutput> {
+    x: Value<O>,
 }
 
-impl Int {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> Int<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         match &self.x {
             Value::Number(n) => Ok(Value::Number(n.trunc())),
             Value::Bool(b) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
@@ -83,12 +82,12 @@ impl Int {
 /// float(x) - Converts value to float
 #[derive(BuiltinFunction)]
 #[builtin(name = "float")]
-struct Float {
-    x: Value,
+struct Float<O: PineOutput> {
+    x: Value<O>,
 }
 
-impl Float {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> Float<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         match &self.x {
             Value::Number(n) => Ok(Value::Number(*n)),
             Value::Bool(b) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
@@ -104,14 +103,14 @@ impl Float {
 /// nz(source, replacement) - Replaces na values with default or replacement value
 #[derive(BuiltinFunction)]
 #[builtin(name = "nz")]
-struct Nz {
-    source: Value,
+struct Nz<O: PineOutput> {
+    source: Value<O>,
     #[arg(default = Value::Number(0.0))]
-    replacement: Value,
+    replacement: Value<O>,
 }
 
-impl Nz {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> Nz<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         match &self.source {
             Value::Na => {
                 // If replacement is not provided (default), use type-specific defaults
@@ -128,12 +127,12 @@ impl Nz {
 /// fixnan(source) - Replaces NaN values with previous nearest non-NaN value
 #[derive(BuiltinFunction)]
 #[builtin(name = "fixnan")]
-struct Fixnan {
-    source: Value,
+struct Fixnan<O: PineOutput> {
+    source: Value<O>,
 }
 
-impl Fixnan {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> Fixnan<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         // This is a simplified implementation
         // A full implementation would need to track previous values across bar evaluations
         match &self.source {
@@ -147,7 +146,6 @@ impl Fixnan {
         }
     }
 }
-*/
 
 /// Register all builtin namespaces as objects and global functions
 /// Returns namespace objects to be loaded as variables (e.g., "array", "str", "ta")
@@ -156,17 +154,18 @@ impl Fixnan {
 ///
 /// This uses DefaultPineOutput for now. Full generic support will be added when the
 /// BuiltinFunction macro is updated to support generic output types.
-pub fn register_namespace_objects<O: PineOutput>() -> HashMap<String, Value<O>> {
+pub fn register_namespace_objects<
+    O: PineOutput + LogOutput + PlotOutput + LabelOutput + BoxOutput,
+>() -> HashMap<String, Value<O>> {
     let mut namespaces = HashMap::new();
 
     // Register namespace objects
     namespaces.insert("array".to_string(), array::register());
-    /*
     namespaces.insert("box".to_string(), r#box::register());
     namespaces.insert("color".to_string(), color::register());
     namespaces.insert("currency".to_string(), currency::register());
     namespaces.insert("label".to_string(), label::register());
-    namespaces.insert("log".to_string(), log::register::<DefaultPineOutput>());
+    namespaces.insert("log".to_string(), log::register());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("matrix".to_string(), matrix::register());
     namespaces.insert("str".to_string(), str::register());
@@ -175,27 +174,27 @@ pub fn register_namespace_objects<O: PineOutput>() -> HashMap<String, Value<O>> 
     // Register global builtin functions
     namespaces.insert(
         "na".to_string(),
-        Value::BuiltinFunction(Rc::new(Na::builtin_fn) as BuiltinFn<DefaultPineOutput>),
+        Value::BuiltinFunction(Rc::new(Na::<O>::builtin_fn)),
     );
     namespaces.insert(
         "bool".to_string(),
-        Value::BuiltinFunction(Rc::new(Bool::builtin_fn) as BuiltinFn<DefaultPineOutput>),
+        Value::BuiltinFunction(Rc::new(Bool::<O>::builtin_fn)),
     );
     namespaces.insert(
         "int".to_string(),
-        Value::BuiltinFunction(Rc::new(Int::builtin_fn) as BuiltinFn<DefaultPineOutput>),
+        Value::BuiltinFunction(Rc::new(Int::<O>::builtin_fn)),
     );
     namespaces.insert(
         "float".to_string(),
-        Value::BuiltinFunction(Rc::new(Float::builtin_fn) as BuiltinFn<DefaultPineOutput>),
+        Value::BuiltinFunction(Rc::new(Float::<O>::builtin_fn)),
     );
     namespaces.insert(
         "nz".to_string(),
-        Value::BuiltinFunction(Rc::new(Nz::builtin_fn) as BuiltinFn<DefaultPineOutput>),
+        Value::BuiltinFunction(Rc::new(Nz::<O>::builtin_fn)),
     );
     namespaces.insert(
         "fixnan".to_string(),
-        Value::BuiltinFunction(Rc::new(Fixnan::builtin_fn) as BuiltinFn<DefaultPineOutput>),
+        Value::BuiltinFunction(Rc::new(Fixnan::<O>::builtin_fn)),
     );
 
     // Register time/date functions
@@ -207,12 +206,10 @@ pub fn register_namespace_objects<O: PineOutput>() -> HashMap<String, Value<O>> 
     for (name, func) in plot::register_plot_functions() {
         namespaces.insert(name, func);
     }
-    */
 
     namespaces
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,7 +217,7 @@ mod tests {
 
     #[test]
     fn test_na() {
-        let mut ctx = Interpreter::new();
+        let mut ctx = Interpreter::<DefaultPineOutput>::new();
 
         // Test with na value
         let args = vec![EvaluatedArg::Positional(Value::Na)];
@@ -245,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_bool() {
-        let mut ctx = Interpreter::new();
+        let mut ctx = Interpreter::<DefaultPineOutput>::new();
 
         // Test number to bool
         let args = vec![EvaluatedArg::Positional(Value::Number(5.0))];
@@ -264,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_int() {
-        let mut ctx = Interpreter::new();
+        let mut ctx = Interpreter::<DefaultPineOutput>::new();
 
         // Test float to int (truncate)
         let args = vec![EvaluatedArg::Positional(Value::Number(5.7))];
@@ -288,7 +285,7 @@ mod tests {
 
     #[test]
     fn test_float() {
-        let mut ctx = Interpreter::new();
+        let mut ctx = Interpreter::<DefaultPineOutput>::new();
 
         // Test number to float
         let args = vec![EvaluatedArg::Positional(Value::Number(5.0))];
@@ -308,7 +305,7 @@ mod tests {
 
     #[test]
     fn test_nz() {
-        let mut ctx = Interpreter::new();
+        let mut ctx = Interpreter::<DefaultPineOutput>::new();
 
         // Test na value without replacement (should return 0.0)
         let args = vec![EvaluatedArg::Positional(Value::Na)];
@@ -331,7 +328,7 @@ mod tests {
 
     #[test]
     fn test_fixnan() {
-        let mut ctx = Interpreter::new();
+        let mut ctx = Interpreter::<DefaultPineOutput>::new();
 
         // Test na value
         let args = vec![EvaluatedArg::Positional(Value::Na)];
@@ -349,4 +346,3 @@ mod tests {
         assert_eq!(result, Value::Number(0.0));
     }
 }
-*/

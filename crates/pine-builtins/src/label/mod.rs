@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Color, Interpreter, Label, LabelOutput, RuntimeError, Value};
+use pine_interpreter::{Color, Interpreter, Label, LabelOutput, PineOutput, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -7,9 +7,9 @@ use std::rc::Rc;
 /// label.new() - Creates a new label object
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.new")]
-struct LabelNew {
-    x: Value,
-    y: Value,
+struct LabelNew<O: PineOutput + LabelOutput> {
+    x: Value<O>,
+    y: Value<O>,
     #[arg(default = "")]
     text: String,
     #[arg(default = "bar_index")]
@@ -32,8 +32,8 @@ struct LabelNew {
     text_font_family: String,
 }
 
-impl LabelNew {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + LabelOutput> LabelNew<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         // Create a label struct
         let label = Label {
             x: self.x.as_number()?,
@@ -61,13 +61,13 @@ impl LabelNew {
 /// label.set_x() - Sets the x coordinate of a label
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_x")]
-struct LabelSetX {
+struct LabelSetX<O: PineOutput + LabelOutput> {
     id: f64,
-    x: Value,
+    x: Value<O>,
 }
 
-impl LabelSetX {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + LabelOutput> LabelSetX<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -81,13 +81,13 @@ impl LabelSetX {
 /// label.set_y() - Sets the y coordinate of a label
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_y")]
-struct LabelSetY {
+struct LabelSetY<O: PineOutput + LabelOutput> {
     id: f64,
-    y: Value,
+    y: Value<O>,
 }
 
-impl LabelSetY {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + LabelOutput> LabelSetY<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -101,14 +101,14 @@ impl LabelSetY {
 /// label.set_xy() - Sets the x and y coordinates of a label
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_xy")]
-struct LabelSetXy {
+struct LabelSetXy<O: PineOutput + LabelOutput> {
     id: f64,
-    x: Value,
-    y: Value,
+    x: Value<O>,
+    y: Value<O>,
 }
 
-impl LabelSetXy {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + LabelOutput> LabelSetXy<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -123,14 +123,14 @@ impl LabelSetXy {
 /// label.set_xloc() - Sets the x location mode and coordinate
 #[derive(BuiltinFunction)]
 #[builtin(name = "label.set_xloc")]
-struct LabelSetXloc {
+struct LabelSetXloc<O: PineOutput + LabelOutput> {
     id: f64,
-    x: Value,
+    x: Value<O>,
     xloc: String,
 }
 
-impl LabelSetXloc {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + LabelOutput> LabelSetXloc<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -144,14 +144,17 @@ impl LabelSetXloc {
 
 /// label.set_yloc() - Sets the y location mode
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_yloc")]
+#[builtin(name = "label.set_yloc", output = LabelOutput)]
 struct LabelSetYloc {
     id: f64,
     yloc: String,
 }
 
 impl LabelSetYloc {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -164,14 +167,17 @@ impl LabelSetYloc {
 
 /// label.set_color() - Sets the label color
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_color")]
+#[builtin(name = "label.set_color", output = LabelOutput)]
 struct LabelSetColor {
     id: f64,
     color: Color,
 }
 
 impl LabelSetColor {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -184,14 +190,17 @@ impl LabelSetColor {
 
 /// label.set_style() - Sets the label style
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_style")]
+#[builtin(name = "label.set_style", output = LabelOutput)]
 struct LabelSetStyle {
     id: f64,
     style: String,
 }
 
 impl LabelSetStyle {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -204,14 +213,17 @@ impl LabelSetStyle {
 
 /// label.set_text() - Sets the label text
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_text")]
+#[builtin(name = "label.set_text", output = LabelOutput)]
 struct LabelSetText {
     id: f64,
     text: String,
 }
 
 impl LabelSetText {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -224,14 +236,17 @@ impl LabelSetText {
 
 /// label.set_textcolor() - Sets the label text color
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_textcolor")]
+#[builtin(name = "label.set_textcolor", output = LabelOutput)]
 struct LabelSetTextcolor {
     id: f64,
     textcolor: Color,
 }
 
 impl LabelSetTextcolor {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -244,14 +259,17 @@ impl LabelSetTextcolor {
 
 /// label.set_size() - Sets the label size
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_size")]
+#[builtin(name = "label.set_size", output = LabelOutput)]
 struct LabelSetSize {
     id: f64,
     size: String,
 }
 
 impl LabelSetSize {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -264,14 +282,17 @@ impl LabelSetSize {
 
 /// label.set_textalign() - Sets the label text alignment
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_textalign")]
+#[builtin(name = "label.set_textalign", output = LabelOutput)]
 struct LabelSetTextalign {
     id: f64,
     textalign: String,
 }
 
 impl LabelSetTextalign {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -284,14 +305,17 @@ impl LabelSetTextalign {
 
 /// label.set_tooltip() - Sets the label tooltip
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_tooltip")]
+#[builtin(name = "label.set_tooltip", output = LabelOutput)]
 struct LabelSetTooltip {
     id: f64,
     tooltip: String,
 }
 
 impl LabelSetTooltip {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -304,14 +328,17 @@ impl LabelSetTooltip {
 
 /// label.set_text_font_family() - Sets the label text font family
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.set_text_font_family")]
+#[builtin(name = "label.set_text_font_family", output = LabelOutput)]
 struct LabelSetTextFontFamily {
     id: f64,
     text_font_family: String,
 }
 
 impl LabelSetTextFontFamily {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -324,13 +351,16 @@ impl LabelSetTextFontFamily {
 
 /// label.get_x() - Gets the x coordinate of a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.get_x")]
+#[builtin(name = "label.get_x", output = LabelOutput)]
 struct LabelGetX {
     id: f64,
 }
 
 impl LabelGetX {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -342,13 +372,16 @@ impl LabelGetX {
 
 /// label.get_y() - Gets the y coordinate of a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.get_y")]
+#[builtin(name = "label.get_y", output = LabelOutput)]
 struct LabelGetY {
     id: f64,
 }
 
 impl LabelGetY {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -360,13 +393,16 @@ impl LabelGetY {
 
 /// label.get_text() - Gets the text of a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.get_text")]
+#[builtin(name = "label.get_text", output = LabelOutput)]
 struct LabelGetText {
     id: f64,
 }
 
 impl LabelGetText {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -378,13 +414,16 @@ impl LabelGetText {
 
 /// label.delete() - Deletes a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.delete")]
+#[builtin(name = "label.delete", output = LabelOutput)]
 struct LabelDelete {
     id: f64,
 }
 
 impl LabelDelete {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         ctx.output.delete_label(id);
         Ok(Value::Na)
@@ -393,13 +432,16 @@ impl LabelDelete {
 
 /// label.copy() - Copies a label
 #[derive(BuiltinFunction)]
-#[builtin(name = "label.copy")]
+#[builtin(name = "label.copy", output = LabelOutput)]
 struct LabelCopy {
     id: f64,
 }
 
 impl LabelCopy {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput + LabelOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let label = ctx
             .output
@@ -412,8 +454,8 @@ impl LabelCopy {
 }
 
 /// Register the label namespace with all functions
-pub fn register() -> Value {
-    let mut members = HashMap::new();
+pub fn register<O: PineOutput + LabelOutput>() -> Value<O> {
+    let mut members: HashMap<String, Value<O>> = HashMap::new();
 
     // Add style constants
     members.insert(
@@ -503,79 +545,79 @@ pub fn register() -> Value {
 
     members.insert(
         "new".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelNew::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelNew::<O>::builtin_fn)),
     );
     members.insert(
         "set_x".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetX::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetX::<O>::builtin_fn)),
     );
     members.insert(
         "set_y".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetY::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetY::<O>::builtin_fn)),
     );
     members.insert(
         "set_xy".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetXy::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetXy::<O>::builtin_fn)),
     );
     members.insert(
         "set_xloc".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetXloc::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetXloc::<O>::builtin_fn)),
     );
     members.insert(
         "set_yloc".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetYloc::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetYloc::builtin_fn::<O>)),
     );
     members.insert(
         "set_color".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetColor::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetColor::builtin_fn::<O>)),
     );
     members.insert(
         "set_style".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetStyle::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetStyle::builtin_fn::<O>)),
     );
     members.insert(
         "set_text".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetText::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetText::builtin_fn::<O>)),
     );
     members.insert(
         "set_textcolor".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetTextcolor::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetTextcolor::builtin_fn::<O>)),
     );
     members.insert(
         "set_size".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetSize::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetSize::builtin_fn::<O>)),
     );
     members.insert(
         "set_textalign".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetTextalign::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetTextalign::builtin_fn::<O>)),
     );
     members.insert(
         "set_tooltip".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetTooltip::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetTooltip::builtin_fn::<O>)),
     );
     members.insert(
         "set_text_font_family".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetTextFontFamily::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelSetTextFontFamily::builtin_fn::<O>)),
     );
     members.insert(
         "get_x".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelGetX::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelGetX::builtin_fn::<O>)),
     );
     members.insert(
         "get_y".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelGetY::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelGetY::builtin_fn::<O>)),
     );
     members.insert(
         "get_text".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelGetText::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelGetText::builtin_fn::<O>)),
     );
     members.insert(
         "delete".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelDelete::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelDelete::builtin_fn::<O>)),
     );
     members.insert(
         "copy".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelCopy::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(LabelCopy::builtin_fn::<O>)),
     );
 
     Value::Object {

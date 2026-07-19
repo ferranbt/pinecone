@@ -35,7 +35,7 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     // Parse the function name and type params count from attributes
-    let (function_name, type_params_count) = parse_builtin_attributes(&input);
+    let (function_name, type_params_count, output_bound) = parse_builtin_attributes(&input);
 
     let struct_name = &input.ident;
 
@@ -61,14 +61,34 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     let struct_construction = generate_struct_construction(fields);
 
     // A builtin is stored as `BuiltinFn<O>`, so the generated `builtin_fn` must be
-    // generic over the output type. The struct already declares `O` — along with
-    // any capability bound it needs, e.g. `struct LabelNew<O: PineOutput + LabelOutput>`
-    // — so forward that declaration rather than inventing one here.
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    // generic over the output type. Where `O` is declared depends on the struct:
+    // one holding a `Value<O>` field declares `O` itself — along with any
+    // capability bound it needs, e.g. `struct LabelNew<O: PineOutput + LabelOutput>`
+    // — so that declaration is forwarded verbatim. A struct with only plain fields
+    // (`f64`, `String`) has nothing to parameterize, so `O` goes on the method.
+    let (decl_impl_generics, decl_ty_generics, where_clause) = input.generics.split_for_impl();
+    let (impl_generics, ty_generics, fn_generics) = if input.generics.params.is_empty() {
+        // `#[builtin(output = LabelOutput)]` adds the capability the builtin needs
+        // from the output type; without it `PineOutput` alone is enough.
+        let capability = output_bound
+            .map(|bound| quote! { + ::pine_interpreter::#bound })
+            .unwrap_or_default();
+        (
+            quote! {},
+            quote! {},
+            quote! { <O: ::pine_interpreter::PineOutput #capability> },
+        )
+    } else {
+        (
+            quote! { #decl_impl_generics },
+            quote! { #decl_ty_generics },
+            quote! {},
+        )
+    };
 
     let expanded = quote! {
         impl #impl_generics #struct_name #ty_generics #where_clause {
-            pub fn builtin_fn(
+            pub fn builtin_fn #fn_generics (
                 ctx: &mut ::pine_interpreter::Interpreter<O>,
                 call_args: ::pine_interpreter::FunctionCallArgs<O>,
             ) -> Result<::pine_interpreter::Value<O>, ::pine_interpreter::RuntimeError> {
@@ -99,9 +119,16 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-fn parse_builtin_attributes(input: &DeriveInput) -> (String, usize) {
+/// Parses `#[builtin(name = "...", type_params = N, output = Trait)]`.
+///
+/// `output` names an extra capability the builtin needs from the output type
+/// (`LogOutput`, `PlotOutput`, `LabelOutput`, `BoxOutput`). It only applies to
+/// structs that declare no generics of their own — one that holds a `Value<O>`
+/// states its bounds on `O` directly.
+fn parse_builtin_attributes(input: &DeriveInput) -> (String, usize, Option<syn::Ident>) {
     let mut function_name = None;
     let mut type_params_count = 0;
+    let mut output_bound = None;
 
     for attr in &input.attrs {
         if let Meta::List(meta_list) = &attr.meta {
@@ -127,13 +154,30 @@ fn parse_builtin_attributes(input: &DeriveInput) -> (String, usize) {
                         }
                     }
                 }
+
+                // Parse output capability bound
+                if let Some(output_pos) = tokens_str.find("output") {
+                    let after_eq = &tokens_str[output_pos..];
+                    if let Some(eq_pos) = after_eq.find('=') {
+                        let bound = after_eq[eq_pos + 1..]
+                            .split(',')
+                            .next()
+                            .unwrap_or("")
+                            .trim()
+                            .to_string();
+                        if !bound.is_empty() {
+                            output_bound =
+                                Some(syn::Ident::new(&bound, proc_macro2::Span::call_site()));
+                        }
+                    }
+                }
             }
         }
     }
 
     let function_name =
         function_name.expect("BuiltinFunction requires a #[builtin(name = \"...\")] attribute");
-    (function_name, type_params_count)
+    (function_name, type_params_count, output_bound)
 }
 
 fn generate_type_param_extraction(
@@ -209,9 +253,10 @@ fn generate_field_parsing(
         let is_variadic = is_field_variadic(field);
 
         if is_variadic {
-            // Variadic field should be Vec<Value>
+            // Variadic field is a `Vec<Value<O>>`; take the declared type rather
+            // than naming `Value` here, which would not know the output type.
             field_decls.push(quote! {
-                let mut #field_name: Vec<Value> = Vec::new();
+                let mut #field_name: #field_type = Vec::new();
             });
             variadic_field = Some(field_name);
             continue;
