@@ -2,6 +2,7 @@
 mod tests {
     use pine::ScriptBuilder;
     use pine_ast::Program;
+    use pine_core::SymInfo;
     use pine_interpreter::{
         Bar, DefaultPineOutput, HistoricalDataProvider, LibraryLoader, LogOutput, Value,
     };
@@ -181,6 +182,24 @@ mod tests {
         None
     }
 
+    /// Fixed symbol information every script is compiled with, so a fixture can
+    /// assert `syminfo.*` against known values.
+    fn test_syminfo() -> SymInfo {
+        SymInfo {
+            ticker: "AAPL".to_string(),
+            tickerid: "NASDAQ:AAPL".to_string(),
+            description: "Apple Inc.".to_string(),
+            prefix: "NASDAQ".to_string(),
+            currency: "USD".to_string(),
+            basecurrency: "USD".to_string(),
+            type_: "stock".to_string(),
+            mintick: 0.01,
+            pointvalue: 1.0,
+            timezone: "America/New_York".to_string(),
+            session: "0930-1600".to_string(),
+        }
+    }
+
     fn execute_pine_script_with_logger(source: &str) -> eyre::Result<Vec<String>> {
         let library_loader = TestLibraryLoader::new();
 
@@ -192,6 +211,7 @@ mod tests {
         let mut script = ScriptBuilder::with_code(source)
             .with_library_loader(Box::new(library_loader))
             .with_historical_provider(Box::new(historical_data))
+            .with_syminfo(test_syminfo())
             .compile()?;
 
         // Run over the final `bar_count` bars, keeping interpreter state across

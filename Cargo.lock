@@ -1376,6 +1376,7 @@ name = "pine-builtins"
 version = "0.1.0"
 dependencies = [
  "pine-builtin-macro",
+ "pine-core",
  "pine-interpreter",
 ]
 

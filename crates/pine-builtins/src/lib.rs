@@ -1,4 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
+use pine_core::SymInfo;
 use pine_interpreter::{BoxOutput, LabelOutput, LogOutput, PineOutput, PlotOutput};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
@@ -22,6 +23,7 @@ mod math;
 mod matrix;
 mod plot;
 mod str;
+mod syminfo;
 mod ta;
 mod time;
 
@@ -156,8 +158,16 @@ impl<O: PineOutput> Fixnan<O> {
 /// BuiltinFunction macro is updated to support generic output types.
 pub fn register_namespace_objects<
     O: PineOutput + LogOutput + PlotOutput + LabelOutput + BoxOutput,
->() -> HashMap<String, Value<O>> {
+>(
+    syminfo: Option<SymInfo>,
+) -> HashMap<String, Value<O>> {
     let mut namespaces = HashMap::new();
+
+    // `syminfo` is always present in Pine, so an absent one falls back to defaults.
+    namespaces.insert(
+        "syminfo".to_string(),
+        syminfo::create_syminfo(syminfo.unwrap_or_default()),
+    );
 
     // Register namespace objects
     namespaces.insert("array".to_string(), array::register());
