@@ -186,6 +186,35 @@ pub struct LogEntry {
     pub message: String,
 }
 
+/// The default value of a declared input, preserved with its type so a host can
+/// render the right settings widget.
+#[derive(Debug, Clone, PartialEq)]
+pub enum InputValue {
+    Int(i64),
+    Float(f64),
+    Bool(bool),
+    Str(String),
+    Color(Color),
+}
+
+/// A declared script input (`input.int(...)`, `input.source(...)`, ...).
+///
+/// Recorded into the output so a host can enumerate a script's configurable
+/// settings without executing anything itself. The script still receives the
+/// default value at runtime.
+#[derive(Debug, Clone)]
+pub struct Input {
+    /// Which `input.*` function declared it: `"int"`, `"float"`, `"bool"`,
+    /// `"string"`, `"source"`, `"color"`, `"session"`, `"time"`.
+    pub kind: String,
+    /// Display title (`title` argument), empty when none was given.
+    pub title: String,
+    /// Group the input belongs to (`group` argument), empty when none.
+    pub group: String,
+    /// Default value returned to the script.
+    pub default: InputValue,
+}
+
 /// Base trait for all output implementations
 ///
 /// This trait defines the minimal contract that all output types must implement.
@@ -289,6 +318,15 @@ macro_rules! impl_output_traits_delegate {
                 self.$field.delete_box(id)
             }
         }
+
+        impl $crate::InputOutput for $type {
+            fn add_input(&mut self, input: $crate::Input) {
+                self.$field.add_input(input)
+            }
+            fn inputs(&self) -> &[$crate::Input] {
+                self.$field.inputs()
+            }
+        }
     };
 }
 
@@ -349,6 +387,14 @@ pub trait BoxOutput: PineOutput {
     fn delete_box(&mut self, id: usize) -> bool;
 }
 
+/// Extension trait for recording declared inputs
+pub trait InputOutput: PineOutput {
+    /// Record a declared input.
+    fn add_input(&mut self, input: Input);
+    /// Every input declared so far, in declaration order.
+    fn inputs(&self) -> &[Input];
+}
+
 /// Default implementation of PineOutput that supports all features
 #[derive(Default, Clone, Debug)]
 pub struct DefaultPineOutput {
@@ -374,6 +420,8 @@ pub struct DefaultPineOutput {
     plotshapes: Vec<Plotshape>,
     /// Log entries
     logs: Vec<LogEntry>,
+    /// Declared inputs
+    inputs: Vec<Input>,
 }
 
 impl PineOutput for DefaultPineOutput {
@@ -387,6 +435,7 @@ impl PineOutput for DefaultPineOutput {
         self.plotchars.clear();
         self.plotshapes.clear();
         self.logs.clear();
+        self.inputs.clear();
         // Reset ID counters
         self.next_label_id = 0;
         self.next_box_id = 0;
@@ -492,5 +541,15 @@ impl BoxOutput for DefaultPineOutput {
 
     fn delete_box(&mut self, id: usize) -> bool {
         self.boxes.remove(&id).is_some()
+    }
+}
+
+impl InputOutput for DefaultPineOutput {
+    fn add_input(&mut self, input: Input) {
+        self.inputs.push(input);
+    }
+
+    fn inputs(&self) -> &[Input] {
+        &self.inputs
     }
 }
