@@ -92,7 +92,7 @@ pub struct Series<O: PineOutput = DefaultPineOutput> {
 
 /// Value types in the interpreter
 #[derive(Clone)]
-pub enum Value<O: PineOutput = DefaultPineOutput> {
+pub enum Value<O: PineOutput> {
     Number(f64),
     String(String),
     Bool(bool),
@@ -333,7 +333,7 @@ struct MethodDef {
 }
 
 /// The interpreter executes a program with a given bar
-pub struct Interpreter<O: PineOutput = DefaultPineOutput> {
+pub struct Interpreter<O: PineOutput> {
     /// Local variables in the current scope
     variables: HashMap<String, Variable<O>>,
     /// Builtin function registry
@@ -511,7 +511,7 @@ impl<O: PineOutput> Interpreter<O> {
     /// Returns current value + historical values up to length-1
     pub fn get_series_values(
         &self,
-        source: &Value,
+        source: &Value<O>,
         length: usize,
     ) -> Result<Vec<f64>, RuntimeError> {
         let mut values = Vec::new();

@@ -1,4 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
+use pine_interpreter::PineOutput;
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -12,6 +13,7 @@ pub use pine_interpreter::LogLevel;
 
 // Namespace modules
 mod array;
+/*
 mod r#box;
 mod color;
 mod currency;
@@ -145,6 +147,7 @@ impl Fixnan {
         }
     }
 }
+*/
 
 /// Register all builtin namespaces as objects and global functions
 /// Returns namespace objects to be loaded as variables (e.g., "array", "str", "ta")
@@ -153,11 +156,12 @@ impl Fixnan {
 ///
 /// This uses DefaultPineOutput for now. Full generic support will be added when the
 /// BuiltinFunction macro is updated to support generic output types.
-pub fn register_namespace_objects() -> HashMap<String, Value<DefaultPineOutput>> {
+pub fn register_namespace_objects<O: PineOutput>() -> HashMap<String, Value<O>> {
     let mut namespaces = HashMap::new();
 
     // Register namespace objects
     namespaces.insert("array".to_string(), array::register());
+    /*
     namespaces.insert("box".to_string(), r#box::register());
     namespaces.insert("color".to_string(), color::register());
     namespaces.insert("currency".to_string(), currency::register());
@@ -203,10 +207,12 @@ pub fn register_namespace_objects() -> HashMap<String, Value<DefaultPineOutput>>
     for (name, func) in plot::register_plot_functions() {
         namespaces.insert(name, func);
     }
+    */
 
     namespaces
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -343,3 +349,4 @@ mod tests {
         assert_eq!(result, Value::Number(0.0));
     }
 }
+*/

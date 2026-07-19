@@ -60,12 +60,18 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     let field_validation = generate_field_validation(fields);
     let struct_construction = generate_struct_construction(fields);
 
+    // A builtin is stored as `BuiltinFn<O>`, so the generated `builtin_fn` must be
+    // generic over the output type. The struct already declares `O` — along with
+    // any capability bound it needs, e.g. `struct LabelNew<O: PineOutput + LabelOutput>`
+    // — so forward that declaration rather than inventing one here.
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
     let expanded = quote! {
-        impl #struct_name {
+        impl #impl_generics #struct_name #ty_generics #where_clause {
             pub fn builtin_fn(
-                ctx: &mut ::pine_interpreter::Interpreter,
-                call_args: ::pine_interpreter::FunctionCallArgs,
-            ) -> Result<::pine_interpreter::Value, ::pine_interpreter::RuntimeError> {
+                ctx: &mut ::pine_interpreter::Interpreter<O>,
+                call_args: ::pine_interpreter::FunctionCallArgs<O>,
+            ) -> Result<::pine_interpreter::Value<O>, ::pine_interpreter::RuntimeError> {
                 use ::pine_interpreter::{Value, RuntimeError, EvaluatedArg};
 
                 // Extract type parameters first

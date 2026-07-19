@@ -8,7 +8,9 @@ pub use pine_parser as parser;
 use pine_ast::Program;
 use pine_core::{PineVersion, VersionError};
 use pine_diagnostics::Diagnostic;
-use pine_interpreter::{Bar, DefaultPineOutput, Interpreter, PineOutput, RuntimeError, Value};
+use pine_interpreter::{
+    Bar, HistoricalDataProvider, Interpreter, LibraryLoader, PineOutput, RuntimeError, Value,
+};
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
 use std::collections::HashMap;
@@ -74,18 +76,47 @@ impl From<VersionError> for Error {
     }
 }
 
-/// A compiled PineScript program that can be executed multiple times
-///
-/// This represents a parsed PineScript program that maintains state
-/// across multiple bar executions, just like in TradingView.
-pub struct Script<O: PineOutput = DefaultPineOutput> {
-    program: Program,
-    interpreter: Interpreter<O>,
+pub struct ScriptBuilder<O: PineOutput> {
+    source: String,
+    custom_variables: HashMap<String, Value<O>>,
+    historical_provider: Option<Box<dyn HistoricalDataProvider<O>>>,
+    library_loader: Option<Box<dyn LibraryLoader>>,
 }
 
-impl Script<DefaultPineOutput> {
+impl<O: PineOutput> ScriptBuilder<O> {
+    pub fn with_code(source: &str) -> ScriptBuilder<O> {
+        Self {
+            source: source.to_string(),
+            custom_variables: HashMap::new(),
+            historical_provider: None,
+            library_loader: None,
+        }
+    }
+
+    /// Host-supplied variables the script can reference, registered as consts
+    /// alongside the builtin namespaces.
+    pub fn with_custom_variables(mut self, variables: HashMap<String, Value<O>>) -> Self {
+        self.custom_variables = variables;
+        self
+    }
+
+    pub fn with_historical_provider(
+        mut self,
+        provider: Box<dyn HistoricalDataProvider<O>>,
+    ) -> Self {
+        self.historical_provider = Some(provider);
+        self
+    }
+
+    /// Resolves `import` statements. Without one, importing a library fails.
+    pub fn with_library_loader(mut self, loader: Box<dyn LibraryLoader>) -> Self {
+        self.library_loader = Some(loader);
+        self
+    }
+
     /// Compile PineScript source code into a Script with default output
-    pub fn compile(source: &str) -> Result<Self, Error> {
+    pub fn compile(self) -> Result<Script<O>, Error> {
+        let source = self.source.as_str();
         let _version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
 
         let mut lexer = Lexer::new(source);
@@ -103,6 +134,13 @@ impl Script<DefaultPineOutput> {
 
         // Create interpreter and load builtin namespace objects
         let mut interpreter = Interpreter::new();
+        if let Some(historical_provider) = self.historical_provider {
+            interpreter.set_historical_provider(historical_provider);
+        }
+        if let Some(library_loader) = self.library_loader {
+            interpreter.set_library_loader(library_loader);
+        }
+
         let namespaces = pine_builtins::register_namespace_objects();
 
         // Register namespace objects as const variables
@@ -110,41 +148,27 @@ impl Script<DefaultPineOutput> {
             interpreter.set_const_variable(&name, value);
         }
 
-        Ok(Self {
+        for (name, value) in self.custom_variables {
+            interpreter.set_const_variable(&name, value);
+        }
+
+        Ok(Script {
             program,
             interpreter,
         })
     }
 }
 
+/// A compiled PineScript program that can be executed multiple times
+///
+/// This represents a parsed PineScript program that maintains state
+/// across multiple bar executions, just like in TradingView.
+pub struct Script<O: PineOutput> {
+    program: Program,
+    interpreter: Interpreter<O>,
+}
+
 impl<O: PineOutput> Script<O> {
-    pub fn compile_with_variables(
-        source: &str,
-        custom_variables: HashMap<String, Value<O>>,
-    ) -> Result<Self, Error> {
-        let _version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
-
-        let mut lexer = Lexer::new(source);
-        let tokens = lexer.tokenize()?;
-
-        let mut parser = Parser::new(tokens);
-        let statements = parser.parse()?;
-        let program = Program::new(statements);
-
-        // Create interpreter with custom output type
-        let mut interpreter: Interpreter<O> = Interpreter::new();
-
-        // Register custom variables
-        for (name, value) in custom_variables {
-            interpreter.set_const_variable(&name, value);
-        }
-
-        Ok(Self {
-            program,
-            interpreter,
-        })
-    }
-
     pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
         // Load bar data as Series variables so TA functions can access historical data
         use interpreter::{Series, Value};
@@ -197,27 +221,5 @@ impl<O: PineOutput> Script<O> {
             self.execute(bar)?;
         }
         Ok(())
-    }
-
-    /// Set the historical data provider for accessing past bar data
-    ///
-    /// This is required for TA functions that need to look back at historical values.
-    pub fn set_historical_provider(
-        &mut self,
-        provider: Box<dyn pine_interpreter::HistoricalDataProvider<O>>,
-    ) {
-        self.interpreter.set_historical_provider(provider);
-    }
-
-    pub fn set_library_loader(&mut self, provider: Box<dyn pine_interpreter::LibraryLoader>) {
-        self.interpreter.set_library_loader(provider);
-    }
-
-    /// Get a mutable reference to the interpreter
-    ///
-    /// This allows direct access to the interpreter for advanced use cases like
-    /// updating the historical provider state between bar executions.
-    pub fn interpreter_mut(&mut self) -> &mut Interpreter<O> {
-        &mut self.interpreter
     }
 }

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use pine::Script;
+    use pine::ScriptBuilder;
     use pine_ast::Program;
     use pine_interpreter::{
         Bar, DefaultPineOutput, HistoricalDataProvider, LibraryLoader, LogOutput, Value,
@@ -184,16 +184,15 @@ mod tests {
     fn execute_pine_script_with_logger(source: &str) -> eyre::Result<Vec<String>> {
         let library_loader = TestLibraryLoader::new();
 
-        let mut script = Script::compile(source)?;
-
         // Generate historical bar data for TA functions
         let bars = generate_test_bars(200);
         let historical_data = TestHistoricalData::new(bars.clone());
         let current_index = historical_data.current_handle();
 
-        // Set up historical data provider
-        script.set_historical_provider(Box::new(historical_data));
-        script.set_library_loader(Box::new(library_loader));
+        let mut script = ScriptBuilder::with_code(source)
+            .with_library_loader(Box::new(library_loader))
+            .with_historical_provider(Box::new(historical_data))
+            .compile()?;
 
         // Run over the final `bar_count` bars, keeping interpreter state across
         // them, and collect every log emitted. `// Bars: N` opts into multi-bar

@@ -1,7 +1,8 @@
 mod test_data;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use pine::Script;
+use pine::interpreter::DefaultPineOutput;
+use pine::ScriptBuilder;
 use test_data::{execute_with_history, generate_bars};
 
 const TEST_SCRIPTS: &[(&str, &str)] = &[
@@ -36,7 +37,9 @@ fn bench_compile_only(c: &mut Criterion) {
     for (name, source) in TEST_SCRIPTS {
         group.bench_with_input(BenchmarkId::from_parameter(name), source, |b, source| {
             b.iter(|| {
-                let _ = Script::compile(black_box(source)).unwrap();
+                let _ = ScriptBuilder::<DefaultPineOutput>::with_code(black_box(source))
+                    .compile()
+                    .unwrap();
             });
         });
     }

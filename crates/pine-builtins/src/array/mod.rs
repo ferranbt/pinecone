@@ -1,21 +1,21 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 /// array.new<type>() - Creates a new typed array (generic version)
 #[derive(BuiltinFunction)]
 #[builtin(name = "array.new", type_params = 1)]
-struct ArrayNew {
+struct ArrayNew<O: PineOutput> {
     #[type_param]
     element_type: String,
     size: f64,
     #[arg(default = Value::Na)]
-    initial_value: Value,
+    initial_value: Value<O>,
 }
 
-impl ArrayNew {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ArrayNew<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         // Validate element type
         if !matches!(
             self.element_type.as_str(),
@@ -36,13 +36,13 @@ impl ArrayNew {
 /// array.new_float() - Creates a new float array (backward compatibility)
 #[derive(BuiltinFunction)]
 #[builtin(name = "array.new_float")]
-struct ArrayNewFloat {
+struct ArrayNewFloat<O: PineOutput> {
     size: f64,
-    initial_value: Value,
+    initial_value: Value<O>,
 }
 
-impl ArrayNewFloat {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ArrayNewFloat<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let size = self.size as usize;
         let arr = vec![self.initial_value.clone(); size];
         Ok(Value::Array(Rc::new(RefCell::new(arr))))
@@ -51,12 +51,12 @@ impl ArrayNewFloat {
 
 #[derive(BuiltinFunction)]
 #[builtin(name = "array.clear")]
-struct ArrayClear {
-    array: Value,
+struct ArrayClear<O: PineOutput> {
+    array: Value<O>,
 }
 
-impl ArrayClear {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ArrayClear<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let arr = self.array.as_array()?;
         arr.borrow_mut().clear();
         Ok(Value::Na)
@@ -65,13 +65,13 @@ impl ArrayClear {
 
 #[derive(BuiltinFunction)]
 #[builtin(name = "array.push")]
-struct ArrayPush {
-    array: Value,
-    value: Value,
+struct ArrayPush<O: PineOutput> {
+    array: Value<O>,
+    value: Value<O>,
 }
 
-impl ArrayPush {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ArrayPush<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let arr = self.array.as_array()?;
         arr.borrow_mut().push(self.value.clone());
         Ok(Value::Na)
@@ -80,13 +80,13 @@ impl ArrayPush {
 
 #[derive(BuiltinFunction)]
 #[builtin(name = "array.get")]
-struct ArrayGet {
-    array: Value,
+struct ArrayGet<O: PineOutput> {
+    array: Value<O>,
     index: f64,
 }
 
-impl ArrayGet {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ArrayGet<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let arr = self.array.as_array()?;
         let index = self.index as usize;
         arr.borrow()
@@ -98,12 +98,12 @@ impl ArrayGet {
 
 #[derive(BuiltinFunction)]
 #[builtin(name = "array.size")]
-struct ArraySize {
-    array: Value,
+struct ArraySize<O: PineOutput> {
+    array: Value<O>,
 }
 
-impl ArraySize {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> ArraySize<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let arr = self.array.as_array()?;
         let size = arr.borrow().len();
         Ok(Value::Number(size as f64))
@@ -111,34 +111,35 @@ impl ArraySize {
 }
 
 /// Register all array namespace functions and return the namespace object
-pub fn register() -> Value {
-    let mut array_ns = std::collections::HashMap::new();
+pub fn register<O: PineOutput>() -> Value<O> {
+    let mut array_ns: std::collections::HashMap<String, Value<O>> =
+        std::collections::HashMap::new();
 
     // Generic typed array.new<type>()
     array_ns.insert(
         "new".to_string(),
-        Value::BuiltinFunction(Rc::new(ArrayNew::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ArrayNew::<O>::builtin_fn)),
     );
     // Backward compatible array.new_float()
     array_ns.insert(
         "new_float".to_string(),
-        Value::BuiltinFunction(Rc::new(ArrayNewFloat::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ArrayNewFloat::<O>::builtin_fn)),
     );
     array_ns.insert(
         "clear".to_string(),
-        Value::BuiltinFunction(Rc::new(ArrayClear::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ArrayClear::<O>::builtin_fn)),
     );
     array_ns.insert(
         "push".to_string(),
-        Value::BuiltinFunction(Rc::new(ArrayPush::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ArrayPush::<O>::builtin_fn)),
     );
     array_ns.insert(
         "get".to_string(),
-        Value::BuiltinFunction(Rc::new(ArrayGet::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ArrayGet::<O>::builtin_fn)),
     );
     array_ns.insert(
         "size".to_string(),
-        Value::BuiltinFunction(Rc::new(ArraySize::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(ArraySize::<O>::builtin_fn)),
     );
 
     Value::Object {

@@ -190,7 +190,7 @@ pub struct LogEntry {
 ///
 /// This trait defines the minimal contract that all output types must implement.
 /// Extension traits (LogOutput, PlotOutput, etc.) add additional capabilities.
-pub trait PineOutput: Default + Clone + std::fmt::Debug {
+pub trait PineOutput: Default + Clone + std::fmt::Debug + 'static {
     /// Clear all output data for a new iteration
     fn clear(&mut self);
 }

@@ -1,4 +1,5 @@
-use pine::Script;
+use pine::ScriptBuilder;
+use pine_builtins::DefaultPineOutput;
 use pine_interpreter::{Bar, HistoricalDataProvider, Value};
 use std::cell::Cell;
 
@@ -54,7 +55,7 @@ impl BenchHistoricalData {
 }
 
 impl HistoricalDataProvider for BenchHistoricalData {
-    fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value> {
+    fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value<DefaultPineOutput>> {
         let current_index = self.current_index.get();
 
         if current_index < offset {
@@ -85,10 +86,11 @@ impl HistoricalDataProvider for BenchHistoricalData {
 /// This helper compiles a script, sets up the historical data provider,
 /// and executes it with the last bar in the dataset.
 pub fn execute_with_history(source: &str, bars: &[Bar]) -> Result<(), pine::Error> {
-    let mut script = Script::compile(source)?;
     let historical_data = BenchHistoricalData::new(bars.to_vec());
     historical_data.set_current_bar(bars.len() - 1);
-    script.set_historical_provider(Box::new(historical_data));
+    let mut script = ScriptBuilder::with_code(source)
+        .with_historical_provider(Box::new(historical_data))
+        .compile()?;
     let _output = script.execute(&bars[bars.len() - 1])?;
     Ok(())
 }
