@@ -204,7 +204,10 @@ struct BoxSetBorderColor {
 }
 
 impl BoxSetBorderColor {
-    fn execute<O: PineOutput + BoxOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+    fn execute<O: PineOutput + BoxOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let box_obj = ctx
             .output
@@ -224,7 +227,10 @@ struct BoxSetBorderWidth {
 }
 
 impl BoxSetBorderWidth {
-    fn execute<O: PineOutput + BoxOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+    fn execute<O: PineOutput + BoxOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let id = self.id as usize;
         let box_obj = ctx
             .output
