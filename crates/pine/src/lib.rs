@@ -129,7 +129,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
         O: LogOutput + PlotOutput + LabelOutput + BoxOutput + InputOutput,
     {
         let source = self.source.as_str();
-        let _version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+        let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
 
         let mut lexer = Lexer::new(source);
         let tokens = lexer.tokenize()?;
@@ -153,7 +153,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
             interpreter.set_library_loader(library_loader);
         }
 
-        let namespaces = pine_builtins::register_namespace_objects(self.syminfo);
+        let namespaces = pine_builtins::register_namespace_objects(version, self.syminfo);
 
         // Register namespace objects as const variables
         for (name, value) in namespaces {

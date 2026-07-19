@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_core::SymInfo;
+use pine_core::{PineVersion, SymInfo};
 use pine_interpreter::{BoxOutput, InputOutput, LabelOutput, LogOutput, PineOutput, PlotOutput};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
@@ -160,6 +160,7 @@ impl<O: PineOutput> Fixnan<O> {
 pub fn register_namespace_objects<
     O: PineOutput + LogOutput + PlotOutput + LabelOutput + BoxOutput + InputOutput,
 >(
+    version: PineVersion,
     syminfo: Option<SymInfo>,
 ) -> HashMap<String, Value<O>> {
     let mut namespaces = HashMap::new();
@@ -175,7 +176,9 @@ pub fn register_namespace_objects<
     namespaces.insert("box".to_string(), r#box::register());
     namespaces.insert("color".to_string(), color::register());
     namespaces.insert("currency".to_string(), currency::register());
-    namespaces.insert("input".to_string(), input::register());
+    for (name, value) in input::register(version) {
+        namespaces.insert(name, value);
+    }
     namespaces.insert("label".to_string(), label::register());
     namespaces.insert("log".to_string(), log::register());
     namespaces.insert("math".to_string(), math::register());

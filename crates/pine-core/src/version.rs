@@ -30,6 +30,7 @@ pub enum VersionError {
 /// [`Default`] is [`PineVersion::LATEST`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum PineVersion {
+    V3,
     V4,
     V5,
     #[default]
@@ -43,6 +44,7 @@ impl PineVersion {
     /// The number as written in `//@version=N`.
     pub fn number(self) -> u8 {
         match self {
+            PineVersion::V3 => 3,
             PineVersion::V4 => 4,
             PineVersion::V5 => 5,
             PineVersion::V6 => 6,
@@ -52,6 +54,7 @@ impl PineVersion {
     /// The version for a `//@version=N` number, or `None` if unsupported.
     pub fn from_number(n: u8) -> Option<Self> {
         match n {
+            3 => Some(PineVersion::V3),
             4 => Some(PineVersion::V4),
             5 => Some(PineVersion::V5),
             6 => Some(PineVersion::V6),
@@ -117,8 +120,8 @@ mod tests {
     fn distinguishes_missing_from_unsupported() {
         assert_eq!(PineVersion::detect("x = 1\n"), Ok(None));
         assert_eq!(
-            PineVersion::detect("//@version=3\n"),
-            Err(VersionError::Unsupported(3))
+            PineVersion::detect("//@version=2\n"),
+            Err(VersionError::Unsupported(2))
         );
     }
 

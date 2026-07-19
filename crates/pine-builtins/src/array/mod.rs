@@ -145,5 +145,6 @@ pub fn register<O: PineOutput>() -> Value<O> {
     Value::Object {
         type_name: "array".to_string(),
         fields: Rc::new(RefCell::new(array_ns)),
+        call: None,
     }
 }

@@ -1531,8 +1531,14 @@ impl Parser {
             loop {
                 // Check for named argument: name=value
                 // In PineScript, function calls can have named arguments like plot(x, title="foo", color=red)
-                if let TokenType::Ident(name) = &self.peek().typ {
-                    let name = name.clone();
+                // `type` is a keyword (v5 UDTs) but is also v3/v4's `input(..., type=...)`
+                // parameter name, so accept it as a key too.
+                let key_name = match &self.peek().typ {
+                    TokenType::Ident(name) => Some(name.clone()),
+                    TokenType::Type => Some("type".to_string()),
+                    _ => None,
+                };
+                if let Some(name) = key_name {
                     if let Some((name, value)) = self.try_parse(|p| {
                         p.advance(); // consume identifier
                         if p.check(&TokenType::Assign) {

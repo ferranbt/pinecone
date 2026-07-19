@@ -127,6 +127,12 @@ const FUNCTIONS: &[&str] = &[
     "string",
     "line",
     "timestamp",
+    // v3's unqualified `input(..., type=<tag>)` type constants.
+    "integer",
+    "source",
+    "symbol",
+    "resolution",
+    "price",
     // Script declarations. Every script opens with exactly one of these.
     "indicator",
     "strategy",

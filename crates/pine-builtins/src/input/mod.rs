@@ -1,17 +1,35 @@
 //! The `input.*` namespace.
 //!
+//! `input` changed shape between major versions, so [`register`] dispatches on
+//! it: v5/v6 use the namespaced functions in this module; v3/v4 use the single
+//! overloaded `input(...)` in [`legacy`].
+//!
 //! In a headless interpreter there is no settings UI, so each function returns
 //! its default value so the script can run. It also records the declaration into
 //! the output (via [`InputOutput`]) so a host can enumerate a script's inputs
 //! without executing it.
 
+mod legacy;
+
 use pine_builtin_macro::BuiltinFunction;
+use pine_core::PineVersion;
 use pine_interpreter::{
     Color, Input, InputOutput, InputValue, Interpreter, PineOutput, RuntimeError, Value,
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+
+/// Every name the `input` namespace contributes, chosen by version: the v5/v6
+/// namespaced functions, or the v3/v4 overloaded `input()` plus its type
+/// constants.
+pub fn register<O: PineOutput + InputOutput>(version: PineVersion) -> Vec<(String, Value<O>)> {
+    if version >= PineVersion::V5 {
+        vec![("input".to_string(), register_v56())]
+    } else {
+        legacy::register()
+    }
+}
 
 /// input.int(defval, title, minval, maxval, step, group, tooltip, options)
 #[derive(BuiltinFunction)]
@@ -261,7 +279,8 @@ impl<O: PineOutput + InputOutput> InputSource<O> {
 ///
 /// `input.integer` is v4's spelling of `input.int`; both share one
 /// implementation.
-pub fn register<O: PineOutput + InputOutput>() -> Value<O> {
+/// The v5/v6 `input` object: type-specific member functions (`input.int(...)`).
+fn register_v56<O: PineOutput + InputOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
 
     members.insert(
@@ -304,5 +323,6 @@ pub fn register<O: PineOutput + InputOutput>() -> Value<O> {
     Value::Object {
         type_name: "input".to_string(),
         fields: Rc::new(RefCell::new(members)),
+        call: None,
     }
 }

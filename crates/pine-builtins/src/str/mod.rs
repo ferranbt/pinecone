@@ -332,5 +332,6 @@ pub fn register<O: PineOutput>() -> Value<O> {
     Value::Object {
         type_name: "str".to_string(),
         fields: Rc::new(RefCell::new(str_ns)),
+        call: None,
     }
 }

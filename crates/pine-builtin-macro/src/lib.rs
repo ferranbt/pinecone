@@ -241,7 +241,9 @@ fn generate_field_parsing(
 
     for field in fields.iter() {
         let field_name = field.ident.as_ref().unwrap();
-        let field_name_str = field_name.to_string();
+        // A raw identifier like `r#type` names the Pine argument `type`; strip the
+        // `r#` so the named-argument key matches what the caller wrote.
+        let field_name_str = field_name.to_string().trim_start_matches("r#").to_string();
         let field_type = &field.ty;
 
         // Skip type parameter fields - they're extracted separately
@@ -498,7 +500,7 @@ fn generate_field_validation(
 
     for field in fields {
         let field_name = field.ident.as_ref().unwrap();
-        let field_name_str = field_name.to_string();
+        let field_name_str = field_name.to_string().trim_start_matches("r#").to_string();
 
         // Skip type parameter fields - they're validated separately
         if is_field_type_param(field) {
