@@ -23,5 +23,6 @@ pub fn create_syminfo<O: PineOutput>(info: SymInfo) -> Value<O> {
     Value::Object {
         type_name: "syminfo".to_string(),
         fields: Rc::new(RefCell::new(members)),
+        call: None,
     }
 }

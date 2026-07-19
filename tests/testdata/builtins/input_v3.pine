@@ -1,0 +1,18 @@
+//@version=3
+// v3 input(): the type is an argument given as a bare constant (`type=integer`).
+// `input` returns the default; type/minval/options are accepted and ignored.
+length = input(14, "Length", type=integer, minval=1)
+factor = input(2.5, "Factor", type=float)
+useClose = input(true, "Use Close", type=bool)
+maType = input("EMA", "MA Type", options=["EMA", "SMA"])
+
+log.info(length)
+log.info(factor)
+log.info(useClose)
+log.info(maType)
+
+// Expected output:
+// 14
+// 2.5
+// true
+// EMA

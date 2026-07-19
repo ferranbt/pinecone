@@ -30,6 +30,7 @@ pub fn register<O: PineOutput + LogOutput>() -> Value<O> {
     Value::Object {
         type_name: "log".to_string(),
         fields: Rc::new(RefCell::new(log_ns)),
+        call: None,
     }
 }
 

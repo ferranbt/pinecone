@@ -187,5 +187,6 @@ pub fn register<O: PineOutput>() -> Value<O> {
     Value::Object {
         type_name: "color".to_string(),
         fields: Rc::new(RefCell::new(color_ns)),
+        call: None,
     }
 }
