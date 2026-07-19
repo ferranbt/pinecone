@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 
 /// ta.tr(handle_na) - True Range
 /// True range is max(high - low, abs(high - close[1]), abs(low - close[1]))
@@ -11,7 +11,7 @@ pub struct TaTr {
 }
 
 impl TaTr {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         // Get high, low, close from context
         let high = ctx
             .get_variable("high")
@@ -93,7 +93,7 @@ pub struct TaAtr {
 }
 
 impl TaAtr {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -248,14 +248,14 @@ impl TaAtr {
 /// Returns [middle, upper, lower] bands
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.bb")]
-pub struct TaBb {
-    series: Value,
+pub struct TaBb<O: PineOutput> {
+    series: Value<O>,
     length: f64,
     mult: f64,
 }
 
-impl TaBb {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaBb<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(

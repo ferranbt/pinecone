@@ -1,16 +1,16 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 
 /// ta.sma(source, length) - Simple Moving Average
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.sma")]
-pub struct TaSma {
-    source: Value,
+pub struct TaSma<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaSma {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaSma<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -33,13 +33,13 @@ impl TaSma {
 /// ta.ema(source, length) - Exponential Moving Average
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.ema")]
-pub struct TaEma {
-    source: Value,
+pub struct TaEma<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaEma {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaEma<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -111,13 +111,13 @@ impl TaEma {
 /// ta.rma(source, length) - Rolling Moving Average (Wilder's Smoothing)
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.rma")]
-pub struct TaRma {
-    source: Value,
+pub struct TaRma<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaRma {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaRma<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -189,13 +189,13 @@ impl TaRma {
 /// ta.wma(source, length) - Weighted Moving Average
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.wma")]
-pub struct TaWma {
-    source: Value,
+pub struct TaWma<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaWma {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaWma<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -258,13 +258,13 @@ impl TaWma {
 /// Note: Requires volume series to be available in context
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.vwma")]
-pub struct TaVwma {
-    source: Value,
+pub struct TaVwma<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaVwma {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaVwma<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -310,13 +310,13 @@ impl TaVwma {
 /// ta.hma(source, length) - Hull Moving Average
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.hma")]
-pub struct TaHma {
-    source: Value,
+pub struct TaHma<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaHma {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaHma<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -376,12 +376,12 @@ impl TaHma {
 /// ta.swma(source) - Symmetrically Weighted Moving Average (4-bar)
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.swma")]
-pub struct TaSwma {
-    source: Value,
+pub struct TaSwma<O: PineOutput> {
+    source: Value<O>,
 }
 
-impl TaSwma {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaSwma<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         // SWMA uses fixed 4-bar window with weights [1, 2, 2, 1]
         let values = ctx.get_series_values(&self.source, 4)?;
 

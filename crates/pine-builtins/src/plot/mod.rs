@@ -1,6 +1,6 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_interpreter::{
-    Color, Interpreter, Plot as PlotStruct, PlotOutput, Plotarrow as PlotarrowStruct,
+    Color, Interpreter, PineOutput, Plot as PlotStruct, PlotOutput, Plotarrow as PlotarrowStruct,
     Plotbar as PlotbarStruct, Plotcandle as PlotcandleStruct, Plotchar as PlotcharStruct,
     Plotshape as PlotshapeStruct, RuntimeError, Value,
 };
@@ -10,8 +10,8 @@ use std::rc::Rc;
 /// plot() - Plots a series of data on the chart
 #[derive(BuiltinFunction)]
 #[builtin(name = "plot")]
-struct Plot {
-    series: Value,
+struct Plot<O: PineOutput + PlotOutput> {
+    series: Value<O>,
     #[arg(default = "")]
     title: String,
     #[arg(default = None)]
@@ -44,8 +44,8 @@ struct Plot {
     linestyle: String,
 }
 
-impl Plot {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + PlotOutput> Plot<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let plot = PlotStruct {
             series: self.series.as_number()?,
             title: self.title.clone(),
@@ -73,8 +73,8 @@ impl Plot {
 /// plotarrow() - Plots up and down arrows on the chart
 #[derive(BuiltinFunction)]
 #[builtin(name = "plotarrow")]
-struct Plotarrow {
-    series: Value,
+struct Plotarrow<O: PineOutput + PlotOutput> {
+    series: Value<O>,
     #[arg(default = "")]
     title: String,
     #[arg(default = None)]
@@ -101,8 +101,8 @@ struct Plotarrow {
     force_overlay: bool,
 }
 
-impl Plotarrow {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + PlotOutput> Plotarrow<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let plotarrow = PlotarrowStruct {
             series: self.series.as_number()?,
             title: self.title.clone(),
@@ -127,11 +127,11 @@ impl Plotarrow {
 /// plotbar() - Plots OHLC bars on the chart
 #[derive(BuiltinFunction)]
 #[builtin(name = "plotbar")]
-struct Plotbar {
-    open: Value,
-    high: Value,
-    low: Value,
-    close: Value,
+struct Plotbar<O: PineOutput + PlotOutput> {
+    open: Value<O>,
+    high: Value<O>,
+    low: Value<O>,
+    close: Value<O>,
     #[arg(default = "")]
     title: String,
     #[arg(default = None)]
@@ -150,8 +150,8 @@ struct Plotbar {
     force_overlay: bool,
 }
 
-impl Plotbar {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + PlotOutput> Plotbar<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let plotbar = PlotbarStruct {
             open: self.open.as_number()?,
             high: self.high.as_number()?,
@@ -175,11 +175,11 @@ impl Plotbar {
 /// plotcandle() - Plots candlestick chart
 #[derive(BuiltinFunction)]
 #[builtin(name = "plotcandle")]
-struct Plotcandle {
-    open: Value,
-    high: Value,
-    low: Value,
-    close: Value,
+struct Plotcandle<O: PineOutput + PlotOutput> {
+    open: Value<O>,
+    high: Value<O>,
+    low: Value<O>,
+    close: Value<O>,
     #[arg(default = "")]
     title: String,
     #[arg(default = None)]
@@ -202,8 +202,8 @@ struct Plotcandle {
     force_overlay: bool,
 }
 
-impl Plotcandle {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + PlotOutput> Plotcandle<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let plotcandle = PlotcandleStruct {
             open: self.open.as_number()?,
             high: self.high.as_number()?,
@@ -229,8 +229,8 @@ impl Plotcandle {
 /// plotchar() - Plots visual shapes on the chart using ASCII characters
 #[derive(BuiltinFunction)]
 #[builtin(name = "plotchar")]
-struct Plotchar {
-    series: Value,
+struct Plotchar<O: PineOutput + PlotOutput> {
+    series: Value<O>,
     #[arg(default = "")]
     title: String,
     #[arg(default = "★")]
@@ -261,8 +261,8 @@ struct Plotchar {
     force_overlay: bool,
 }
 
-impl Plotchar {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + PlotOutput> Plotchar<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let plotchar = PlotcharStruct {
             series: self.series.as_number()?,
             title: self.title.clone(),
@@ -289,8 +289,8 @@ impl Plotchar {
 /// plotshape() - Plots visual shapes on the chart
 #[derive(BuiltinFunction)]
 #[builtin(name = "plotshape")]
-struct Plotshape {
-    series: Value,
+struct Plotshape<O: PineOutput + PlotOutput> {
+    series: Value<O>,
     #[arg(default = "")]
     title: String,
     #[arg(default = "circle")]
@@ -321,8 +321,8 @@ struct Plotshape {
     force_overlay: bool,
 }
 
-impl Plotshape {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput + PlotOutput> Plotshape<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let plotshape = PlotshapeStruct {
             series: self.series.as_number()?,
             title: self.title.clone(),
@@ -347,32 +347,32 @@ impl Plotshape {
 }
 
 /// Register plot functions as global functions
-pub fn register_plot_functions() -> HashMap<String, Value> {
-    let mut functions = HashMap::new();
+pub fn register_plot_functions<O: PineOutput + PlotOutput>() -> HashMap<String, Value<O>> {
+    let mut functions: HashMap<String, Value<O>> = HashMap::new();
 
     functions.insert(
         "plot".to_string(),
-        Value::BuiltinFunction(Rc::new(Plot::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(Plot::<O>::builtin_fn)),
     );
     functions.insert(
         "plotarrow".to_string(),
-        Value::BuiltinFunction(Rc::new(Plotarrow::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(Plotarrow::<O>::builtin_fn)),
     );
     functions.insert(
         "plotbar".to_string(),
-        Value::BuiltinFunction(Rc::new(Plotbar::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(Plotbar::<O>::builtin_fn)),
     );
     functions.insert(
         "plotcandle".to_string(),
-        Value::BuiltinFunction(Rc::new(Plotcandle::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(Plotcandle::<O>::builtin_fn)),
     );
     functions.insert(
         "plotchar".to_string(),
-        Value::BuiltinFunction(Rc::new(Plotchar::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(Plotchar::<O>::builtin_fn)),
     );
     functions.insert(
         "plotshape".to_string(),
-        Value::BuiltinFunction(Rc::new(Plotshape::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(Plotshape::<O>::builtin_fn)),
     );
 
     functions

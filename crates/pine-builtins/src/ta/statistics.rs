@@ -1,16 +1,16 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 
 /// ta.stdev(source, length) - Standard Deviation
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.stdev")]
-pub struct TaStdev {
-    source: Value,
+pub struct TaStdev<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaStdev {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaStdev<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -49,13 +49,13 @@ impl TaStdev {
 /// ta.variance(source, length) - Variance
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.variance")]
-pub struct TaVariance {
-    source: Value,
+pub struct TaVariance<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaVariance {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaVariance<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -93,13 +93,13 @@ impl TaVariance {
 /// ta.median(source, length) - Median value
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.median")]
-pub struct TaMedian {
-    source: Value,
+pub struct TaMedian<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaMedian {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaMedian<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -132,13 +132,13 @@ impl TaMedian {
 /// ta.dev(source, length) - Mean Absolute Deviation
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.dev")]
-pub struct TaDev {
-    source: Value,
+pub struct TaDev<O: PineOutput> {
+    source: Value<O>,
     length: f64,
 }
 
-impl TaDev {
-    fn execute(&self, ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> TaDev<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(

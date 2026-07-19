@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 
 /// math.abs(number) - Returns absolute value
 #[derive(BuiltinFunction)]
@@ -9,7 +9,7 @@ struct MathAbs {
 }
 
 impl MathAbs {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.abs()))
     }
 }
@@ -22,7 +22,7 @@ struct MathCeil {
 }
 
 impl MathCeil {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.ceil()))
     }
 }
@@ -35,7 +35,7 @@ struct MathFloor {
 }
 
 impl MathFloor {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.floor()))
     }
 }
@@ -50,7 +50,7 @@ struct MathRound {
 }
 
 impl MathRound {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         if self.precision == 0.0 {
             Ok(Value::Number(self.number.round()))
         } else {
@@ -70,7 +70,7 @@ struct MathSign {
 }
 
 impl MathSign {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let result = if self.number > 0.0 {
             1.0
         } else if self.number < 0.0 {
@@ -90,7 +90,7 @@ struct MathSqrt {
 }
 
 impl MathSqrt {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.sqrt()))
     }
 }
@@ -103,7 +103,7 @@ struct MathExp {
 }
 
 impl MathExp {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.exp()))
     }
 }
@@ -116,7 +116,7 @@ struct MathLog {
 }
 
 impl MathLog {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.ln()))
     }
 }
@@ -129,7 +129,7 @@ struct MathLog10 {
 }
 
 impl MathLog10 {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.log10()))
     }
 }
@@ -144,7 +144,7 @@ struct MathSin {
 }
 
 impl MathSin {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.sin()))
     }
 }
@@ -157,7 +157,7 @@ struct MathCos {
 }
 
 impl MathCos {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.cos()))
     }
 }
@@ -170,7 +170,7 @@ struct MathTan {
 }
 
 impl MathTan {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.tan()))
     }
 }
@@ -183,7 +183,7 @@ struct MathAsin {
 }
 
 impl MathAsin {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.asin()))
     }
 }
@@ -196,7 +196,7 @@ struct MathAcos {
 }
 
 impl MathAcos {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.acos()))
     }
 }
@@ -209,7 +209,7 @@ struct MathAtan {
 }
 
 impl MathAtan {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.atan()))
     }
 }
@@ -222,7 +222,7 @@ struct MathToRadians {
 }
 
 impl MathToRadians {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.to_radians()))
     }
 }
@@ -235,7 +235,7 @@ struct MathToDegrees {
 }
 
 impl MathToDegrees {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.number.to_degrees()))
     }
 }
@@ -251,7 +251,7 @@ struct MathPow {
 }
 
 impl MathPow {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         Ok(Value::Number(self.base.powf(self.exponent)))
     }
 }
@@ -261,13 +261,13 @@ impl MathPow {
 /// math.min(...) - Returns minimum of all arguments (requires at least 2)
 #[derive(BuiltinFunction)]
 #[builtin(name = "math.min")]
-struct MathMin {
+struct MathMin<O: PineOutput> {
     #[arg(variadic)]
-    values: Vec<Value>,
+    values: Vec<Value<O>>,
 }
 
-impl MathMin {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MathMin<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         if self.values.len() < 2 {
             return Err(RuntimeError::TypeError(
                 "math.min requires at least 2 arguments".to_string(),
@@ -296,13 +296,13 @@ impl MathMin {
 /// math.max(...) - Returns maximum of all arguments (requires at least 2)
 #[derive(BuiltinFunction)]
 #[builtin(name = "math.max")]
-struct MathMax {
+struct MathMax<O: PineOutput> {
     #[arg(variadic)]
-    values: Vec<Value>,
+    values: Vec<Value<O>>,
 }
 
-impl MathMax {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MathMax<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         if self.values.len() < 2 {
             return Err(RuntimeError::TypeError(
                 "math.max requires at least 2 arguments".to_string(),
@@ -331,13 +331,13 @@ impl MathMax {
 /// math.avg(...) - Returns average of all arguments (requires at least 1)
 #[derive(BuiltinFunction)]
 #[builtin(name = "math.avg")]
-struct MathAvg {
+struct MathAvg<O: PineOutput> {
     #[arg(variadic)]
-    values: Vec<Value>,
+    values: Vec<Value<O>>,
 }
 
-impl MathAvg {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MathAvg<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         if self.values.is_empty() {
             return Err(RuntimeError::TypeError(
                 "math.avg requires at least 1 argument".to_string(),
@@ -373,13 +373,13 @@ impl MathAvg {
 /// math.sum(...) - Returns sum of all arguments (requires at least 1)
 #[derive(BuiltinFunction)]
 #[builtin(name = "math.sum")]
-struct MathSum {
+struct MathSum<O: PineOutput> {
     #[arg(variadic)]
-    values: Vec<Value>,
+    values: Vec<Value<O>>,
 }
 
-impl MathSum {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+impl<O: PineOutput> MathSum<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         if self.values.is_empty() {
             return Err(RuntimeError::TypeError(
                 "math.sum requires at least 1 argument".to_string(),
@@ -415,7 +415,7 @@ struct MathRandom {
 }
 
 impl MathRandom {
-    fn execute(&self, _ctx: &mut Interpreter) -> Result<Value, RuntimeError> {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         use std::cell::Cell;
         thread_local! {
             static SEED: Cell<u64> = const { Cell::new(0x123456789abcdef0) };
@@ -434,113 +434,113 @@ impl MathRandom {
 }
 
 /// Register all math namespace functions and return the namespace object
-pub fn register() -> Value {
+pub fn register<O: PineOutput>() -> Value<O> {
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::rc::Rc;
 
-    let mut math_ns = HashMap::new();
+    let mut math_ns: HashMap<String, Value<O>> = HashMap::new();
 
     // Single-argument functions
     math_ns.insert(
         "abs".to_string(),
-        Value::BuiltinFunction(Rc::new(MathAbs::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathAbs::builtin_fn::<O>)),
     );
     math_ns.insert(
         "ceil".to_string(),
-        Value::BuiltinFunction(Rc::new(MathCeil::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathCeil::builtin_fn::<O>)),
     );
     math_ns.insert(
         "floor".to_string(),
-        Value::BuiltinFunction(Rc::new(MathFloor::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathFloor::builtin_fn::<O>)),
     );
     math_ns.insert(
         "round".to_string(),
-        Value::BuiltinFunction(Rc::new(MathRound::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathRound::builtin_fn::<O>)),
     );
     math_ns.insert(
         "sign".to_string(),
-        Value::BuiltinFunction(Rc::new(MathSign::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathSign::builtin_fn::<O>)),
     );
     math_ns.insert(
         "sqrt".to_string(),
-        Value::BuiltinFunction(Rc::new(MathSqrt::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathSqrt::builtin_fn::<O>)),
     );
     math_ns.insert(
         "exp".to_string(),
-        Value::BuiltinFunction(Rc::new(MathExp::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathExp::builtin_fn::<O>)),
     );
     math_ns.insert(
         "log".to_string(),
-        Value::BuiltinFunction(Rc::new(MathLog::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathLog::builtin_fn::<O>)),
     );
     math_ns.insert(
         "log10".to_string(),
-        Value::BuiltinFunction(Rc::new(MathLog10::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathLog10::builtin_fn::<O>)),
     );
 
     // Trigonometric functions
     math_ns.insert(
         "sin".to_string(),
-        Value::BuiltinFunction(Rc::new(MathSin::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathSin::builtin_fn::<O>)),
     );
     math_ns.insert(
         "cos".to_string(),
-        Value::BuiltinFunction(Rc::new(MathCos::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathCos::builtin_fn::<O>)),
     );
     math_ns.insert(
         "tan".to_string(),
-        Value::BuiltinFunction(Rc::new(MathTan::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathTan::builtin_fn::<O>)),
     );
     math_ns.insert(
         "asin".to_string(),
-        Value::BuiltinFunction(Rc::new(MathAsin::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathAsin::builtin_fn::<O>)),
     );
     math_ns.insert(
         "acos".to_string(),
-        Value::BuiltinFunction(Rc::new(MathAcos::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathAcos::builtin_fn::<O>)),
     );
     math_ns.insert(
         "atan".to_string(),
-        Value::BuiltinFunction(Rc::new(MathAtan::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathAtan::builtin_fn::<O>)),
     );
     math_ns.insert(
         "toradians".to_string(),
-        Value::BuiltinFunction(Rc::new(MathToRadians::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathToRadians::builtin_fn::<O>)),
     );
     math_ns.insert(
         "todegrees".to_string(),
-        Value::BuiltinFunction(Rc::new(MathToDegrees::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathToDegrees::builtin_fn::<O>)),
     );
 
     // Two-argument functions
     math_ns.insert(
         "pow".to_string(),
-        Value::BuiltinFunction(Rc::new(MathPow::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathPow::builtin_fn::<O>)),
     );
 
     // Variadic functions
     math_ns.insert(
         "min".to_string(),
-        Value::BuiltinFunction(Rc::new(MathMin::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathMin::<O>::builtin_fn)),
     );
     math_ns.insert(
         "max".to_string(),
-        Value::BuiltinFunction(Rc::new(MathMax::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathMax::<O>::builtin_fn)),
     );
     math_ns.insert(
         "avg".to_string(),
-        Value::BuiltinFunction(Rc::new(MathAvg::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathAvg::<O>::builtin_fn)),
     );
     math_ns.insert(
         "sum".to_string(),
-        Value::BuiltinFunction(Rc::new(MathSum::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathSum::<O>::builtin_fn)),
     );
 
     // Special functions
     math_ns.insert(
         "random".to_string(),
-        Value::BuiltinFunction(Rc::new(MathRandom::builtin_fn)),
+        Value::BuiltinFunction(Rc::new(MathRandom::builtin_fn::<O>)),
     );
 
     Value::Object {

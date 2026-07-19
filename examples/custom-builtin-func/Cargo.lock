@@ -169,9 +169,12 @@ dependencies = [
  "eyre",
  "pine-ast",
  "pine-builtins",
+ "pine-core",
+ "pine-diagnostics",
  "pine-interpreter",
  "pine-lexer",
  "pine-parser",
+ "pine-sema",
 ]
 
 [[package]]
@@ -197,6 +200,17 @@ dependencies = [
  "pine-builtin-macro",
  "pine-interpreter",
 ]
+
+[[package]]
+name = "pine-core"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "pine-diagnostics"
+version = "0.1.0"
 
 [[package]]
 name = "pine-interpreter"
@@ -225,6 +239,14 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "pine-sema"
+version = "0.1.0"
+dependencies = [
+ "pine-ast",
+ "pine-diagnostics",
 ]
 
 [[package]]

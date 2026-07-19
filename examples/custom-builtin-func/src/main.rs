@@ -3,7 +3,7 @@
 /// This example demonstrates how to extend Pinecone with:
 /// 1. A custom output type that stores additional data (alerts)
 /// 2. A custom builtin function that works with the custom output
-use pine::Script;
+use pine::ScriptBuilder;
 use pine_interpreter::{
     impl_output_traits_delegate, DefaultPineOutput, EvaluatedArg, FunctionCallArgs, Interpreter,
     PineOutput, RuntimeError, Value,
@@ -79,9 +79,10 @@ fn main() {
     let mut custom_variables: HashMap<String, Value<CustomOutput>> = HashMap::new();
     custom_variables.insert("alert".to_string(), create_alert_builtin());
 
-    let mut script =
-        Script::<CustomOutput>::compile_with_variables(script_source, custom_variables)
-            .expect("Compilation failed");
+    let mut script = ScriptBuilder::<CustomOutput>::with_code(script_source)
+        .with_custom_variables(custom_variables)
+        .compile()
+        .expect("Compilation failed");
 
     let bar = pine_interpreter::Bar {
         open: 101.0,
