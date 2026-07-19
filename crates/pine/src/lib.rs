@@ -6,7 +6,7 @@ pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
 use pine_ast::Program;
-use pine_core::{PineVersion, VersionError};
+use pine_core::{PineVersion, SymInfo, VersionError};
 use pine_diagnostics::Diagnostic;
 use pine_interpreter::{
     Bar, BoxOutput, HistoricalDataProvider, Interpreter, LabelOutput, LibraryLoader, LogOutput,
@@ -82,6 +82,7 @@ pub struct ScriptBuilder<O: PineOutput> {
     custom_variables: HashMap<String, Value<O>>,
     historical_provider: Option<Box<dyn HistoricalDataProvider<O>>>,
     library_loader: Option<Box<dyn LibraryLoader>>,
+    syminfo: Option<SymInfo>,
 }
 
 impl<O: PineOutput> ScriptBuilder<O> {
@@ -91,6 +92,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
             custom_variables: HashMap::new(),
             historical_provider: None,
             library_loader: None,
+            syminfo: None,
         }
     }
 
@@ -112,6 +114,12 @@ impl<O: PineOutput> ScriptBuilder<O> {
     /// Resolves `import` statements. Without one, importing a library fails.
     pub fn with_library_loader(mut self, loader: Box<dyn LibraryLoader>) -> Self {
         self.library_loader = Some(loader);
+        self
+    }
+
+    /// Symbol information exposed to the script as `syminfo.*`
+    pub fn with_syminfo(mut self, syminfo: SymInfo) -> Self {
+        self.syminfo = Some(syminfo);
         self
     }
 
@@ -145,7 +153,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
             interpreter.set_library_loader(library_loader);
         }
 
-        let namespaces = pine_builtins::register_namespace_objects();
+        let namespaces = pine_builtins::register_namespace_objects(self.syminfo);
 
         // Register namespace objects as const variables
         for (name, value) in namespaces {
