@@ -242,21 +242,9 @@ fn set_cell<O: PineOutput + TableOutput>(
     Ok(())
 }
 
-/// The `position.*` constants `table.new` anchors to.
-const POSITIONS: &[&str] = &[
-    "top_left",
-    "top_center",
-    "top_right",
-    "middle_left",
-    "middle_center",
-    "middle_right",
-    "bottom_left",
-    "bottom_center",
-    "bottom_right",
-];
-
-/// The `table` namespace plus the `position` constants it depends on.
-pub fn register<O: PineOutput + TableOutput>() -> Vec<(String, Value<O>)> {
+/// The `table` namespace. `table.new`'s `position` argument is satisfied by the
+/// `position.*` constants registered separately (see `constants::position`).
+pub fn register<O: PineOutput + TableOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
     members.insert(
         "new".to_string(),
@@ -290,24 +278,9 @@ pub fn register<O: PineOutput + TableOutput>() -> Vec<(String, Value<O>)> {
         "delete".to_string(),
         Value::BuiltinFunction(Rc::new(TableDelete::builtin_fn::<O>)),
     );
-    let table_object = Value::Object {
+    Value::Object {
         type_name: "table".to_string(),
         fields: Rc::new(RefCell::new(members)),
         call: None,
-    };
-
-    let mut position_members: HashMap<String, Value<O>> = HashMap::new();
-    for pos in POSITIONS {
-        position_members.insert(pos.to_string(), Value::String(pos.to_string()));
     }
-    let position_object = Value::Object {
-        type_name: "position".to_string(),
-        fields: Rc::new(RefCell::new(position_members)),
-        call: None,
-    };
-
-    vec![
-        ("table".to_string(), table_object),
-        ("position".to_string(), position_object),
-    ]
 }

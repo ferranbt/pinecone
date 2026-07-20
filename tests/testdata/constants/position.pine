@@ -1,0 +1,13 @@
+// position.* constants resolve to their string tag.
+log.info(position.top_left)
+log.info(position.top_right)
+log.info(position.middle_center)
+log.info(position.bottom_right)
+log.info(position.bottom)
+
+// Expected output:
+// top_left
+// top_right
+// middle_center
+// bottom_right
+// bottom

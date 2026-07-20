@@ -18,6 +18,7 @@ pub use pine_interpreter::LogLevel;
 mod array;
 mod r#box;
 mod color;
+mod constants;
 mod currency;
 mod input;
 mod label;
@@ -194,9 +195,13 @@ pub fn register_namespace_objects<
     for (name, value) in line::register(version) {
         namespaces.insert(name, value);
     }
-    for (name, value) in table::register() {
-        namespaces.insert(name, value);
-    }
+    namespaces.insert("table".to_string(), table::register());
+
+    // Constant-only namespaces (string tags used as arguments elsewhere).
+    namespaces.insert("size".to_string(), constants::size::register());
+    namespaces.insert("shape".to_string(), constants::shape::register());
+    namespaces.insert("location".to_string(), constants::location::register());
+    namespaces.insert("position".to_string(), constants::position::register());
     namespaces.insert("log".to_string(), log::register());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("matrix".to_string(), matrix::register());

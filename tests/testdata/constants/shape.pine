@@ -1,0 +1,13 @@
+// shape.* constants resolve to their string tag.
+log.info(shape.circle)
+log.info(shape.cross)
+log.info(shape.triangleup)
+log.info(shape.labeldown)
+log.info(shape.arrowup)
+
+// Expected output:
+// circle
+// cross
+// triangleup
+// labeldown
+// arrowup
