@@ -1470,6 +1470,7 @@ version = "0.1.0"
 dependencies = [
  "pine-ast",
  "pine-diagnostics",
+ "pine-interpreter",
  "pine-lexer",
  "pine-parser",
 ]

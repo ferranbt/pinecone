@@ -7,27 +7,39 @@
 //! global-vs-local), which the default recurse-everything walk doesn't express.
 //! So we hand-write the recursion and interleave the scope bookkeeping.
 
-use pine_ast::{Argument, Expr, Program, Stmt};
+use std::collections::HashMap;
 
-use crate::builtins::{is_builtin, is_global_only};
-use crate::scope::{ScopeStack, SymbolKind};
+use pine_ast::{Argument, Expr, Program, Stmt};
+use pine_interpreter::{PineOutput, Value};
+
+use crate::scope::{is_global_only, ScopeStack, SymbolKind};
 use pine_diagnostics::Diagnostic;
 
-pub struct Analyzer {
+pub struct Analyzer<'a, O: PineOutput> {
     scopes: ScopeStack,
     diagnostics: Vec<Diagnostic>,
     /// Number of enclosing loops in the *current function*. Reset across
     /// function boundaries — a loop never spans a function.
     loop_depth: u32,
+    /// The runtime's registered built-ins — namespaces, global functions, and
+    /// per-bar variables that exist without a user declaration. Supplied by the
+    /// caller rather than hardcoded here. Kept as the full value map (not just
+    /// names) so later passes can inspect the objects' types.
+    builtins: &'a HashMap<String, Value<O>>,
 }
 
-impl Analyzer {
-    pub fn new() -> Self {
+impl<'a, O: PineOutput> Analyzer<'a, O> {
+    pub fn new(builtins: &'a HashMap<String, Value<O>>) -> Self {
         Self {
             scopes: ScopeStack::new(),
             diagnostics: Vec::new(),
             loop_depth: 0,
+            builtins,
         }
+    }
+
+    fn is_builtin(&self, name: &str) -> bool {
+        self.builtins.contains_key(name)
     }
 
     /// Analyze a whole program, returning the errors found.
@@ -236,7 +248,7 @@ impl Analyzer {
                     None,
                     format!("cannot assign to `{name}`, it is a {}", other.noun()),
                 ),
-                None if is_builtin(name) => self.emit(
+                None if self.is_builtin(name) => self.emit(
                     "reassign-builtin",
                     None,
                     format!("cannot reassign built-in `{name}`"),
@@ -257,7 +269,7 @@ impl Analyzer {
     fn check_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Variable(name) => {
-                if self.scopes.resolve(name).is_none() && !is_builtin(name) {
+                if self.scopes.resolve(name).is_none() && !self.is_builtin(name) {
                     self.emit(
                         "undeclared-variable",
                         None,
@@ -277,7 +289,7 @@ impl Analyzer {
                             format!("`{fname}` may only be called in the global scope"),
                         );
                     }
-                    if self.scopes.resolve(fname).is_none() && !is_builtin(fname) {
+                    if self.scopes.resolve(fname).is_none() && !self.is_builtin(fname) {
                         self.emit(
                             "unknown-function",
                             pos,
@@ -357,8 +369,3 @@ impl Analyzer {
     }
 }
 
-impl Default for Analyzer {
-    fn default() -> Self {
-        Self::new()
-    }
-}

@@ -35,6 +35,17 @@ pub struct Label {
 }
 
 /// Represents a box drawable object
+/// The `indicator(...)` declaration — a script's identity and display settings.
+#[derive(Clone, Debug, Default)]
+pub struct Indicator {
+    pub title: String,
+    pub shorttitle: String,
+    pub overlay: bool,
+    pub format: String,
+    pub precision: Option<i64>,
+    pub timeframe: String,
+}
+
 /// A trend line drawn between two points, `(x1, y1)`–`(x2, y2)`.
 #[derive(Clone, Debug)]
 pub struct LineObject {
@@ -363,6 +374,15 @@ macro_rules! impl_output_traits_delegate {
             }
         }
 
+        impl $crate::IndicatorOutput for $type {
+            fn set_indicator(&mut self, indicator: $crate::Indicator) {
+                self.$field.set_indicator(indicator)
+            }
+            fn indicator(&self) -> Option<&$crate::Indicator> {
+                self.$field.indicator()
+            }
+        }
+
         impl $crate::LineOutput for $type {
             fn add_line(&mut self, line: $crate::LineObject) -> usize {
                 self.$field.add_line(line)
@@ -476,6 +496,14 @@ pub trait LineOutput: PineOutput {
     fn delete_line(&mut self, id: usize) -> bool;
 }
 
+/// Extension trait for the script's `indicator(...)` declaration.
+pub trait IndicatorOutput: PineOutput {
+    /// Record the indicator declaration (a script has at most one).
+    fn set_indicator(&mut self, indicator: Indicator);
+    /// The declaration, if the script declared one.
+    fn indicator(&self) -> Option<&Indicator>;
+}
+
 /// Extension trait for recording declared inputs
 pub trait InputOutput: PineOutput {
     /// Record a declared input.
@@ -519,6 +547,8 @@ pub struct DefaultPineOutput {
     logs: Vec<LogEntry>,
     /// Declared inputs
     inputs: Vec<Input>,
+    /// The `indicator(...)` declaration, if any.
+    indicator: Option<Indicator>,
 }
 
 impl PineOutput for DefaultPineOutput {
@@ -533,6 +563,7 @@ impl PineOutput for DefaultPineOutput {
         self.plotshapes.clear();
         self.logs.clear();
         self.inputs.clear();
+        self.indicator = None;
         self.lines.clear();
         self.tables.clear();
         // Reset ID counters
@@ -694,5 +725,15 @@ impl InputOutput for DefaultPineOutput {
 
     fn inputs(&self) -> &[Input] {
         &self.inputs
+    }
+}
+
+impl IndicatorOutput for DefaultPineOutput {
+    fn set_indicator(&mut self, indicator: Indicator) {
+        self.indicator = Some(indicator);
+    }
+
+    fn indicator(&self) -> Option<&Indicator> {
+        self.indicator.as_ref()
     }
 }

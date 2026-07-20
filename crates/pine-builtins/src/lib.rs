@@ -1,7 +1,8 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineVersion, SymInfo, Timeframe};
 use pine_interpreter::{
-    BoxOutput, InputOutput, LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
+    BoxOutput, IndicatorOutput, InputOutput, LabelOutput, LineOutput, LogOutput, PineOutput,
+    PlotOutput, TableOutput,
 };
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
@@ -21,6 +22,7 @@ mod r#box;
 mod color;
 mod constants;
 mod currency;
+mod indicator;
 mod input;
 mod label;
 mod line;
@@ -172,7 +174,8 @@ pub fn register_namespace_objects<
         + BoxOutput
         + InputOutput
         + LineOutput
-        + TableOutput,
+        + TableOutput
+        + IndicatorOutput,
 >(
     version: PineVersion,
     syminfo: Option<SymInfo>,
@@ -204,6 +207,7 @@ pub fn register_namespace_objects<
         namespaces.insert(name, value);
     }
     namespaces.insert("table".to_string(), table::register());
+    namespaces.insert("indicator".to_string(), indicator::register());
 
     // Constant-only namespaces (string tags used as arguments elsewhere).
     namespaces.insert("size".to_string(), constants::size::register());

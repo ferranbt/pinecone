@@ -6,7 +6,9 @@ edition = "2021"
 [dependencies]
 pine-ast = { workspace = true }
 pine-diagnostics = { workspace = true }
+pine-interpreter = { workspace = true }
 
 [dev-dependencies]
 pine-lexer = { workspace = true }
 pine-parser = { workspace = true }
+pine-interpreter = { workspace = true }
