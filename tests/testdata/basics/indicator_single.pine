@@ -1,0 +1,6 @@
+// A single indicator declaration is valid and runs (returns na).
+indicator("My Script", shorttitle = "MS", overlay = true)
+log.info("ok")
+
+// Expected output:
+// ok

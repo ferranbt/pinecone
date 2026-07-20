@@ -26,7 +26,13 @@ pub struct Analyzer<'a, O: PineOutput> {
     /// caller rather than hardcoded here. Kept as the full value map (not just
     /// names) so later passes can inspect the objects' types.
     builtins: &'a HashMap<String, Value<O>>,
+    /// How many script declarations (`indicator`/`strategy`/`library`) have been
+    /// seen. A script may have at most one.
+    declarations: u32,
 }
+
+/// The script-declaration functions — a script must have exactly one.
+const SCRIPT_DECLARATIONS: &[&str] = &["indicator", "strategy", "library"];
 
 impl<'a, O: PineOutput> Analyzer<'a, O> {
     pub fn new(builtins: &'a HashMap<String, Value<O>>) -> Self {
@@ -35,6 +41,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             diagnostics: Vec::new(),
             loop_depth: 0,
             builtins,
+            declarations: 0,
         }
     }
 
@@ -288,6 +295,16 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                             pos,
                             format!("`{fname}` may only be called in the global scope"),
                         );
+                    }
+                    if SCRIPT_DECLARATIONS.contains(&fname.as_str()) {
+                        self.declarations += 1;
+                        if self.declarations > 1 {
+                            self.emit(
+                                "duplicate-declaration",
+                                pos,
+                                "a script may only have one indicator/strategy/library declaration",
+                            );
+                        }
                     }
                     if self.scopes.resolve(fname).is_none() && !self.is_builtin(fname) {
                         self.emit(
