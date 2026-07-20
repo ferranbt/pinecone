@@ -1,8 +1,8 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineVersion, SymInfo, Timeframe};
 use pine_interpreter::{
-    BoxOutput, IndicatorOutput, InputOutput, LabelOutput, LineOutput, LogOutput, PineOutput,
-    PlotOutput, TableOutput,
+    BoxOutput, GlobalOutput, IndicatorOutput, InputOutput, LabelOutput, LineOutput, LogOutput,
+    PineOutput, PlotOutput, TableOutput,
 };
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
@@ -22,6 +22,7 @@ mod r#box;
 mod color;
 mod constants;
 mod currency;
+mod globals;
 mod indicator;
 mod input;
 mod label;
@@ -175,7 +176,8 @@ pub fn register_namespace_objects<
         + InputOutput
         + LineOutput
         + TableOutput
-        + IndicatorOutput,
+        + IndicatorOutput
+        + GlobalOutput,
 >(
     version: PineVersion,
     syminfo: Option<SymInfo>,
@@ -208,12 +210,17 @@ pub fn register_namespace_objects<
     }
     namespaces.insert("table".to_string(), table::register());
     namespaces.insert("indicator".to_string(), indicator::register());
+    for (name, value) in globals::register() {
+        namespaces.insert(name, value);
+    }
 
     // Constant-only namespaces (string tags used as arguments elsewhere).
     namespaces.insert("size".to_string(), constants::size::register());
     namespaces.insert("shape".to_string(), constants::shape::register());
     namespaces.insert("location".to_string(), constants::location::register());
     namespaces.insert("position".to_string(), constants::position::register());
+    namespaces.insert("display".to_string(), constants::display::register());
+    namespaces.insert("format".to_string(), constants::format::register());
     namespaces.insert("log".to_string(), log::register());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("matrix".to_string(), matrix::register());

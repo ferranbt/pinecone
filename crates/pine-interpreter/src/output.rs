@@ -35,6 +35,15 @@ pub struct Label {
 }
 
 /// Represents a box drawable object
+/// Chart-wide settings written by global functions like `bgcolor`/`barcolor`.
+#[derive(Clone, Debug, Default)]
+pub struct GlobalContext {
+    /// Background color (`bgcolor`).
+    pub bgcolor: Option<Color>,
+    /// Price-bar color (`barcolor`).
+    pub barcolor: Option<Color>,
+}
+
 /// The `indicator(...)` declaration — a script's identity and display settings.
 #[derive(Clone, Debug, Default)]
 pub struct Indicator {
@@ -383,6 +392,18 @@ macro_rules! impl_output_traits_delegate {
             }
         }
 
+        impl $crate::GlobalOutput for $type {
+            fn set_bgcolor(&mut self, color: Option<$crate::Color>) {
+                self.$field.set_bgcolor(color)
+            }
+            fn set_barcolor(&mut self, color: Option<$crate::Color>) {
+                self.$field.set_barcolor(color)
+            }
+            fn global_context(&self) -> &$crate::GlobalContext {
+                self.$field.global_context()
+            }
+        }
+
         impl $crate::LineOutput for $type {
             fn add_line(&mut self, line: $crate::LineObject) -> usize {
                 self.$field.add_line(line)
@@ -496,6 +517,14 @@ pub trait LineOutput: PineOutput {
     fn delete_line(&mut self, id: usize) -> bool;
 }
 
+/// Extension trait for chart-wide globals (`bgcolor`, `barcolor`).
+pub trait GlobalOutput: PineOutput {
+    fn set_bgcolor(&mut self, color: Option<Color>);
+    fn set_barcolor(&mut self, color: Option<Color>);
+    /// The accumulated chart-wide settings.
+    fn global_context(&self) -> &GlobalContext;
+}
+
 /// Extension trait for the script's `indicator(...)` declaration.
 pub trait IndicatorOutput: PineOutput {
     /// Record the indicator declaration (a script has at most one).
@@ -549,6 +578,8 @@ pub struct DefaultPineOutput {
     inputs: Vec<Input>,
     /// The `indicator(...)` declaration, if any.
     indicator: Option<Indicator>,
+    /// Chart-wide settings (`bgcolor`, `barcolor`).
+    globals: GlobalContext,
 }
 
 impl PineOutput for DefaultPineOutput {
@@ -564,6 +595,7 @@ impl PineOutput for DefaultPineOutput {
         self.logs.clear();
         self.inputs.clear();
         self.indicator = None;
+        self.globals = GlobalContext::default();
         self.lines.clear();
         self.tables.clear();
         // Reset ID counters
@@ -735,5 +767,19 @@ impl IndicatorOutput for DefaultPineOutput {
 
     fn indicator(&self) -> Option<&Indicator> {
         self.indicator.as_ref()
+    }
+}
+
+impl GlobalOutput for DefaultPineOutput {
+    fn set_bgcolor(&mut self, color: Option<Color>) {
+        self.globals.bgcolor = color;
+    }
+
+    fn set_barcolor(&mut self, color: Option<Color>) {
+        self.globals.barcolor = color;
+    }
+
+    fn global_context(&self) -> &GlobalContext {
+        &self.globals
     }
 }
