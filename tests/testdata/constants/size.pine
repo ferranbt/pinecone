@@ -1,0 +1,15 @@
+// size.* constants resolve to their string tag.
+log.info(size.auto)
+log.info(size.tiny)
+log.info(size.small)
+log.info(size.normal)
+log.info(size.large)
+log.info(size.huge)
+
+// Expected output:
+// auto
+// tiny
+// small
+// normal
+// large
+// huge
