@@ -9,8 +9,9 @@ use pine_ast::Program;
 use pine_core::{PineVersion, SymInfo, Timeframe, VersionError};
 use pine_diagnostics::Diagnostic;
 use pine_interpreter::{
-    Bar, BoxOutput, HistoricalDataProvider, InputOutput, Interpreter, LabelOutput, LibraryLoader,
-    LineOutput, LogOutput, PineOutput, PlotOutput, RuntimeError, TableOutput, Value,
+    AlertConditionOutput, Bar, BoxOutput, FillOutput, GlobalOutput, HistoricalDataProvider,
+    IndicatorOutput, InputOutput, Interpreter, LabelOutput, LibraryLoader, LineOutput, LogOutput,
+    PineOutput, PlotOutput, RuntimeError, TableOutput, Value,
 };
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
@@ -141,7 +142,11 @@ impl<O: PineOutput> ScriptBuilder<O> {
             + BoxOutput
             + InputOutput
             + LineOutput
-            + TableOutput,
+            + TableOutput
+            + IndicatorOutput
+            + GlobalOutput
+            + AlertConditionOutput
+            + FillOutput,
     {
         let source = self.source.as_str();
         let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
@@ -153,8 +158,25 @@ impl<O: PineOutput> ScriptBuilder<O> {
         let statements = parser.parse()?;
         let program = Program::new(statements);
 
+        let namespaces =
+            pine_builtins::register_namespace_objects(version, self.syminfo, self.timeframe);
+
+        // The names sema accepts without a user declaration: the registered
+        // namespaces, the per-bar variables `execute` sets (barstate + OHLCV),
+        // and any host-supplied custom variables.
+        let mut builtins = namespaces.clone();
+        for (name, value) in pine_builtins::register_per_bar(&Bar::default()) {
+            builtins.insert(name, value);
+        }
+        for name in ["open", "high", "low", "close", "volume", "ohlc4", "hl2"] {
+            builtins.insert(name.to_string(), Value::Na);
+        }
+        for (name, value) in &self.custom_variables {
+            builtins.insert(name.clone(), value.clone());
+        }
+
         // Semantic pre-check: reject invalid programs before execution.
-        let diagnostics = pine_sema::analyze(&program);
+        let diagnostics = pine_sema::analyze(&program, &builtins);
         if !diagnostics.is_empty() {
             return Err(Error::Sema(diagnostics));
         }
@@ -167,9 +189,6 @@ impl<O: PineOutput> ScriptBuilder<O> {
         if let Some(library_loader) = self.library_loader {
             interpreter.set_library_loader(library_loader);
         }
-
-        let namespaces =
-            pine_builtins::register_namespace_objects(version, self.syminfo, self.timeframe);
 
         // Register namespace objects as const variables
         for (name, value) in namespaces {

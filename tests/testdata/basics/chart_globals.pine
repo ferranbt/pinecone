@@ -1,0 +1,9 @@
+// bgcolor / barcolor write chart-wide colors into the output's GlobalContext.
+// They return na and have no getter, so this just asserts the calls run
+// (including the conditional-color and display-arg forms real scripts use).
+bgcolor(close > open ? color.green : na, title = "Trend", transp = 80)
+barcolor(close > open ? color.lime : color.red, display = display.all)
+log.info("ok")
+
+// Expected output:
+// ok

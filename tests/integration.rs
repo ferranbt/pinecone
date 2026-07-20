@@ -4,7 +4,8 @@ mod tests {
     use pine_ast::Program;
     use pine_core::{SymInfo, Timeframe, TimeframeUnit};
     use pine_interpreter::{
-        Bar, DefaultPineOutput, HistoricalDataProvider, LibraryLoader, LogOutput, Value,
+        AlertConditionOutput, Bar, DefaultPineOutput, HistoricalDataProvider, LibraryLoader,
+        LogOutput, Value,
     };
     use pine_lexer::Lexer;
     use pine_parser::Parser;
@@ -25,6 +26,8 @@ mod tests {
                 low: base - 5.0,
                 close: base + 2.0,
                 volume: 1000.0 + (i as f64 * 10.0),
+                // A distinct per-bar timestamp so the `time` fixture can assert it.
+                time: (i as i64) * 1000,
                 // Dummy barstate
                 is_first: true,
                 is_last: false,
@@ -240,10 +243,19 @@ mod tests {
         let start = bars.len() - bar_count;
 
         let mut logs = Vec::new();
+        let mut last_output = None;
         for (index, bar) in bars.iter().enumerate().skip(start) {
             current_index.set(index);
             let pine_output = script.execute(bar)?;
             logs.extend(pine_output.get_logs().iter().map(|log| log.message.clone()));
+            last_output = Some(pine_output);
+        }
+        // After the logs, surface the final bar's declared alert conditions as
+        // `(alert): <message>` lines so fixtures can assert them.
+        if let Some(output) = last_output {
+            for alert in output.alertconditions() {
+                logs.push(format!("(alert): {}", alert.message));
+            }
         }
         Ok(logs)
     }

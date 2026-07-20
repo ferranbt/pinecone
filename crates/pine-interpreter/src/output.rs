@@ -35,6 +35,44 @@ pub struct Label {
 }
 
 /// Represents a box drawable object
+/// A `fill(...)` between two plots or hlines.
+#[derive(Clone, Debug)]
+pub struct FillObject {
+    /// Id of the first plot/hline (`None` when it was `na`).
+    pub id1: Option<usize>,
+    /// Id of the second plot/hline.
+    pub id2: Option<usize>,
+    pub color: Option<Color>,
+    pub title: String,
+}
+
+/// Chart-wide settings written by global functions like `bgcolor`/`barcolor`.
+#[derive(Clone, Debug, Default)]
+pub struct GlobalContext {
+    /// Background color (`bgcolor`).
+    pub bgcolor: Option<Color>,
+    /// Price-bar color (`barcolor`).
+    pub barcolor: Option<Color>,
+}
+
+/// An `alertcondition(...)` declaration — a named alert with a message.
+#[derive(Clone, Debug, Default)]
+pub struct AlertCondition {
+    pub title: String,
+    pub message: String,
+}
+
+/// The `indicator(...)` declaration — a script's identity and display settings.
+#[derive(Clone, Debug, Default)]
+pub struct Indicator {
+    pub title: String,
+    pub shorttitle: String,
+    pub overlay: bool,
+    pub format: String,
+    pub precision: Option<i64>,
+    pub timeframe: String,
+}
+
 /// A trend line drawn between two points, `(x1, y1)`–`(x2, y2)`.
 #[derive(Clone, Debug)]
 pub struct LineObject {
@@ -363,6 +401,45 @@ macro_rules! impl_output_traits_delegate {
             }
         }
 
+        impl $crate::IndicatorOutput for $type {
+            fn set_indicator(&mut self, indicator: $crate::Indicator) {
+                self.$field.set_indicator(indicator)
+            }
+            fn indicator(&self) -> Option<&$crate::Indicator> {
+                self.$field.indicator()
+            }
+        }
+
+        impl $crate::AlertConditionOutput for $type {
+            fn add_alertcondition(&mut self, alert: $crate::AlertCondition) {
+                self.$field.add_alertcondition(alert)
+            }
+            fn alertconditions(&self) -> &[$crate::AlertCondition] {
+                self.$field.alertconditions()
+            }
+        }
+
+        impl $crate::FillOutput for $type {
+            fn add_fill(&mut self, fill: $crate::FillObject) {
+                self.$field.add_fill(fill)
+            }
+            fn fills(&self) -> &[$crate::FillObject] {
+                self.$field.fills()
+            }
+        }
+
+        impl $crate::GlobalOutput for $type {
+            fn set_bgcolor(&mut self, color: Option<$crate::Color>) {
+                self.$field.set_bgcolor(color)
+            }
+            fn set_barcolor(&mut self, color: Option<$crate::Color>) {
+                self.$field.set_barcolor(color)
+            }
+            fn global_context(&self) -> &$crate::GlobalContext {
+                self.$field.global_context()
+            }
+        }
+
         impl $crate::LineOutput for $type {
             fn add_line(&mut self, line: $crate::LineObject) -> usize {
                 self.$field.add_line(line)
@@ -476,6 +553,36 @@ pub trait LineOutput: PineOutput {
     fn delete_line(&mut self, id: usize) -> bool;
 }
 
+/// Extension trait for recording `fill(...)` areas.
+pub trait FillOutput: PineOutput {
+    fn add_fill(&mut self, fill: FillObject);
+    fn fills(&self) -> &[FillObject];
+}
+
+/// Extension trait for chart-wide globals (`bgcolor`, `barcolor`).
+pub trait GlobalOutput: PineOutput {
+    fn set_bgcolor(&mut self, color: Option<Color>);
+    fn set_barcolor(&mut self, color: Option<Color>);
+    /// The accumulated chart-wide settings.
+    fn global_context(&self) -> &GlobalContext;
+}
+
+/// Extension trait for recording declared alert conditions.
+pub trait AlertConditionOutput: PineOutput {
+    /// Record a declared alert condition.
+    fn add_alertcondition(&mut self, alert: AlertCondition);
+    /// Every alert condition declared so far, in declaration order.
+    fn alertconditions(&self) -> &[AlertCondition];
+}
+
+/// Extension trait for the script's `indicator(...)` declaration.
+pub trait IndicatorOutput: PineOutput {
+    /// Record the indicator declaration (a script has at most one).
+    fn set_indicator(&mut self, indicator: Indicator);
+    /// The declaration, if the script declared one.
+    fn indicator(&self) -> Option<&Indicator>;
+}
+
 /// Extension trait for recording declared inputs
 pub trait InputOutput: PineOutput {
     /// Record a declared input.
@@ -519,6 +626,14 @@ pub struct DefaultPineOutput {
     logs: Vec<LogEntry>,
     /// Declared inputs
     inputs: Vec<Input>,
+    /// The `indicator(...)` declaration, if any.
+    indicator: Option<Indicator>,
+    /// Chart-wide settings (`bgcolor`, `barcolor`).
+    globals: GlobalContext,
+    /// Declared alert conditions.
+    alertconditions: Vec<AlertCondition>,
+    /// `fill(...)` areas.
+    fills: Vec<FillObject>,
 }
 
 impl PineOutput for DefaultPineOutput {
@@ -533,6 +648,10 @@ impl PineOutput for DefaultPineOutput {
         self.plotshapes.clear();
         self.logs.clear();
         self.inputs.clear();
+        self.indicator = None;
+        self.globals = GlobalContext::default();
+        self.alertconditions.clear();
+        self.fills.clear();
         self.lines.clear();
         self.tables.clear();
         // Reset ID counters
@@ -694,5 +813,49 @@ impl InputOutput for DefaultPineOutput {
 
     fn inputs(&self) -> &[Input] {
         &self.inputs
+    }
+}
+
+impl IndicatorOutput for DefaultPineOutput {
+    fn set_indicator(&mut self, indicator: Indicator) {
+        self.indicator = Some(indicator);
+    }
+
+    fn indicator(&self) -> Option<&Indicator> {
+        self.indicator.as_ref()
+    }
+}
+
+impl AlertConditionOutput for DefaultPineOutput {
+    fn add_alertcondition(&mut self, alert: AlertCondition) {
+        self.alertconditions.push(alert);
+    }
+
+    fn alertconditions(&self) -> &[AlertCondition] {
+        &self.alertconditions
+    }
+}
+
+impl FillOutput for DefaultPineOutput {
+    fn add_fill(&mut self, fill: FillObject) {
+        self.fills.push(fill);
+    }
+
+    fn fills(&self) -> &[FillObject] {
+        &self.fills
+    }
+}
+
+impl GlobalOutput for DefaultPineOutput {
+    fn set_bgcolor(&mut self, color: Option<Color>) {
+        self.globals.bgcolor = color;
+    }
+
+    fn set_barcolor(&mut self, color: Option<Color>) {
+        self.globals.barcolor = color;
+    }
+
+    fn global_context(&self) -> &GlobalContext {
+        &self.globals
     }
 }

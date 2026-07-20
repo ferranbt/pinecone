@@ -1,0 +1,6 @@
+// A script may declare itself only once.
+indicator("First")
+indicator("Second", overlay = true)
+
+// Expected error:
+// a script may only have one indicator/strategy/library declaration

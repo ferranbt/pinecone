@@ -1,0 +1,11 @@
+// display.* constants resolve to their string tag.
+log.info(display.none)
+log.info(display.all)
+log.info(display.data_window)
+log.info(display.status_line)
+
+// Expected output:
+// none
+// all
+// data_window
+// status_line

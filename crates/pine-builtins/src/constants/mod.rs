@@ -5,6 +5,8 @@
 //! constants. Only `size`, `shape`, and `location` live here for now; the other
 //! constant families remain in their own modules.
 
+pub mod display;
+pub mod format;
 pub mod location;
 pub mod position;
 pub mod shape;

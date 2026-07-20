@@ -86,3 +86,20 @@ impl Default for ScopeStack {
         Self::new()
     }
 }
+
+/// Functions Pine only permits at **global** scope (never inside `if`, loops, or
+/// function bodies).
+const GLOBAL_ONLY_FUNCTIONS: &[&str] = &[
+    "plot",
+    "plotshape",
+    "plotchar",
+    "plotcandle",
+    "plotbar",
+    "plotarrow",
+    "fill",
+];
+
+/// May `name` only be called at global scope?
+pub fn is_global_only(name: &str) -> bool {
+    GLOBAL_ONLY_FUNCTIONS.contains(&name)
+}

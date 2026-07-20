@@ -1,0 +1,10 @@
+// alertcondition fires only on bars where the condition is true. On the final
+// test bar close > open, so only the Bull alert fires. The harness surfaces each
+// fired alert as `(alert): <message>` after the logs.
+log.info("start")
+alertcondition(close > open, title = "Bull", message = "Bullish bar")
+alertcondition(close < open, title = "Bear", message = "Bearish bar")
+
+// Expected output:
+// start
+// (alert): Bullish bar

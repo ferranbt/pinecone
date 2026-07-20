@@ -1,7 +1,8 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineVersion, SymInfo, Timeframe};
 use pine_interpreter::{
-    BoxOutput, InputOutput, LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
+    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, IndicatorOutput, InputOutput,
+    LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
@@ -15,12 +16,16 @@ pub use pine_interpreter::EvaluatedArg;
 pub use pine_interpreter::LogLevel;
 
 // Namespace modules
+mod alertcondition;
 mod array;
 mod barstate;
 mod r#box;
 mod color;
 mod constants;
 mod currency;
+mod fill;
+mod globals;
+mod indicator;
 mod input;
 mod label;
 mod line;
@@ -172,7 +177,11 @@ pub fn register_namespace_objects<
         + BoxOutput
         + InputOutput
         + LineOutput
-        + TableOutput,
+        + TableOutput
+        + IndicatorOutput
+        + GlobalOutput
+        + AlertConditionOutput
+        + FillOutput,
 >(
     version: PineVersion,
     syminfo: Option<SymInfo>,
@@ -204,12 +213,20 @@ pub fn register_namespace_objects<
         namespaces.insert(name, value);
     }
     namespaces.insert("table".to_string(), table::register());
+    namespaces.insert("indicator".to_string(), indicator::register());
+    namespaces.insert("alertcondition".to_string(), alertcondition::register());
+    namespaces.insert("fill".to_string(), fill::register());
+    for (name, value) in globals::register() {
+        namespaces.insert(name, value);
+    }
 
     // Constant-only namespaces (string tags used as arguments elsewhere).
     namespaces.insert("size".to_string(), constants::size::register());
     namespaces.insert("shape".to_string(), constants::shape::register());
     namespaces.insert("location".to_string(), constants::location::register());
     namespaces.insert("position".to_string(), constants::position::register());
+    namespaces.insert("display".to_string(), constants::display::register());
+    namespaces.insert("format".to_string(), constants::format::register());
     namespaces.insert("log".to_string(), log::register());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("matrix".to_string(), matrix::register());
@@ -260,7 +277,10 @@ pub fn register_namespace_objects<
 /// The compile-time counterpart is [`register_namespace_objects`]; this holds the
 /// namespaces whose values change every bar. For now that is only `barstate`.
 pub fn register_per_bar<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
-    vec![("barstate".to_string(), barstate::register(bar))]
+    vec![
+        ("barstate".to_string(), barstate::register(bar)),
+        ("time".to_string(), time::register_bar_time(bar)),
+    ]
 }
 
 #[cfg(test)]
