@@ -49,6 +49,27 @@ pub struct LineObject {
     pub width: f64,
 }
 
+/// One cell of a [`Table`].
+#[derive(Clone, Debug, Default)]
+pub struct TableCell {
+    pub text: String,
+    pub text_color: Option<Color>,
+    pub bgcolor: Option<Color>,
+    pub text_size: String,
+    pub text_halign: String,
+    pub text_valign: String,
+}
+
+/// A table overlay: a fixed grid of cells anchored to a chart position.
+#[derive(Clone, Debug)]
+pub struct Table {
+    pub position: String,
+    pub columns: usize,
+    pub rows: usize,
+    pub bgcolor: Option<Color>,
+    pub cells: HashMap<(usize, usize), TableCell>,
+}
+
 #[derive(Clone, Debug)]
 pub struct PineBox {
     pub left: f64,
@@ -356,6 +377,21 @@ macro_rules! impl_output_traits_delegate {
                 self.$field.delete_line(id)
             }
         }
+
+        impl $crate::TableOutput for $type {
+            fn add_table(&mut self, table: $crate::Table) -> usize {
+                self.$field.add_table(table)
+            }
+            fn get_table(&self, id: usize) -> Option<&$crate::Table> {
+                self.$field.get_table(id)
+            }
+            fn get_table_mut(&mut self, id: usize) -> Option<&mut $crate::Table> {
+                self.$field.get_table_mut(id)
+            }
+            fn delete_table(&mut self, id: usize) -> bool {
+                self.$field.delete_table(id)
+            }
+        }
     };
 }
 
@@ -416,6 +452,18 @@ pub trait BoxOutput: PineOutput {
     fn delete_box(&mut self, id: usize) -> bool;
 }
 
+/// Extension trait for table output
+pub trait TableOutput: PineOutput {
+    /// Add a table and return its ID
+    fn add_table(&mut self, table: Table) -> usize;
+    /// Get a reference to a table by ID
+    fn get_table(&self, id: usize) -> Option<&Table>;
+    /// Get a mutable reference to a table by ID
+    fn get_table_mut(&mut self, id: usize) -> Option<&mut Table>;
+    /// Delete a table by ID and return true if it existed
+    fn delete_table(&mut self, id: usize) -> bool;
+}
+
 /// Extension trait for line output
 pub trait LineOutput: PineOutput {
     /// Add a line and return its ID
@@ -451,6 +499,10 @@ pub struct DefaultPineOutput {
     lines: HashMap<usize, LineObject>,
     /// Next line ID
     next_line_id: usize,
+    /// Table storage for drawable objects
+    tables: HashMap<usize, Table>,
+    /// Next table ID
+    next_table_id: usize,
     /// Plot outputs
     plots: Vec<Plot>,
     /// Plotarrow outputs
@@ -482,10 +534,12 @@ impl PineOutput for DefaultPineOutput {
         self.logs.clear();
         self.inputs.clear();
         self.lines.clear();
+        self.tables.clear();
         // Reset ID counters
         self.next_label_id = 0;
         self.next_box_id = 0;
         self.next_line_id = 0;
+        self.next_table_id = 0;
     }
 }
 
@@ -609,6 +663,27 @@ impl LineOutput for DefaultPineOutput {
 
     fn delete_line(&mut self, id: usize) -> bool {
         self.lines.remove(&id).is_some()
+    }
+}
+
+impl TableOutput for DefaultPineOutput {
+    fn add_table(&mut self, table: Table) -> usize {
+        let id = self.next_table_id;
+        self.next_table_id += 1;
+        self.tables.insert(id, table);
+        id
+    }
+
+    fn get_table(&self, id: usize) -> Option<&Table> {
+        self.tables.get(&id)
+    }
+
+    fn get_table_mut(&mut self, id: usize) -> Option<&mut Table> {
+        self.tables.get_mut(&id)
+    }
+
+    fn delete_table(&mut self, id: usize) -> bool {
+        self.tables.remove(&id).is_some()
     }
 }
 
