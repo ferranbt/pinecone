@@ -1,0 +1,10 @@
+//@version=4
+// v4 hline: the linestyle is a bare constant (`linestyle=dotted`), not
+// `hline.style_dotted`. Still recorded into the line sink.
+h = hline(0, title="Zero Level", linestyle=dotted)
+log.info(line.get_y1(h))
+log.info(line.get_y2(h))
+
+// Expected output:
+// 0
+// 0

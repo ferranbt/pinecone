@@ -35,6 +35,20 @@ pub struct Label {
 }
 
 /// Represents a box drawable object
+/// A trend line drawn between two points, `(x1, y1)`–`(x2, y2)`.
+#[derive(Clone, Debug)]
+pub struct LineObject {
+    pub x1: f64,
+    pub y1: f64,
+    pub x2: f64,
+    pub y2: f64,
+    pub xloc: String,
+    pub extend: String,
+    pub color: Option<Color>,
+    pub style: String,
+    pub width: f64,
+}
+
 #[derive(Clone, Debug)]
 pub struct PineBox {
     pub left: f64,
@@ -327,6 +341,21 @@ macro_rules! impl_output_traits_delegate {
                 self.$field.inputs()
             }
         }
+
+        impl $crate::LineOutput for $type {
+            fn add_line(&mut self, line: $crate::LineObject) -> usize {
+                self.$field.add_line(line)
+            }
+            fn get_line(&self, id: usize) -> Option<&$crate::LineObject> {
+                self.$field.get_line(id)
+            }
+            fn get_line_mut(&mut self, id: usize) -> Option<&mut $crate::LineObject> {
+                self.$field.get_line_mut(id)
+            }
+            fn delete_line(&mut self, id: usize) -> bool {
+                self.$field.delete_line(id)
+            }
+        }
     };
 }
 
@@ -387,6 +416,18 @@ pub trait BoxOutput: PineOutput {
     fn delete_box(&mut self, id: usize) -> bool;
 }
 
+/// Extension trait for line output
+pub trait LineOutput: PineOutput {
+    /// Add a line and return its ID
+    fn add_line(&mut self, line: LineObject) -> usize;
+    /// Get a reference to a line by ID
+    fn get_line(&self, id: usize) -> Option<&LineObject>;
+    /// Get a mutable reference to a line by ID
+    fn get_line_mut(&mut self, id: usize) -> Option<&mut LineObject>;
+    /// Delete a line by ID and return true if it existed
+    fn delete_line(&mut self, id: usize) -> bool;
+}
+
 /// Extension trait for recording declared inputs
 pub trait InputOutput: PineOutput {
     /// Record a declared input.
@@ -406,6 +447,10 @@ pub struct DefaultPineOutput {
     boxes: HashMap<usize, PineBox>,
     /// Next box ID
     next_box_id: usize,
+    /// Line storage for drawable objects
+    lines: HashMap<usize, LineObject>,
+    /// Next line ID
+    next_line_id: usize,
     /// Plot outputs
     plots: Vec<Plot>,
     /// Plotarrow outputs
@@ -436,9 +481,11 @@ impl PineOutput for DefaultPineOutput {
         self.plotshapes.clear();
         self.logs.clear();
         self.inputs.clear();
+        self.lines.clear();
         // Reset ID counters
         self.next_label_id = 0;
         self.next_box_id = 0;
+        self.next_line_id = 0;
     }
 }
 
@@ -541,6 +588,27 @@ impl BoxOutput for DefaultPineOutput {
 
     fn delete_box(&mut self, id: usize) -> bool {
         self.boxes.remove(&id).is_some()
+    }
+}
+
+impl LineOutput for DefaultPineOutput {
+    fn add_line(&mut self, line: LineObject) -> usize {
+        let id = self.next_line_id;
+        self.next_line_id += 1;
+        self.lines.insert(id, line);
+        id
+    }
+
+    fn get_line(&self, id: usize) -> Option<&LineObject> {
+        self.lines.get(&id)
+    }
+
+    fn get_line_mut(&mut self, id: usize) -> Option<&mut LineObject> {
+        self.lines.get_mut(&id)
+    }
+
+    fn delete_line(&mut self, id: usize) -> bool {
+        self.lines.remove(&id).is_some()
     }
 }
 

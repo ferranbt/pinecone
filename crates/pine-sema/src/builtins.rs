@@ -133,6 +133,10 @@ const FUNCTIONS: &[&str] = &[
     "symbol",
     "resolution",
     "price",
+    // v3/v4 bare `linestyle=<tag>` constants for hline/line.
+    "solid",
+    "dotted",
+    "dashed",
     // Script declarations. Every script opens with exactly one of these.
     "indicator",
     "strategy",
