@@ -4,7 +4,7 @@ mod output;
 pub use output::{
     BoxOutput, Color, DefaultPineOutput, Input, InputOutput, InputValue, Label, LabelOutput,
     LineObject, LineOutput, LogEntry, LogLevel, LogOutput, PineBox, PineOutput, Plot, PlotOutput,
-    Plotarrow, Plotbar, Plotcandle, Plotchar, Plotshape,
+    Plotarrow, Plotbar, Plotcandle, Plotchar, Plotshape, Table, TableCell, TableOutput,
 };
 
 // Note: impl_output_traits_delegate! macro is automatically exported at crate root by #[macro_export]

@@ -1,7 +1,7 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineVersion, SymInfo};
 use pine_interpreter::{
-    BoxOutput, InputOutput, LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput,
+    BoxOutput, InputOutput, LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
@@ -29,6 +29,7 @@ mod plot;
 mod str;
 mod syminfo;
 mod ta;
+mod table;
 mod time;
 
 // Global utility functions - defined first so they can be referenced in register function
@@ -161,7 +162,14 @@ impl<O: PineOutput> Fixnan<O> {
 /// This uses DefaultPineOutput for now. Full generic support will be added when the
 /// BuiltinFunction macro is updated to support generic output types.
 pub fn register_namespace_objects<
-    O: PineOutput + LogOutput + PlotOutput + LabelOutput + BoxOutput + InputOutput + LineOutput,
+    O: PineOutput
+        + LogOutput
+        + PlotOutput
+        + LabelOutput
+        + BoxOutput
+        + InputOutput
+        + LineOutput
+        + TableOutput,
 >(
     version: PineVersion,
     syminfo: Option<SymInfo>,
@@ -184,6 +192,9 @@ pub fn register_namespace_objects<
     }
     namespaces.insert("label".to_string(), label::register());
     for (name, value) in line::register(version) {
+        namespaces.insert(name, value);
+    }
+    for (name, value) in table::register() {
         namespaces.insert(name, value);
     }
     namespaces.insert("log".to_string(), log::register());
