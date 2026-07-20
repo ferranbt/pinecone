@@ -1,0 +1,17 @@
+// timeframe.* is host-supplied data. The harness compiles with period "3D",
+// so this asserts the passthrough (period) and the derived classification
+// (multiplier / is* flags).
+log.info(timeframe.period)
+log.info(timeframe.multiplier)
+log.info(timeframe.isdaily)
+log.info(timeframe.isdwm)
+log.info(timeframe.isintraday)
+log.info(timeframe.isweekly)
+
+// Expected output:
+// 3D
+// 3
+// true
+// true
+// false
+// false

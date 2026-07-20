@@ -2,7 +2,7 @@
 mod tests {
     use pine::ScriptBuilder;
     use pine_ast::Program;
-    use pine_core::SymInfo;
+    use pine_core::{SymInfo, Timeframe, TimeframeUnit};
     use pine_interpreter::{
         Bar, DefaultPineOutput, HistoricalDataProvider, LibraryLoader, LogOutput, Value,
     };
@@ -25,6 +25,14 @@ mod tests {
                 low: base - 5.0,
                 close: base + 2.0,
                 volume: 1000.0 + (i as f64 * 10.0),
+                // Dummy barstate
+                is_first: true,
+                is_last: false,
+                is_new: true,
+                is_confirmed: false,
+                is_history: true,
+                is_realtime: false,
+                is_last_confirmed_history: true,
             });
         }
 
@@ -200,6 +208,15 @@ mod tests {
         }
     }
 
+    /// Fixed timeframe every script is compiled with, so a fixture can assert
+    /// `timeframe.*` against known values (period "3D" → multiplier 3, daily).
+    fn test_timeframe() -> Timeframe {
+        Timeframe {
+            multiplier: 3,
+            unit: TimeframeUnit::Daily,
+        }
+    }
+
     fn execute_pine_script_with_logger(source: &str) -> eyre::Result<Vec<String>> {
         let library_loader = TestLibraryLoader::new();
 
@@ -212,6 +229,7 @@ mod tests {
             .with_library_loader(Box::new(library_loader))
             .with_historical_provider(Box::new(historical_data))
             .with_syminfo(test_syminfo())
+            .with_timeframe(test_timeframe())
             .compile()?;
 
         // Run over the final `bar_count` bars, keeping interpreter state across

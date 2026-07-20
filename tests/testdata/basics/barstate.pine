@@ -1,0 +1,19 @@
+// barstate.* are per-bar booleans built from the Bar's flags. The test harness
+// sets a fixed dummy pattern on each bar (see generate_test_bars), so this
+// verifies every flag maps to the right barstate member and is registered per bar.
+log.info(barstate.isfirst)
+log.info(barstate.islast)
+log.info(barstate.isnew)
+log.info(barstate.isconfirmed)
+log.info(barstate.ishistory)
+log.info(barstate.isrealtime)
+log.info(barstate.islastconfirmedhistory)
+
+// Expected output:
+// true
+// false
+// true
+// false
+// true
+// false
+// true

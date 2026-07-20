@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_core::{PineVersion, SymInfo};
+use pine_core::{PineVersion, SymInfo, Timeframe};
 use pine_interpreter::{
     BoxOutput, InputOutput, LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
 };
@@ -16,6 +16,7 @@ pub use pine_interpreter::LogLevel;
 
 // Namespace modules
 mod array;
+mod barstate;
 mod r#box;
 mod color;
 mod constants;
@@ -32,6 +33,7 @@ mod syminfo;
 mod ta;
 mod table;
 mod time;
+mod timeframe;
 
 // Global utility functions - defined first so they can be referenced in register function
 
@@ -174,13 +176,19 @@ pub fn register_namespace_objects<
 >(
     version: PineVersion,
     syminfo: Option<SymInfo>,
+    timeframe: Option<Timeframe>,
 ) -> HashMap<String, Value<O>> {
     let mut namespaces = HashMap::new();
 
-    // `syminfo` is always present in Pine, so an absent one falls back to defaults.
+    // `syminfo` and `timeframe` are always present in Pine, so an absent one
+    // falls back to defaults.
     namespaces.insert(
         "syminfo".to_string(),
         syminfo::create_syminfo(syminfo.unwrap_or_default()),
+    );
+    namespaces.insert(
+        "timeframe".to_string(),
+        timeframe::register(timeframe.unwrap_or_default()),
     );
 
     // Register namespace objects
@@ -245,6 +253,14 @@ pub fn register_namespace_objects<
     }
 
     namespaces
+}
+
+/// Per-bar variables, rebuilt for each [`Bar`] and registered before it executes.
+///
+/// The compile-time counterpart is [`register_namespace_objects`]; this holds the
+/// namespaces whose values change every bar. For now that is only `barstate`.
+pub fn register_per_bar<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
+    vec![("barstate".to_string(), barstate::register(bar))]
 }
 
 #[cfg(test)]

@@ -6,7 +6,7 @@ pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
 use pine_ast::Program;
-use pine_core::{PineVersion, SymInfo, VersionError};
+use pine_core::{PineVersion, SymInfo, Timeframe, VersionError};
 use pine_diagnostics::Diagnostic;
 use pine_interpreter::{
     Bar, BoxOutput, HistoricalDataProvider, InputOutput, Interpreter, LabelOutput, LibraryLoader,
@@ -83,6 +83,7 @@ pub struct ScriptBuilder<O: PineOutput> {
     historical_provider: Option<Box<dyn HistoricalDataProvider<O>>>,
     library_loader: Option<Box<dyn LibraryLoader>>,
     syminfo: Option<SymInfo>,
+    timeframe: Option<Timeframe>,
 }
 
 impl<O: PineOutput> ScriptBuilder<O> {
@@ -93,6 +94,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
             historical_provider: None,
             library_loader: None,
             syminfo: None,
+            timeframe: None,
         }
     }
 
@@ -120,6 +122,13 @@ impl<O: PineOutput> ScriptBuilder<O> {
     /// Symbol information exposed to the script as `syminfo.*`
     pub fn with_syminfo(mut self, syminfo: SymInfo) -> Self {
         self.syminfo = Some(syminfo);
+        self
+    }
+
+    /// The chart timeframe exposed to the script as `timeframe.*`. Without one,
+    /// the namespace is populated with defaults.
+    pub fn with_timeframe(mut self, timeframe: Timeframe) -> Self {
+        self.timeframe = Some(timeframe);
         self
     }
 
@@ -159,7 +168,8 @@ impl<O: PineOutput> ScriptBuilder<O> {
             interpreter.set_library_loader(library_loader);
         }
 
-        let namespaces = pine_builtins::register_namespace_objects(version, self.syminfo);
+        let namespaces =
+            pine_builtins::register_namespace_objects(version, self.syminfo, self.timeframe);
 
         // Register namespace objects as const variables
         for (name, value) in namespaces {
@@ -226,6 +236,11 @@ impl<O: PineOutput> Script<O> {
                 current: Box::new(Value::Number(bar.volume)),
             }),
         );
+
+        // Per-bar namespaces (barstate) are rebuilt from this bar's flags.
+        for (name, value) in pine_builtins::register_per_bar(bar) {
+            self.interpreter.set_variable(&name, value);
+        }
 
         let output = self.interpreter.execute(&self.program)?;
         Ok(output)
