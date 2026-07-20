@@ -168,7 +168,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
         for (name, value) in pine_builtins::register_per_bar(&Bar::default()) {
             builtins.insert(name, value);
         }
-        for name in ["open", "high", "low", "close", "volume"] {
+        for name in ["open", "high", "low", "close", "volume", "ohlc4", "hl2"] {
             builtins.insert(name.to_string(), Value::Na);
         }
         for (name, value) in &self.custom_variables {
