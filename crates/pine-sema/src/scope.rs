@@ -96,6 +96,7 @@ const GLOBAL_ONLY_FUNCTIONS: &[&str] = &[
     "plotcandle",
     "plotbar",
     "plotarrow",
+    "fill",
 ];
 
 /// May `name` only be called at global scope?

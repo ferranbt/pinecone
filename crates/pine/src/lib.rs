@@ -9,9 +9,9 @@ use pine_ast::Program;
 use pine_core::{PineVersion, SymInfo, Timeframe, VersionError};
 use pine_diagnostics::Diagnostic;
 use pine_interpreter::{
-    AlertConditionOutput, Bar, BoxOutput, GlobalOutput, HistoricalDataProvider, IndicatorOutput,
-    InputOutput, Interpreter, LabelOutput, LibraryLoader, LineOutput, LogOutput, PineOutput,
-    PlotOutput, RuntimeError, TableOutput, Value,
+    AlertConditionOutput, Bar, BoxOutput, FillOutput, GlobalOutput, HistoricalDataProvider,
+    IndicatorOutput, InputOutput, Interpreter, LabelOutput, LibraryLoader, LineOutput, LogOutput,
+    PineOutput, PlotOutput, RuntimeError, TableOutput, Value,
 };
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
@@ -145,7 +145,8 @@ impl<O: PineOutput> ScriptBuilder<O> {
             + TableOutput
             + IndicatorOutput
             + GlobalOutput
-            + AlertConditionOutput,
+            + AlertConditionOutput
+            + FillOutput,
     {
         let source = self.source.as_str();
         let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);

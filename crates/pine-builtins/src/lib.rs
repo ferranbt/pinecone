@@ -1,8 +1,8 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineVersion, SymInfo, Timeframe};
 use pine_interpreter::{
-    AlertConditionOutput, BoxOutput, GlobalOutput, IndicatorOutput, InputOutput, LabelOutput,
-    LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
+    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, IndicatorOutput, InputOutput,
+    LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
@@ -23,6 +23,7 @@ mod r#box;
 mod color;
 mod constants;
 mod currency;
+mod fill;
 mod globals;
 mod indicator;
 mod input;
@@ -179,7 +180,8 @@ pub fn register_namespace_objects<
         + TableOutput
         + IndicatorOutput
         + GlobalOutput
-        + AlertConditionOutput,
+        + AlertConditionOutput
+        + FillOutput,
 >(
     version: PineVersion,
     syminfo: Option<SymInfo>,
@@ -213,6 +215,7 @@ pub fn register_namespace_objects<
     namespaces.insert("table".to_string(), table::register());
     namespaces.insert("indicator".to_string(), indicator::register());
     namespaces.insert("alertcondition".to_string(), alertcondition::register());
+    namespaces.insert("fill".to_string(), fill::register());
     for (name, value) in globals::register() {
         namespaces.insert(name, value);
     }
@@ -274,7 +277,10 @@ pub fn register_namespace_objects<
 /// The compile-time counterpart is [`register_namespace_objects`]; this holds the
 /// namespaces whose values change every bar. For now that is only `barstate`.
 pub fn register_per_bar<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
-    vec![("barstate".to_string(), barstate::register(bar))]
+    vec![
+        ("barstate".to_string(), barstate::register(bar)),
+        ("time".to_string(), time::register_bar_time(bar)),
+    ]
 }
 
 #[cfg(test)]

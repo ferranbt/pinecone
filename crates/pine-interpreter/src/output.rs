@@ -35,6 +35,17 @@ pub struct Label {
 }
 
 /// Represents a box drawable object
+/// A `fill(...)` between two plots or hlines.
+#[derive(Clone, Debug)]
+pub struct FillObject {
+    /// Id of the first plot/hline (`None` when it was `na`).
+    pub id1: Option<usize>,
+    /// Id of the second plot/hline.
+    pub id2: Option<usize>,
+    pub color: Option<Color>,
+    pub title: String,
+}
+
 /// Chart-wide settings written by global functions like `bgcolor`/`barcolor`.
 #[derive(Clone, Debug, Default)]
 pub struct GlobalContext {
@@ -408,6 +419,15 @@ macro_rules! impl_output_traits_delegate {
             }
         }
 
+        impl $crate::FillOutput for $type {
+            fn add_fill(&mut self, fill: $crate::FillObject) {
+                self.$field.add_fill(fill)
+            }
+            fn fills(&self) -> &[$crate::FillObject] {
+                self.$field.fills()
+            }
+        }
+
         impl $crate::GlobalOutput for $type {
             fn set_bgcolor(&mut self, color: Option<$crate::Color>) {
                 self.$field.set_bgcolor(color)
@@ -533,6 +553,12 @@ pub trait LineOutput: PineOutput {
     fn delete_line(&mut self, id: usize) -> bool;
 }
 
+/// Extension trait for recording `fill(...)` areas.
+pub trait FillOutput: PineOutput {
+    fn add_fill(&mut self, fill: FillObject);
+    fn fills(&self) -> &[FillObject];
+}
+
 /// Extension trait for chart-wide globals (`bgcolor`, `barcolor`).
 pub trait GlobalOutput: PineOutput {
     fn set_bgcolor(&mut self, color: Option<Color>);
@@ -606,6 +632,8 @@ pub struct DefaultPineOutput {
     globals: GlobalContext,
     /// Declared alert conditions.
     alertconditions: Vec<AlertCondition>,
+    /// `fill(...)` areas.
+    fills: Vec<FillObject>,
 }
 
 impl PineOutput for DefaultPineOutput {
@@ -623,6 +651,7 @@ impl PineOutput for DefaultPineOutput {
         self.indicator = None;
         self.globals = GlobalContext::default();
         self.alertconditions.clear();
+        self.fills.clear();
         self.lines.clear();
         self.tables.clear();
         // Reset ID counters
@@ -804,6 +833,16 @@ impl AlertConditionOutput for DefaultPineOutput {
 
     fn alertconditions(&self) -> &[AlertCondition] {
         &self.alertconditions
+    }
+}
+
+impl FillOutput for DefaultPineOutput {
+    fn add_fill(&mut self, fill: FillObject) {
+        self.fills.push(fill);
+    }
+
+    fn fills(&self) -> &[FillObject] {
+        &self.fills
     }
 }
 

@@ -1,5 +1,10 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
+use pine_interpreter::{Bar, Interpreter, PineOutput, RuntimeError, Value};
+
+/// The per-bar `time` variable: the bar's opening UNIX timestamp (milliseconds).
+pub fn register_bar_time<O: PineOutput>(bar: &Bar) -> Value<O> {
+    Value::Number(bar.time as f64)
+}
 
 /// year(time) - Returns year for given UNIX time in milliseconds
 #[derive(BuiltinFunction)]

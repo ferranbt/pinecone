@@ -1,0 +1,10 @@
+// fill records the area between two plots/hlines. hline returns an id, so the
+// fill gets real ids. It returns na and has no getter, so this asserts the call
+// runs (including the color/title/transp args real scripts use).
+h1 = hline(1.0, title = "Top")
+h2 = hline(0.0, title = "Bottom")
+fill(h1, h2, color = color.blue, title = "Band", transp = 80)
+log.info("ok")
+
+// Expected output:
+// ok

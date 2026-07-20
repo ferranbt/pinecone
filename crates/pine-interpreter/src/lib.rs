@@ -2,10 +2,11 @@ mod output;
 
 // Re-export output types and traits
 pub use output::{
-    AlertCondition, AlertConditionOutput, BoxOutput, Color, DefaultPineOutput, GlobalContext,
-    GlobalOutput, Indicator, IndicatorOutput, Input, InputOutput, InputValue, Label, LabelOutput,
-    LineObject, LineOutput, LogEntry, LogLevel, LogOutput, PineBox, PineOutput, Plot, PlotOutput,
-    Plotarrow, Plotbar, Plotcandle, Plotchar, Plotshape, Table, TableCell, TableOutput,
+    AlertCondition, AlertConditionOutput, BoxOutput, Color, DefaultPineOutput, FillObject,
+    FillOutput, GlobalContext, GlobalOutput, Indicator, IndicatorOutput, Input, InputOutput,
+    InputValue, Label, LabelOutput, LineObject, LineOutput, LogEntry, LogLevel, LogOutput, PineBox,
+    PineOutput, Plot, PlotOutput, Plotarrow, Plotbar, Plotcandle, Plotchar, Plotshape, Table,
+    TableCell, TableOutput,
 };
 
 // Note: impl_output_traits_delegate! macro is automatically exported at crate root by #[macro_export]
@@ -83,6 +84,9 @@ pub struct Bar {
     pub low: f64,
     pub close: f64,
     pub volume: f64,
+    /// The bar's opening time as a UNIX timestamp in milliseconds, exposed to
+    /// scripts as the `time` variable.
+    pub time: i64,
     /// Barstate flags the host supplies, exposed to scripts as `barstate.*`.
     /// The first bar of the dataset (`barstate.isfirst`).
     pub is_first: bool,
