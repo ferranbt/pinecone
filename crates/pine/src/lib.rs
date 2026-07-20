@@ -126,7 +126,13 @@ impl<O: PineOutput> ScriptBuilder<O> {
     /// Compile PineScript source code into a Script with default output
     pub fn compile(self) -> Result<Script<O>, Error>
     where
-        O: LogOutput + PlotOutput + LabelOutput + BoxOutput + InputOutput + LineOutput + TableOutput,
+        O: LogOutput
+            + PlotOutput
+            + LabelOutput
+            + BoxOutput
+            + InputOutput
+            + LineOutput
+            + TableOutput,
     {
         let source = self.source.as_str();
         let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);

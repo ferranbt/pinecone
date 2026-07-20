@@ -28,8 +28,8 @@ mod matrix;
 mod plot;
 mod str;
 mod syminfo;
-mod table;
 mod ta;
+mod table;
 mod time;
 
 // Global utility functions - defined first so they can be referenced in register function
