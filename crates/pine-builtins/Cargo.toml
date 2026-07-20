@@ -7,3 +7,4 @@ edition = "2021"
 pine-builtin-macro = { workspace = true }
 pine-core = { workspace = true }
 pine-interpreter = { workspace = true }
+chrono = { workspace = true }
