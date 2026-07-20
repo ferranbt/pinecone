@@ -385,4 +385,3 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 }
-

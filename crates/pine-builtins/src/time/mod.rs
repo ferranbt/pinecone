@@ -1,6 +1,8 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Bar, BuiltinFn, EvaluatedArg, Interpreter, PineOutput, RuntimeError, Value};
+use pine_interpreter::{
+    Bar, BuiltinFn, EvaluatedArg, Interpreter, PineOutput, RuntimeError, Value,
+};
 use std::rc::Rc;
 
 /// The per-bar `time` variable: the bar's opening UNIX timestamp (milliseconds).
@@ -73,9 +75,11 @@ fn timestamp_fn<O: PineOutput>() -> BuiltinFn<O> {
             return Ok(Value::Na);
         }
         let get = |i: usize| nums.get(i).copied().unwrap_or(0);
-        Ok(ymd_to_millis(get(0), get(1), get(2), get(3), get(4), get(5))
-            .map(|ms| Value::Number(ms as f64))
-            .unwrap_or(Value::Na))
+        Ok(
+            ymd_to_millis(get(0), get(1), get(2), get(3), get(4), get(5))
+                .map(|ms| Value::Number(ms as f64))
+                .unwrap_or(Value::Na),
+        )
     })
 }
 
