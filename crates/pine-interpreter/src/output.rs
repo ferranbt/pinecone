@@ -44,6 +44,13 @@ pub struct GlobalContext {
     pub barcolor: Option<Color>,
 }
 
+/// An `alertcondition(...)` declaration — a named alert with a message.
+#[derive(Clone, Debug, Default)]
+pub struct AlertCondition {
+    pub title: String,
+    pub message: String,
+}
+
 /// The `indicator(...)` declaration — a script's identity and display settings.
 #[derive(Clone, Debug, Default)]
 pub struct Indicator {
@@ -392,6 +399,15 @@ macro_rules! impl_output_traits_delegate {
             }
         }
 
+        impl $crate::AlertConditionOutput for $type {
+            fn add_alertcondition(&mut self, alert: $crate::AlertCondition) {
+                self.$field.add_alertcondition(alert)
+            }
+            fn alertconditions(&self) -> &[$crate::AlertCondition] {
+                self.$field.alertconditions()
+            }
+        }
+
         impl $crate::GlobalOutput for $type {
             fn set_bgcolor(&mut self, color: Option<$crate::Color>) {
                 self.$field.set_bgcolor(color)
@@ -525,6 +541,14 @@ pub trait GlobalOutput: PineOutput {
     fn global_context(&self) -> &GlobalContext;
 }
 
+/// Extension trait for recording declared alert conditions.
+pub trait AlertConditionOutput: PineOutput {
+    /// Record a declared alert condition.
+    fn add_alertcondition(&mut self, alert: AlertCondition);
+    /// Every alert condition declared so far, in declaration order.
+    fn alertconditions(&self) -> &[AlertCondition];
+}
+
 /// Extension trait for the script's `indicator(...)` declaration.
 pub trait IndicatorOutput: PineOutput {
     /// Record the indicator declaration (a script has at most one).
@@ -580,6 +604,8 @@ pub struct DefaultPineOutput {
     indicator: Option<Indicator>,
     /// Chart-wide settings (`bgcolor`, `barcolor`).
     globals: GlobalContext,
+    /// Declared alert conditions.
+    alertconditions: Vec<AlertCondition>,
 }
 
 impl PineOutput for DefaultPineOutput {
@@ -596,6 +622,7 @@ impl PineOutput for DefaultPineOutput {
         self.inputs.clear();
         self.indicator = None;
         self.globals = GlobalContext::default();
+        self.alertconditions.clear();
         self.lines.clear();
         self.tables.clear();
         // Reset ID counters
@@ -767,6 +794,16 @@ impl IndicatorOutput for DefaultPineOutput {
 
     fn indicator(&self) -> Option<&Indicator> {
         self.indicator.as_ref()
+    }
+}
+
+impl AlertConditionOutput for DefaultPineOutput {
+    fn add_alertcondition(&mut self, alert: AlertCondition) {
+        self.alertconditions.push(alert);
+    }
+
+    fn alertconditions(&self) -> &[AlertCondition] {
+        &self.alertconditions
     }
 }
 

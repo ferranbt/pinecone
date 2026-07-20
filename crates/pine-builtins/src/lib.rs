@@ -1,8 +1,8 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineVersion, SymInfo, Timeframe};
 use pine_interpreter::{
-    BoxOutput, GlobalOutput, IndicatorOutput, InputOutput, LabelOutput, LineOutput, LogOutput,
-    PineOutput, PlotOutput, TableOutput,
+    AlertConditionOutput, BoxOutput, GlobalOutput, IndicatorOutput, InputOutput, LabelOutput,
+    LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
@@ -16,6 +16,7 @@ pub use pine_interpreter::EvaluatedArg;
 pub use pine_interpreter::LogLevel;
 
 // Namespace modules
+mod alertcondition;
 mod array;
 mod barstate;
 mod r#box;
@@ -177,7 +178,8 @@ pub fn register_namespace_objects<
         + LineOutput
         + TableOutput
         + IndicatorOutput
-        + GlobalOutput,
+        + GlobalOutput
+        + AlertConditionOutput,
 >(
     version: PineVersion,
     syminfo: Option<SymInfo>,
@@ -210,6 +212,7 @@ pub fn register_namespace_objects<
     }
     namespaces.insert("table".to_string(), table::register());
     namespaces.insert("indicator".to_string(), indicator::register());
+    namespaces.insert("alertcondition".to_string(), alertcondition::register());
     for (name, value) in globals::register() {
         namespaces.insert(name, value);
     }
