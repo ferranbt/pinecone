@@ -227,6 +227,11 @@ impl<O: PineOutput> Script<O> {
             }),
         );
 
+        // Per-bar namespaces (barstate) are rebuilt from this bar's flags.
+        for (name, value) in pine_builtins::register_per_bar(bar) {
+            self.interpreter.set_variable(&name, value);
+        }
+
         let output = self.interpreter.execute(&self.program)?;
         Ok(output)
     }

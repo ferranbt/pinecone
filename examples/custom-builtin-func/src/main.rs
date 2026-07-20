@@ -90,6 +90,7 @@ fn main() {
         low: 100.0,
         close: 103.0,
         volume: 1500.0,
+        ..Default::default()
     };
 
     let output = script.execute(&bar).expect("Execution failed");

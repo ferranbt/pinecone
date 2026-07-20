@@ -27,6 +27,7 @@ pub fn generate_bars(count: usize) -> Vec<Bar> {
             low,
             close,
             volume,
+            ..Default::default()
         });
 
         price = close;

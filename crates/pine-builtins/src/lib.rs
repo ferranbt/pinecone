@@ -16,6 +16,7 @@ pub use pine_interpreter::LogLevel;
 
 // Namespace modules
 mod array;
+mod barstate;
 mod r#box;
 mod color;
 mod constants;
@@ -245,6 +246,14 @@ pub fn register_namespace_objects<
     }
 
     namespaces
+}
+
+/// Per-bar variables, rebuilt for each [`Bar`] and registered before it executes.
+///
+/// The compile-time counterpart is [`register_namespace_objects`]; this holds the
+/// namespaces whose values change every bar. For now that is only `barstate`.
+pub fn register_per_bar<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
+    vec![("barstate".to_string(), barstate::register(bar))]
 }
 
 #[cfg(test)]

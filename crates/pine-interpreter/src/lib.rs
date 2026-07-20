@@ -82,6 +82,21 @@ pub struct Bar {
     pub low: f64,
     pub close: f64,
     pub volume: f64,
+    /// Barstate flags the host supplies, exposed to scripts as `barstate.*`.
+    /// The first bar of the dataset (`barstate.isfirst`).
+    pub is_first: bool,
+    /// The last bar of the dataset (`barstate.islast`).
+    pub is_last: bool,
+    /// A new bar has just opened (`barstate.isnew`).
+    pub is_new: bool,
+    /// The bar is closed/confirmed (`barstate.isconfirmed`).
+    pub is_confirmed: bool,
+    /// A historical bar (`barstate.ishistory`).
+    pub is_history: bool,
+    /// A real-time bar (`barstate.isrealtime`).
+    pub is_realtime: bool,
+    /// The last historical bar before real-time (`barstate.islastconfirmedhistory`).
+    pub is_last_confirmed_history: bool,
 }
 
 /// Represents a time series with an identifier and current value

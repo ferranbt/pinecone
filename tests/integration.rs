@@ -25,6 +25,14 @@ mod tests {
                 low: base - 5.0,
                 close: base + 2.0,
                 volume: 1000.0 + (i as f64 * 10.0),
+                // Dummy barstate
+                is_first: true,
+                is_last: false,
+                is_new: true,
+                is_confirmed: false,
+                is_history: true,
+                is_realtime: false,
+                is_last_confirmed_history: true,
             });
         }
 
