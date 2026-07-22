@@ -227,6 +227,8 @@ pub fn register_namespace_objects<
     namespaces.insert("position".to_string(), constants::position::register());
     namespaces.insert("display".to_string(), constants::display::register());
     namespaces.insert("format".to_string(), constants::format::register());
+    namespaces.insert("order".to_string(), constants::order::register());
+    namespaces.insert("text".to_string(), constants::text::register());
     namespaces.insert("log".to_string(), log::register());
     namespaces.insert("math".to_string(), math::register());
     namespaces.insert("matrix".to_string(), matrix::register());

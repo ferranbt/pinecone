@@ -84,6 +84,7 @@ pub struct Bar {
     pub low: f64,
     pub close: f64,
     pub volume: f64,
+    pub index: u64,
     /// The bar's opening time as a UNIX timestamp in milliseconds, exposed to
     /// scripts as the `time` variable.
     pub time: i64,

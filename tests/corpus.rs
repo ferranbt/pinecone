@@ -65,10 +65,10 @@ fn test_corpus() -> eyre::Result<()> {
             let path = entry.path();
             let source = fs::read_to_string(path)?;
 
-            // Only v6 is supported for now.
-            if PineVersion::detect(&source) != Ok(Some(PineVersion::V6)) {
+            let script_version = PineVersion::detect(&source)?.expect("pinescript version");
+            if !matches!(script_version, PineVersion::V6 | PineVersion::V5) {
                 continue;
-            }
+            };
 
             let relative_path = path.strip_prefix(&corpus_dir).unwrap_or(path);
             match ScriptBuilder::<DefaultPineOutput>::with_code(&source).compile() {
