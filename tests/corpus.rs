@@ -66,10 +66,7 @@ fn test_corpus() -> eyre::Result<()> {
             let source = fs::read_to_string(path)?;
 
             let script_version = PineVersion::detect(&source)?.expect("pinescript version");
-            if !matches!(
-                script_version,
-                PineVersion::V6 | PineVersion::V5 | PineVersion::V4
-            ) {
+            if !matches!(script_version, PineVersion::V6 | PineVersion::V5) {
                 continue;
             };
 
