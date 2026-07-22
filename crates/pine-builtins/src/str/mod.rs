@@ -1,6 +1,8 @@
 use pine_builtin_macro::BuiltinFunction;
+use pine_core::PineVersion;
 use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 /// str.length(string) - Returns the length of a string
@@ -267,10 +269,8 @@ impl StrRepeat {
 }
 
 /// Register all str namespace functions and return the namespace object
-pub fn register<O: PineOutput>() -> Value<O> {
-    use std::cell::RefCell;
-
-    let mut str_ns: std::collections::HashMap<String, Value<O>> = std::collections::HashMap::new();
+pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>> {
+    let mut str_ns: HashMap<String, Value<O>> = std::collections::HashMap::new();
 
     str_ns.insert(
         "length".to_string(),
@@ -329,9 +329,18 @@ pub fn register<O: PineOutput>() -> Value<O> {
         Value::BuiltinFunction(Rc::new(StrRepeat::builtin_fn::<O>)),
     );
 
-    Value::Object {
-        type_name: "str".to_string(),
-        fields: Rc::new(RefCell::new(str_ns)),
-        call: None,
+    if matches!(version, PineVersion::V5 | PineVersion::V6) {
+        let mut obj: HashMap<String, Value<O>> = HashMap::new();
+        obj.insert(
+            "str".to_string(),
+            Value::Object {
+                type_name: "str".to_string(),
+                fields: Rc::new(RefCell::new(str_ns)),
+                call: None,
+            },
+        );
+        obj
+    } else {
+        str_ns
     }
 }

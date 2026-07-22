@@ -1,5 +1,9 @@
 use pine_builtin_macro::BuiltinFunction;
+use pine_core::PineVersion;
 use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 /// math.abs(number) - Returns absolute value
 #[derive(BuiltinFunction)]
@@ -434,11 +438,7 @@ impl MathRandom {
 }
 
 /// Register all math namespace functions and return the namespace object
-pub fn register<O: PineOutput>() -> Value<O> {
-    use std::cell::RefCell;
-    use std::collections::HashMap;
-    use std::rc::Rc;
-
+pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>> {
     let mut math_ns: HashMap<String, Value<O>> = HashMap::new();
 
     // Single-argument functions
@@ -543,9 +543,18 @@ pub fn register<O: PineOutput>() -> Value<O> {
         Value::BuiltinFunction(Rc::new(MathRandom::builtin_fn::<O>)),
     );
 
-    Value::Object {
-        type_name: "math".to_string(),
-        fields: Rc::new(RefCell::new(math_ns)),
-        call: None,
+    if matches!(version, PineVersion::V5 | PineVersion::V6) {
+        let mut obj: HashMap<String, Value<O>> = HashMap::new();
+        obj.insert(
+            "math".to_string(),
+            Value::Object {
+                type_name: "math".to_string(),
+                fields: Rc::new(RefCell::new(math_ns)),
+                call: None,
+            },
+        );
+        obj
+    } else {
+        math_ns
     }
 }

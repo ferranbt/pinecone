@@ -5,6 +5,7 @@
 //! [`IndicatorOutput`]; a script may have at most one (enforced by sema).
 
 use pine_builtin_macro::BuiltinFunction;
+use pine_core::PineVersion;
 use pine_interpreter::{Indicator, IndicatorOutput, Interpreter, PineOutput, RuntimeError, Value};
 use std::rc::Rc;
 
@@ -60,7 +61,14 @@ impl IndicatorFn {
     }
 }
 
-/// The `indicator` global function value.
-pub fn register<O: PineOutput + IndicatorOutput>() -> Value<O> {
-    Value::BuiltinFunction(Rc::new(IndicatorFn::builtin_fn::<O>))
+pub fn register<O: PineOutput + IndicatorOutput>(version: PineVersion) -> Vec<(String, Value<O>)> {
+    let name = if version < PineVersion::V5 {
+        "study"
+    } else {
+        "indicator"
+    };
+    vec![(
+        name.to_string(),
+        Value::BuiltinFunction(Rc::new(IndicatorFn::builtin_fn::<O>)),
+    )]
 }

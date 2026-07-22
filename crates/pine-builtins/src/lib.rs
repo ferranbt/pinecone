@@ -213,7 +213,9 @@ pub fn register_namespace_objects<
         namespaces.insert(name, value);
     }
     namespaces.insert("table".to_string(), table::register());
-    namespaces.insert("indicator".to_string(), indicator::register());
+    for (name, value) in indicator::register(version) {
+        namespaces.insert(name, value);
+    }
     namespaces.insert("alertcondition".to_string(), alertcondition::register());
     namespaces.insert("fill".to_string(), fill::register());
     for (name, value) in globals::register() {
@@ -230,10 +232,16 @@ pub fn register_namespace_objects<
     namespaces.insert("order".to_string(), constants::order::register());
     namespaces.insert("text".to_string(), constants::text::register());
     namespaces.insert("log".to_string(), log::register());
-    namespaces.insert("math".to_string(), math::register());
+    for (name, func) in math::register(version) {
+        namespaces.insert(name, func);
+    }
     namespaces.insert("matrix".to_string(), matrix::register());
-    namespaces.insert("str".to_string(), str::register());
-    namespaces.insert("ta".to_string(), ta::register());
+    for (name, func) in str::register(version) {
+        namespaces.insert(name, func);
+    }
+    for (name, func) in ta::register(version) {
+        namespaces.insert(name, func);
+    }
 
     // Register global builtin functions
     namespaces.insert(
