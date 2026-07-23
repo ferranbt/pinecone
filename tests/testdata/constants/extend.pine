@@ -1,0 +1,11 @@
+// extend.* constants resolve to their string tag.
+log.info(extend.none)
+log.info(extend.left)
+log.info(extend.right)
+log.info(extend.both)
+
+// Expected output:
+// none
+// left
+// right
+// both

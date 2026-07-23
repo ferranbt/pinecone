@@ -174,8 +174,10 @@ impl<O: PineOutput> ScriptBuilder<O> {
             "low",
             "close",
             "volume",
-            "ohlc4",
             "hl2",
+            "hlc3",
+            "hlcc4",
+            "ohlc4",
             "bar_index",
         ] {
             builtins.insert(name.to_string(), Value::Na);
@@ -229,41 +231,27 @@ impl<O: PineOutput> Script<O> {
         // Load bar data as Series variables so TA functions can access historical data
         use interpreter::{Series, Value};
 
-        self.interpreter.set_variable(
-            "open",
-            Value::Series(Series {
-                id: "open".to_string(),
-                current: Box::new(Value::Number(bar.open)),
-            }),
-        );
-        self.interpreter.set_variable(
-            "high",
-            Value::Series(Series {
-                id: "high".to_string(),
-                current: Box::new(Value::Number(bar.high)),
-            }),
-        );
-        self.interpreter.set_variable(
-            "low",
-            Value::Series(Series {
-                id: "low".to_string(),
-                current: Box::new(Value::Number(bar.low)),
-            }),
-        );
-        self.interpreter.set_variable(
-            "close",
-            Value::Series(Series {
-                id: "close".to_string(),
-                current: Box::new(Value::Number(bar.close)),
-            }),
-        );
-        self.interpreter.set_variable(
-            "volume",
-            Value::Series(Series {
-                id: "volume".to_string(),
-                current: Box::new(Value::Number(bar.volume)),
-            }),
-        );
+        // The series id is also the key the historical provider is queried with.
+        for (id, value) in [
+            ("open", bar.open),
+            ("high", bar.high),
+            ("low", bar.low),
+            ("close", bar.close),
+            ("volume", bar.volume),
+            ("hl2", (bar.high + bar.low) / 2.0),
+            ("hlc3", (bar.high + bar.low + bar.close) / 3.0),
+            ("hlcc4", (bar.high + bar.low + bar.close * 2.0) / 4.0),
+            ("ohlc4", (bar.open + bar.high + bar.low + bar.close) / 4.0),
+        ] {
+            self.interpreter.set_variable(
+                id,
+                Value::Series(Series {
+                    id: id.to_string(),
+                    current: Box::new(Value::Number(value)),
+                }),
+            );
+        }
+
         self.interpreter
             .set_variable("bar_index", Value::Number(bar.index as f64));
 

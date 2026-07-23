@@ -1,0 +1,17 @@
+//@version=4
+// v4 already had the `str.*` namespace; only `tostring`/`tonumber` moved into it
+// in v5, so in v4 those two are also global.
+//
+// v4 has no `log.*` namespace — bare `log` is math's natural logarithm — so this
+// fixture can't print. It asserts the v4 names resolve; the returned values are
+// asserted in the v5 str fixtures.
+len = str.length("abc")
+parts = str.split("a,b", ",")
+replaced = str.replace_all("a-b-c", "-", "")
+upper = str.upper("abc")
+
+// Global in v4, and *only* global — `str.tostring`/`str.tonumber` are v5.
+text = tostring(42)
+number = tonumber("42")
+
+// Expected output:

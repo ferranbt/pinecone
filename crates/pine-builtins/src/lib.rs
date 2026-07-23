@@ -231,6 +231,9 @@ pub fn register_namespace_objects<
     namespaces.insert("format".to_string(), constants::format::register());
     namespaces.insert("order".to_string(), constants::order::register());
     namespaces.insert("text".to_string(), constants::text::register());
+    namespaces.insert("xloc".to_string(), constants::xloc::register());
+    namespaces.insert("extend".to_string(), constants::extend::register());
+    namespaces.insert("barmerge".to_string(), constants::barmerge::register());
     namespaces.insert("log".to_string(), log::register());
     for (name, func) in math::register(version) {
         namespaces.insert(name, func);

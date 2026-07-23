@@ -1,0 +1,7 @@
+// xloc.* constants resolve to their string tag.
+log.info(xloc.bar_index)
+log.info(xloc.bar_time)
+
+// Expected output:
+// bar_index
+// bar_time

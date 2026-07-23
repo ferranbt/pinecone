@@ -5,7 +5,9 @@
 //! constants. Only `size`, `shape`, and `location` live here for now; the other
 //! constant families remain in their own modules.
 
+pub mod barmerge;
 pub mod display;
+pub mod extend;
 pub mod format;
 pub mod location;
 pub mod order;
@@ -13,3 +15,4 @@ pub mod position;
 pub mod shape;
 pub mod size;
 pub mod text;
+pub mod xloc;
