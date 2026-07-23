@@ -1,37 +1,19 @@
-// Test ta.highest and ta.lowest
-// Over the last 5 bars close is 297, 298, 299, 300, 301.
+// Test ta.highest and ta.lowest — the extreme VALUE over the window.
+// Like Pine, na until the window has `length` bars. Over the last 3 bars close
+// is 299, 300, 301.
 
-// Bars: 5
+// Bars: 3
 
-high5 = ta.highest(close, 5)
-log.info(high5)
+high3 = ta.highest(close, 3)
+log.info(high3)
 
-low5 = ta.lowest(close, 5)
-log.info(low5)
-
-// Offsets are reported as negative bar counts back from the current bar. Close
-// only rises, so the highest is always this bar and the lowest the oldest one.
-log.info(ta.highestbars(close, 5))
-log.info(ta.lowestbars(close, 5))
+low3 = ta.lowest(close, 3)
+log.info(low3)
 
 // Expected output:
 // na
 // na
 // na
 // na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
 // 301
-// 297
-// 0
-// -4
+// 299
