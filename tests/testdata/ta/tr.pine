@@ -1,17 +1,20 @@
 // Test ta.tr (True Range)
-// True Range = max(high-low, abs(high-close[1]), abs(low-close[1]))
-// At bar 199: high=306, low=296, close[1]=300
-// TR = max(306-296, abs(306-300), abs(296-300))
-// TR = max(10, 6, 4) = 10
+// max(high-low, abs(high-close[1]), abs(low-close[1])). Every fixture bar
+// spans 10 and steps up by 1, so the bar's own range always wins.
+//
+// On the very first bar there is no previous close: the default falls back to
+// high - low, while handle_na=true asks for na instead.
 
-// True Range with default handle_na
-tr_default = ta.tr()
-log.info(tr_default)
+// Bars: 2
 
-// True Range with handle_na=true
-tr_handle_na = ta.tr(true)
-log.info(tr_handle_na)
+trDefault = ta.tr()
+log.info(trDefault)
+
+trHandleNa = ta.tr(true)
+log.info(trHandleNa)
 
 // Expected output:
+// 10
+// na
 // 10
 // 10

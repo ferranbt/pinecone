@@ -1,16 +1,37 @@
+use super::moving_averages::{checked_length, smooth_step};
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, SeriesBuffer, Value};
 
 /// ta.rsi(source, length) - Relative Strength Index
+///
+/// `100 - 100 / (1 + rs)`, where `rs` is Wilder-smoothed gains over Wilder-
+/// smoothed losses. Both averages are carried across bars by the call site, so
+/// this is the real recursive definition rather than an average of the last
+/// `length` changes.
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.rsi")]
-pub struct TaRsi<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.rsi", stateful)]
+pub struct TaRsi {
+    source: f64,
     length: f64,
+    /// Last bar's source, to difference against. `None` on the first bar, when
+    /// there is no change to measure yet.
+    #[state]
+    previous: Option<f64>,
+    #[state]
+    gains: SeriesBuffer<f64>,
+    #[state]
+    losses: SeriesBuffer<f64>,
+    #[state]
+    avg_gain: Option<f64>,
+    #[state]
+    avg_loss: Option<f64>,
 }
 
-impl<O: PineOutput> TaRsi<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+impl TaRsi {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
             return Err(RuntimeError::TypeError(
@@ -18,217 +39,197 @@ impl<O: PineOutput> TaRsi<O> {
             ));
         }
 
-        // Get enough values to calculate changes
-        let values = ctx.get_series_values(&self.source, length + 1)?;
-
-        if values.len() < 2 {
+        let Some(previous) = self.previous.replace(self.source) else {
+            // First bar: no previous value, so no change to measure yet.
             return Ok(Value::Na);
-        }
+        };
 
-        // Calculate gains and losses
-        let mut gains = Vec::new();
-        let mut losses = Vec::new();
+        let change = self.source - previous;
+        let gain = change.max(0.0);
+        let loss = (-change).max(0.0);
 
-        for i in 0..values.len() - 1 {
-            let change = values[i] - values[i + 1];
-            if change > 0.0 {
-                gains.push(change);
-                losses.push(0.0);
-            } else {
-                gains.push(0.0);
-                losses.push(-change);
-            }
-        }
-
-        if gains.is_empty() {
+        // Both sides advance together, so they fill on the same bar.
+        let gain_seed = self.gains.observe(gain, length);
+        let loss_seed = self.losses.observe(loss, length);
+        let (Some(gain_seed), Some(loss_seed)) = (gain_seed, loss_seed) else {
             return Ok(Value::Na);
-        }
+        };
 
-        // Calculate RMA of gains and losses
-        let avg_gain: f64 = gains.iter().take(length.min(gains.len())).sum::<f64>()
-            / length.min(gains.len()) as f64;
-        let avg_loss: f64 = losses.iter().take(length.min(losses.len())).sum::<f64>()
-            / length.min(losses.len()) as f64;
+        let alpha = 1.0 / length as f64;
+        let avg_gain = smooth_step(self.avg_gain, gain, alpha, &gain_seed);
+        let avg_loss = smooth_step(self.avg_loss, loss, alpha, &loss_seed);
+        self.avg_gain = Some(avg_gain);
+        self.avg_loss = Some(avg_loss);
 
+        // Only-gains saturates at 100, only-losses at 0, and no movement at all
+        // sits in the middle.
         if avg_loss == 0.0 {
-            return Ok(Value::Number(100.0));
+            return Ok(Value::Number(if avg_gain == 0.0 { 50.0 } else { 100.0 }));
         }
 
         let rs = avg_gain / avg_loss;
-        let rsi = 100.0 - (100.0 / (1.0 + rs));
-
-        Ok(Value::Number(rsi))
+        Ok(Value::Number(100.0 - 100.0 / (1.0 + rs)))
     }
 }
 
 /// ta.cci(source, length) - Commodity Channel Index
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.cci")]
-pub struct TaCci<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.cci", stateful)]
+pub struct TaCci {
+    source: f64,
     length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaCci<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
+impl TaCci {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
 
-        // CCI = (Typical Price - SMA) / (0.015 * Mean Deviation)
-        // For simplicity, we use source directly instead of typical price
-        let values = ctx.get_series_values(&self.source, length)?;
-
-        if values.is_empty() {
+        let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
-        }
+        };
 
-        // Calculate SMA
-        let sma: f64 = values.iter().sum::<f64>() / values.len() as f64;
-
-        // Calculate mean absolute deviation
-        let mad: f64 = values.iter().map(|&v| (v - sma).abs()).sum::<f64>() / values.len() as f64;
+        let sma: f64 = values.iter().sum::<f64>() / length as f64;
+        let mad: f64 = values.iter().map(|&v| (v - sma).abs()).sum::<f64>() / length as f64;
 
         if mad == 0.0 {
             return Ok(Value::Na);
         }
 
-        let cci = (values[0] - sma) / (0.015 * mad);
-        Ok(Value::Number(cci))
+        Ok(Value::Number((values[0] - sma) / (0.015 * mad)))
     }
 }
 
-/// ta.mom(source, length) - Momentum
+/// ta.mom(source, length) - Momentum: the change over `length` bars.
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.mom")]
-pub struct TaMom<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.mom", stateful)]
+pub struct TaMom {
+    source: f64,
     length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaMom<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+impl TaMom {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
 
-        // Momentum is just current - value N bars ago
-        let values = ctx.get_series_values(&self.source, length + 1)?;
-
-        if values.len() <= length {
+        // `length` bars back needs `length + 1` values in hand.
+        let Some(values) = self.window.observe(self.source, length + 1) else {
             return Ok(Value::Na);
-        }
+        };
 
-        let momentum = values[0] - values[length];
-        Ok(Value::Number(momentum))
+        Ok(Value::Number(values[0] - values[length]))
     }
 }
 
-/// ta.roc(source, length) - Rate of Change
+/// ta.roc(source, length) - Rate of Change, as a percentage.
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.roc")]
-pub struct TaRoc<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.roc", stateful)]
+pub struct TaRoc {
+    source: f64,
     length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaRoc<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+impl TaRoc {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
 
-        // ROC = ((current - previous) / previous) * 100
-        let values = ctx.get_series_values(&self.source, length + 1)?;
-
-        if values.len() <= length {
+        let Some(values) = self.window.observe(self.source, length + 1) else {
             return Ok(Value::Na);
-        }
+        };
 
-        let current = values[0];
         let previous = values[length];
-
         if previous == 0.0 {
             return Ok(Value::Na);
         }
 
-        let roc = ((current - previous) / previous) * 100.0;
-        Ok(Value::Number(roc))
+        Ok(Value::Number((values[0] - previous) / previous * 100.0))
     }
 }
 
 /// ta.cmo(source, length) - Chande Momentum Oscillator
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.cmo")]
-pub struct TaCmo<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.cmo", stateful)]
+pub struct TaCmo {
+    source: f64,
     length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaCmo<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
+impl TaCmo {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
 
-        // CMO = 100 * (sum of gains - sum of losses) / (sum of gains + sum of losses)
-        let values = ctx.get_series_values(&self.source, length + 1)?;
-
-        if values.len() < 2 {
+        // `length` changes need `length + 1` values in hand.
+        let Some(values) = self.window.observe(self.source, length + 1) else {
             return Ok(Value::Na);
-        }
+        };
 
-        let mut sum_gains = 0.0;
-        let mut sum_losses = 0.0;
-
-        for i in 0..values.len() - 1 {
-            let change = values[i] - values[i + 1];
+        let mut gains = 0.0;
+        let mut losses = 0.0;
+        for pair in values.windows(2) {
+            let change = pair[0] - pair[1];
             if change > 0.0 {
-                sum_gains += change;
+                gains += change;
             } else {
-                sum_losses += -change;
+                losses -= change;
             }
         }
 
-        let total = sum_gains + sum_losses;
+        let total = gains + losses;
         if total == 0.0 {
             return Ok(Value::Number(0.0));
         }
 
-        let cmo = 100.0 * (sum_gains - sum_losses) / total;
-        Ok(Value::Number(cmo))
+        Ok(Value::Number(100.0 * (gains - losses) / total))
     }
 }
 
 /// ta.stoch(source, high, low, length) - Stochastic: where `source` sits inside
 /// the `[lowest(low), highest(high)]` range of the last `length` bars, as 0..100.
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.stoch")]
-pub struct TaStoch<O: PineOutput> {
-    source: Value<O>,
-    high: Value<O>,
-    low: Value<O>,
+#[builtin(name = "ta.stoch", stateful)]
+pub struct TaStoch {
+    source: f64,
+    high: f64,
+    low: f64,
     length: f64,
+    #[state]
+    highs: SeriesBuffer<f64>,
+    #[state]
+    lows: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaStoch<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
+impl TaStoch {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
 
-        let source = ctx.get_series_values(&self.source, 1)?;
-        let highs = ctx.get_series_values(&self.high, length)?;
-        let lows = ctx.get_series_values(&self.low, length)?;
-
-        if source.is_empty() || highs.is_empty() || lows.is_empty() {
+        // Both sides advance together, so they fill on the same bar.
+        let highs = self.highs.observe(self.high, length);
+        let lows = self.lows.observe(self.low, length);
+        let (Some(highs), Some(lows)) = (highs, lows) else {
             return Ok(Value::Na);
-        }
+        };
 
         let highest = highs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         let lowest = lows.iter().copied().fold(f64::INFINITY, f64::min);
@@ -238,7 +239,7 @@ impl<O: PineOutput> TaStoch<O> {
             return Ok(Value::Number(0.0));
         }
 
-        Ok(Value::Number(100.0 * (source[0] - lowest) / range))
+        Ok(Value::Number(100.0 * (self.source - lowest) / range))
     }
 }
 
@@ -246,93 +247,96 @@ impl<O: PineOutput> TaStoch<O> {
 /// bar's money flow counts as positive or negative according to the sign of the
 /// change in `source`.
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.mfi")]
-pub struct TaMfi<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.mfi", stateful)]
+pub struct TaMfi {
+    source: f64,
     length: f64,
+    /// Money flow on up bars, 0 otherwise — Pine's `upper` sum.
+    #[state]
+    rising: SeriesBuffer<f64>,
+    /// Money flow on down bars, 0 otherwise — Pine's `lower` sum.
+    #[state]
+    falling: SeriesBuffer<f64>,
+    #[state]
+    previous: Option<f64>,
 }
 
-impl<O: PineOutput> TaMfi<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
+impl TaMfi {
+    fn execute<O: PineOutput>(
+        &mut self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
 
         let volume = ctx
             .get_variable("volume")
             .ok_or_else(|| RuntimeError::UndefinedVariable("volume".to_string()))?
-            .clone();
+            .as_number()?;
 
-        // One extra source value: each of the `length` bars needs its predecessor
-        // to know whether its money flow is positive or negative.
-        let values = ctx.get_series_values(&self.source, length + 1)?;
-        let volumes = ctx.get_series_values(&volume, length)?;
-
-        let bars = (values.len().saturating_sub(1)).min(volumes.len());
-        if bars == 0 {
+        let Some(previous) = self.previous.replace(self.source) else {
+            // First bar: no previous value, so the flow has no direction yet.
             return Ok(Value::Na);
-        }
+        };
 
-        let mut positive = 0.0;
-        let mut negative = 0.0;
-        for i in 0..bars {
-            let flow = values[i] * volumes[i];
-            if values[i] > values[i + 1] {
-                positive += flow;
-            } else if values[i] < values[i + 1] {
-                negative += flow;
-            }
-        }
+        // Each bar's flow lands wholly on one side; an unchanged bar on neither.
+        // The flow keeps the source's own sign, as Pine's does, so the two sides
+        // stay meaningful even for a source that goes negative.
+        let flow = self.source * volume;
+        let change = self.source - previous;
+        let rising = self
+            .rising
+            .observe(if change > 0.0 { flow } else { 0.0 }, length);
+        let falling = self
+            .falling
+            .observe(if change < 0.0 { flow } else { 0.0 }, length);
+        let (Some(rising), Some(falling)) = (rising, falling) else {
+            return Ok(Value::Na);
+        };
 
-        if negative == 0.0 {
+        let upper: f64 = rising.iter().sum();
+        let lower: f64 = falling.iter().sum();
+
+        // No down bars in the window means the index is pinned at its top.
+        if lower == 0.0 {
             return Ok(Value::Number(100.0));
         }
 
-        Ok(Value::Number(100.0 - 100.0 / (1.0 + positive / negative)))
+        Ok(Value::Number(100.0 - 100.0 / (1.0 + upper / lower)))
     }
 }
 
 /// ta.linreg(source, length, offset) - Linear Regression
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.linreg")]
-pub struct TaLinreg<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.linreg", stateful)]
+pub struct TaLinreg {
+    source: f64,
     length: f64,
     #[arg(default = 0.0)]
     offset: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaLinreg<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
+impl TaLinreg {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
 
-        let values = ctx.get_series_values(&self.source, length)?;
-
-        if values.is_empty() {
+        let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
-        }
+        };
 
         let n = values.len() as f64;
-
-        // Calculate means
         let mean_x = (values.len() - 1) as f64 / 2.0;
         let mean_y: f64 = values.iter().sum::<f64>() / n;
 
-        // Calculate slope (beta)
         let mut numerator = 0.0;
         let mut denominator = 0.0;
-
-        for (i, &val) in values.iter().enumerate() {
+        for (i, &value) in values.iter().enumerate() {
             let x_dev = i as f64 - mean_x;
-            numerator += x_dev * (val - mean_y);
+            numerator += x_dev * (value - mean_y);
             denominator += x_dev * x_dev;
         }
 
@@ -343,10 +347,6 @@ impl<O: PineOutput> TaLinreg<O> {
         let slope = numerator / denominator;
         let intercept = mean_y - slope * mean_x;
 
-        // Calculate value at offset (0 = current bar)
-        let x_pos = self.offset;
-        let linreg_val = intercept + slope * x_pos;
-
-        Ok(Value::Number(linreg_val))
+        Ok(Value::Number(intercept + slope * self.offset))
     }
 }

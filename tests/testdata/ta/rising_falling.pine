@@ -1,19 +1,22 @@
 // Test ta.rising and ta.falling
-// close values: 299, 300, 301 (bar 197, 198, 199 - always increasing)
+// Testing 3 bars of movement needs 4 values. Unlike the windowed averages these
+// answer false rather than na while warming up, since they return a bool.
+// Close rises every bar in this fixture.
 
-// Check if close is rising for last 3 bars (should be true)
+// Bars: 4
+
 is_rising = ta.rising(close, 3)
 log.info(is_rising)
 
-// Check if close is falling for last 3 bars (should be false, it's rising)
 is_falling = ta.falling(close, 3)
 log.info(is_falling)
 
-// Check rising for 1 bar (true, current > previous)
-is_rising1 = ta.rising(close, 1)
-log.info(is_rising1)
-
 // Expected output:
-// true
+// false
+// false
+// false
+// false
+// false
 // false
 // true
+// false

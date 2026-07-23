@@ -1,25 +1,26 @@
 // Test ta.stoch (where source sits inside the recent high/low range, as 0..100)
-// Over the last 5 bars: highest high = 304, lowest low = 290, so range = 14.
-// On the current bar close = 301, high = 304, low = 294.
+// Needs `length` bars of high and low. Over the last 5 bars the highest high is
+// 304 and the lowest low is 290, so the range is 14 and close is 301.
+
+// Bars: 5
 
 // 100 * (301 - 290) / 14
 stochClose = ta.stoch(close, high, low, 5)
 log.info(stochClose)
 
-// The source sits at the top of the range: 100 * (304 - 290) / 14
-stochHigh = ta.stoch(high, high, low, 5)
-log.info(stochHigh)
-
-// 100 * (294 - 290) / 14
-stochLow = ta.stoch(low, high, low, 5)
-log.info(stochLow)
-
-// A single bar collapses the range to high - low = 10: 100 * (301 - 294) / 10
+// Length 1 fills immediately: each bar's own range is high - low = 10, and
+// close sits 7 above the low, so this is 70 on every bar.
 stochOneBar = ta.stoch(close, high, low, 1)
 log.info(stochOneBar)
 
 // Expected output:
+// na
+// 70
+// na
+// 70
+// na
+// 70
+// na
+// 70
 // 78.57142857142857
-// 100
-// 28.571428571428573
 // 70

@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{parse_macro_input, Data, DeriveInput, Field, Fields, Meta};
 
 /// Derive macro for builtin functions
@@ -30,12 +30,13 @@ use syn::{parse_macro_input, Data, DeriveInput, Field, Fields, Meta};
 ///     }
 /// }
 /// ```
-#[proc_macro_derive(BuiltinFunction, attributes(builtin, arg, type_param))]
+#[proc_macro_derive(BuiltinFunction, attributes(builtin, arg, type_param, state))]
 pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     // Parse the function name and type params count from attributes
-    let (function_name, type_params_count, output_bound) = parse_builtin_attributes(&input);
+    let (function_name, type_params_count, output_bound, stateful) =
+        parse_builtin_attributes(&input);
 
     let struct_name = &input.ident;
 
@@ -86,32 +87,128 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
         )
     };
 
-    let expanded = quote! {
-        impl #impl_generics #struct_name #ty_generics #where_clause {
-            pub fn builtin_fn #fn_generics (
-                ctx: &mut ::pine_interpreter::Interpreter<O>,
-                call_args: ::pine_interpreter::FunctionCallArgs<O>,
-            ) -> Result<::pine_interpreter::Value<O>, ::pine_interpreter::RuntimeError> {
-                use ::pine_interpreter::{Value, RuntimeError, EvaluatedArg};
+    let body = quote! {
+        // Extract type parameters first
+        #type_param_extraction
 
-                // Extract type parameters first
-                #type_param_extraction
+        let args = call_args.args;
 
-                let args = call_args.args;
+        #field_parsing
 
-                #field_parsing
+        #field_validation
+    };
 
-                #field_validation
+    let expanded = if stateful {
+        let state_fields: Vec<_> = fields.iter().filter(|f| is_field_state(f)).collect();
+        let state_names: Vec<_> = state_fields
+            .iter()
+            .map(|f| f.ident.as_ref().unwrap())
+            .collect();
+        let state_decls: Vec<_> = state_fields
+            .iter()
+            .map(|f| {
+                let name = f.ident.as_ref().unwrap();
+                let ty = &f.ty;
+                quote! { #name: #ty }
+            })
+            .collect();
+        let slot_name = format_ident!("{}Slot", struct_name);
 
-                let instance = Self {
-                    #struct_construction
-                };
-
-                instance.execute(ctx)
+        quote! {
+            /// One call site's memory for the builtin above: its `#[state]`
+            /// fields, plus the bar it last advanced on and what it returned
+            /// then, so re-entering a call site within one bar cannot advance
+            /// the state twice.
+            #[derive(Default)]
+            #[doc(hidden)]
+            pub struct #slot_name<O: ::pine_interpreter::PineOutput> {
+                #(#state_decls,)*
+                bar_seq: u64,
+                memo: Option<::pine_interpreter::Value<O>>,
             }
 
-            pub fn name() -> &'static str {
-                #function_name
+            impl #impl_generics #struct_name #ty_generics #where_clause {
+                /// Builds the callable. Each returned closure owns the state for
+                /// every call site of this builtin, keyed by call id.
+                pub fn builtin_fn #fn_generics () -> ::pine_interpreter::BuiltinFn<O> {
+                    let slots: ::std::rc::Rc<::std::cell::RefCell<
+                        ::std::collections::HashMap<u32, #slot_name<O>>
+                    >> = Default::default();
+
+                    ::std::rc::Rc::new(move |
+                        ctx: &mut ::pine_interpreter::Interpreter<O>,
+                        call_args: ::pine_interpreter::FunctionCallArgs<O>,
+                    | -> Result<::pine_interpreter::Value<O>, ::pine_interpreter::RuntimeError> {
+                        use ::pine_interpreter::{Value, RuntimeError, EvaluatedArg};
+
+                        let call_id = call_args.call_id;
+                        let bar_seq = ctx.bar_seq();
+
+                        // Already ran on this bar: hand back the same value
+                        // rather than advancing the state again.
+                        {
+                            let slots = slots.borrow();
+                            if let Some(slot) = slots.get(&call_id) {
+                                if slot.bar_seq == bar_seq {
+                                    if let Some(memo) = &slot.memo {
+                                        return Ok(memo.clone());
+                                    }
+                                }
+                            }
+                        }
+
+                        #body
+
+                        let mut instance = Self {
+                            #struct_construction
+                        };
+
+                        // Restore what this call site accumulated on earlier bars.
+                        {
+                            let slots = slots.borrow();
+                            if let Some(slot) = slots.get(&call_id) {
+                                #(instance.#state_names = slot.#state_names.clone();)*
+                            }
+                        }
+
+                        let result = instance.execute(ctx)?;
+
+                        let mut slots = slots.borrow_mut();
+                        let slot = slots.entry(call_id).or_default();
+                        #(slot.#state_names = instance.#state_names;)*
+                        slot.bar_seq = bar_seq;
+                        slot.memo = Some(result.clone());
+
+                        Ok(result)
+                    })
+                }
+
+                pub fn name() -> &'static str {
+                    #function_name
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl #impl_generics #struct_name #ty_generics #where_clause {
+                pub fn builtin_fn #fn_generics (
+                    ctx: &mut ::pine_interpreter::Interpreter<O>,
+                    call_args: ::pine_interpreter::FunctionCallArgs<O>,
+                ) -> Result<::pine_interpreter::Value<O>, ::pine_interpreter::RuntimeError> {
+                    use ::pine_interpreter::{Value, RuntimeError, EvaluatedArg};
+
+                    #body
+
+                    let instance = Self {
+                        #struct_construction
+                    };
+
+                    instance.execute(ctx)
+                }
+
+                pub fn name() -> &'static str {
+                    #function_name
+                }
             }
         }
     };
@@ -125,10 +222,11 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
 /// (`LogOutput`, `PlotOutput`, `LabelOutput`, `BoxOutput`). It only applies to
 /// structs that declare no generics of their own — one that holds a `Value<O>`
 /// states its bounds on `O` directly.
-fn parse_builtin_attributes(input: &DeriveInput) -> (String, usize, Option<syn::Ident>) {
+fn parse_builtin_attributes(input: &DeriveInput) -> (String, usize, Option<syn::Ident>, bool) {
     let mut function_name = None;
     let mut type_params_count = 0;
     let mut output_bound = None;
+    let mut stateful = false;
 
     for attr in &input.attrs {
         if let Meta::List(meta_list) = &attr.meta {
@@ -171,13 +269,16 @@ fn parse_builtin_attributes(input: &DeriveInput) -> (String, usize, Option<syn::
                         }
                     }
                 }
+
+                // `stateful` opts the builtin into per-call-site memory.
+                stateful |= tokens_str.contains("stateful");
             }
         }
     }
 
     let function_name =
         function_name.expect("BuiltinFunction requires a #[builtin(name = \"...\")] attribute");
-    (function_name, type_params_count, output_bound)
+    (function_name, type_params_count, output_bound, stateful)
 }
 
 fn generate_type_param_extraction(
@@ -229,6 +330,18 @@ fn is_field_type_param(field: &Field) -> bool {
     })
 }
 
+/// `#[state]` marks a field that is not a Pine argument but the builtin's own
+/// memory, carried across bars by the call site rather than parsed from a call.
+fn is_field_state(field: &Field) -> bool {
+    field.attrs.iter().any(|attr| {
+        if let Meta::Path(path) = &attr.meta {
+            path.is_ident("state")
+        } else {
+            false
+        }
+    })
+}
+
 fn generate_field_parsing(
     fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>,
 ) -> proc_macro2::TokenStream {
@@ -248,6 +361,11 @@ fn generate_field_parsing(
 
         // Skip type parameter fields - they're extracted separately
         if is_field_type_param(field) {
+            continue;
+        }
+
+        // Skip state fields - they come from the call site, not the arguments
+        if is_field_state(field) {
             continue;
         }
 
@@ -507,6 +625,11 @@ fn generate_field_validation(
             continue;
         }
 
+        // Skip state fields - they are never supplied by the caller
+        if is_field_state(field) {
+            continue;
+        }
+
         // Skip variadic fields - they don't need validation
         if is_field_variadic(field) {
             continue;
@@ -542,7 +665,13 @@ fn generate_struct_construction(
         .iter()
         .map(|field| {
             let field_name = field.ident.as_ref().unwrap();
-            quote! { #field_name }
+            // State fields start empty; the call site's saved values are restored
+            // over them right after construction.
+            if is_field_state(field) {
+                quote! { #field_name: Default::default() }
+            } else {
+                quote! { #field_name }
+            }
         })
         .collect();
 

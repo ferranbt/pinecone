@@ -1,4 +1,7 @@
 mod output;
+mod series_buffer;
+
+pub use series_buffer::{SeriesBuffer, MAX_LOOKBACK};
 
 // Re-export output types and traits
 pub use output::{
@@ -395,6 +398,9 @@ pub struct Interpreter<O: PineOutput> {
     /// Lexical id of the call site currently executing (0 at top level). Scopes
     /// `var` init-once tracking to the active call site.
     current_call_id: u32,
+    /// Counts bars executed. Stateful builtins compare against it to advance
+    /// their state at most once per bar, however often their call site runs.
+    bar_seq: u64,
 }
 
 /// Names a statement block ASSIGNS (declares or writes) directly — i.e. the true
@@ -465,6 +471,7 @@ impl<O: PineOutput> Interpreter<O> {
             function_local_state: HashMap::new(),
             var_decls_initialized: std::collections::HashSet::new(),
             current_call_id: 0,
+            bar_seq: 0,
         }
     }
 
@@ -482,6 +489,7 @@ impl<O: PineOutput> Interpreter<O> {
             function_local_state: HashMap::new(),
             var_decls_initialized: std::collections::HashSet::new(),
             current_call_id: 0,
+            bar_seq: 0,
         }
     }
 
@@ -499,6 +507,7 @@ impl<O: PineOutput> Interpreter<O> {
             function_local_state: HashMap::new(),
             var_decls_initialized: std::collections::HashSet::new(),
             current_call_id: 0,
+            bar_seq: 0,
         }
     }
 
@@ -519,7 +528,14 @@ impl<O: PineOutput> Interpreter<O> {
             function_local_state: HashMap::new(),
             var_decls_initialized: std::collections::HashSet::new(),
             current_call_id: 0,
+            bar_seq: 0,
         }
+    }
+
+    /// How many bars have been executed. A stateful builtin advances its state
+    /// when this differs from the value it last saw.
+    pub fn bar_seq(&self) -> u64 {
+        self.bar_seq
     }
 
     /// Set the historical data provider
@@ -541,6 +557,8 @@ impl<O: PineOutput> Interpreter<O> {
     pub fn execute(&mut self, program: &Program) -> Result<O, RuntimeError> {
         // Clear output from previous iteration
         self.output.clear();
+        // A new bar: stateful builtins may advance their state again.
+        self.bar_seq += 1;
 
         for stmt in &program.statements {
             self.execute_stmt(stmt)?;

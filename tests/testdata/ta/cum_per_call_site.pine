@@ -1,0 +1,36 @@
+// A stateful builtin keeps its memory per CALL SITE, so two `ta.cum` calls
+// accumulate independently even though they are the same function.
+// Over the last 3 bars close is 299, 300, 301 and open is 297, 298, 299.
+
+// Bars: 3
+
+a = ta.cum(close)
+b = ta.cum(open)
+log.info(a)
+log.info(b)
+
+// A third call site over the same series keeps its own total, which happens to
+// track `a` because it sums the same values.
+c = ta.cum(close)
+log.info(c)
+
+// One call site reached twice in a single bar advances its total once, not
+// twice: the second pass gets back the value the first pass produced.
+looped = 0.0
+for i = 0 to 1
+    looped := ta.cum(close)
+log.info(looped)
+
+// Expected output:
+// 299
+// 297
+// 299
+// 299
+// 599
+// 595
+// 599
+// 599
+// 900
+// 894
+// 900
+// 900

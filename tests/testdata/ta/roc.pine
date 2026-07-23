@@ -1,17 +1,17 @@
 // Test ta.roc (Rate of Change)
-// ROC = ((current - previous) / previous) * 100
-// Current close = 301 (bar 199)
-// 5 bars ago = 296 (bar 194)
-// roc(5) = ((301 - 296) / 296) * 100 = 1.689...
+// ROC = ((current - N bars ago) / N bars ago) * 100, so it needs N+1 values.
+// Over the last 6 bars close is 296..301.
 
-// Rate of Change over 5 bars
+// Bars: 6
+
+// ((301 - 296) / 296) * 100
 roc5 = ta.roc(close, 5)
 log.info(roc5)
 
-// Rate of Change over 10 bars
-roc10 = ta.roc(close, 10)
-log.info(roc10)
-
 // Expected output:
+// na
+// na
+// na
+// na
+// na
 // 1.6891891891891893
-// 3.436426116838488

@@ -1,15 +1,13 @@
-// Test ta.stdev (Standard Deviation)
-// Last 5 closes: 301, 300, 299, 298, 297
-// Mean = 299, StdDev = sqrt(((2^2 + 1^2 + 0 + 1^2 + 2^2) / 5)) = sqrt(2) ≈ 1.414
+// Test ta.stdev (Standard Deviation, population)
+// Like Pine, na until the window has `length` bars. Over the last 3 bars close
+// is 299, 300, 301: mean 300, variance 2/3, stdev sqrt(2/3).
 
-// Standard deviation of last 5 closes
-stdev5 = ta.stdev(close, 5)
-log.info(stdev5)
+// Bars: 3
 
-// Standard deviation of last 10 closes
-stdev10 = ta.stdev(close, 10)
-log.info(stdev10)
+sd = ta.stdev(close, 3)
+log.info(sd)
 
 // Expected output:
-// 1.4142135623730951
-// 2.8722813232690143
+// na
+// na
+// 0.816496580927726

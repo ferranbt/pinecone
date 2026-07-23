@@ -23,147 +23,148 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     // Moving averages
     ta_ns.insert(
         "sma".to_string(),
-        Value::BuiltinFunction(Rc::new(TaSma::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaSma::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "ema".to_string(),
-        Value::BuiltinFunction(Rc::new(TaEma::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaEma::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "rma".to_string(),
-        Value::BuiltinFunction(Rc::new(TaRma::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaRma::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "wma".to_string(),
-        Value::BuiltinFunction(Rc::new(TaWma::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaWma::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "vwma".to_string(),
-        Value::BuiltinFunction(Rc::new(TaVwma::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaVwma::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "hma".to_string(),
-        Value::BuiltinFunction(Rc::new(TaHma::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaHma::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "swma".to_string(),
-        Value::BuiltinFunction(Rc::new(TaSwma::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaSwma::builtin_fn::<O>()),
     );
 
     // Statistics
     ta_ns.insert(
         "stdev".to_string(),
-        Value::BuiltinFunction(Rc::new(TaStdev::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaStdev::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "variance".to_string(),
-        Value::BuiltinFunction(Rc::new(TaVariance::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaVariance::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "median".to_string(),
-        Value::BuiltinFunction(Rc::new(TaMedian::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaMedian::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "dev".to_string(),
-        Value::BuiltinFunction(Rc::new(TaDev::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaDev::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "percentile_nearest_rank".to_string(),
-        Value::BuiltinFunction(Rc::new(TaPercentileNearestRank::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaPercentileNearestRank::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "cum".to_string(),
-        Value::BuiltinFunction(Rc::new(TaCum::<O>::builtin_fn)),
+        // Stateful: the closure owns this script's per-call-site running totals.
+        Value::BuiltinFunction(TaCum::builtin_fn::<O>()),
     );
 
     // Volatility
     ta_ns.insert(
         "tr".to_string(),
-        Value::BuiltinFunction(Rc::new(TaTr::builtin_fn::<O>)),
+        Value::BuiltinFunction(TaTr::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "atr".to_string(),
-        Value::BuiltinFunction(Rc::new(TaAtr::builtin_fn::<O>)),
+        Value::BuiltinFunction(TaAtr::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "bb".to_string(),
-        Value::BuiltinFunction(Rc::new(TaBb::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaBb::builtin_fn::<O>()),
     );
 
     // Comparison & Signals
     ta_ns.insert(
         "change".to_string(),
-        Value::BuiltinFunction(Rc::new(TaChange::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaChange::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "highest".to_string(),
-        Value::BuiltinFunction(Rc::new(TaHighest::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaHighest::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "lowest".to_string(),
-        Value::BuiltinFunction(Rc::new(TaLowest::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaLowest::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "highestbars".to_string(),
-        Value::BuiltinFunction(Rc::new(TaHighestbars::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaHighestbars::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "lowestbars".to_string(),
-        Value::BuiltinFunction(Rc::new(TaLowestbars::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaLowestbars::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "rising".to_string(),
-        Value::BuiltinFunction(Rc::new(TaRising::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaRising::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "falling".to_string(),
-        Value::BuiltinFunction(Rc::new(TaFalling::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaFalling::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "cross".to_string(),
-        Value::BuiltinFunction(Rc::new(TaCross::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaCross::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "crossover".to_string(),
-        Value::BuiltinFunction(Rc::new(TaCrossover::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaCrossover::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "crossunder".to_string(),
-        Value::BuiltinFunction(Rc::new(TaCrossunder::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaCrossunder::builtin_fn::<O>()),
     );
 
     // Oscillators & Indicators
     ta_ns.insert(
         "rsi".to_string(),
-        Value::BuiltinFunction(Rc::new(TaRsi::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaRsi::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "cci".to_string(),
-        Value::BuiltinFunction(Rc::new(TaCci::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaCci::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "mom".to_string(),
-        Value::BuiltinFunction(Rc::new(TaMom::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaMom::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "roc".to_string(),
-        Value::BuiltinFunction(Rc::new(TaRoc::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaRoc::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "cmo".to_string(),
-        Value::BuiltinFunction(Rc::new(TaCmo::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaCmo::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "linreg".to_string(),
-        Value::BuiltinFunction(Rc::new(TaLinreg::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaLinreg::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "stoch".to_string(),
-        Value::BuiltinFunction(Rc::new(TaStoch::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaStoch::builtin_fn::<O>()),
     );
     ta_ns.insert(
         "mfi".to_string(),
-        Value::BuiltinFunction(Rc::new(TaMfi::<O>::builtin_fn)),
+        Value::BuiltinFunction(TaMfi::builtin_fn::<O>()),
     );
 
     if matches!(version, PineVersion::V5 | PineVersion::V6) {
