@@ -41,6 +41,10 @@ bench:
 bench-one name:
     cargo bench --bench {{name}}
 
+# Run every benchmark once without measuring, to check they still build and run.
+bench-check:
+    cargo bench -p pinecone-benches -- --test
+
 # Compile all examples to verify they build
 compile-examples:
     #!/usr/bin/env bash
