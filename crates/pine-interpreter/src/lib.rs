@@ -26,10 +26,21 @@ pub trait LibraryLoader {
     fn load_library(&self, path: &str) -> Result<Program, String>;
 }
 
-/// Trait for providing historical data for series
-pub trait HistoricalDataProvider<O: PineOutput = DefaultPineOutput> {
-    /// Get historical value for a series at a given offset (0 = current, 1 = previous bar, etc.)
-    fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value<O>>;
+/// Record `value` as what `name` held on a completed bar, so `name[n]` can reach
+/// it. Entries beyond [`MAX_LOOKBACK`] are dropped.
+///
+/// Takes the history map rather than `&mut self` so callers can hold a borrow of
+/// another interpreter field while recording.
+fn push_history<O: PineOutput>(
+    history: &mut HashMap<String, Vec<Value<O>>>,
+    name: &str,
+    value: Value<O>,
+) {
+    let entries = history.entry(name.to_string()).or_default();
+    entries.push(value);
+    if entries.len() > MAX_LOOKBACK {
+        entries.drain(..entries.len() - MAX_LOOKBACK);
+    }
 }
 
 #[derive(Error, Debug)]
@@ -364,14 +375,10 @@ struct MethodDef {
 pub struct Interpreter<O: PineOutput> {
     /// Local variables in the current scope
     variables: HashMap<String, Variable<O>>,
-    /// Builtin function registry
-    builtins: HashMap<String, BuiltinFn<O>>,
     /// Method registry (method_name -> Vec<MethodDef>) - can have multiple methods with same name for different types
     methods: HashMap<String, Vec<MethodDef>>,
     /// Library loader for importing external libraries
     library_loader: Option<Box<dyn LibraryLoader>>,
-    /// Historical data provider for series lookback
-    pub historical_provider: Option<Box<dyn HistoricalDataProvider<O>>>,
     /// Exported items from this module (for library mode)
     exports: HashMap<String, Value<O>>,
     /// Output storage for plots, labels, logs, etc.
@@ -462,66 +469,7 @@ impl<O: PineOutput> Interpreter<O> {
         Self {
             variables: HashMap::new(),
             methods: HashMap::new(),
-            builtins: HashMap::new(),
             library_loader: None,
-            historical_provider: None,
-            exports: HashMap::new(),
-            output: O::default(),
-            user_series_history: HashMap::new(),
-            function_local_state: HashMap::new(),
-            var_decls_initialized: std::collections::HashSet::new(),
-            current_call_id: 0,
-            bar_seq: 0,
-        }
-    }
-
-    /// Create interpreter with custom builtins
-    pub fn with_builtins(builtins: HashMap<String, BuiltinFn<O>>) -> Self {
-        Self {
-            variables: HashMap::new(),
-            methods: HashMap::new(),
-            builtins,
-            library_loader: None,
-            historical_provider: None,
-            exports: HashMap::new(),
-            output: O::default(),
-            user_series_history: HashMap::new(),
-            function_local_state: HashMap::new(),
-            var_decls_initialized: std::collections::HashSet::new(),
-            current_call_id: 0,
-            bar_seq: 0,
-        }
-    }
-
-    /// Create interpreter with a library loader
-    pub fn with_loader(loader: Box<dyn LibraryLoader>) -> Self {
-        Self {
-            variables: HashMap::new(),
-            methods: HashMap::new(),
-            builtins: HashMap::new(),
-            library_loader: Some(loader),
-            historical_provider: None,
-            exports: HashMap::new(),
-            output: O::default(),
-            user_series_history: HashMap::new(),
-            function_local_state: HashMap::new(),
-            var_decls_initialized: std::collections::HashSet::new(),
-            current_call_id: 0,
-            bar_seq: 0,
-        }
-    }
-
-    /// Create interpreter with custom builtins and library loader
-    pub fn with_builtins_and_loader(
-        builtins: HashMap<String, BuiltinFn<O>>,
-        loader: Box<dyn LibraryLoader>,
-    ) -> Self {
-        Self {
-            variables: HashMap::new(),
-            methods: HashMap::new(),
-            builtins,
-            library_loader: Some(loader),
-            historical_provider: None,
             exports: HashMap::new(),
             output: O::default(),
             user_series_history: HashMap::new(),
@@ -536,11 +484,6 @@ impl<O: PineOutput> Interpreter<O> {
     /// when this differs from the value it last saw.
     pub fn bar_seq(&self) -> u64 {
         self.bar_seq
-    }
-
-    /// Set the historical data provider
-    pub fn set_historical_provider(&mut self, provider: Box<dyn HistoricalDataProvider<O>>) {
-        self.historical_provider = Some(provider);
     }
 
     /// Set the library loader
@@ -585,6 +528,25 @@ impl<O: PineOutput> Interpreter<O> {
         );
     }
 
+    /// Set a built-in series to its value for a new bar, keeping the outgoing
+    /// value reachable as `name[1]`.
+    ///
+    /// This is how the OHLCV series and their derivations get the same lookback
+    /// as any user variable: history accumulates as bars execute, so `close[1]`
+    /// is na until a second bar has run.
+    pub fn advance_series(&mut self, name: &str, value: Value<O>) {
+        if let Some(existing) = self.variables.get(name) {
+            // Record the number the series held, not the series wrapper, so a
+            // `name[1]` lookback reads as a plain value.
+            let previous = match &existing.value {
+                Value::Series(series) => (*series.current).clone(),
+                other => other.clone(),
+            };
+            push_history(&mut self.user_series_history, name, previous);
+        }
+        self.set_variable(name, value);
+    }
+
     /// Set a const variable (cannot be reassigned)
     pub fn set_const_variable(&mut self, name: &str, value: Value<O>) {
         self.variables.insert(
@@ -595,50 +557,6 @@ impl<O: PineOutput> Interpreter<O> {
                 is_var_persistent: false,
             },
         );
-    }
-
-    /// Helper to get series values as a Vec<f64> for the given length
-    /// Returns current value + historical values up to length-1
-    pub fn get_series_values(
-        &self,
-        source: &Value<O>,
-        length: usize,
-    ) -> Result<Vec<f64>, RuntimeError> {
-        let mut values = Vec::new();
-
-        match source {
-            Value::Series(series) => {
-                // Get current value
-                if let Value::Number(n) = *series.current {
-                    values.push(n);
-                } else {
-                    return Err(RuntimeError::TypeError(
-                        "Series must contain numbers".to_string(),
-                    ));
-                }
-
-                // Get historical values
-                if let Some(provider) = &self.historical_provider {
-                    for i in 1..length {
-                        if let Some(Value::Number(n)) = provider.get_historical(&series.id, i) {
-                            values.push(n);
-                        } else {
-                            break;
-                        }
-                    }
-                }
-            }
-            Value::Number(n) => {
-                values.push(*n);
-            }
-            _ => {
-                return Err(RuntimeError::TypeError(
-                    "source must be a number or series".to_string(),
-                ));
-            }
-        }
-
-        Ok(values)
     }
 
     /// Helper to evaluate arguments and validate positional-before-named rule
@@ -704,11 +622,7 @@ impl<O: PineOutput> Interpreter<O> {
                 // the Assignment handler does for `:=` reassignments.
                 if !is_var_persistent {
                     if let Some(existing) = self.variables.get(name) {
-                        let hist = self.user_series_history.entry(name.clone()).or_default();
-                        hist.push(existing.value.clone());
-                        if hist.len() > 500 {
-                            hist.drain(..hist.len() - 500);
-                        }
+                        push_history(&mut self.user_series_history, name, existing.value.clone());
                     }
                 }
                 let value = if let Some(init_expr) = initializer {
@@ -736,11 +650,7 @@ impl<O: PineOutput> Interpreter<O> {
                 if let Expr::Variable(name) = target {
                     if let Some(var) = self.variables.get(name) {
                         if var.is_var_persistent {
-                            let hist = self.user_series_history.entry(name.clone()).or_default();
-                            hist.push(var.value.clone());
-                            if hist.len() > 500 {
-                                hist.drain(..hist.len() - 500);
-                            }
+                            push_history(&mut self.user_series_history, name, var.value.clone());
                         }
                     }
                 }
@@ -756,12 +666,11 @@ impl<O: PineOutput> Interpreter<O> {
                                 }
                                 if !var.is_var_persistent {
                                     // Non-var: push current value to history after eval (Pine [n] lookback).
-                                    let hist =
-                                        self.user_series_history.entry(name.clone()).or_default();
-                                    hist.push(var.value.clone());
-                                    if hist.len() > 500 {
-                                        hist.drain(..hist.len() - 500);
-                                    }
+                                    push_history(
+                                        &mut self.user_series_history,
+                                        name,
+                                        var.value.clone(),
+                                    );
                                 }
                                 // var-persistent: already pushed before eval above.
                                 (false, var.is_var_persistent)
@@ -818,11 +727,7 @@ impl<O: PineOutput> Interpreter<O> {
                     for (i, name) in names.iter().enumerate() {
                         // Push current value to history before overwriting (supports [n] lookback).
                         if let Some(var) = self.variables.get(name) {
-                            let hist = self.user_series_history.entry(name.clone()).or_default();
-                            hist.push(var.value.clone());
-                            if hist.len() > 500 {
-                                hist.drain(..hist.len() - 500);
-                            }
+                            push_history(&mut self.user_series_history, name, var.value.clone());
                         }
                         let element_val = arr.get(i).cloned().unwrap_or(Value::Na);
                         self.variables.insert(
@@ -1246,17 +1151,11 @@ impl<O: PineOutput> Interpreter<O> {
         match expr {
             Expr::Literal(lit) => Ok(self.eval_literal(lit)),
 
-            Expr::Variable(name) => {
-                // Check builtins first, then variables
-                if let Some(builtin_fn) = self.builtins.get(name).cloned() {
-                    Ok(Value::BuiltinFunction(builtin_fn))
-                } else {
-                    self.variables
-                        .get(name)
-                        .map(|var| var.value.clone())
-                        .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone()))
-                }
-            }
+            Expr::Variable(name) => self
+                .variables
+                .get(name)
+                .map(|var| var.value.clone())
+                .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone())),
 
             Expr::Binary {
                 left, op, right, ..
@@ -1368,14 +1267,14 @@ impl<O: PineOutput> Interpreter<O> {
                             .ok_or(RuntimeError::IndexOutOfBounds(index_val))
                     }
                     Value::Series(series) => {
-                        // For series, index 0 is current value, index > 0 queries historical provider
+                        // Index 0 is this bar. Anything further back lives in
+                        // `user_series_history`, which the branch above already
+                        // consulted for a named variable — reaching here means
+                        // the series has no recorded history, which is na.
                         if index_val == 0 {
                             Ok((*series.current).clone())
                         } else {
-                            self.historical_provider
-                                .as_ref()
-                                .and_then(|p| p.get_historical(&series.id, index_val))
-                                .ok_or(RuntimeError::IndexOutOfBounds(index_val))
+                            Ok(Value::Na)
                         }
                     }
                     ref v => Err(RuntimeError::TypeError(format!(

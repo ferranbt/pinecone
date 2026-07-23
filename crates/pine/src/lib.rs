@@ -9,9 +9,9 @@ use pine_ast::Program;
 use pine_core::{PineVersion, SymInfo, Timeframe, VersionError};
 use pine_diagnostics::Diagnostic;
 use pine_interpreter::{
-    AlertConditionOutput, Bar, BoxOutput, FillOutput, GlobalOutput, HistoricalDataProvider,
-    IndicatorOutput, InputOutput, Interpreter, LabelOutput, LibraryLoader, LineOutput, LogOutput,
-    PineOutput, PlotOutput, RuntimeError, TableOutput, Value,
+    AlertConditionOutput, Bar, BoxOutput, FillOutput, GlobalOutput, IndicatorOutput, InputOutput,
+    Interpreter, LabelOutput, LibraryLoader, LineOutput, LogOutput, PineOutput, PlotOutput,
+    RuntimeError, TableOutput, Value,
 };
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
@@ -81,7 +81,6 @@ impl From<VersionError> for Error {
 pub struct ScriptBuilder<O: PineOutput> {
     source: String,
     custom_variables: HashMap<String, Value<O>>,
-    historical_provider: Option<Box<dyn HistoricalDataProvider<O>>>,
     library_loader: Option<Box<dyn LibraryLoader>>,
     syminfo: Option<SymInfo>,
     timeframe: Option<Timeframe>,
@@ -92,7 +91,6 @@ impl<O: PineOutput> ScriptBuilder<O> {
         Self {
             source: source.to_string(),
             custom_variables: HashMap::new(),
-            historical_provider: None,
             library_loader: None,
             syminfo: None,
             timeframe: None,
@@ -103,14 +101,6 @@ impl<O: PineOutput> ScriptBuilder<O> {
     /// alongside the builtin namespaces.
     pub fn with_custom_variables(mut self, variables: HashMap<String, Value<O>>) -> Self {
         self.custom_variables = variables;
-        self
-    }
-
-    pub fn with_historical_provider(
-        mut self,
-        provider: Box<dyn HistoricalDataProvider<O>>,
-    ) -> Self {
-        self.historical_provider = Some(provider);
         self
     }
 
@@ -194,9 +184,6 @@ impl<O: PineOutput> ScriptBuilder<O> {
 
         // Create interpreter and load builtin namespace objects
         let mut interpreter = Interpreter::new();
-        if let Some(historical_provider) = self.historical_provider {
-            interpreter.set_historical_provider(historical_provider);
-        }
         if let Some(library_loader) = self.library_loader {
             interpreter.set_library_loader(library_loader);
         }
@@ -243,7 +230,7 @@ impl<O: PineOutput> Script<O> {
             ("hlcc4", (bar.high + bar.low + bar.close * 2.0) / 4.0),
             ("ohlc4", (bar.open + bar.high + bar.low + bar.close) / 4.0),
         ] {
-            self.interpreter.set_variable(
+            self.interpreter.advance_series(
                 id,
                 Value::Series(Series {
                     id: id.to_string(),

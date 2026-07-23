@@ -1,23 +1,36 @@
 // Test using series in expressions
-// Bar 199: close=301, Bar 198: close=300, Bar 197: close=299
+//
+// Lookbacks read from history built as bars execute, so an expression reaching
+// back is na until enough bars have run. Over the last 3 bars close is
+// 299, 300, 301.
 
-// Calculate change from previous bar
+// Bars: 3
+
+// Change from the previous bar
 change = close[0] - close[1]
 log.info(change)
 
-// Calculate average of current and previous
+// Average of this bar and the previous one
 avg = (close[0] + close[1]) / 2
 log.info(avg)
 
-// Check if price is rising
+// Comparing against a missing bar is na, not false
 is_rising = close[0] > close[1]
 log.info(is_rising)
 
-// Calculate sum of last 3 bars
+// Sum over 3 bars needs all three of them
 sum3 = close[0] + close[1] + close[2]
 log.info(sum3)
 
 // Expected output:
+// na
+// na
+// na
+// na
+// 1
+// 299.5
+// true
+// na
 // 1
 // 300.5
 // true

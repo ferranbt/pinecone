@@ -1,25 +1,26 @@
 // Test series indexing (accessing historical values)
-// The test framework provides 200 bars of historical data
-// Bar 199 (current): close = 301, Bar 198: close = 300, Bar 197: close = 299
+//
+// A series' history accumulates as bars execute, so a lookback deeper than the
+// number of bars run so far is na. Over the last 3 bars close is 299, 300, 301.
 
-// Access current value (index 0)
-current = close[0]
-log.info(current)
+// Bars: 3
 
-// Access previous bar (index 1)
-prev1 = close[1]
-log.info(prev1)
+// Current bar
+log.info(close[0])
 
-// Access 2 bars ago (index 2)
-prev2 = close[2]
-log.info(prev2)
+// Previous bar — na until a second bar has run
+log.info(close[1])
 
-// Access 5 bars ago (index 5)
-prev5 = close[5]
-log.info(prev5)
+// Two bars back — na until a third has run
+log.info(close[2])
 
 // Expected output:
+// 299
+// na
+// na
+// 300
+// 299
+// na
 // 301
 // 300
 // 299
-// 296
