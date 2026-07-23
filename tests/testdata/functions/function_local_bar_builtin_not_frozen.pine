@@ -1,0 +1,17 @@
+// A host bar builtin (`open`) read inside a user function must reflect the
+// CURRENT bar on every bar — it must not be frozen at the first call's value.
+// Regression: the call-site local-state save kept every non-parameter name in
+// scope, including inherited builtins like `open`, and restored them stale on
+// the next bar, so any stateful indicator that reads open/high/low/close inside
+// a function (e.g. a recursive Heikin-Ashi open) silently froze.
+
+// Bars: 4
+f() =>
+    open + 10.0
+log.info(f())
+
+// Expected output:
+// 306
+// 307
+// 308
+// 309
