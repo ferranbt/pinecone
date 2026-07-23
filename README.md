@@ -1,7 +1,5 @@
 # Pinecone
 
-[![CodSpeed Badge](https://img.shields.io/endpoint?url=https://app.codspeed.io/ferranbt/pinecone/badge.json)](https://app.codspeed.io/ferranbt/pinecone?utm_source=badge)
-
 A modular PineScript interpreter written in Rust.
 
 Pinecone executes PineScript code (TradingView's scripting language) with support for technical analysis, custom indicators, and strategy backtesting. The interpreter is designed to be extensible - you can add custom builtin functions and output types to integrate with your own systems.
