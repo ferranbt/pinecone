@@ -1,0 +1,13 @@
+// Test ta.mfi (Money Flow Index)
+// Every fixture bar closes higher than the last, so all money flow is positive
+// and the negative side stays at 0 — the saturated end of the index.
+mfi14 = ta.mfi(close, 14)
+log.info(mfi14)
+
+// A plain number has no history, so no bar has a predecessor to compare against.
+mfiConst = ta.mfi(3, 14)
+log.info(mfiConst)
+
+// Expected output:
+// 100
+// na

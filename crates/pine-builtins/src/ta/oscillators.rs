@@ -202,6 +202,99 @@ impl<O: PineOutput> TaCmo<O> {
     }
 }
 
+/// ta.stoch(source, high, low, length) - Stochastic: where `source` sits inside
+/// the `[lowest(low), highest(high)]` range of the last `length` bars, as 0..100.
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.stoch")]
+pub struct TaStoch<O: PineOutput> {
+    source: Value<O>,
+    high: Value<O>,
+    low: Value<O>,
+    length: f64,
+}
+
+impl<O: PineOutput> TaStoch<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let length = self.length as usize;
+        if length == 0 {
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
+        }
+
+        let source = ctx.get_series_values(&self.source, 1)?;
+        let highs = ctx.get_series_values(&self.high, length)?;
+        let lows = ctx.get_series_values(&self.low, length)?;
+
+        if source.is_empty() || highs.is_empty() || lows.is_empty() {
+            return Ok(Value::Na);
+        }
+
+        let highest = highs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let lowest = lows.iter().copied().fold(f64::INFINITY, f64::min);
+
+        let range = highest - lowest;
+        if range == 0.0 {
+            return Ok(Value::Number(0.0));
+        }
+
+        Ok(Value::Number(100.0 * (source[0] - lowest) / range))
+    }
+}
+
+/// ta.mfi(source, length) - Money Flow Index: RSI weighted by volume, where a
+/// bar's money flow counts as positive or negative according to the sign of the
+/// change in `source`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.mfi")]
+pub struct TaMfi<O: PineOutput> {
+    source: Value<O>,
+    length: f64,
+}
+
+impl<O: PineOutput> TaMfi<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let length = self.length as usize;
+        if length == 0 {
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
+        }
+
+        let volume = ctx
+            .get_variable("volume")
+            .ok_or_else(|| RuntimeError::UndefinedVariable("volume".to_string()))?
+            .clone();
+
+        // One extra source value: each of the `length` bars needs its predecessor
+        // to know whether its money flow is positive or negative.
+        let values = ctx.get_series_values(&self.source, length + 1)?;
+        let volumes = ctx.get_series_values(&volume, length)?;
+
+        let bars = (values.len().saturating_sub(1)).min(volumes.len());
+        if bars == 0 {
+            return Ok(Value::Na);
+        }
+
+        let mut positive = 0.0;
+        let mut negative = 0.0;
+        for i in 0..bars {
+            let flow = values[i] * volumes[i];
+            if values[i] > values[i + 1] {
+                positive += flow;
+            } else if values[i] < values[i + 1] {
+                negative += flow;
+            }
+        }
+
+        if negative == 0.0 {
+            return Ok(Value::Number(100.0));
+        }
+
+        Ok(Value::Number(100.0 - 100.0 / (1.0 + positive / negative)))
+    }
+}
+
 /// ta.linreg(source, length, offset) - Linear Regression
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.linreg")]

@@ -88,6 +88,10 @@ mod tests {
                 "low" => bar.low,
                 "close" => bar.close,
                 "volume" => bar.volume,
+                "hl2" => (bar.high + bar.low) / 2.0,
+                "hlc3" => (bar.high + bar.low + bar.close) / 3.0,
+                "hlcc4" => (bar.high + bar.low + bar.close * 2.0) / 4.0,
+                "ohlc4" => (bar.open + bar.high + bar.low + bar.close) / 4.0,
                 _ => return None,
             };
 

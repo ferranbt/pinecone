@@ -1,0 +1,25 @@
+// The derived price series are set per bar alongside OHLCV, and carry a series
+// id so they index into history like close does.
+// Current bar: open = 299, high = 304, low = 294, close = 301.
+
+// (304 + 294) / 2
+log.info(hl2[0])
+
+// (304 + 294 + 301) / 3
+log.info(hlc3[0])
+
+// (304 + 294 + 301 * 2) / 4
+log.info(hlcc4[0])
+
+// (299 + 304 + 294 + 301) / 4
+log.info(ohlc4[0])
+
+// Previous bar: high = 303, low = 293
+log.info(hl2[1])
+
+// Expected output:
+// 299
+// 299.6666666666667
+// 300
+// 299.5
+// 298

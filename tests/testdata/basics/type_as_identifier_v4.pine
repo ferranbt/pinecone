@@ -1,0 +1,12 @@
+//@version=4
+// `type` only became a keyword in v5, so a v4 script may use it as an ordinary
+// name — including as a function parameter, which is how it shows up in the wild.
+//
+// v4 has no `log.*` namespace — bare `log` is math's natural logarithm — so this
+// fixture can't print. It asserts the v4 spelling parses and runs.
+_label(type) => "ESD:" + type
+
+type = "EARNINGS"
+tag = _label(type)
+
+// Expected output:

@@ -1,0 +1,19 @@
+// Test ta.cum (cumulative sum from the first bar)
+// The fixture has 200 bars: close = 102 + i, volume = 1000 + 10i (i = 0..199)
+
+// Sum of every close: 200 * 102 + (0 + 1 + ... + 199) = 20400 + 19900
+cumClose = ta.cum(close)
+log.info(cumClose)
+
+// Sum of every volume: 200 * 1000 + 10 * 19900
+cumVolume = ta.cum(volume)
+log.info(cumVolume)
+
+// A plain number has no history, so it contributes only the current bar.
+cumConst = ta.cum(3)
+log.info(cumConst)
+
+// Expected output:
+// 40300
+// 399000
+// 3

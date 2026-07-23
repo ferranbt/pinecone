@@ -329,18 +329,24 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
         Value::BuiltinFunction(Rc::new(StrRepeat::builtin_fn::<O>)),
     );
 
-    if matches!(version, PineVersion::V5 | PineVersion::V6) {
-        let mut obj: HashMap<String, Value<O>> = HashMap::new();
-        obj.insert(
-            "str".to_string(),
-            Value::Object {
-                type_name: "str".to_string(),
-                fields: Rc::new(RefCell::new(str_ns)),
-                call: None,
-            },
-        );
-        obj
-    } else {
-        str_ns
+    let mut out: HashMap<String, Value<O>> = HashMap::new();
+
+    // `str.*` has been a namespace since v4; `tostring`/`tonumber` only moved
+    // into it in v5, so before then they are global instead.
+    if version < PineVersion::V5 {
+        for name in ["tostring", "tonumber"] {
+            let func = str_ns.remove(name).expect("registered above");
+            out.insert(name.to_string(), func);
+        }
     }
+
+    out.insert(
+        "str".to_string(),
+        Value::Object {
+            type_name: "str".to_string(),
+            fields: Rc::new(RefCell::new(str_ns)),
+            call: None,
+        },
+    );
+    out
 }

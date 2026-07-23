@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 eyre = { workspace = true }
+pine-core = { workspace = true }
 thiserror = { workspace = true }
