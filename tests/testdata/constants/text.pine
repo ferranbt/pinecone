@@ -1,0 +1,11 @@
+// text.* constants resolve to their string tag.
+log.info(text.align_left)
+log.info(text.align_center)
+log.info(text.align_right)
+log.info(text.wrap_auto)
+
+// Expected output:
+// align_left
+// align_center
+// align_right
+// wrap_auto

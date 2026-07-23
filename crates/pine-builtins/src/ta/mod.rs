@@ -1,5 +1,7 @@
+use pine_core::PineVersion;
 use pine_interpreter::{PineOutput, Value};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 mod comparison;
@@ -15,8 +17,8 @@ pub use statistics::*;
 pub use volatility::*;
 
 /// Register all ta namespace functions and return the namespace object
-pub fn register<O: PineOutput>() -> Value<O> {
-    let mut ta_ns: std::collections::HashMap<String, Value<O>> = std::collections::HashMap::new();
+pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>> {
+    let mut ta_ns: HashMap<String, Value<O>> = HashMap::new();
 
     // Moving averages
     ta_ns.insert(
@@ -148,9 +150,18 @@ pub fn register<O: PineOutput>() -> Value<O> {
         Value::BuiltinFunction(Rc::new(TaLinreg::<O>::builtin_fn)),
     );
 
-    Value::Object {
-        type_name: "ta".to_string(),
-        fields: Rc::new(RefCell::new(ta_ns)),
-        call: None,
+    if matches!(version, PineVersion::V5 | PineVersion::V6) {
+        let mut obj: HashMap<String, Value<O>> = HashMap::new();
+        obj.insert(
+            "ta".to_string(),
+            Value::Object {
+                type_name: "ta".to_string(),
+                fields: Rc::new(RefCell::new(ta_ns)),
+                call: None,
+            },
+        );
+        obj
+    } else {
+        ta_ns
     }
 }

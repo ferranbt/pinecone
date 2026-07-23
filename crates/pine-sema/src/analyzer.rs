@@ -32,7 +32,7 @@ pub struct Analyzer<'a, O: PineOutput> {
 }
 
 /// The script-declaration functions — a script must have exactly one.
-const SCRIPT_DECLARATIONS: &[&str] = &["indicator", "strategy", "library"];
+const SCRIPT_DECLARATIONS: &[&str] = &["study", "indicator", "strategy", "library"];
 
 impl<'a, O: PineOutput> Analyzer<'a, O> {
     pub fn new(builtins: &'a HashMap<String, Value<O>>) -> Self {

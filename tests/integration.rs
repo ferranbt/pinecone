@@ -26,6 +26,7 @@ mod tests {
                 low: base - 5.0,
                 close: base + 2.0,
                 volume: 1000.0 + (i as f64 * 10.0),
+                index: i as u64,
                 // A distinct per-bar timestamp so the `time` fixture can assert it.
                 time: (i as i64) * 1000,
                 // Dummy barstate

@@ -168,7 +168,16 @@ impl<O: PineOutput> ScriptBuilder<O> {
         for (name, value) in pine_builtins::register_per_bar(&Bar::default()) {
             builtins.insert(name, value);
         }
-        for name in ["open", "high", "low", "close", "volume", "ohlc4", "hl2"] {
+        for name in [
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "ohlc4",
+            "hl2",
+            "bar_index",
+        ] {
             builtins.insert(name.to_string(), Value::Na);
         }
         for (name, value) in &self.custom_variables {
@@ -255,6 +264,8 @@ impl<O: PineOutput> Script<O> {
                 current: Box::new(Value::Number(bar.volume)),
             }),
         );
+        self.interpreter
+            .set_variable("bar_index", Value::Number(bar.index as f64));
 
         // Per-bar namespaces (barstate) are rebuilt from this bar's flags.
         for (name, value) in pine_builtins::register_per_bar(bar) {

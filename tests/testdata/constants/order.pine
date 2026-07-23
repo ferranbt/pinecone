@@ -1,0 +1,7 @@
+// order.* constants resolve to their string tag.
+log.info(order.ascending)
+log.info(order.descending)
+
+// Expected output:
+// ascending
+// descending

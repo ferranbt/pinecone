@@ -8,6 +8,8 @@
 pub mod display;
 pub mod format;
 pub mod location;
+pub mod order;
 pub mod position;
 pub mod shape;
 pub mod size;
+pub mod text;
