@@ -397,6 +397,53 @@ pub struct Interpreter<O: PineOutput> {
     current_call_id: u32,
 }
 
+/// Names a statement block ASSIGNS (declares or writes) directly — i.e. the true
+/// locals of a function body. Reads (e.g. `open`) are ignored, and nested function
+/// declarations are a separate scope so their bodies are not descended into. Used to
+/// decide which variables a call site's persistent state should carry across bars.
+fn collect_assigned_names(body: &[Stmt], out: &mut std::collections::HashSet<String>) {
+    for s in body {
+        match s {
+            Stmt::VarDecl { name, .. } => {
+                out.insert(name.clone());
+            }
+            Stmt::Assignment {
+                target: Expr::Variable(n),
+                ..
+            } => {
+                out.insert(n.clone());
+            }
+            Stmt::TupleAssignment { names, .. } => {
+                for n in names {
+                    out.insert(n.clone());
+                }
+            }
+            Stmt::If {
+                then_branch,
+                else_if_branches,
+                else_branch,
+                ..
+            } => {
+                collect_assigned_names(then_branch, out);
+                for (_, b) in else_if_branches {
+                    collect_assigned_names(b, out);
+                }
+                if let Some(b) = else_branch {
+                    collect_assigned_names(b, out);
+                }
+            }
+            Stmt::For { var_name, body, .. } => {
+                out.insert(var_name.clone());
+                collect_assigned_names(body, out);
+            }
+            Stmt::While { body, .. } | Stmt::ForIn { body, .. } => {
+                collect_assigned_names(body, out)
+            }
+            _ => {}
+        }
+    }
+}
+
 /// Pine `na` is float NaN. NaN can also reach `==`/`!=` wrapped as a
 /// `Value::Number(NaN)` (ta.* functions return `Number(NaN)` for all-NaN
 /// windows) rather than `Value::Na` — both forms make the comparison yield na.
@@ -1802,9 +1849,17 @@ impl<O: PineOutput> Interpreter<O> {
         // outer/global scope, so two call sites keep independent state.
         let call_vars = std::mem::replace(&mut self.variables, saved_vars);
         if call_id != 0 {
+            // Persist only the names the body actually ASSIGNS — its true locals
+            // (both `var` and plain, so their series history advances). The scope
+            // also holds read-only builtins/globals inherited from the outer scope
+            // (`open`/`high`/`low`/`close`/…); saving one of those would restore it
+            // stale on the next call, freezing any indicator that reads it inside
+            // the function (e.g. a recursive Heikin-Ashi open).
+            let mut assigned: std::collections::HashSet<String> = std::collections::HashSet::new();
+            collect_assigned_names(body, &mut assigned);
             let local_state: HashMap<String, Variable<O>> = call_vars
                 .into_iter()
-                .filter(|(k, _)| !param_names.contains(k))
+                .filter(|(k, _)| !param_names.contains(k) && assigned.contains(k))
                 .collect();
             self.function_local_state.insert(call_id, local_state);
         }
