@@ -1,3 +1,5 @@
+//@version=5
+indicator("plot/basic_plot")
 // Test basic plot function
 value = 100.0
 p = plot(value, title="Test Plot")

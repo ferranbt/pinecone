@@ -1,3 +1,5 @@
+//@version=5
+indicator("variables/sema_block_local_does_not_leak")
 if close > open
     t = 1
 x = t

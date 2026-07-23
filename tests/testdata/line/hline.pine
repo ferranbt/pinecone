@@ -1,9 +1,11 @@
+//@version=5
+indicator("line/hline")
 // hline draws a horizontal line at a fixed price. It reuses the line sink, so
 // the id it returns reads back through the line.get_* getters (y1 == y2 == price).
 h = hline(2.0, title="Upper Band", color=color.red, linestyle=hline.style_dotted)
-log.info(line.get_y1(h))
-log.info(line.get_y2(h))
-log.info(hline.style_dotted)
+log.info(str.tostring(line.get_y1(h)))
+log.info(str.tostring(line.get_y2(h)))
+log.info(str.tostring(hline.style_dotted))
 
 // Expected output:
 // 2

@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/error_const_param_reassignment")
 // Test that const function parameters cannot be reassigned
 
 modify(const int x) =>

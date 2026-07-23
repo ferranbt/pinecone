@@ -1,3 +1,5 @@
+//@version=5
+indicator("functions/function_local_var_persists")
 // Pine functions keep local state across calls: a `var` declared inside a
 // function body initializes once and persists across bars, so the local counter
 // accumulates each time the function is called.
@@ -9,7 +11,7 @@ f_counter() =>
     n
 
 c = f_counter()
-log.info(c)
+log.info(str.tostring(c))
 
 // Expected output:
 // 1

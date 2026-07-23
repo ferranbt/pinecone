@@ -1,3 +1,5 @@
+//@version=5
+indicator("loops/while_loop")
 // Test while loops
 
 // Simple while loop
@@ -6,7 +8,7 @@ var sum1 = 0
 while i < 5
     sum1 := sum1 + i
     i := i + 1
-log.info(sum1)
+log.info(str.tostring(sum1))
 
 // While with break
 var j = 0
@@ -16,7 +18,7 @@ while j < 10
         break
     sum2 := sum2 + j
     j := j + 1
-log.info(sum2)
+log.info(str.tostring(sum2))
 
 // While with continue (sum only odd numbers)
 var k = 0
@@ -26,7 +28,7 @@ while k < 10
     if k % 2 == 0
         continue
     sum3 := sum3 + k
-log.info(sum3)
+log.info(str.tostring(sum3))
 
 // Expected output:
 // 10

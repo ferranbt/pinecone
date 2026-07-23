@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/stdev")
 // Test ta.stdev (Standard Deviation, population)
 // Like Pine, na until the window has `length` bars. Over the last 3 bars close
 // is 299, 300, 301: mean 300, variance 2/3, stdev sqrt(2/3).
@@ -5,9 +7,9 @@
 // Bars: 3
 
 sd = ta.stdev(close, 3)
-log.info(sd)
+log.info(str.tostring(sd))
 
 // Expected output:
-// na
-// na
+// NaN
+// NaN
 // 0.816496580927726

@@ -1,3 +1,5 @@
+//@version=5
+indicator("table/basic_operations")
 // table.* create / mutate / delete. Tables have no getters in Pine, so this
 // asserts the ids from table.new and that the cell / style / delete calls run
 // without error (cell contents can't be read back from a script).
@@ -7,10 +9,10 @@ table.cell(t, 1, 1, "B")
 table.cell_set_text(t, 0, 0, "AA")
 table.cell_set_bgcolor(t, 1, 1, color.red)
 table.set_bgcolor(t, color.black)
-log.info(t)
+log.info(str.tostring(t))
 
 t2 = table.new(position.bottom_left, 1, 1)
-log.info(t2)
+log.info(str.tostring(t2))
 table.clear(t2)
 table.delete(t2)
 

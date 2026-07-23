@@ -1,3 +1,5 @@
+//@version=5
+indicator("series/indexing")
 // Test series indexing (accessing historical values)
 //
 // A series' history accumulates as bars execute, so a lookback deeper than the
@@ -6,21 +8,21 @@
 // Bars: 3
 
 // Current bar
-log.info(close[0])
+log.info(str.tostring(close[0]))
 
 // Previous bar — na until a second bar has run
-log.info(close[1])
+log.info(str.tostring(close[1]))
 
 // Two bars back — na until a third has run
-log.info(close[2])
+log.info(str.tostring(close[2]))
 
 // Expected output:
 // 299
-// na
-// na
+// NaN
+// NaN
 // 300
 // 299
-// na
+// NaN
 // 301
 // 300
 // 299

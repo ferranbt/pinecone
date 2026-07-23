@@ -27,7 +27,7 @@
                   "op": "Add",
                   "right": {
                     "Literal": {
-                      "Number": 1.0
+                      "Int": 1
                     }
                   }
                 }

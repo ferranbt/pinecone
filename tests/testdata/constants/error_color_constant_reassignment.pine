@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/error_color_constant_reassignment")
 // Test that color constants cannot be reassigned
 
 color.red := color.blue  // This should fail

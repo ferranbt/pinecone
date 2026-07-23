@@ -1,9 +1,11 @@
+//@version=5
+indicator("array/new_and_size")
 // Test array.new_float and array.size
 
 a_float = array.new_float(3, 10.0)
 size1 = array.size(a_float)
 
-log.info(size1)
+log.info(str.tostring(size1))
 
 // Expected output:
 // 3

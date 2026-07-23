@@ -1,10 +1,12 @@
+//@version=5
+indicator("time/timenow")
 // `timenow` is the current UTC time in milliseconds. It is wall-clock, so it
 // can only be asserted relatively: it must sit past a fixed date in the past.
-log.info(timenow > timestamp(2024, 1, 1, 0, 0))
+log.info(str.tostring(timenow > timestamp(2024, 1, 1, 0, 0)))
 
 // Unlike `time`, which is the bar's own opening timestamp, `timenow` is not
 // bar data — the fixture's bars are timestamped near the epoch.
-log.info(timenow > time)
+log.info(str.tostring(timenow > time))
 
 // Expected output:
 // true

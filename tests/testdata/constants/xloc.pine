@@ -1,6 +1,8 @@
+//@version=5
+indicator("constants/xloc")
 // xloc.* constants resolve to their string tag.
-log.info(xloc.bar_index)
-log.info(xloc.bar_time)
+log.info(str.tostring(xloc.bar_index))
+log.info(str.tostring(xloc.bar_time))
 
 // Expected output:
 // bar_index

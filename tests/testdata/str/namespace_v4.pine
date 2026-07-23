@@ -1,4 +1,5 @@
 //@version=4
+study("str/namespace_v4")
 // v4 already had the `str.*` namespace; only `tostring`/`tonumber` moved into it
 // in v5, so in v4 those two are also global.
 //

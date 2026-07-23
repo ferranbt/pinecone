@@ -1,22 +1,24 @@
+//@version=5
+indicator("control_flow/ternary")
 // Test ternary (conditional) expressions
 
 // Simple ternary
 result1 = 10 > 5 ? 100 : 200
-log.info(result1)
+log.info(str.tostring(result1))
 
 result2 = 3 > 5 ? 100 : 200
-log.info(result2)
+log.info(str.tostring(result2))
 
 // Nested ternary
 var x = 7
 result3 = x < 5 ? 1 : x < 10 ? 2 : 3
-log.info(result3)
+log.info(str.tostring(result3))
 
 // Ternary with expressions
 var a = 10
 var b = 20
 result4 = a > b ? a + 10 : b + 10
-log.info(result4)
+log.info(str.tostring(result4))
 
 // Expected output:
 // 100

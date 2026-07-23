@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/cci")
 // Test ta.cci (Commodity Channel Index)
 // (source - sma) / (0.015 * mean absolute deviation) over the window.
 // Over the last 5 bars close is 297..301, so sma = 299 and mad = 1.2.
@@ -6,11 +8,11 @@
 
 // (301 - 299) / (0.015 * 1.2) = 2 / 0.018
 cci5 = ta.cci(close, 5)
-log.info(cci5)
+log.info(str.tostring(cci5))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 111.11111111111111

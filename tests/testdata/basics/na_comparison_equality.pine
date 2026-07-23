@@ -1,38 +1,40 @@
+//@version=5
+indicator("basics/na_comparison_equality")
 // Pine semantics: `==` / `!=` where either operand is na yield na, including
 // `na == na` (testing for na requires the na() function). This also holds when
 // the na arrives as a computed NaN inside a number (e.g. math.sqrt(-1.0))
 // rather than the `na` value.
 
 // An na operand makes == / != yield na
-log.info(1 != na)
-log.info(na != 1)
-log.info(1 == na)
-log.info(na == 1)
-log.info(na == na)
+log.info(str.tostring(1 != na))
+log.info(str.tostring(na != 1))
+log.info(str.tostring(1 == na))
+log.info(str.tostring(na == 1))
+log.info(str.tostring(na == na))
 
 // A computed NaN number behaves the same as na
 nanv = math.sqrt(-1.0)
-log.info(nanv == nanv)
-log.info(nanv != nanv)
-log.info(1 == nanv)
-log.info(nanv != 1)
+log.info(str.tostring(nanv == nanv))
+log.info(str.tostring(nanv != nanv))
+log.info(str.tostring(1 == nanv))
+log.info(str.tostring(nanv != 1))
 
 // Without an na operand, == / != stay boolean
-log.info(1 == 1)
-log.info(1 != 1)
-log.info(1 != 2)
-log.info("a" == "a")
+log.info(str.tostring(1 == 1))
+log.info(str.tostring(1 != 1))
+log.info(str.tostring(1 != 2))
+log.info(str.tostring("a" == "a"))
 
 // Expected output:
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
 // true
 // false
 // true

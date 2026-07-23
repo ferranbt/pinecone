@@ -1,3 +1,5 @@
+//@version=5
+indicator("array/clear")
 // Test array.clear
 
 a = array.new_float(0, 0.0)
@@ -5,12 +7,12 @@ array.push(a, 10.0)
 array.push(a, 20.0)
 
 size1 = array.size(a)
-log.info(size1)
+log.info(str.tostring(size1))
 
 array.clear(a)
 
 size2 = array.size(a)
-log.info(size2)
+log.info(str.tostring(size2))
 
 // Expected output:
 // 2

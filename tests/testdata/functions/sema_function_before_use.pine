@@ -1,5 +1,7 @@
+//@version=5
+indicator("functions/sema_function_before_use")
 x = f(1)
 f(a) => a * 2
 
 // Expected error:
-// error [unknown-function] 1:6: unknown function `f`
+// error [unknown-function] 3:6: unknown function `f`

@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/hma")
 // Test ta.hma (Hull Moving Average)
 // wma(2 * wma(source, length/2) - wma(source, length), sqrt(length)), so it
 // needs `length` bars for the inner averages and sqrt(length)-1 more for the
@@ -13,17 +15,17 @@
 // Bars: 11
 
 hma9 = ta.hma(close, 9)
-log.info(hma9)
+log.info(str.tostring(hma9))
 
 // Expected output:
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
 // 301.00000000000006

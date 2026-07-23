@@ -1,3 +1,5 @@
+//@version=5
+indicator("loops/var_init_once_in_loop")
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -16,7 +18,7 @@ while i < 3
         j := j + 1
     i := i + 1
 
-log.info(sum)
+log.info(str.tostring(sum))
 
 // Expected output:
 // 0

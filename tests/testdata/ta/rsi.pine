@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/rsi")
 // Test ta.rsi (Relative Strength Index)
 // Wilder-smoothed gains over Wilder-smoothed losses. The first bar has no
 // previous value to difference against, and the averages then need `length`
@@ -8,17 +10,17 @@
 
 // Every change is a gain, so losses stay at 0 and RSI saturates at 100.
 rsiUp = ta.rsi(close, 2)
-log.info(rsiUp)
+log.info(str.tostring(rsiUp))
 
 // Negating the source makes every change a loss, saturating at the other end.
 rsiDown = ta.rsi(-close, 2)
-log.info(rsiDown)
+log.info(str.tostring(rsiDown))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 100
 // 0
 // 100

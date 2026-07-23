@@ -1,4 +1,5 @@
 //@version=4
+study("basics/type_as_identifier_v4")
 // `type` only became a keyword in v5, so a v4 script may use it as an ordinary
 // name — including as a function parameter, which is how it shows up in the wild.
 //

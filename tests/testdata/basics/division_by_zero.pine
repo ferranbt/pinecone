@@ -1,32 +1,34 @@
+//@version=5
+indicator("basics/division_by_zero")
 // Pine semantics: division or modulo by zero yields `na`, not an error.
 // Arithmetic never aborts; the script continues with an `na` result.
 
 // Division by zero yields na
 a = 10 / 0
-log.info(a)
+log.info(str.tostring(a))
 
 // Modulo by zero yields na
 b = 10 % 0
-log.info(b)
+log.info(str.tostring(b))
 
 // Zero divided by zero yields na
 c = 0 / 0
-log.info(c)
+log.info(str.tostring(c))
 
 // An na dividend short-circuits to na before the divisor is inspected
 d = na / 0
-log.info(d)
+log.info(str.tostring(d))
 
 // Non-zero divisors are unaffected
 e = 6 / 3
-log.info(e)
+log.info(str.tostring(e))
 f = 7 % 4
-log.info(f)
+log.info(str.tostring(f))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 2
 // 3

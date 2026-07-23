@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/na_propagation")
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -7,34 +9,34 @@
 // Arithmetic with na propagates na
 x = na
 y = x + 1
-log.info(y)
+log.info(str.tostring(y))
 
 // Comparison with na yields na
 b = x > 0
-log.info(b)
+log.info(str.tostring(b))
 
 // Three-valued logic: false absorbs na
 c = false and x > 0
-log.info(c)
+log.info(str.tostring(c))
 
 // Three-valued logic: true absorbs na
 d = true or x > 0
-log.info(d)
+log.info(str.tostring(d))
 
 // na doubles as a function: na(x) tests for na
 e = na(x)
-log.info(e)
+log.info(str.tostring(e))
 
 // An na condition takes the false/else branch; if-expression
 // without an else yields na
 f = if x > 0
     1
-log.info(f)
+log.info(str.tostring(f))
 
 // Expected output:
-// na
-// na
+// NaN
+// NaN
 // false
 // true
 // true
-// na
+// NaN

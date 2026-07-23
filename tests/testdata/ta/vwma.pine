@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/vwma")
 // Test ta.vwma (Volume Weighted Moving Average)
 // sum(price * volume) / sum(volume) over the window. Over the last 5 bars
 // close is 297..301 and volume is 2950, 2960, 2970, 2980, 2990.
@@ -6,11 +8,11 @@
 
 // 4440250 / 14850
 vwma5 = ta.vwma(close, 5)
-log.info(vwma5)
+log.info(str.tostring(vwma5))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 299.006734006734

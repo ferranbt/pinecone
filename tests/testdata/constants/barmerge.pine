@@ -1,8 +1,10 @@
+//@version=5
+indicator("constants/barmerge")
 // barmerge.* constants resolve to their string tag.
-log.info(barmerge.gaps_on)
-log.info(barmerge.gaps_off)
-log.info(barmerge.lookahead_on)
-log.info(barmerge.lookahead_off)
+log.info(str.tostring(barmerge.gaps_on))
+log.info(str.tostring(barmerge.gaps_off))
+log.info(str.tostring(barmerge.lookahead_on))
+log.info(str.tostring(barmerge.lookahead_off))
 
 // Expected output:
 // gaps_on

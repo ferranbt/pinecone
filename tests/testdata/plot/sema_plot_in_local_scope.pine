@@ -1,5 +1,7 @@
+//@version=5
+indicator("plot/sema_plot_in_local_scope")
 if close > open
     plot(close)
 
 // Expected error:
-// error [global-scope-required] 2:9: `plot` may only be called in the global scope
+// error [global-scope-required] 4:9: `plot` may only be called in the global scope

@@ -243,20 +243,28 @@ impl TaStoch {
     }
 }
 
-/// ta.mfi(source, length) - Money Flow Index: RSI weighted by volume, where a
-/// bar's money flow counts as positive or negative according to the sign of the
-/// change in `source`.
+/// ta.mfi(source, length) - Money Flow Index.
+///
+/// Mirrors the reference implementation the spec gives:
+///
+/// ```text
+/// upper = math.sum(volume * (ta.change(src) <= 0.0 ? 0.0 : src), length)
+/// lower = math.sum(volume * (ta.change(src) >= 0.0 ? 0.0 : src), length)
+/// mfi   = 100.0 - (100.0 / (1.0 + upper / lower))
+/// ```
+///
+/// On the first bar `ta.change` is na, and an na ternary condition takes the
+/// else branch — so that bar's flow counts towards *both* sums rather than
+/// being skipped.
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.mfi", stateful)]
 pub struct TaMfi {
     source: f64,
     length: f64,
-    /// Money flow on up bars, 0 otherwise — Pine's `upper` sum.
     #[state]
-    rising: SeriesBuffer<f64>,
-    /// Money flow on down bars, 0 otherwise — Pine's `lower` sum.
+    upper: SeriesBuffer<f64>,
     #[state]
-    falling: SeriesBuffer<f64>,
+    lower: SeriesBuffer<f64>,
     #[state]
     previous: Option<f64>,
 }
@@ -273,28 +281,33 @@ impl TaMfi {
             .ok_or_else(|| RuntimeError::UndefinedVariable("volume".to_string()))?
             .as_number()?;
 
-        let Some(previous) = self.previous.replace(self.source) else {
-            // First bar: no previous value, so the flow has no direction yet.
+        let flow = volume * self.source;
+        // `None` is the first bar's na change, which fails both `<= 0.0` and
+        // `>= 0.0` and so takes the else branch on each side.
+        let change = self.previous.replace(self.source).map(|p| self.source - p);
+        let upper = self.upper.observe(
+            if change.is_some_and(|c| c <= 0.0) {
+                0.0
+            } else {
+                flow
+            },
+            length,
+        );
+        let lower = self.lower.observe(
+            if change.is_some_and(|c| c >= 0.0) {
+                0.0
+            } else {
+                flow
+            },
+            length,
+        );
+
+        let (Some(upper), Some(lower)) = (upper, lower) else {
             return Ok(Value::Na);
         };
 
-        // Each bar's flow lands wholly on one side; an unchanged bar on neither.
-        // The flow keeps the source's own sign, as Pine's does, so the two sides
-        // stay meaningful even for a source that goes negative.
-        let flow = self.source * volume;
-        let change = self.source - previous;
-        let rising = self
-            .rising
-            .observe(if change > 0.0 { flow } else { 0.0 }, length);
-        let falling = self
-            .falling
-            .observe(if change < 0.0 { flow } else { 0.0 }, length);
-        let (Some(rising), Some(falling)) = (rising, falling) else {
-            return Ok(Value::Na);
-        };
-
-        let upper: f64 = rising.iter().sum();
-        let lower: f64 = falling.iter().sum();
+        let upper: f64 = upper.iter().sum();
+        let lower: f64 = lower.iter().sum();
 
         // No down bars in the window means the index is pinned at its top.
         if lower == 0.0 {

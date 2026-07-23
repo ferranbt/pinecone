@@ -1,9 +1,11 @@
+//@version=5
+indicator("constants/location")
 // location.* constants resolve to their string tag.
-log.info(location.abovebar)
-log.info(location.belowbar)
-log.info(location.top)
-log.info(location.bottom)
-log.info(location.absolute)
+log.info(str.tostring(location.abovebar))
+log.info(str.tostring(location.belowbar))
+log.info(str.tostring(location.top))
+log.info(str.tostring(location.bottom))
+log.info(str.tostring(location.absolute))
 
 // Expected output:
 // abovebar

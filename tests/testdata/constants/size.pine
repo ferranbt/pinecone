@@ -1,10 +1,12 @@
+//@version=5
+indicator("constants/size")
 // size.* constants resolve to their string tag.
-log.info(size.auto)
-log.info(size.tiny)
-log.info(size.small)
-log.info(size.normal)
-log.info(size.large)
-log.info(size.huge)
+log.info(str.tostring(size.auto))
+log.info(str.tostring(size.tiny))
+log.info(str.tostring(size.small))
+log.info(str.tostring(size.normal))
+log.info(str.tostring(size.large))
+log.info(str.tostring(size.huge))
 
 // Expected output:
 // auto

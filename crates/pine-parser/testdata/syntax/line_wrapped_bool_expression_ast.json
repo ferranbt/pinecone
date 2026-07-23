@@ -15,7 +15,7 @@
                   "op": "Less",
                   "right": {
                     "Literal": {
-                      "Number": 2.0
+                      "Int": 2
                     }
                   }
                 }
@@ -40,7 +40,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 1.0
+          "Int": 1
         }
       }
     }

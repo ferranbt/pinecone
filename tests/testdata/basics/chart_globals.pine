@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/chart_globals")
 // bgcolor / barcolor write chart-wide colors into the output's GlobalContext.
 // They return na and have no getter, so this just asserts the calls run
 // (including the conditional-color and display-arg forms real scripts use).

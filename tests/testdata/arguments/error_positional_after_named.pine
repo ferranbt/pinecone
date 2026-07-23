@@ -1,3 +1,5 @@
+//@version=5
+indicator("arguments/error_positional_after_named")
 // Test that positional arguments after named arguments fail
 // This should produce an error
 

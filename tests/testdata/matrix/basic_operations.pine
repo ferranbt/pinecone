@@ -1,16 +1,18 @@
+//@version=5
+indicator("matrix/basic_operations")
 // Test basic matrix operations
 m = matrix.new<float>(2, 3, 5.0)
-log.info(matrix.rows(m))
-log.info(matrix.columns(m))
-log.info(matrix.elements_count(m))
+log.info(str.tostring(matrix.rows(m)))
+log.info(str.tostring(matrix.columns(m)))
+log.info(str.tostring(matrix.elements_count(m)))
 
 // Get element
 val = matrix.get(m, 0, 0)
-log.info(val)
+log.info(str.tostring(val))
 
 // Set element
 matrix.set(m, 0, 0, 10.0)
-log.info(matrix.get(m, 0, 0))
+log.info(str.tostring(matrix.get(m, 0, 0)))
 
 // Expected output:
 // 2

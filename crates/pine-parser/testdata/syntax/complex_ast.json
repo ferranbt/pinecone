@@ -5,7 +5,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 10.0
+          "Int": 10
         }
       },
       "var_kind": "Var"
@@ -65,7 +65,7 @@
               {
                 "Positional": {
                   "Literal": {
-                    "Number": 14.0
+                    "Int": 14
                   }
                 }
               }
@@ -88,7 +88,7 @@
               {
                 "Positional": {
                   "Literal": {
-                    "Number": 28.0
+                    "Int": 28
                   }
                 }
               }

@@ -1,3 +1,5 @@
+//@version=5
+indicator("types/enum_with_values")
 // Test enums with explicit string values
 enum Signal
     buy = "Buy signal"
@@ -8,11 +10,11 @@ x = Signal.buy
 y = Signal.sell
 z = Signal.neutral
 
-log.info(x)
-log.info(y)
-log.info(z)
+log.info(str.tostring(x))
+log.info(str.tostring(y))
+log.info(str.tostring(z))
 
 // Expected output:
-// Enum(Signal::buy)
-// Enum(Signal::sell)
-// Enum(Signal::neutral)
+// Signal::buy
+// Signal::sell
+// Signal::neutral

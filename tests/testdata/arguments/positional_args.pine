@@ -1,3 +1,5 @@
+//@version=5
+indicator("arguments/positional_args")
 // Test all positional arguments for plot function
 // plot(series, title, color, linewidth, style, trackprice)
 // Note: plot() now returns void and stores output internally

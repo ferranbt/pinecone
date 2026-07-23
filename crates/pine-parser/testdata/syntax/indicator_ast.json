@@ -17,7 +17,7 @@
             {
               "Positional": {
                 "Literal": {
-                  "Number": 10.0
+                  "Int": 10
                 }
               }
             },
@@ -31,7 +31,7 @@
             {
               "Positional": {
                 "Literal": {
-                  "Number": 1.0
+                  "Int": 1
                 }
               }
             }
@@ -114,7 +114,7 @@
           {
             "Positional": {
               "Literal": {
-                "Number": 3.0
+                "Int": 3
               }
             }
           }
@@ -165,7 +165,7 @@
                       {
                         "Positional": {
                           "Literal": {
-                            "Number": 80.0
+                            "Int": 80
                           }
                         }
                       }

@@ -1,4 +1,4 @@
-use pine_interpreter::{LogLevel, LogOutput, PineOutput, Value};
+use pine_interpreter::{EvaluatedArg, LogLevel, LogOutput, PineOutput, RuntimeError, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -17,10 +17,7 @@ pub fn register<O: PineOutput + LogOutput>() -> Value<O> {
 
     for (name, level) in levels {
         let log_fn: pine_interpreter::BuiltinFn<O> = Rc::new(move |ctx, func_call| {
-            let msg = match func_call.args.first() {
-                Some(pine_interpreter::EvaluatedArg::Positional(v)) => value_to_string(v),
-                _ => String::new(),
-            };
+            let msg = format_message(name, func_call.args.first())?;
             ctx.output.add_log(level, msg);
             Ok(Value::Na)
         });
@@ -34,12 +31,27 @@ pub fn register<O: PineOutput + LogOutput>() -> Value<O> {
     }
 }
 
-fn value_to_string<O: PineOutput>(value: &Value<O>) -> String {
-    match value {
-        Value::String(s) => s.clone(),
-        Value::Number(n) => n.to_string(),
-        Value::Bool(b) => b.to_string(),
-        Value::Na => "na".to_string(),
-        other => format!("{:?}", other),
+/// The log message. Pine types this argument as `string`, so a non-string is a
+/// type error — a number is printed with `str.tostring`, not logged directly.
+fn format_message<O: PineOutput>(
+    name: &str,
+    first: Option<&EvaluatedArg<O>>,
+) -> Result<String, RuntimeError> {
+    match first {
+        Some(EvaluatedArg::Positional(Value::String(s)))
+        | Some(EvaluatedArg::Named {
+            value: Value::String(s),
+            ..
+        }) => Ok(s.clone()),
+        Some(EvaluatedArg::Positional(Value::Na))
+        | Some(EvaluatedArg::Named {
+            value: Value::Na, ..
+        }) => Ok(String::new()),
+        Some(EvaluatedArg::Positional(other)) | Some(EvaluatedArg::Named { value: other, .. }) => {
+            Err(RuntimeError::TypeError(format!(
+                "log.{name} expects a string message, got {other:?}"
+            )))
+        }
+        None => Ok(String::new()),
     }
 }

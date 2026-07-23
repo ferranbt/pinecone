@@ -1,3 +1,5 @@
+//@version=5
+indicator("arguments/mixed_args")
 // Test mixing positional and named arguments
 // Pine Script allows positional arguments followed by named arguments,
 // but once you use a named argument, all following must be named

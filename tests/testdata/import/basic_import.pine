@@ -1,11 +1,13 @@
+//@version=5
+indicator("import/basic_import")
 // Test basic import functionality
 
 import mylib as lib
 
 // Use exported type
 p = lib.Point.new(10.0, 20.0)
-log.info(p.x)
-log.info(p.y)
+log.info(str.tostring(p.x))
+log.info(str.tostring(p.y))
 
 // Expected output:
 // 10

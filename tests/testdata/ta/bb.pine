@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/bb")
 // Test ta.bb (Bollinger Bands)
 // Over the last 5 bars close is 297..301, so the basis is 299 and the
 // population variance is (4+1+0+1+4)/5 = 2, giving stdev sqrt(2).
@@ -8,23 +10,23 @@
 // Bars: 5
 
 [middle, upper, lower] = ta.bb(close, 5, 2)
-log.info(middle)
-log.info(upper)
-log.info(lower)
+log.info(str.tostring(middle))
+log.info(str.tostring(upper))
+log.info(str.tostring(lower))
 
 // Expected output:
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
 // 299
 // 301.8284271247462
 // 296.1715728752538

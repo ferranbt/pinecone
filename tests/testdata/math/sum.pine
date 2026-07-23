@@ -1,13 +1,26 @@
-// Test math.sum with variadic arguments
-result1 = math.sum(5, 3)
-result2 = math.sum(10, 5, 3, 8)
-result3 = math.sum(1, 2, 3, 4, 5)
+//@version=5
+indicator("math/sum")
+// math.sum(source, length) is the sliding sum of the last `length` values of a
+// series — not a sum of its arguments. Like the other windowed functions it is
+// na until the window has filled.
+// Over the last 4 bars close is 298, 299, 300, 301.
 
-log.info(result1)
-log.info(result2)
-log.info(result3)
+// Bars: 4
+
+// 299+300+301 on the final bar
+sum3 = math.sum(close, 3)
+log.info(str.tostring(sum3))
+
+// A constant source still contributes one value per bar: 2+2+2
+sumConst = math.sum(2, 3)
+log.info(str.tostring(sumConst))
 
 // Expected output:
-// 8
-// 26
-// 15
+// NaN
+// NaN
+// NaN
+// NaN
+// 897
+// 6
+// 900
+// 6

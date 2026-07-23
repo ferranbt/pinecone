@@ -1,16 +1,18 @@
+//@version=5
+indicator("basics/barstate")
 // barstate.* are per-bar booleans, and the flags behind them follow from where
 // a bar sits in the series rather than being set by hand.
 //
 // This runs on the last of the loaded bars, so it is the last bar and not the
 // first. Every bar of a completed series is closed history, and none of it is
 // real time.
-log.info(barstate.isfirst)
-log.info(barstate.islast)
-log.info(barstate.isnew)
-log.info(barstate.isconfirmed)
-log.info(barstate.ishistory)
-log.info(barstate.isrealtime)
-log.info(barstate.islastconfirmedhistory)
+log.info(str.tostring(barstate.isfirst))
+log.info(str.tostring(barstate.islast))
+log.info(str.tostring(barstate.isnew))
+log.info(str.tostring(barstate.isconfirmed))
+log.info(str.tostring(barstate.ishistory))
+log.info(str.tostring(barstate.isrealtime))
+log.info(str.tostring(barstate.islastconfirmedhistory))
 
 // Expected output:
 // false

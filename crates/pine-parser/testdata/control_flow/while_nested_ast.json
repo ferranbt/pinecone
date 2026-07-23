@@ -5,7 +5,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 0.0
+          "Int": 0
         }
       },
       "var_kind": "Var"
@@ -17,7 +17,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 0.0
+          "Int": 0
         }
       },
       "var_kind": "Var"
@@ -33,7 +33,7 @@
           "op": "Less",
           "right": {
             "Literal": {
-              "Number": 3.0
+              "Int": 3
             }
           }
         }
@@ -45,7 +45,7 @@
             "type_annotation": null,
             "initializer": {
               "Literal": {
-                "Number": 0.0
+                "Int": 0
               }
             },
             "var_kind": "Var"
@@ -61,7 +61,7 @@
                 "op": "Less",
                 "right": {
                   "Literal": {
-                    "Number": 2.0
+                    "Int": 2
                   }
                 }
               }
@@ -106,7 +106,7 @@
                       "op": "Add",
                       "right": {
                         "Literal": {
-                          "Number": 1.0
+                          "Int": 1
                         }
                       }
                     }
@@ -129,7 +129,7 @@
                 "op": "Add",
                 "right": {
                   "Literal": {
-                    "Number": 1.0
+                    "Int": 1
                   }
                 }
               }

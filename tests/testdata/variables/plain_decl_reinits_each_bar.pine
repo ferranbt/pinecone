@@ -1,10 +1,12 @@
+//@version=5
+indicator("variables/plain_decl_reinits_each_bar")
 // Contrast to `var`: a plain declaration re-evaluates its initializer every
 // bar, so `count` is reset to 0 each bar and the increment always yields 1.
 
 // Bars: 3
 count = 0
 count := count + 1
-log.info(count)
+log.info(str.tostring(count))
 
 // Expected output:
 // 1

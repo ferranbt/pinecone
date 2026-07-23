@@ -1,5 +1,7 @@
+//@version=5
+indicator("matrix/error_no_type")
 // Test that matrix.new without type parameter fails
 m = matrix.new(2, 3, 0.0)
-log.info(m)
+log.info(str.tostring(m))
 
 // Expected error: Missing type parameter

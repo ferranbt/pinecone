@@ -1,10 +1,12 @@
+//@version=5
+indicator("variables/varip_persists_across_bars")
 // varip persists across bars like var; the intrabar-update distinction only
 // matters in realtime, which this bar-by-bar harness does not exercise.
 
 // Bars: 3
 varip count = 0
 count := count + 1
-log.info(count)
+log.info(str.tostring(count))
 
 // Expected output:
 // 1

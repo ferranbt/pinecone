@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/ema")
 // Test ta.ema (Exponential Moving Average)
 // Like Pine, na until `length` bars have been seen, then seeded with their
 // simple average and recursed with alpha * source + (1 - alpha) * ema[1].
@@ -11,11 +13,11 @@
 // Bars: 5
 
 ema3 = ta.ema(close, 3)
-log.info(ema3)
+log.info(str.tostring(ema3))
 
 // Expected output:
-// na
-// na
+// NaN
+// NaN
 // 298
 // 299
 // 300

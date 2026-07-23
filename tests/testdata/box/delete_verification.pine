@@ -1,8 +1,10 @@
+//@version=5
+indicator("box/delete_verification")
 // Test that box.delete() actually removes the box
 // When we try to access a deleted box, we should get an error
 
 b = box.new(5, 150.0, 15, 100.0, text="Test Box")
-log.info(box.get_left(b))
+log.info(str.tostring(box.get_left(b)))
 
 // Delete the box
 box.delete(b)

@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/error_const_param_non_const_arg")
 // Test that const function parameters reject non-const arguments
 
 add(const int x, const int y) => x + y

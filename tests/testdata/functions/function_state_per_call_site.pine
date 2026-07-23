@@ -1,3 +1,5 @@
+//@version=5
+indicator("functions/function_state_per_call_site")
 // Function-local state is per CALL SITE, not per function name. Each call site
 // of the same stateful function keeps its own independent `var` state, matching
 // TradingView. Here two calls to the same counter each advance their own count,
@@ -12,8 +14,8 @@ f_counter() =>
 
 a = f_counter()
 b = f_counter()
-log.info(a)
-log.info(b)
+log.info(str.tostring(a))
+log.info(str.tostring(b))
 
 // Expected output:
 // 1

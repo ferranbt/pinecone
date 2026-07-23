@@ -1,6 +1,8 @@
+mod num;
 mod output;
 mod series_buffer;
 
+pub use num::Num;
 pub use series_buffer::{SeriesBuffer, MAX_LOOKBACK};
 
 // Re-export output types and traits
@@ -40,6 +42,24 @@ fn push_history<O: PineOutput>(
     entries.push(value);
     if entries.len() > MAX_LOOKBACK {
         entries.drain(..entries.len() - MAX_LOOKBACK);
+    }
+}
+
+/// Apply a numeric binary operator under Pine's int/float rule (see [`Num`]).
+/// An na operand, a non-numeric operand, or a `None` from `op` (a zero divisor)
+/// all yield `na`.
+fn numeric_op<O: PineOutput>(
+    left: &Value<O>,
+    right: &Value<O>,
+    op: impl Fn(Num, Num) -> Option<Num>,
+) -> Result<Value<O>, RuntimeError> {
+    // Reject a genuinely non-numeric operand (a string), while letting na through.
+    left.to_number()?;
+    right.to_number()?;
+
+    match (left.as_num(), right.as_num()) {
+        (Some(a), Some(b)) => Ok(op(a, b).map_or(Value::Na, Value::from)),
+        _ => Ok(Value::Na),
     }
 }
 
@@ -100,6 +120,7 @@ pub struct Series<O: PineOutput = DefaultPineOutput> {
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value<O: PineOutput> {
+    Int(i64),
     Number(f64),
     String(String),
     Bool(bool),
@@ -132,6 +153,16 @@ pub enum Value<O: PineOutput> {
     },
 }
 
+impl<O: PineOutput> From<Num> for Value<O> {
+    /// A [`Num`] carries its own type, so it lands on the matching variant.
+    fn from(n: Num) -> Self {
+        match n {
+            Num::Int(n) => Value::Int(n),
+            Num::Float(n) => Value::Number(n),
+        }
+    }
+}
+
 impl<O: PineOutput> Value<O> {
     pub fn new_color(r: u8, g: u8, b: u8, t: u8) -> Value<O> {
         Value::Color(Color::new(r, g, b, t))
@@ -142,6 +173,7 @@ impl<O: PineOutput> Value<O> {
 impl<O: PineOutput> std::fmt::Debug for Value<O> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Value::Int(n) => write!(f, "Int({:?})", n),
             Value::Number(n) => write!(f, "Number({:?})", n),
             Value::String(s) => write!(f, "String({:?})", s),
             Value::Bool(b) => write!(f, "Bool({:?})", b),
@@ -174,6 +206,11 @@ impl<O: PineOutput> std::fmt::Debug for Value<O> {
 impl<O: PineOutput> PartialEq for Value<O> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
+            (Value::Int(a), Value::Int(b)) => a == b,
+            // int and float compare by value, so `1 == 1.0`.
+            (Value::Int(a), Value::Number(b)) | (Value::Number(b), Value::Int(a)) => {
+                (*a as f64 - b).abs() < f64::EPSILON
+            }
             (Value::Number(a), Value::Number(b)) => (a - b).abs() < f64::EPSILON,
             (Value::String(a), Value::String(b)) => a == b,
             (Value::Bool(a), Value::Bool(b)) => a == b,
@@ -265,10 +302,32 @@ impl<O: PineOutput> Value<O> {
         Ok(self.to_bool()?.unwrap_or(false))
     }
 
+    /// This value as a [`Num`], preserving whether it is an int or a float, so
+    /// callers can apply Pine's overload rule. `None` for `na` and for anything
+    /// non-numeric.
+    pub fn as_num(&self) -> Option<Num> {
+        match self {
+            Value::Int(n) => Some(Num::Int(*n)),
+            Value::Number(n) => Some(Num::Float(*n)),
+            Value::Bool(b) => Some(Num::Int(if *b { 1 } else { 0 })),
+            Value::Series(series) => series.current.as_num(),
+            _ => None,
+        }
+    }
+
+    /// The integer this value carries, if it is int-typed.
+    fn as_int(&self) -> Option<i64> {
+        match self.as_num() {
+            Some(Num::Int(n)) => Some(n),
+            _ => None,
+        }
+    }
+
     /// Returns Ok(None) when self is Na so callers can propagate na correctly.
     /// Returns Err for genuine type mismatches (e.g. passing a string to arithmetic).
     pub fn to_number(&self) -> Result<Option<f64>, RuntimeError> {
         match self {
+            Value::Int(n) => Ok(Some(*n as f64)),
             Value::Number(n) => Ok(Some(*n)),
             Value::Bool(b) => Ok(Some(if *b { 1.0 } else { 0.0 })),
             Value::Series(series) => series.current.to_number(),
@@ -284,6 +343,7 @@ impl<O: PineOutput> Value<O> {
     pub fn to_bool(&self) -> Result<Option<bool>, RuntimeError> {
         match self {
             Value::Bool(b) => Ok(Some(*b)),
+            Value::Int(n) => Ok(Some(*n != 0)),
             // NaN must not become true: `n != 0.0` is true for NaN in IEEE 754.
             Value::Number(n) => Ok(Some(*n != 0.0 && !n.is_nan())),
             Value::Na => Ok(None),
@@ -303,6 +363,7 @@ impl<O: PineOutput> Value<O> {
     pub fn as_string(&self) -> Result<String, RuntimeError> {
         match self {
             Value::String(s) => Ok(s.clone()),
+            Value::Int(n) => Ok(n.to_string()),
             Value::Number(n) => Ok(n.to_string()),
             Value::Bool(b) => Ok(b.to_string()),
             Value::Na => Ok("na".to_string()),
@@ -372,7 +433,10 @@ pub struct Interpreter<O: PineOutput> {
     /// function-local `var` at two call sites initializes independently.
     /// Tracked separately from `variables` so a `var` declaration can shadow a
     /// pre-existing host-injected variable (e.g. `var close = 10`).
-    var_decls_initialized: std::collections::HashSet<(u32, String)>,
+    ///
+    /// The value is the bar it initialized on, so a reassignment can tell that
+    /// there is no previous bar to read back yet.
+    var_decls_initialized: HashMap<(u32, String), u64>,
     /// Lexical id of the call site currently executing (0 at top level). Scopes
     /// `var` init-once tracking to the active call site.
     current_call_id: u32,
@@ -445,7 +509,7 @@ impl<O: PineOutput> Interpreter<O> {
             output: O::default(),
             user_series_history: HashMap::new(),
             function_local_state: HashMap::new(),
-            var_decls_initialized: std::collections::HashSet::new(),
+            var_decls_initialized: HashMap::new(),
             current_call_id: 0,
             bar_seq: 0,
         }
@@ -583,10 +647,10 @@ impl<O: PineOutput> Interpreter<O> {
                 // declaration can shadow a pre-existing host-injected builtin.
                 if is_var_persistent {
                     let init_key = (self.current_call_id, name.clone());
-                    if self.var_decls_initialized.contains(&init_key) {
+                    if self.var_decls_initialized.contains_key(&init_key) {
                         return Ok(None);
                     }
-                    self.var_decls_initialized.insert(init_key);
+                    self.var_decls_initialized.insert(init_key, self.bar_seq);
                 }
                 // Non-`var` declarations (e.g. `ha_bull_4h = expr`) re-execute on every bar.
                 // Push the previous value to history so `name[1]` lookbacks work, exactly as
@@ -618,9 +682,17 @@ impl<O: PineOutput> Interpreter<O> {
                 // history BEFORE evaluating the RHS so that [1] lookback in the expression
                 // sees the correct previous-bar value.  Non-var variables push after eval
                 // (their old value was already pushed by VarDecl, or there is no VarDecl).
+                //
+                // Nothing is pushed on the bar the `var` initialized: there is no
+                // previous bar yet, and inventing one would make `acc[1]` read the
+                // initializer instead of na.
                 if let Expr::Variable(name) = target {
                     if let Some(var) = self.variables.get(name) {
-                        if var.is_var_persistent {
+                        let born_this_bar = self
+                            .var_decls_initialized
+                            .get(&(self.current_call_id, name.clone()))
+                            == Some(&self.bar_seq);
+                        if var.is_var_persistent && !born_this_bar {
                             push_history(&mut self.user_series_history, name, var.value.clone());
                         }
                     }
@@ -780,7 +852,7 @@ impl<O: PineOutput> Interpreter<O> {
                     self.variables.insert(
                         var_name.clone(),
                         Variable {
-                            value: Value::Number(i as f64),
+                            value: Value::Int(i),
                             is_const: false,
                             is_var_persistent: false,
                         },
@@ -813,7 +885,7 @@ impl<O: PineOutput> Interpreter<O> {
                         self.variables.insert(
                             idx_var.clone(),
                             Variable {
-                                value: Value::Number(index as f64),
+                                value: Value::Int(index as i64),
                                 is_const: false,
                                 is_var_persistent: false,
                             },
@@ -1407,6 +1479,7 @@ impl<O: PineOutput> Interpreter<O> {
 
     fn eval_literal(&self, lit: &Literal) -> Value<O> {
         match lit {
+            Literal::Int(n) => Value::Int(*n),
             Literal::Number(n) => Value::Number(*n),
             Literal::String(s) => Value::String(s.clone()),
             Literal::Bool(b) => Value::Bool(*b),
@@ -1431,45 +1504,19 @@ impl<O: PineOutput> Interpreter<O> {
                         right.as_string()?
                     )))
                 } else {
-                    match (left.to_number()?, right.to_number()?) {
-                        (Some(l), Some(r)) => Ok(Value::Number(l + r)),
-                        _ => Ok(Value::Na),
-                    }
+                    numeric_op(left, right, |a, b| Some(a + b))
                 }
             }
 
-            BinOp::Sub => match (left.to_number()?, right.to_number()?) {
-                (Some(l), Some(r)) => Ok(Value::Number(l - r)),
-                _ => Ok(Value::Na),
-            },
+            BinOp::Sub => numeric_op(left, right, |a, b| Some(a - b)),
 
-            BinOp::Mul => match (left.to_number()?, right.to_number()?) {
-                (Some(l), Some(r)) => Ok(Value::Number(l * r)),
-                _ => Ok(Value::Na),
-            },
+            BinOp::Mul => numeric_op(left, right, |a, b| Some(a * b)),
 
-            // Pine semantics: a zero divisor yields `na`, not an error — `x / 0`
-            // and `x % 0` evaluate to `na` just as an na operand does (`na`
-            // dividends are already caught by the `_` arm below).
-            BinOp::Div => match (left.to_number()?, right.to_number()?) {
-                (Some(l), Some(r)) => {
-                    if r == 0.0 {
-                        return Ok(Value::Na);
-                    }
-                    Ok(Value::Number(l / r))
-                }
-                _ => Ok(Value::Na),
-            },
+            // Pine semantics: a zero divisor yields `na`, not an error. Two ints
+            // divide as ints (`15 / 2 == 7`); any float operand divides as float.
+            BinOp::Div => numeric_op(left, right, Num::checked_div),
 
-            BinOp::Mod => match (left.to_number()?, right.to_number()?) {
-                (Some(l), Some(r)) => {
-                    if r == 0.0 {
-                        return Ok(Value::Na);
-                    }
-                    Ok(Value::Number(l % r))
-                }
-                _ => Ok(Value::Na),
-            },
+            BinOp::Mod => numeric_op(left, right, Num::checked_rem),
 
             // Pine semantics: a comparison with an `na` operand yields `na`
             // (including `na == na` — testing for na requires the na() function).
@@ -1555,9 +1602,13 @@ impl<O: PineOutput> Interpreter<O> {
 
     fn eval_unary_op(&self, op: &UnOp, val: &Value<O>) -> Result<Value<O>, RuntimeError> {
         match op {
-            UnOp::Neg => match val.to_number()? {
-                Some(n) => Ok(Value::Number(-n)),
-                None => Ok(Value::Na),
+            // Negating an int stays an int.
+            UnOp::Neg => match val.as_int() {
+                Some(n) => Ok(Value::Int(-n)),
+                None => match val.to_number()? {
+                    Some(n) => Ok(Value::Number(-n)),
+                    None => Ok(Value::Na),
+                },
             },
             UnOp::Not => match val.to_bool()? {
                 Some(b) => Ok(Value::Bool(!b)),
@@ -1568,6 +1619,11 @@ impl<O: PineOutput> Interpreter<O> {
 
     fn values_equal(&self, left: &Value<O>, right: &Value<O>) -> Result<bool, RuntimeError> {
         match (left, right) {
+            (Value::Int(l), Value::Int(r)) => Ok(l == r),
+            // int and float compare by value, so `1 == 1.0`.
+            (Value::Int(l), Value::Number(r)) | (Value::Number(r), Value::Int(l)) => {
+                Ok((*l as f64 - r).abs() < f64::EPSILON)
+            }
             (Value::Number(l), Value::Number(r)) => Ok((l - r).abs() < f64::EPSILON),
             (Value::String(l), Value::String(r)) => Ok(l == r),
             (Value::Bool(l), Value::Bool(r)) => Ok(l == r),

@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/highestbars_lowestbars")
 // Test ta.highestbars and ta.lowestbars — WHERE the extreme sits, not what it
 // is. Both report an offset back from the current bar: 0 is this bar, -1 the
 // one before it, and so on, so the result is always zero or negative.
@@ -7,13 +9,13 @@
 
 // Bars: 3
 
-log.info(ta.highestbars(close, 3))
-log.info(ta.lowestbars(close, 3))
+log.info(str.tostring(ta.highestbars(close, 3)))
+log.info(str.tostring(ta.lowestbars(close, 3)))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 0
 // -2

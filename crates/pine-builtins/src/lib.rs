@@ -66,6 +66,7 @@ impl<O: PineOutput> Bool<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         match &self.x {
             Value::Bool(b) => Ok(Value::Bool(*b)),
+            Value::Int(n) => Ok(Value::Bool(*n != 0)),
             Value::Number(n) => Ok(Value::Bool(*n != 0.0)),
             Value::Na => Ok(Value::Bool(false)),
             _ => Ok(Value::Bool(true)),
@@ -83,8 +84,9 @@ struct Int<O: PineOutput> {
 impl<O: PineOutput> Int<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         match &self.x {
-            Value::Number(n) => Ok(Value::Number(n.trunc())),
-            Value::Bool(b) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
+            Value::Int(n) => Ok(Value::Int(*n)),
+            Value::Number(n) => Ok(Value::Int(n.trunc() as i64)),
+            Value::Bool(b) => Ok(Value::Int(if *b { 1 } else { 0 })),
             Value::Na => Ok(Value::Na),
             _ => Err(RuntimeError::TypeError(format!(
                 "Cannot convert {:?} to int",
@@ -104,6 +106,7 @@ struct Float<O: PineOutput> {
 impl<O: PineOutput> Float<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         match &self.x {
+            Value::Int(n) => Ok(Value::Number(*n as f64)),
             Value::Number(n) => Ok(Value::Number(*n)),
             Value::Bool(b) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
             Value::Na => Ok(Value::Na),

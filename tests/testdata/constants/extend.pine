@@ -1,8 +1,10 @@
+//@version=5
+indicator("constants/extend")
 // extend.* constants resolve to their string tag.
-log.info(extend.none)
-log.info(extend.left)
-log.info(extend.right)
-log.info(extend.both)
+log.info(str.tostring(extend.none))
+log.info(str.tostring(extend.left))
+log.info(str.tostring(extend.right))
+log.info(str.tostring(extend.both))
 
 // Expected output:
 // none

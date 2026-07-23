@@ -1,3 +1,5 @@
+//@version=5
+indicator("import/import_nonexistent_member")
 // Test accessing non-existent member from import - should fail
 
 import mylib as lib

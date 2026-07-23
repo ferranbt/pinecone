@@ -1,12 +1,14 @@
+//@version=5
+indicator("basics/timeframe")
 // timeframe.* is host-supplied data. The harness compiles with period "3D",
 // so this asserts the passthrough (period) and the derived classification
 // (multiplier / is* flags).
-log.info(timeframe.period)
-log.info(timeframe.multiplier)
-log.info(timeframe.isdaily)
-log.info(timeframe.isdwm)
-log.info(timeframe.isintraday)
-log.info(timeframe.isweekly)
+log.info(str.tostring(timeframe.period))
+log.info(str.tostring(timeframe.multiplier))
+log.info(str.tostring(timeframe.isdaily))
+log.info(str.tostring(timeframe.isdwm))
+log.info(str.tostring(timeframe.isintraday))
+log.info(str.tostring(timeframe.isweekly))
 
 // Expected output:
 // 3D

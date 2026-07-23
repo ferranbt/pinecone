@@ -5,7 +5,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 0.0
+          "Int": 0
         }
       }
     }
@@ -15,12 +15,12 @@
       "var_name": "i",
       "from": {
         "Literal": {
-          "Number": 0.0
+          "Int": 0
         }
       },
       "to": {
         "Literal": {
-          "Number": 5.0
+          "Int": 5
         }
       },
       "body": [
@@ -29,12 +29,12 @@
             "var_name": "j",
             "from": {
               "Literal": {
-                "Number": 0.0
+                "Int": 0
               }
             },
             "to": {
               "Literal": {
-                "Number": 3.0
+                "Int": 3
               }
             },
             "body": [

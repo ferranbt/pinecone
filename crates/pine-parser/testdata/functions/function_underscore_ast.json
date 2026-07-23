@@ -20,7 +20,7 @@
                   "op": "Mul",
                   "right": {
                     "Literal": {
-                      "Number": 2.0
+                      "Int": 2
                     }
                   }
                 }

@@ -1,3 +1,5 @@
+//@version=5
+indicator("errors/continue_outside_loop")
 // Test continue outside loop - should fail
 
 var x = 10

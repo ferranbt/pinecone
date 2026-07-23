@@ -1,11 +1,13 @@
+//@version=5
+indicator("builtins/nz")
 // Test nz() function
 result1 = nz(na)
 result2 = nz(na, 42.0)
 result3 = nz(5.0)
 
-log.info(result1)
-log.info(result2)
-log.info(result3)
+log.info(str.tostring(result1))
+log.info(str.tostring(result2))
+log.info(str.tostring(result3))
 
 // Expected output:
 // 0

@@ -1,8 +1,10 @@
+//@version=5
+indicator("constants/error_const_reassignment")
 // Test that const variables cannot be reassigned
 
 const int x = 10
 x := 20  // This should fail
 
-log.info(x)
+log.info(str.tostring(x))
 
 // Expected error: Cannot reassign const variable

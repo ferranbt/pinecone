@@ -40,13 +40,13 @@
             "Binary": {
               "left": {
                 "Literal": {
-                  "Number": 10.0
+                  "Int": 10
                 }
               },
               "op": "Add",
               "right": {
                 "Literal": {
-                  "Number": 20.0
+                  "Int": 20
                 }
               }
             }
@@ -54,7 +54,7 @@
           "op": "Add",
           "right": {
             "Literal": {
-              "Number": 30.0
+              "Int": 30
             }
           }
         }

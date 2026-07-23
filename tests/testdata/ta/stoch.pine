@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/stoch")
 // Test ta.stoch (where source sits inside the recent high/low range, as 0..100)
 // Needs `length` bars of high and low. Over the last 5 bars the highest high is
 // 304 and the lowest low is 290, so the range is 14 and close is 301.
@@ -6,21 +8,21 @@
 
 // 100 * (301 - 290) / 14
 stochClose = ta.stoch(close, high, low, 5)
-log.info(stochClose)
+log.info(str.tostring(stochClose))
 
 // Length 1 fills immediately: each bar's own range is high - low = 10, and
 // close sits 7 above the low, so this is 70 on every bar.
 stochOneBar = ta.stoch(close, high, low, 1)
-log.info(stochOneBar)
+log.info(str.tostring(stochOneBar))
 
 // Expected output:
-// na
+// NaN
 // 70
-// na
+// NaN
 // 70
-// na
+// NaN
 // 70
-// na
+// NaN
 // 70
 // 78.57142857142857
 // 70

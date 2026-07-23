@@ -630,8 +630,8 @@ impl Parser {
                 if let TokenType::Ident(part) = &self.peek().typ {
                     path_parts.push(part.clone());
                     self.advance();
-                } else if let TokenType::Number(n) = &self.peek().typ {
-                    // Version number
+                } else if let TokenType::IntLiteral(n) = &self.peek().typ {
+                    // Version number (an integer path segment)
                     path_parts.push(n.to_string());
                     self.advance();
                 } else {
@@ -1574,6 +1574,11 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr, ParserError> {
+        if let TokenType::IntLiteral(n) = self.peek().typ {
+            self.advance();
+            return Ok(Expr::Literal(Literal::Int(n)));
+        }
+
         if let TokenType::Number(n) = self.peek().typ {
             self.advance();
             return Ok(Expr::Literal(Literal::Number(n)));
@@ -1747,7 +1752,7 @@ mod tests {
     fn test_literals() {
         // Numbers
         let expr = parse_expr("42").unwrap();
-        assert_eq!(expr, Expr::Literal(Literal::Number(42.0)));
+        assert_eq!(expr, Expr::Literal(Literal::Int(42)));
 
         // Strings
         let expr = parse_expr(r#""hello""#).unwrap();
@@ -1774,14 +1779,14 @@ mod tests {
         assert!(matches!(expr, Expr::Index { .. }));
         if let Expr::Index { expr: base, index } = expr {
             assert_eq!(*base, Expr::Variable("close".to_string()));
-            assert_eq!(*index, Expr::Literal(Literal::Number(1.0)));
+            assert_eq!(*index, Expr::Literal(Literal::Int(1)));
         }
 
         // high[5] - 5 bars ago
         let expr = parse_expr("high[5]").unwrap();
         if let Expr::Index { expr: base, index } = expr {
             assert_eq!(*base, Expr::Variable("high".to_string()));
-            assert_eq!(*index, Expr::Literal(Literal::Number(5.0)));
+            assert_eq!(*index, Expr::Literal(Literal::Int(5)));
         }
     }
 
@@ -1805,7 +1810,7 @@ mod tests {
             );
             assert_eq!(
                 args[1],
-                Argument::Positional(Expr::Literal(Literal::Number(14.0)))
+                Argument::Positional(Expr::Literal(Literal::Int(14)))
             );
         } else {
             panic!("Expected function call");
@@ -1834,9 +1839,9 @@ mod tests {
             left, op, right, ..
         } = expr
         {
-            assert_eq!(*left, Expr::Literal(Literal::Number(2.0)));
+            assert_eq!(*left, Expr::Literal(Literal::Int(2)));
             assert_eq!(op, BinOp::Add);
-            assert_eq!(*right, Expr::Literal(Literal::Number(3.0)));
+            assert_eq!(*right, Expr::Literal(Literal::Int(3)));
         }
 
         // Multiplication has higher precedence: 2 + 3 * 4 = 2 + (3 * 4)
@@ -1848,7 +1853,7 @@ mod tests {
             ..
         } = expr
         {
-            assert_eq!(*left, Expr::Literal(Literal::Number(2.0)));
+            assert_eq!(*left, Expr::Literal(Literal::Int(2)));
             assert_eq!(op1, BinOp::Add);
             if let Expr::Binary {
                 left: l2,
@@ -1857,9 +1862,9 @@ mod tests {
                 ..
             } = *right
             {
-                assert_eq!(*l2, Expr::Literal(Literal::Number(3.0)));
+                assert_eq!(*l2, Expr::Literal(Literal::Int(3)));
                 assert_eq!(op2, BinOp::Mul);
-                assert_eq!(*r2, Expr::Literal(Literal::Number(4.0)));
+                assert_eq!(*r2, Expr::Literal(Literal::Int(4)));
             }
         }
 
@@ -1869,9 +1874,9 @@ mod tests {
             left, op, right, ..
         } = expr
         {
-            assert_eq!(*left, Expr::Literal(Literal::Number(10.0)));
+            assert_eq!(*left, Expr::Literal(Literal::Int(10)));
             assert_eq!(op, BinOp::Div);
-            assert_eq!(*right, Expr::Literal(Literal::Number(2.0)));
+            assert_eq!(*right, Expr::Literal(Literal::Int(2)));
         }
 
         // Subtraction
@@ -1880,9 +1885,9 @@ mod tests {
             left, op, right, ..
         } = expr
         {
-            assert_eq!(*left, Expr::Literal(Literal::Number(5.0)));
+            assert_eq!(*left, Expr::Literal(Literal::Int(5)));
             assert_eq!(op, BinOp::Sub);
-            assert_eq!(*right, Expr::Literal(Literal::Number(3.0)));
+            assert_eq!(*right, Expr::Literal(Literal::Int(3)));
         }
     }
 
@@ -1907,7 +1912,7 @@ mod tests {
         {
             assert_eq!(*left, Expr::Variable("rsi".to_string()));
             assert_eq!(op, BinOp::Less);
-            assert_eq!(*right, Expr::Literal(Literal::Number(30.0)));
+            assert_eq!(*right, Expr::Literal(Literal::Int(30)));
         }
 
         // Equality
@@ -1918,7 +1923,7 @@ mod tests {
         {
             assert_eq!(*left, Expr::Variable("x".to_string()));
             assert_eq!(op, BinOp::Eq);
-            assert_eq!(*right, Expr::Literal(Literal::Number(5.0)));
+            assert_eq!(*right, Expr::Literal(Literal::Int(5)));
         }
     }
 
@@ -1928,7 +1933,7 @@ mod tests {
         let expr = parse_expr("-5").unwrap();
         if let Expr::Unary { op, expr } = expr {
             assert_eq!(op, UnOp::Neg);
-            assert_eq!(*expr, Expr::Literal(Literal::Number(5.0)));
+            assert_eq!(*expr, Expr::Literal(Literal::Int(5)));
         }
 
         // Double negation
@@ -1937,7 +1942,7 @@ mod tests {
             assert_eq!(op1, UnOp::Neg);
             if let Expr::Unary { op: op2, expr: e2 } = *e1 {
                 assert_eq!(op2, UnOp::Neg);
-                assert_eq!(*e2, Expr::Literal(Literal::Number(10.0)));
+                assert_eq!(*e2, Expr::Literal(Literal::Int(10)));
             }
         }
     }
@@ -1964,7 +1969,7 @@ mod tests {
             assert_eq!(*var_kind, VarKind::Var, "var x = 10 must be Var");
             assert_eq!(
                 initializer.as_ref().unwrap(),
-                &Expr::Literal(Literal::Number(10.0))
+                &Expr::Literal(Literal::Int(10))
             );
         } else {
             panic!("Expected VarDecl");
@@ -2019,7 +2024,7 @@ mod tests {
         {
             assert_eq!(div_op, BinOp::Div);
             assert!(matches!(*left, Expr::Binary { op: BinOp::Add, .. }));
-            assert_eq!(*right, Expr::Literal(Literal::Number(2.0)));
+            assert_eq!(*right, Expr::Literal(Literal::Int(2)));
         }
     }
 

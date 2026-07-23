@@ -1,3 +1,5 @@
+//@version=5
+indicator("arguments/error_duplicate_named_arg")
 // Test that duplicate named arguments fail
 
 p = plot(series=100.0, title="Test", series=200.0)

@@ -208,6 +208,7 @@ impl<O: PineOutput> StrToString<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let result = match &self.value {
             Value::String(s) => s.clone(),
+            Value::Int(n) => n.to_string(),
             Value::Number(n) => n.to_string(),
             Value::Bool(b) => if *b { "true" } else { "false" }.to_string(),
             Value::Na => "NaN".to_string(),

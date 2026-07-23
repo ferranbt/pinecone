@@ -1,3 +1,5 @@
+//@version=5
+indicator("control_flow/if_expression")
 // Test if expressions that return values
 
 // Simple if expression returning value
@@ -6,7 +8,7 @@ var open = 5
 x = if close > open
     close
 
-log.info(x)
+log.info(str.tostring(x))
 
 // If expression returning value (false case)
 var close2 = 5
@@ -14,7 +16,7 @@ var open2 = 10
 y = if close2 > open2
     close2
 
-log.info(y)
+log.info(str.tostring(y))
 
 // If-else expression with string return type
 var val = 5
@@ -23,7 +25,7 @@ string result = if val > 0
 else
     "non-positive"
 
-log.info(result)
+log.info(str.tostring(result))
 
 // If-else expression with string return type (negative case)
 var val2 = -5
@@ -32,7 +34,7 @@ string result2 = if val2 > 0
 else
     "non-positive"
 
-log.info(result2)
+log.info(str.tostring(result2))
 
 // If-else if-else expression
 var num = 5
@@ -45,7 +47,7 @@ else if num < 10
 else
     "large"
 
-log.info(label)
+log.info(str.tostring(label))
 
 // If-else if-else expression (large case)
 var num2 = 100
@@ -58,11 +60,11 @@ else if num2 < 10
 else
     "large"
 
-log.info(label2)
+log.info(str.tostring(label2))
 
 // Expected output:
 // 10
-// na
+// NaN
 // positive
 // non-positive
 // small

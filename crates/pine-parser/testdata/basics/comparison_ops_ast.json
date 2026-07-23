@@ -47,7 +47,7 @@
               "op": "GreaterEq",
               "right": {
                 "Literal": {
-                  "Number": 100.0
+                  "Int": 100
                 }
               }
             }
@@ -61,7 +61,7 @@
               "op": "LessEq",
               "right": {
                 "Literal": {
-                  "Number": 200.0
+                  "Int": 200
                 }
               }
             }

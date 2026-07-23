@@ -1,3 +1,5 @@
+//@version=5
+indicator("errors/deleted_label_access")
 // Test accessing a deleted label - should fail
 
 lbl = label.new(5, 150.0, "Test")

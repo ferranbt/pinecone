@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/percentile_nearest_rank")
 // Test ta.percentile_nearest_rank (percentile by the nearest-rank method)
 // Like Pine, na until the window has `length` bars. Over the last 3 bars close
 // is 299, 300, 301, so the sorted window is [299, 300, 301].
@@ -6,23 +8,23 @@
 
 // rank = ceil(50/100 * 3) = 2 -> the 2nd smallest
 p50 = ta.percentile_nearest_rank(close, 3, 50)
-log.info(p50)
+log.info(str.tostring(p50))
 
 // rank = 3 -> the largest
 p100 = ta.percentile_nearest_rank(close, 3, 100)
-log.info(p100)
+log.info(str.tostring(p100))
 
 // rank 0 clamps up to 1 -> the smallest
 p0 = ta.percentile_nearest_rank(close, 3, 0)
-log.info(p0)
+log.info(str.tostring(p0))
 
 // Expected output:
-// na
-// na
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
 // 300
 // 301
 // 299

@@ -1,3 +1,5 @@
+//@version=5
+indicator("variables/var_persists_across_bars")
 // Pine `var`: the initializer runs only the first time execution reaches the
 // declaration, and the variable persists across bars. So the counter keeps
 // incrementing bar to bar instead of resetting to 0 each bar.
@@ -5,7 +7,7 @@
 // Bars: 3
 var count = 0
 count := count + 1
-log.info(count)
+log.info(str.tostring(count))
 
 // Expected output:
 // 1

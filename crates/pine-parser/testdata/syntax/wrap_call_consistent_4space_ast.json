@@ -19,7 +19,7 @@
                 "name": "defval",
                 "value": {
                   "Literal": {
-                    "Number": 10.0
+                    "Int": 10
                   }
                 }
               }
@@ -39,7 +39,7 @@
                 "name": "minval",
                 "value": {
                   "Literal": {
-                    "Number": 1.0
+                    "Int": 1
                   }
                 }
               }

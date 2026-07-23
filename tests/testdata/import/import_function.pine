@@ -1,10 +1,12 @@
+//@version=5
+indicator("import/import_function")
 // Test importing and calling an exported function
 
 import mylib as lib
 
 // Use exported function
 result = lib.add(5, 3)
-log.info(result)
+log.info(str.tostring(result))
 
 // Expected output:
 // 8

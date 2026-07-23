@@ -1,9 +1,11 @@
+//@version=5
+indicator("constants/const_basic")
 // Test basic const variable usage
 
 const int x = 10
 const string name = "test"
-log.info(x)
-log.info(name)
+log.info(str.tostring(x))
+log.info(str.tostring(name))
 
 // Expected output:
 // 10

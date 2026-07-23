@@ -1,32 +1,34 @@
+//@version=5
+indicator("str/basic_ops")
 // Test string basic operations
 
 // String length
 len1 = str.length("hello")
 len2 = str.length("world!")
-log.info(len1)
-log.info(len2)
+log.info(str.tostring(len1))
+log.info(str.tostring(len2))
 
 // String case conversion
 lower1 = str.lower("HELLO")
 upper1 = str.upper("world")
-log.info(lower1)
-log.info(upper1)
+log.info(str.tostring(lower1))
+log.info(str.tostring(upper1))
 
 // String contains
 contains1 = str.contains("hello world", "world")
 contains2 = str.contains("hello world", "xyz")
-log.info(contains1)
-log.info(contains2)
+log.info(str.tostring(contains1))
+log.info(str.tostring(contains2))
 
 // String starts/ends with
 starts1 = str.startswith("hello world", "hello")
 starts2 = str.startswith("hello world", "world")
 ends1 = str.endswith("hello world", "world")
 ends2 = str.endswith("hello world", "hello")
-log.info(starts1)
-log.info(starts2)
-log.info(ends1)
-log.info(ends2)
+log.info(str.tostring(starts1))
+log.info(str.tostring(starts2))
+log.info(str.tostring(ends1))
+log.info(str.tostring(ends2))
 
 // Expected output:
 // 5

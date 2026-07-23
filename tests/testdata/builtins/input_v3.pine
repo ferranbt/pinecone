@@ -1,4 +1,5 @@
 //@version=3
+study("builtins/input_v3")
 // v3 input(): the type is an argument given as a bare constant (`type=integer`).
 //
 // v3 has no `log.*` namespace — bare `log` is math's natural logarithm — so this

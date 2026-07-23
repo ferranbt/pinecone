@@ -18,7 +18,7 @@
                   },
                   "index": {
                     "Literal": {
-                      "Number": 1.0
+                      "Int": 1
                     }
                   }
                 }
@@ -28,7 +28,7 @@
           "op": "Mul",
           "right": {
             "Literal": {
-              "Number": 100.0
+              "Int": 100
             }
           }
         }

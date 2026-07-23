@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/rising_falling")
 // Test ta.rising and ta.falling
 // Testing 3 bars of movement needs 4 values. Unlike the windowed averages these
 // answer false rather than na while warming up, since they return a bool.
@@ -6,10 +8,10 @@
 // Bars: 4
 
 is_rising = ta.rising(close, 3)
-log.info(is_rising)
+log.info(str.tostring(is_rising))
 
 is_falling = ta.falling(close, 3)
-log.info(is_falling)
+log.info(str.tostring(is_falling))
 
 // Expected output:
 // false

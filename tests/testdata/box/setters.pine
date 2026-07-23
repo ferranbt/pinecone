@@ -1,3 +1,5 @@
+//@version=5
+indicator("box/setters")
 // Test box setter functions
 b = box.new(0, 100.0, 10, 50.0, text="Initial Text")
 
@@ -7,19 +9,19 @@ box.set_top(b, 200.0)
 box.set_right(b, 20)
 box.set_bottom(b, 75.0)
 
-log.info(box.get_left(b))
-log.info(box.get_top(b))
-log.info(box.get_right(b))
-log.info(box.get_bottom(b))
+log.info(str.tostring(box.get_left(b)))
+log.info(str.tostring(box.get_top(b)))
+log.info(str.tostring(box.get_right(b)))
+log.info(str.tostring(box.get_bottom(b)))
 
 // Test combined setters
 box.set_lefttop(b, 1, 150.0)
-log.info(box.get_left(b))
-log.info(box.get_top(b))
+log.info(str.tostring(box.get_left(b)))
+log.info(str.tostring(box.get_top(b)))
 
 box.set_rightbottom(b, 15, 80.0)
-log.info(box.get_right(b))
-log.info(box.get_bottom(b))
+log.info(str.tostring(box.get_right(b)))
+log.info(str.tostring(box.get_bottom(b)))
 
 // Test text setter
 box.set_text(b, "Updated Text")

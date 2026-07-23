@@ -1,12 +1,14 @@
+//@version=5
+indicator("constants/const_variable")
 // Test const variable declarations
 
 const int x = 10
 const string message = "Hello"
 const float PI = 3.14159
 
-log.info(x)
-log.info(message)
-log.info(PI)
+log.info(str.tostring(x))
+log.info(str.tostring(message))
+log.info(str.tostring(PI))
 
 // Expected output:
 // 10

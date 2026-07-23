@@ -1,9 +1,21 @@
+use crate::ta::checked_length;
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::PineVersion;
-use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
+use pine_interpreter::{Interpreter, Num, PineOutput, RuntimeError, SeriesBuffer, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+
+/// Fold the arguments with `pick`, skipping na. The spec gives math.max and
+/// math.min both an int and a float overload, and [`Num`] keeps whichever type
+/// the arguments imply. All-na yields na.
+fn extremum<O: PineOutput>(values: &[Value<O>], pick: impl Fn(Num, Num) -> Num) -> Value<O> {
+    values
+        .iter()
+        .filter_map(|value| value.as_num())
+        .reduce(pick)
+        .map_or(Value::Na, Value::from)
+}
 
 /// math.abs(number) - Returns absolute value
 #[derive(BuiltinFunction)]
@@ -278,22 +290,7 @@ impl<O: PineOutput> MathMin<O> {
             ));
         }
 
-        let mut min = f64::INFINITY;
-        for val in &self.values {
-            match val {
-                Value::Number(n) => {
-                    min = min.min(*n);
-                }
-                Value::Na => continue, // Skip Na values
-                _ => {
-                    return Err(RuntimeError::TypeError(
-                        "math.min requires number arguments".to_string(),
-                    ))
-                }
-            }
-        }
-
-        Ok(Value::Number(min))
+        Ok(extremum(&self.values, Num::min))
     }
 }
 
@@ -313,22 +310,7 @@ impl<O: PineOutput> MathMax<O> {
             ));
         }
 
-        let mut max = f64::NEG_INFINITY;
-        for val in &self.values {
-            match val {
-                Value::Number(n) => {
-                    max = max.max(*n);
-                }
-                Value::Na => continue, // Skip Na values
-                _ => {
-                    return Err(RuntimeError::TypeError(
-                        "math.max requires number arguments".to_string(),
-                    ))
-                }
-            }
-        }
-
-        Ok(Value::Number(max))
+        Ok(extremum(&self.values, Num::max))
     }
 }
 
@@ -348,65 +330,55 @@ impl<O: PineOutput> MathAvg<O> {
             ));
         }
 
-        let mut sum = 0.0;
-        let mut count = 0;
+        // The spec gives math.avg only a float return, so it averages as float
+        // however its arguments were typed.
+        let values: Vec<f64> = self
+            .values
+            .iter()
+            .filter_map(|v| v.as_num())
+            .map(Num::as_f64)
+            .collect();
 
-        for val in &self.values {
-            match val {
-                Value::Number(n) => {
-                    sum += n;
-                    count += 1;
-                }
-                Value::Na => continue, // Skip Na values
-                _ => {
-                    return Err(RuntimeError::TypeError(
-                        "math.avg requires number arguments".to_string(),
-                    ))
-                }
-            }
-        }
-
-        if count == 0 {
+        if values.is_empty() {
             Ok(Value::Na)
         } else {
-            Ok(Value::Number(sum / count as f64))
+            Ok(Value::Number(
+                values.iter().sum::<f64>() / values.len() as f64,
+            ))
         }
     }
 }
 
-/// math.sum(...) - Returns sum of all arguments (requires at least 1)
+/// math.sum(source, length) - The sliding sum of the last `length` values.
+///
+/// Per the spec, na values in `source` are ignored: an na bar does not take a
+/// slot, so the sum is always over `length` non-na values.
 #[derive(BuiltinFunction)]
-#[builtin(name = "math.sum")]
-struct MathSum<O: PineOutput> {
-    #[arg(variadic)]
-    values: Vec<Value<O>>,
+#[builtin(name = "math.sum", stateful)]
+struct MathSum {
+    source: f64,
+    length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> MathSum<O> {
-    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        if self.values.is_empty() {
-            return Err(RuntimeError::TypeError(
-                "math.sum requires at least 1 argument".to_string(),
-            ));
+impl MathSum {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
+
+        // na arrives as NaN and is skipped rather than entering the window.
+        if !self.source.is_nan() {
+            self.window.push(self.source, length);
         }
 
-        let mut sum = 0.0;
-
-        for val in &self.values {
-            match val {
-                Value::Number(n) => {
-                    sum += n;
-                }
-                Value::Na => continue, // Skip Na values
-                _ => {
-                    return Err(RuntimeError::TypeError(
-                        "math.sum requires number arguments".to_string(),
-                    ))
-                }
-            }
+        if self.window.len() < length {
+            return Ok(Value::Na);
         }
 
-        Ok(Value::Number(sum))
+        Ok(Value::Number(self.window.window(length).iter().sum()))
     }
 }
 
@@ -534,7 +506,7 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     );
     math_ns.insert(
         "sum".to_string(),
-        Value::BuiltinFunction(Rc::new(MathSum::<O>::builtin_fn)),
+        Value::BuiltinFunction(MathSum::builtin_fn::<O>()),
     );
 
     // Special functions

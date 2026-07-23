@@ -1,10 +1,12 @@
+//@version=5
+indicator("basics/timestamp")
 // timestamp(...) builds a UNIX timestamp (ms) from date parts.
 // 2019-01-01 00:00 UTC = 1546300800000 ms.
-log.info(timestamp(2019, 1, 1, 0, 0))
+log.info(str.tostring(timestamp(2019, 1, 1, 0, 0)))
 // The timezone form ignores the leading tz string and reads the same numbers.
-log.info(timestamp("GMT", 2019, 1, 1, 0, 0))
+log.info(str.tostring(timestamp("GMT", 2019, 1, 1, 0, 0)))
 // A bare date string is not parsed and yields na.
-log.info(timestamp("01 Jan 2019 00:00"))
+log.info(str.tostring(timestamp("01 Jan 2019 00:00")))
 
 // Expected output:
 // 1546300800000

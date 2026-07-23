@@ -1,9 +1,11 @@
+//@version=5
+indicator("constants/position")
 // position.* constants resolve to their string tag.
-log.info(position.top_left)
-log.info(position.top_right)
-log.info(position.middle_center)
-log.info(position.bottom_right)
-log.info(position.bottom)
+log.info(str.tostring(position.top_left))
+log.info(str.tostring(position.top_right))
+log.info(str.tostring(position.middle_center))
+log.info(str.tostring(position.bottom_right))
+log.info(str.tostring(position.bottom))
 
 // Expected output:
 // top_left
