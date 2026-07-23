@@ -624,110 +624,68 @@ impl BoxCopy {
 pub fn register<O: PineOutput + BoxOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
 
-    members.insert(
-        "new".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxNew::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_left".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetLeft::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_top".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetTop::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_right".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetRight::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_bottom".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetBottom::<O>::builtin_fn)),
-    );
+    members.insert("new".to_string(), BoxNew::<O>::builtin_value());
+    members.insert("set_left".to_string(), BoxSetLeft::<O>::builtin_value());
+    members.insert("set_top".to_string(), BoxSetTop::<O>::builtin_value());
+    members.insert("set_right".to_string(), BoxSetRight::<O>::builtin_value());
+    members.insert("set_bottom".to_string(), BoxSetBottom::<O>::builtin_value());
     members.insert(
         "set_lefttop".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetLefttop::<O>::builtin_fn)),
+        BoxSetLefttop::<O>::builtin_value(),
     );
     members.insert(
         "set_rightbottom".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetRightbottom::<O>::builtin_fn)),
+        BoxSetRightbottom::<O>::builtin_value(),
     );
     members.insert(
         "set_border_color".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetBorderColor::builtin_fn::<O>)),
+        BoxSetBorderColor::builtin_value::<O>(),
     );
     members.insert(
         "set_border_width".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetBorderWidth::builtin_fn::<O>)),
+        BoxSetBorderWidth::builtin_value::<O>(),
     );
     members.insert(
         "set_border_style".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetBorderStyle::builtin_fn::<O>)),
+        BoxSetBorderStyle::builtin_value::<O>(),
     );
-    members.insert(
-        "set_extend".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetExtend::builtin_fn::<O>)),
-    );
+    members.insert("set_extend".to_string(), BoxSetExtend::builtin_value::<O>());
     members.insert(
         "set_bgcolor".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetBgcolor::builtin_fn::<O>)),
+        BoxSetBgcolor::builtin_value::<O>(),
     );
-    members.insert(
-        "set_text".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetText::builtin_fn::<O>)),
-    );
+    members.insert("set_text".to_string(), BoxSetText::builtin_value::<O>());
     members.insert(
         "set_text_color".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetTextColor::builtin_fn::<O>)),
+        BoxSetTextColor::builtin_value::<O>(),
     );
     members.insert(
         "set_text_size".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetTextSize::builtin_fn::<O>)),
+        BoxSetTextSize::builtin_value::<O>(),
     );
     members.insert(
         "set_text_halign".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetTextHalign::builtin_fn::<O>)),
+        BoxSetTextHalign::builtin_value::<O>(),
     );
     members.insert(
         "set_text_valign".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetTextValign::builtin_fn::<O>)),
+        BoxSetTextValign::builtin_value::<O>(),
     );
     members.insert(
         "set_text_wrap".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetTextWrap::builtin_fn::<O>)),
+        BoxSetTextWrap::builtin_value::<O>(),
     );
     members.insert(
         "set_text_font_family".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetTextFontFamily::builtin_fn::<O>)),
+        BoxSetTextFontFamily::builtin_value::<O>(),
     );
-    members.insert(
-        "set_xloc".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxSetXloc::<O>::builtin_fn)),
-    );
-    members.insert(
-        "get_left".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxGetLeft::builtin_fn::<O>)),
-    );
-    members.insert(
-        "get_top".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxGetTop::builtin_fn::<O>)),
-    );
-    members.insert(
-        "get_right".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxGetRight::builtin_fn::<O>)),
-    );
-    members.insert(
-        "get_bottom".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxGetBottom::builtin_fn::<O>)),
-    );
-    members.insert(
-        "delete".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxDelete::builtin_fn::<O>)),
-    );
-    members.insert(
-        "copy".to_string(),
-        Value::BuiltinFunction(Rc::new(BoxCopy::builtin_fn::<O>)),
-    );
+    members.insert("set_xloc".to_string(), BoxSetXloc::<O>::builtin_value());
+    members.insert("get_left".to_string(), BoxGetLeft::builtin_value::<O>());
+    members.insert("get_top".to_string(), BoxGetTop::builtin_value::<O>());
+    members.insert("get_right".to_string(), BoxGetRight::builtin_value::<O>());
+    members.insert("get_bottom".to_string(), BoxGetBottom::builtin_value::<O>());
+    members.insert("delete".to_string(), BoxDelete::builtin_value::<O>());
+    members.insert("copy".to_string(), BoxCopy::builtin_value::<O>());
 
     Value::Object {
         type_name: "box".to_string(),

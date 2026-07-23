@@ -1,0 +1,9 @@
+//@version=5
+indicator("arguments/error_too_many_arguments")
+// More positional arguments than the builtin declares is rejected before the
+// script runs.
+
+n = math.abs(1.0, 2.0, 3.0)
+
+// Expected error:
+// error [too-many-arguments] 6:13: `math.abs` takes at most 1 arguments, found 3

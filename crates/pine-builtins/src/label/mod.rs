@@ -543,82 +543,37 @@ pub fn register<O: PineOutput + LabelOutput>() -> Value<O> {
         Value::String("style_xcross".to_string()),
     );
 
-    members.insert(
-        "new".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelNew::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_x".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetX::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_y".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetY::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_xy".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetXy::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_xloc".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetXloc::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_yloc".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetYloc::builtin_fn::<O>)),
-    );
-    members.insert(
-        "set_color".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetColor::builtin_fn::<O>)),
-    );
-    members.insert(
-        "set_style".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetStyle::builtin_fn::<O>)),
-    );
-    members.insert(
-        "set_text".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetText::builtin_fn::<O>)),
-    );
+    members.insert("new".to_string(), LabelNew::<O>::builtin_value());
+    members.insert("set_x".to_string(), LabelSetX::<O>::builtin_value());
+    members.insert("set_y".to_string(), LabelSetY::<O>::builtin_value());
+    members.insert("set_xy".to_string(), LabelSetXy::<O>::builtin_value());
+    members.insert("set_xloc".to_string(), LabelSetXloc::<O>::builtin_value());
+    members.insert("set_yloc".to_string(), LabelSetYloc::builtin_value::<O>());
+    members.insert("set_color".to_string(), LabelSetColor::builtin_value::<O>());
+    members.insert("set_style".to_string(), LabelSetStyle::builtin_value::<O>());
+    members.insert("set_text".to_string(), LabelSetText::builtin_value::<O>());
     members.insert(
         "set_textcolor".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetTextcolor::builtin_fn::<O>)),
+        LabelSetTextcolor::builtin_value::<O>(),
     );
-    members.insert(
-        "set_size".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetSize::builtin_fn::<O>)),
-    );
+    members.insert("set_size".to_string(), LabelSetSize::builtin_value::<O>());
     members.insert(
         "set_textalign".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetTextalign::builtin_fn::<O>)),
+        LabelSetTextalign::builtin_value::<O>(),
     );
     members.insert(
         "set_tooltip".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetTooltip::builtin_fn::<O>)),
+        LabelSetTooltip::builtin_value::<O>(),
     );
     members.insert(
         "set_text_font_family".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelSetTextFontFamily::builtin_fn::<O>)),
+        LabelSetTextFontFamily::builtin_value::<O>(),
     );
-    members.insert(
-        "get_x".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelGetX::builtin_fn::<O>)),
-    );
-    members.insert(
-        "get_y".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelGetY::builtin_fn::<O>)),
-    );
-    members.insert(
-        "get_text".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelGetText::builtin_fn::<O>)),
-    );
-    members.insert(
-        "delete".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelDelete::builtin_fn::<O>)),
-    );
-    members.insert(
-        "copy".to_string(),
-        Value::BuiltinFunction(Rc::new(LabelCopy::builtin_fn::<O>)),
-    );
+    members.insert("get_x".to_string(), LabelGetX::builtin_value::<O>());
+    members.insert("get_y".to_string(), LabelGetY::builtin_value::<O>());
+    members.insert("get_text".to_string(), LabelGetText::builtin_value::<O>());
+    members.insert("delete".to_string(), LabelDelete::builtin_value::<O>());
+    members.insert("copy".to_string(), LabelCopy::builtin_value::<O>());
 
     Value::Object {
         type_name: "label".to_string(),

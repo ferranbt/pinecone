@@ -1,7 +1,9 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::Bar;
-use pine_interpreter::{BuiltinFn, EvaluatedArg, Interpreter, PineOutput, RuntimeError, Value};
+use pine_interpreter::{
+    Builtin, BuiltinFn, EvaluatedArg, Interpreter, PineOutput, RuntimeError, Value,
+};
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -224,35 +226,14 @@ pub fn register_time_functions<O: PineOutput>() -> Vec<(String, Value<O>)> {
     vec![
         (
             "timestamp".to_string(),
-            Value::BuiltinFunction(timestamp_fn::<O>()),
+            Value::BuiltinFunction(Builtin::untyped(timestamp_fn::<O>())),
         ),
-        (
-            "year".to_string(),
-            Value::BuiltinFunction(Rc::new(Year::builtin_fn::<O>)),
-        ),
-        (
-            "month".to_string(),
-            Value::BuiltinFunction(Rc::new(Month::builtin_fn::<O>)),
-        ),
-        (
-            "dayofmonth".to_string(),
-            Value::BuiltinFunction(Rc::new(DayOfMonth::builtin_fn::<O>)),
-        ),
-        (
-            "dayofweek".to_string(),
-            Value::BuiltinFunction(Rc::new(DayOfWeek::builtin_fn::<O>)),
-        ),
-        (
-            "hour".to_string(),
-            Value::BuiltinFunction(Rc::new(Hour::builtin_fn::<O>)),
-        ),
-        (
-            "minute".to_string(),
-            Value::BuiltinFunction(Rc::new(Minute::builtin_fn::<O>)),
-        ),
-        (
-            "second".to_string(),
-            Value::BuiltinFunction(Rc::new(Second::builtin_fn::<O>)),
-        ),
+        ("year".to_string(), Year::builtin_value::<O>()),
+        ("month".to_string(), Month::builtin_value::<O>()),
+        ("dayofmonth".to_string(), DayOfMonth::builtin_value::<O>()),
+        ("dayofweek".to_string(), DayOfWeek::builtin_value::<O>()),
+        ("hour".to_string(), Hour::builtin_value::<O>()),
+        ("minute".to_string(), Minute::builtin_value::<O>()),
+        ("second".to_string(), Second::builtin_value::<O>()),
     ]
 }

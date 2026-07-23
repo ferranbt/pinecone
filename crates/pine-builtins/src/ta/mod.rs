@@ -21,151 +21,58 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     let mut ta_ns: HashMap<String, Value<O>> = HashMap::new();
 
     // Moving averages
-    ta_ns.insert(
-        "sma".to_string(),
-        Value::BuiltinFunction(TaSma::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "ema".to_string(),
-        Value::BuiltinFunction(TaEma::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "rma".to_string(),
-        Value::BuiltinFunction(TaRma::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "wma".to_string(),
-        Value::BuiltinFunction(TaWma::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "vwma".to_string(),
-        Value::BuiltinFunction(TaVwma::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "hma".to_string(),
-        Value::BuiltinFunction(TaHma::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "swma".to_string(),
-        Value::BuiltinFunction(TaSwma::builtin_fn::<O>()),
-    );
+    ta_ns.insert("sma".to_string(), TaSma::builtin_value::<O>());
+    ta_ns.insert("ema".to_string(), TaEma::builtin_value::<O>());
+    ta_ns.insert("rma".to_string(), TaRma::builtin_value::<O>());
+    ta_ns.insert("wma".to_string(), TaWma::builtin_value::<O>());
+    ta_ns.insert("vwma".to_string(), TaVwma::builtin_value::<O>());
+    ta_ns.insert("hma".to_string(), TaHma::builtin_value::<O>());
+    ta_ns.insert("swma".to_string(), TaSwma::builtin_value::<O>());
 
     // Statistics
-    ta_ns.insert(
-        "stdev".to_string(),
-        Value::BuiltinFunction(TaStdev::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "variance".to_string(),
-        Value::BuiltinFunction(TaVariance::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "median".to_string(),
-        Value::BuiltinFunction(TaMedian::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "dev".to_string(),
-        Value::BuiltinFunction(TaDev::builtin_fn::<O>()),
-    );
+    ta_ns.insert("stdev".to_string(), TaStdev::builtin_value::<O>());
+    ta_ns.insert("variance".to_string(), TaVariance::builtin_value::<O>());
+    ta_ns.insert("median".to_string(), TaMedian::builtin_value::<O>());
+    ta_ns.insert("dev".to_string(), TaDev::builtin_value::<O>());
     ta_ns.insert(
         "percentile_nearest_rank".to_string(),
-        Value::BuiltinFunction(TaPercentileNearestRank::builtin_fn::<O>()),
+        TaPercentileNearestRank::builtin_value::<O>(),
     );
     ta_ns.insert(
         "cum".to_string(),
         // Stateful: the closure owns this script's per-call-site running totals.
-        Value::BuiltinFunction(TaCum::builtin_fn::<O>()),
+        TaCum::builtin_value::<O>(),
     );
 
     // Volatility
-    ta_ns.insert(
-        "tr".to_string(),
-        Value::BuiltinFunction(TaTr::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "atr".to_string(),
-        Value::BuiltinFunction(TaAtr::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "bb".to_string(),
-        Value::BuiltinFunction(TaBb::builtin_fn::<O>()),
-    );
+    ta_ns.insert("tr".to_string(), TaTr::builtin_value::<O>());
+    ta_ns.insert("atr".to_string(), TaAtr::builtin_value::<O>());
+    ta_ns.insert("bb".to_string(), TaBb::builtin_value::<O>());
 
     // Comparison & Signals
-    ta_ns.insert(
-        "change".to_string(),
-        Value::BuiltinFunction(TaChange::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "highest".to_string(),
-        Value::BuiltinFunction(TaHighest::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "lowest".to_string(),
-        Value::BuiltinFunction(TaLowest::builtin_fn::<O>()),
-    );
+    ta_ns.insert("change".to_string(), TaChange::builtin_value::<O>());
+    ta_ns.insert("highest".to_string(), TaHighest::builtin_value::<O>());
+    ta_ns.insert("lowest".to_string(), TaLowest::builtin_value::<O>());
     ta_ns.insert(
         "highestbars".to_string(),
-        Value::BuiltinFunction(TaHighestbars::builtin_fn::<O>()),
+        TaHighestbars::builtin_value::<O>(),
     );
-    ta_ns.insert(
-        "lowestbars".to_string(),
-        Value::BuiltinFunction(TaLowestbars::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "rising".to_string(),
-        Value::BuiltinFunction(TaRising::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "falling".to_string(),
-        Value::BuiltinFunction(TaFalling::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "cross".to_string(),
-        Value::BuiltinFunction(TaCross::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "crossover".to_string(),
-        Value::BuiltinFunction(TaCrossover::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "crossunder".to_string(),
-        Value::BuiltinFunction(TaCrossunder::builtin_fn::<O>()),
-    );
+    ta_ns.insert("lowestbars".to_string(), TaLowestbars::builtin_value::<O>());
+    ta_ns.insert("rising".to_string(), TaRising::builtin_value::<O>());
+    ta_ns.insert("falling".to_string(), TaFalling::builtin_value::<O>());
+    ta_ns.insert("cross".to_string(), TaCross::builtin_value::<O>());
+    ta_ns.insert("crossover".to_string(), TaCrossover::builtin_value::<O>());
+    ta_ns.insert("crossunder".to_string(), TaCrossunder::builtin_value::<O>());
 
     // Oscillators & Indicators
-    ta_ns.insert(
-        "rsi".to_string(),
-        Value::BuiltinFunction(TaRsi::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "cci".to_string(),
-        Value::BuiltinFunction(TaCci::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "mom".to_string(),
-        Value::BuiltinFunction(TaMom::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "roc".to_string(),
-        Value::BuiltinFunction(TaRoc::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "cmo".to_string(),
-        Value::BuiltinFunction(TaCmo::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "linreg".to_string(),
-        Value::BuiltinFunction(TaLinreg::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "stoch".to_string(),
-        Value::BuiltinFunction(TaStoch::builtin_fn::<O>()),
-    );
-    ta_ns.insert(
-        "mfi".to_string(),
-        Value::BuiltinFunction(TaMfi::builtin_fn::<O>()),
-    );
+    ta_ns.insert("rsi".to_string(), TaRsi::builtin_value::<O>());
+    ta_ns.insert("cci".to_string(), TaCci::builtin_value::<O>());
+    ta_ns.insert("mom".to_string(), TaMom::builtin_value::<O>());
+    ta_ns.insert("roc".to_string(), TaRoc::builtin_value::<O>());
+    ta_ns.insert("cmo".to_string(), TaCmo::builtin_value::<O>());
+    ta_ns.insert("linreg".to_string(), TaLinreg::builtin_value::<O>());
+    ta_ns.insert("stoch".to_string(), TaStoch::builtin_value::<O>());
+    ta_ns.insert("mfi".to_string(), TaMfi::builtin_value::<O>());
 
     if matches!(version, PineVersion::V5 | PineVersion::V6) {
         let mut obj: HashMap<String, Value<O>> = HashMap::new();

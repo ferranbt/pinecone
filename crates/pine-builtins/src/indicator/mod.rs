@@ -7,7 +7,6 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::PineVersion;
 use pine_interpreter::{Indicator, IndicatorOutput, Interpreter, PineOutput, RuntimeError, Value};
-use std::rc::Rc;
 
 /// indicator(title, shorttitle, overlay, format, precision, ...)
 #[derive(BuiltinFunction)]
@@ -67,8 +66,5 @@ pub fn register<O: PineOutput + IndicatorOutput>(version: PineVersion) -> Vec<(S
     } else {
         "indicator"
     };
-    vec![(
-        name.to_string(),
-        Value::BuiltinFunction(Rc::new(IndicatorFn::builtin_fn::<O>)),
-    )]
+    vec![(name.to_string(), IndicatorFn::builtin_value::<O>())]
 }

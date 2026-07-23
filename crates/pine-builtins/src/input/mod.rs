@@ -295,42 +295,15 @@ impl<O: PineOutput + InputOutput> InputSource<O> {
 fn register_v56<O: PineOutput + InputOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
 
-    members.insert(
-        "int".to_string(),
-        Value::BuiltinFunction(Rc::new(InputInt::<O>::builtin_fn)),
-    );
-    members.insert(
-        "integer".to_string(),
-        Value::BuiltinFunction(Rc::new(InputInt::<O>::builtin_fn)),
-    );
-    members.insert(
-        "float".to_string(),
-        Value::BuiltinFunction(Rc::new(InputFloat::<O>::builtin_fn)),
-    );
-    members.insert(
-        "bool".to_string(),
-        Value::BuiltinFunction(Rc::new(InputBool::builtin_fn::<O>)),
-    );
-    members.insert(
-        "string".to_string(),
-        Value::BuiltinFunction(Rc::new(InputString::<O>::builtin_fn)),
-    );
-    members.insert(
-        "session".to_string(),
-        Value::BuiltinFunction(Rc::new(InputSession::<O>::builtin_fn)),
-    );
-    members.insert(
-        "color".to_string(),
-        Value::BuiltinFunction(Rc::new(InputColor::builtin_fn::<O>)),
-    );
-    members.insert(
-        "time".to_string(),
-        Value::BuiltinFunction(Rc::new(InputTime::builtin_fn::<O>)),
-    );
-    members.insert(
-        "source".to_string(),
-        Value::BuiltinFunction(Rc::new(InputSource::<O>::builtin_fn)),
-    );
+    members.insert("int".to_string(), InputInt::<O>::builtin_value());
+    members.insert("integer".to_string(), InputInt::<O>::builtin_value());
+    members.insert("float".to_string(), InputFloat::<O>::builtin_value());
+    members.insert("bool".to_string(), InputBool::builtin_value::<O>());
+    members.insert("string".to_string(), InputString::<O>::builtin_value());
+    members.insert("session".to_string(), InputSession::<O>::builtin_value());
+    members.insert("color".to_string(), InputColor::builtin_value::<O>());
+    members.insert("time".to_string(), InputTime::builtin_value::<O>());
+    members.insert("source".to_string(), InputSource::<O>::builtin_value());
 
     Value::Object {
         type_name: "input".to_string(),

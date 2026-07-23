@@ -1,4 +1,6 @@
-use pine_interpreter::{EvaluatedArg, LogLevel, LogOutput, PineOutput, RuntimeError, Value};
+use pine_interpreter::{
+    Builtin, EvaluatedArg, LogLevel, LogOutput, PineOutput, RuntimeError, Value,
+};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -21,7 +23,10 @@ pub fn register<O: PineOutput + LogOutput>() -> Value<O> {
             ctx.output.add_log(level, msg);
             Ok(Value::Na)
         });
-        log_ns.insert(name.to_string(), Value::BuiltinFunction(log_fn));
+        log_ns.insert(
+            name.to_string(),
+            Value::BuiltinFunction(Builtin::untyped(log_fn)),
+        );
     }
 
     Value::Object {

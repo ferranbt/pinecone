@@ -57,6 +57,7 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     };
 
     // Generate field parsing code
+    let signature_fn = generate_signature(fields);
     let field_parsing = generate_field_parsing(fields);
     let field_validation = generate_field_validation(fields);
     let struct_construction = generate_struct_construction(fields);
@@ -186,6 +187,17 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
                 pub fn name() -> &'static str {
                     #function_name
                 }
+
+                #signature_fn
+                /// The registered value: the callable plus the arguments it
+                /// accepts, so a caller registers one thing, not two.
+                pub fn builtin_value #fn_generics () -> ::pine_interpreter::Value<O> {
+                    ::pine_interpreter::Value::BuiltinFunction(::pine_interpreter::Builtin {
+                        call: Self::builtin_fn::<O>(),
+                        signature: Self::signature(),
+                    })
+                }
+
             }
         }
     } else {
@@ -209,6 +221,17 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
                 pub fn name() -> &'static str {
                     #function_name
                 }
+
+                #signature_fn
+                /// The registered value: the callable plus the arguments it
+                /// accepts, so a caller registers one thing, not two.
+                pub fn builtin_value #fn_generics () -> ::pine_interpreter::Value<O> {
+                    ::pine_interpreter::Value::BuiltinFunction(::pine_interpreter::Builtin {
+                        call: ::std::rc::Rc::new(Self::builtin_fn),
+                        signature: Self::signature(),
+                    })
+                }
+
             }
         }
     };
@@ -328,6 +351,67 @@ fn is_field_type_param(field: &Field) -> bool {
             false
         }
     })
+}
+
+/// Build the [`BuiltinSignature`] literal describing this builtin's arguments,
+/// so semantic analysis can reject a call before it runs. Mirrors the field
+/// types, since those are what the runtime conversion will apply.
+fn generate_signature(
+    fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>,
+) -> proc_macro2::TokenStream {
+    let params = fields
+        .iter()
+        // `#[type_param]` and `#[state]` fields are not call arguments.
+        .filter(|f| !is_field_type_param(f) && !is_field_state(f))
+        .map(|field| {
+            let name = field
+                .ident
+                .as_ref()
+                .unwrap()
+                .to_string()
+                .trim_start_matches("r#")
+                .to_string();
+            let field_ty = &field.ty;
+            let type_str = quote! { #field_ty }.to_string();
+            let variadic = is_field_variadic(field);
+            let (has_default, _) = parse_field_default(field);
+            // A defaulted, variadic or Option field may be omitted.
+            let required = !has_default && !variadic && !type_str.contains("Option");
+
+            let ty = if type_str.contains("Value") || type_str.contains("Vec") {
+                quote! { ::pine_interpreter::ParamType::Any }
+            } else if type_str.contains("Color") {
+                quote! { ::pine_interpreter::ParamType::Color }
+            } else if type_str.contains("String") {
+                quote! { ::pine_interpreter::ParamType::String }
+            } else if type_str.contains("bool") {
+                quote! { ::pine_interpreter::ParamType::Bool }
+            } else if type_str.contains("f64")
+                || type_str.contains("i64")
+                || type_str.contains("Num")
+            {
+                quote! { ::pine_interpreter::ParamType::Number }
+            } else {
+                quote! { ::pine_interpreter::ParamType::Any }
+            };
+
+            quote! {
+                ::pine_interpreter::Param {
+                    name: #name.to_string(),
+                    ty: #ty,
+                    required: #required,
+                    variadic: #variadic,
+                }
+            }
+        });
+
+    quote! {
+        pub fn signature() -> ::pine_interpreter::BuiltinSignature {
+            ::pine_interpreter::BuiltinSignature {
+                params: vec![#(#params),*],
+            }
+        }
+    }
 }
 
 /// `#[state]` marks a field that is not a Pine argument but the builtin's own

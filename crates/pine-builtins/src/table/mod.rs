@@ -246,38 +246,26 @@ fn set_cell<O: PineOutput + TableOutput>(
 /// `position.*` constants registered separately (see `constants::position`).
 pub fn register<O: PineOutput + TableOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
-    members.insert(
-        "new".to_string(),
-        Value::BuiltinFunction(Rc::new(TableNew::builtin_fn::<O>)),
-    );
-    members.insert(
-        "cell".to_string(),
-        Value::BuiltinFunction(Rc::new(TableCellFn::builtin_fn::<O>)),
-    );
+    members.insert("new".to_string(), TableNew::builtin_value::<O>());
+    members.insert("cell".to_string(), TableCellFn::builtin_value::<O>());
     members.insert(
         "cell_set_text".to_string(),
-        Value::BuiltinFunction(Rc::new(TableCellSetText::builtin_fn::<O>)),
+        TableCellSetText::builtin_value::<O>(),
     );
     members.insert(
         "cell_set_bgcolor".to_string(),
-        Value::BuiltinFunction(Rc::new(TableCellSetBgcolor::builtin_fn::<O>)),
+        TableCellSetBgcolor::builtin_value::<O>(),
     );
     members.insert(
         "cell_set_text_color".to_string(),
-        Value::BuiltinFunction(Rc::new(TableCellSetTextColor::builtin_fn::<O>)),
+        TableCellSetTextColor::builtin_value::<O>(),
     );
     members.insert(
         "set_bgcolor".to_string(),
-        Value::BuiltinFunction(Rc::new(TableSetBgcolor::builtin_fn::<O>)),
+        TableSetBgcolor::builtin_value::<O>(),
     );
-    members.insert(
-        "clear".to_string(),
-        Value::BuiltinFunction(Rc::new(TableClear::builtin_fn::<O>)),
-    );
-    members.insert(
-        "delete".to_string(),
-        Value::BuiltinFunction(Rc::new(TableDelete::builtin_fn::<O>)),
-    );
+    members.insert("clear".to_string(), TableClear::builtin_value::<O>());
+    members.insert("delete".to_string(), TableDelete::builtin_value::<O>());
     Value::Object {
         type_name: "table".to_string(),
         fields: Rc::new(RefCell::new(members)),
