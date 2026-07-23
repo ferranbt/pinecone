@@ -21,7 +21,7 @@
         "op": "Less",
         "right": {
           "Literal": {
-            "Number": 30.0
+            "Int": 30
           }
         }
       }
@@ -36,7 +36,7 @@
         "op": "Eq",
         "right": {
           "Literal": {
-            "Number": 5.0
+            "Int": 5
           }
         }
       }
@@ -52,7 +52,7 @@
             },
             "index": {
               "Literal": {
-                "Number": 1.0
+                "Int": 1
               }
             }
           }
@@ -65,7 +65,7 @@
             },
             "index": {
               "Literal": {
-                "Number": 2.0
+                "Int": 2
               }
             }
           }

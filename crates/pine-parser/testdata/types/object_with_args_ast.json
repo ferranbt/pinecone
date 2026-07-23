@@ -34,7 +34,7 @@
             {
               "Positional": {
                 "Literal": {
-                  "Number": 100.0
+                  "Int": 100
                 }
               }
             },
@@ -71,7 +71,7 @@
                 "name": "x",
                 "value": {
                   "Literal": {
-                    "Number": 200.0
+                    "Int": 200
                   }
                 }
               }

@@ -23,7 +23,7 @@
           },
           "else_expr": {
             "Literal": {
-              "Number": 100.0
+              "Int": 100
             }
           }
         }

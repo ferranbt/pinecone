@@ -5,7 +5,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 5.0
+          "Int": 5
         }
       },
       "var_kind": "Var"
@@ -25,7 +25,7 @@
               "op": "Greater",
               "right": {
                 "Literal": {
-                  "Number": 0.0
+                  "Int": 0
                 }
               }
             }

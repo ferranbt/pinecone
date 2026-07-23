@@ -552,6 +552,14 @@ fn generate_value_conversion(
                     Some(arg_value.as_color()?)
                 }
             }
+        } else if type_str.contains("Num") {
+            quote! {
+                if matches!(arg_value, Value::Na) {
+                    None
+                } else {
+                    arg_value.as_num()
+                }
+            }
         } else if type_str.contains("f64") {
             quote! {
                 if matches!(arg_value, Value::Na) {
@@ -584,6 +592,14 @@ fn generate_value_conversion(
                     Some(arg_value)
                 }
             }
+        }
+    } else if type_str.contains("Num") {
+        // A `Num` field keeps int-vs-float, so the builtin can apply Pine's
+        // overload rule; `f64` below deliberately discards it.
+        quote! {
+            arg_value.as_num().ok_or_else(|| RuntimeError::TypeError(
+                "Expected number".to_string()
+            ))?
         }
     } else if type_str.contains("f64") {
         quote! { arg_value.as_number()? }

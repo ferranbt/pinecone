@@ -17,7 +17,7 @@
             {
               "Positional": {
                 "Literal": {
-                  "Number": 14.0
+                  "Int": 14
                 }
               }
             }

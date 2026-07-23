@@ -153,6 +153,7 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Literal {
+    Int(i64),
     Number(f64),
     String(String),
     Bool(bool),

@@ -14,7 +14,7 @@
                 "name": "a",
                 "value": {
                   "Literal": {
-                    "Number": 1.0
+                    "Int": 1
                   }
                 }
               }
@@ -29,12 +29,12 @@
                     },
                     "then_expr": {
                       "Literal": {
-                        "Number": 1.0
+                        "Int": 1
                       }
                     },
                     "else_expr": {
                       "Literal": {
-                        "Number": 2.0
+                        "Int": 2
                       }
                     }
                   }
@@ -46,7 +46,7 @@
                 "name": "c",
                 "value": {
                   "Literal": {
-                    "Number": 3.0
+                    "Int": 3
                   }
                 }
               }
@@ -63,7 +63,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 1.0
+          "Int": 1
         }
       }
     }

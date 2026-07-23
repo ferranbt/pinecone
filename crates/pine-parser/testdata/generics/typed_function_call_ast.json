@@ -20,21 +20,21 @@
             {
               "Positional": {
                 "Literal": {
-                  "Number": 2.0
+                  "Int": 2
                 }
               }
             },
             {
               "Positional": {
                 "Literal": {
-                  "Number": 3.0
+                  "Int": 3
                 }
               }
             },
             {
               "Positional": {
                 "Literal": {
-                  "Number": 0.0
+                  "Int": 0
                 }
               }
             }
@@ -66,7 +66,7 @@
             {
               "Positional": {
                 "Literal": {
-                  "Number": 10.0
+                  "Int": 10
                 }
               }
             },

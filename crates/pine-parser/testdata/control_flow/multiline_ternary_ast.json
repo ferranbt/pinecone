@@ -18,12 +18,12 @@
           },
           "then_expr": {
             "Literal": {
-              "Number": 1.0
+              "Int": 1
             }
           },
           "else_expr": {
             "Literal": {
-              "Number": 0.0
+              "Int": 0
             }
           }
         }
@@ -49,7 +49,7 @@
           },
           "then_expr": {
             "Literal": {
-              "Number": 1.0
+              "Int": 1
             }
           },
           "else_expr": {
@@ -70,14 +70,14 @@
                   "op": "Neg",
                   "expr": {
                     "Literal": {
-                      "Number": 1.0
+                      "Int": 1
                     }
                   }
                 }
               },
               "else_expr": {
                 "Literal": {
-                  "Number": 0.0
+                  "Int": 0
                 }
               }
             }

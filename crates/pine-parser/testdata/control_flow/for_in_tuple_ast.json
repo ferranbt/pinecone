@@ -17,21 +17,21 @@
             {
               "Positional": {
                 "Literal": {
-                  "Number": 10.0
+                  "Int": 10
                 }
               }
             },
             {
               "Positional": {
                 "Literal": {
-                  "Number": 20.0
+                  "Int": 20
                 }
               }
             },
             {
               "Positional": {
                 "Literal": {
-                  "Number": 30.0
+                  "Int": 30
                 }
               }
             }
@@ -48,7 +48,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 0.0
+          "Int": 0
         }
       },
       "var_kind": "Var"

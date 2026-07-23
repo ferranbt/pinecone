@@ -34,7 +34,7 @@ pub enum LexerError {
 // Token types
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
-    // Literals
+    IntLiteral(i64),
     Number(f64),
     String(String),
     Bool(bool),
@@ -200,15 +200,29 @@ impl Lexer {
             }
         }
 
-        let value = num_str
-            .parse::<f64>()
-            .map_err(|_| LexerError::InvalidNumber {
-                value: num_str.clone(),
-                line: start_line,
-                column: start_col,
-            })?;
+        // No decimal point means an integer literal; Pine treats the two types
+        // differently. (This lexer does not read scientific notation, so a `.`
+        // is the only thing that makes a literal a float.)
+        let typ =
+            if num_str.contains('.') {
+                TokenType::Number(num_str.parse::<f64>().map_err(|_| {
+                    LexerError::InvalidNumber {
+                        value: num_str.clone(),
+                        line: start_line,
+                        column: start_col,
+                    }
+                })?)
+            } else {
+                TokenType::IntLiteral(num_str.parse::<i64>().map_err(|_| {
+                    LexerError::InvalidNumber {
+                        value: num_str.clone(),
+                        line: start_line,
+                        column: start_col,
+                    }
+                })?)
+            };
         Ok(Token {
-            typ: TokenType::Number(value),
+            typ,
             lexeme: num_str,
             line: start_line,
             column: start_col,
@@ -919,7 +933,7 @@ mod tests {
         // Numbers
         let mut lexer = Lexer::new("42 3.15");
         let tokens = lexer.tokenize()?;
-        assert!(matches!(tokens[0].typ, TokenType::Number(n) if n == 42.0));
+        assert!(matches!(tokens[0].typ, TokenType::IntLiteral(n) if n == 42));
         assert!(matches!(tokens[1].typ, TokenType::Number(n) if n == 3.15));
 
         // Strings
@@ -1012,9 +1026,9 @@ mod tests {
     fn test_comments() -> eyre::Result<()> {
         let mut lexer = Lexer::new("42 // comment\n10");
         let tokens = lexer.tokenize()?;
-        assert!(matches!(tokens[0].typ, TokenType::Number(n) if n == 42.0));
+        assert!(matches!(tokens[0].typ, TokenType::IntLiteral(n) if n == 42));
         assert!(matches!(tokens[1].typ, TokenType::Newline));
-        assert!(matches!(tokens[2].typ, TokenType::Number(n) if n == 10.0));
+        assert!(matches!(tokens[2].typ, TokenType::IntLiteral(n) if n == 10));
         Ok(())
     }
 
@@ -1037,14 +1051,14 @@ mod tests {
         assert!(matches!(tokens[0].typ, TokenType::Var));
         assert!(matches!(&tokens[1].typ, TokenType::Ident(s) if s == "x"));
         assert!(matches!(tokens[2].typ, TokenType::Assign));
-        assert!(matches!(tokens[3].typ, TokenType::Number(n) if n == 10.0));
+        assert!(matches!(tokens[3].typ, TokenType::IntLiteral(n) if n == 10));
 
         // Array access
         let mut lexer = Lexer::new("close[1]");
         let tokens = lexer.tokenize()?;
         assert!(matches!(&tokens[0].typ, TokenType::Ident(s) if s == "close"));
         assert!(matches!(tokens[1].typ, TokenType::LBracket));
-        assert!(matches!(tokens[2].typ, TokenType::Number(n) if n == 1.0));
+        assert!(matches!(tokens[2].typ, TokenType::IntLiteral(n) if n == 1));
         assert!(matches!(tokens[3].typ, TokenType::RBracket));
 
         // Comparison
@@ -1052,7 +1066,7 @@ mod tests {
         let tokens = lexer.tokenize()?;
         assert!(matches!(&tokens[0].typ, TokenType::Ident(s) if s == "x"));
         assert!(matches!(tokens[1].typ, TokenType::Greater));
-        assert!(matches!(tokens[2].typ, TokenType::Number(n) if n == 5.0));
+        assert!(matches!(tokens[2].typ, TokenType::IntLiteral(n) if n == 5));
         Ok(())
     }
 }

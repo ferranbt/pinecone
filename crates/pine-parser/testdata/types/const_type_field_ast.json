@@ -9,7 +9,7 @@
           "type_annotation": "int",
           "default_value": {
             "Literal": {
-              "Number": 0.0
+              "Int": 0
             }
           }
         },
@@ -19,7 +19,7 @@
           "type_annotation": "int",
           "default_value": {
             "Literal": {
-              "Number": 0.0
+              "Int": 0
             }
           }
         }

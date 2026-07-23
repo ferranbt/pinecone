@@ -19,7 +19,7 @@
           "op": "Div",
           "right": {
             "Literal": {
-              "Number": 2.0
+              "Int": 2
             }
           }
         }
@@ -57,7 +57,7 @@
           "op": "Mul",
           "right": {
             "Literal": {
-              "Number": 2.0
+              "Int": 2
             }
           }
         }

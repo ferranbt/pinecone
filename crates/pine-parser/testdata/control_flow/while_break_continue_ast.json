@@ -5,7 +5,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 0.0
+          "Int": 0
         }
       },
       "var_kind": "Var"
@@ -17,7 +17,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 0.0
+          "Int": 0
         }
       },
       "var_kind": "Var"
@@ -33,7 +33,7 @@
           "op": "Less",
           "right": {
             "Literal": {
-              "Number": 20.0
+              "Int": 20
             }
           }
         }
@@ -52,7 +52,7 @@
                 "op": "Add",
                 "right": {
                   "Literal": {
-                    "Number": 1.0
+                    "Int": 1
                   }
                 }
               }
@@ -69,7 +69,7 @@
                 "op": "Greater",
                 "right": {
                   "Literal": {
-                    "Number": 10.0
+                    "Int": 10
                   }
                 }
               }
@@ -93,7 +93,7 @@
                     "op": "Mod",
                     "right": {
                       "Literal": {
-                        "Number": 2.0
+                        "Int": 2
                       }
                     }
                   }
@@ -101,7 +101,7 @@
                 "op": "Eq",
                 "right": {
                   "Literal": {
-                    "Number": 0.0
+                    "Int": 0
                   }
                 }
               }

@@ -5,7 +5,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 10.0
+          "Int": 10
         }
       }
     }
@@ -16,7 +16,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 5.0
+          "Int": 5
         }
       }
     }
@@ -41,7 +41,7 @@
             "type_annotation": null,
             "initializer": {
               "Literal": {
-                "Number": 1.0
+                "Int": 1
               }
             }
           }
@@ -56,7 +56,7 @@
                 "op": "Eq",
                 "right": {
                   "Literal": {
-                    "Number": 10.0
+                    "Int": 10
                   }
                 }
               }
@@ -68,7 +68,7 @@
                   "type_annotation": null,
                   "initializer": {
                     "Literal": {
-                      "Number": 100.0
+                      "Int": 100
                     }
                   }
                 }
@@ -82,7 +82,7 @@
                   "type_annotation": null,
                   "initializer": {
                     "Literal": {
-                      "Number": 200.0
+                      "Int": 200
                     }
                   }
                 }

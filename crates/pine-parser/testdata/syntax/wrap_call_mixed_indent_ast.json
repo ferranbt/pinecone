@@ -34,7 +34,7 @@
                       "op": "GreaterEq",
                       "right": {
                         "Literal": {
-                          "Number": 0.0
+                          "Int": 0
                         }
                       }
                     }
@@ -64,7 +64,7 @@
               "name": "linewidth",
               "value": {
                 "Literal": {
-                  "Number": 8.0
+                  "Int": 8
                 }
               }
             }

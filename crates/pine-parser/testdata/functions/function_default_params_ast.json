@@ -13,7 +13,7 @@
               "name": "b",
               "default_value": {
                 "Literal": {
-                  "Number": 10.0
+                  "Int": 10
                 }
               }
             }
@@ -114,7 +114,7 @@
             {
               "Positional": {
                 "Literal": {
-                  "Number": 5.0
+                  "Int": 5
                 }
               }
             }

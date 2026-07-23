@@ -17,10 +17,12 @@ mul1 = 5 * 4
 mul2 = -3 * 2
 mul3 = 2.5 * 4
 
-// Division
+// Division. Two ints divide as ints in Pine, so `15 / 2` truncates to 7; a
+// float operand makes the whole division float.
 div1 = 20 / 4
 div2 = 15 / 2
 div3 = -10 / 2
+div4 = 15 / 2.0
 
 // Modulo
 mod1 = 10 % 3
@@ -38,6 +40,7 @@ log.info(str.tostring(mul3))
 log.info(str.tostring(div1))
 log.info(str.tostring(div2))
 log.info(str.tostring(div3))
+log.info(str.tostring(div4))
 log.info(str.tostring(mod1))
 log.info(str.tostring(mod2))
 
@@ -52,7 +55,8 @@ log.info(str.tostring(mod2))
 // -6
 // 10
 // 5
-// 7.5
+// 7
 // -5
+// 7.5
 // 1
 // 3

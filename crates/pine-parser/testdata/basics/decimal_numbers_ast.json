@@ -29,7 +29,7 @@
         "Binary": {
           "left": {
             "Literal": {
-              "Number": 1.0
+              "Int": 1
             }
           },
           "op": "Add",

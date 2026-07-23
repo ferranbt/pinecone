@@ -5,7 +5,7 @@
       "type_annotation": null,
       "initializer": {
         "Literal": {
-          "Number": 10.0
+          "Int": 10
         }
       },
       "var_kind": "Var"
@@ -22,7 +22,7 @@
           },
           "index": {
             "Literal": {
-              "Number": 1.0
+              "Int": 1
             }
           }
         }
@@ -40,7 +40,7 @@
           "op": "Greater",
           "right": {
             "Literal": {
-              "Number": 5.0
+              "Int": 5
             }
           }
         }
@@ -58,7 +58,7 @@
                 "op": "Mul",
                 "right": {
                   "Literal": {
-                    "Number": 2.0
+                    "Int": 2
                   }
                 }
               }
@@ -80,7 +80,7 @@
                 "op": "Add",
                 "right": {
                   "Literal": {
-                    "Number": 1.0
+                    "Int": 1
                   }
                 }
               }
