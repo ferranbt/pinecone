@@ -1,18 +1,21 @@
 // Test ta.median (Median value)
-// Median is the middle value when data is sorted
-// Last 5 closes: 297, 298, 299, 300, 301 (sorted)
-// Median = 299 (middle value)
+// Like Pine, na until the window has `length` bars. Over the last 3 bars close
+// is 299, 300, 301.
 
-// Median of last 5 closes (odd number)
-med5 = ta.median(close, 5)
-log.info(med5)
+// Bars: 3
 
-// Median of last 4 closes (even number)
-// Last 4 closes: 298, 299, 300, 301 (sorted)
-// Median = (299 + 300) / 2 = 299.5
-med4 = ta.median(close, 4)
-log.info(med4)
+// Window [299,300,301] -> the middle value
+med3 = ta.median(close, 3)
+log.info(med3)
+
+// Fills a bar earlier; even-sized windows average the middle two
+med2 = ta.median(close, 2)
+log.info(med2)
 
 // Expected output:
-// 299
+// na
+// na
+// na
 // 299.5
+// 300
+// 300.5

@@ -1,7 +1,6 @@
 use pine::ScriptBuilder;
 use pine_builtins::DefaultPineOutput;
-use pine_interpreter::{Bar, HistoricalDataProvider, Value};
-use std::cell::Cell;
+use pine_interpreter::Bar;
 
 /// Generate synthetic OHLCV bar data for benchmarking
 pub fn generate_bars(count: usize) -> Vec<Bar> {
@@ -36,62 +35,12 @@ pub fn generate_bars(count: usize) -> Vec<Bar> {
     bars
 }
 
-/// Mock historical data provider for benchmarks
-pub struct BenchHistoricalData {
-    bars: Vec<Bar>,
-    current_index: Cell<usize>,
-}
-
-impl BenchHistoricalData {
-    pub fn new(bars: Vec<Bar>) -> Self {
-        Self {
-            bars,
-            current_index: Cell::new(0),
-        }
-    }
-
-    pub fn set_current_bar(&self, index: usize) {
-        self.current_index.set(index);
-    }
-}
-
-impl HistoricalDataProvider for BenchHistoricalData {
-    fn get_historical(&self, series_id: &str, offset: usize) -> Option<Value<DefaultPineOutput>> {
-        let current_index = self.current_index.get();
-
-        if current_index < offset {
-            return None;
-        }
-
-        let bar_index = current_index - offset;
-        if bar_index >= self.bars.len() {
-            return None;
-        }
-
-        let bar = &self.bars[bar_index];
-        let value = match series_id {
-            "open" => bar.open,
-            "high" => bar.high,
-            "low" => bar.low,
-            "close" => bar.close,
-            "volume" => bar.volume,
-            _ => return None,
-        };
-
-        Some(Value::Number(value))
-    }
-}
-
-/// Execute a script with historical data context
+/// Compile `source` and run it over every bar.
 ///
-/// This helper compiles a script, sets up the historical data provider,
-/// and executes it with the last bar in the dataset.
+/// Series history and stateful builtins accumulate as bars execute, so a script
+/// that looks back has to be replayed from the start rather than evaluated at a
+/// single bar. This measures the whole replay.
 pub fn execute_with_history(source: &str, bars: &[Bar]) -> Result<(), pine::Error> {
-    let historical_data = BenchHistoricalData::new(bars.to_vec());
-    historical_data.set_current_bar(bars.len() - 1);
-    let mut script = ScriptBuilder::with_code(source)
-        .with_historical_provider(Box::new(historical_data))
-        .compile()?;
-    let _output = script.execute(&bars[bars.len() - 1])?;
-    Ok(())
+    let mut script = ScriptBuilder::<DefaultPineOutput>::with_code(source).compile()?;
+    script.execute_bars(bars)
 }

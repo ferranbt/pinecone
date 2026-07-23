@@ -1,0 +1,19 @@
+// Test ta.highestbars and ta.lowestbars — WHERE the extreme sits, not what it
+// is. Both report an offset back from the current bar: 0 is this bar, -1 the
+// one before it, and so on, so the result is always zero or negative.
+//
+// Over the last 3 bars close is 299, 300, 301. Close only ever rises here, so
+// the highest is this bar (0) and the lowest is the oldest in the window (-2).
+
+// Bars: 3
+
+log.info(ta.highestbars(close, 3))
+log.info(ta.lowestbars(close, 3))
+
+// Expected output:
+// na
+// na
+// na
+// na
+// 0
+// -2

@@ -1,19 +1,26 @@
-// Test ta.cum (cumulative sum from the first bar)
-// The fixture has 200 bars: close = 102 + i, volume = 1000 + 10i (i = 0..199)
+// Test ta.cum (running total from the first executed bar)
+// `cum` accumulates as bars execute rather than reading back through history,
+// so it is asserted across bars. Over the last 3 bars close is 299, 300, 301
+// and volume is 2970, 2980, 2990.
 
-// Sum of every close: 200 * 102 + (0 + 1 + ... + 199) = 20400 + 19900
-cumClose = ta.cum(close)
-log.info(cumClose)
+// Bars: 3
 
-// Sum of every volume: 200 * 1000 + 10 * 19900
-cumVolume = ta.cum(volume)
-log.info(cumVolume)
+// 299, then 299+300, then 299+300+301
+log.info(ta.cum(close))
 
-// A plain number has no history, so it contributes only the current bar.
-cumConst = ta.cum(3)
-log.info(cumConst)
+// 2970, then 2970+2980, then 2970+2980+2990
+log.info(ta.cum(volume))
+
+// A constant still accumulates once per bar.
+log.info(ta.cum(1))
 
 // Expected output:
-// 40300
-// 399000
+// 299
+// 2970
+// 1
+// 599
+// 5950
+// 2
+// 900
+// 8940
 // 3

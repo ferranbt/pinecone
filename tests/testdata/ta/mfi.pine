@@ -1,13 +1,24 @@
 // Test ta.mfi (Money Flow Index)
-// Every fixture bar closes higher than the last, so all money flow is positive
-// and the negative side stays at 0 — the saturated end of the index.
-mfi14 = ta.mfi(close, 14)
-log.info(mfi14)
+// Each bar's money flow is signed by the direction of the source, so the first
+// bar has no direction and `length` flows are needed after that.
 
-// A plain number has no history, so no bar has a predecessor to compare against.
-mfiConst = ta.mfi(3, 14)
-log.info(mfiConst)
+// Bars: 4
+
+// Every fixture bar closes higher than the last, so all flow is positive and
+// the negative side stays at 0 — the saturated end of the index.
+mfiUp = ta.mfi(close, 3)
+log.info(mfiUp)
+
+// Negating the source makes every bar a down bar, saturating at the other end.
+mfiDown = ta.mfi(-close, 3)
+log.info(mfiDown)
 
 // Expected output:
-// 100
 // na
+// na
+// na
+// na
+// na
+// na
+// 100
+// 0

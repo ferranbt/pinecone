@@ -1,17 +1,17 @@
 // Test ta.mom (Momentum)
-// Momentum = Current - Value N bars ago
-// Current close = 301 (bar 199)
-// 5 bars ago = 296 (bar 194)
-// mom(5) = 301 - 296 = 5
+// Reaching 5 bars back needs 6 values, so like Pine this is na until the
+// window fills. Over the last 6 bars close is 296..301.
 
-// Momentum over 5 bars
+// Bars: 6
+
+// 301 - 296
 mom5 = ta.mom(close, 5)
 log.info(mom5)
 
-// Momentum over 10 bars
-mom10 = ta.mom(close, 10)
-log.info(mom10)
-
 // Expected output:
+// na
+// na
+// na
+// na
+// na
 // 5
-// 10

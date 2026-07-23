@@ -1,15 +1,29 @@
 // Test ta.hma (Hull Moving Average)
-// HMA = WMA(2 * WMA(n/2) - WMA(n), sqrt(n))
-// Reduces lag and improves smoothing
+// wma(2 * wma(source, length/2) - wma(source, length), sqrt(length)), so it
+// needs `length` bars for the inner averages and sqrt(length)-1 more for the
+// outer one: 9 + 2 = 11 bars here.
+//
+// A weighted average of a straight line lags it by (n-1)/3, so for this
+// fixture's close = 102 + i the whole expression collapses back onto close:
+//   inner  = 2*(c - 1) - (c - 8/3) = c + 2/3
+//   outer  = (c + 2/3) - 2/3      = c
+// which is the point of the Hull average — no lag on a trend. The expected
+// value below is 301 carrying the float error of the two weighted averages.
 
-// HMA with period 9
+// Bars: 11
+
 hma9 = ta.hma(close, 9)
 log.info(hma9)
 
-// HMA with period 16
-hma16 = ta.hma(close, 16)
-log.info(hma16)
-
 // Expected output:
-// 301.6666666666667
-// 301.33333333333337
+// na
+// na
+// na
+// na
+// na
+// na
+// na
+// na
+// na
+// na
+// 301.00000000000006

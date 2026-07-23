@@ -1,16 +1,19 @@
 // Test ta.rma (Rolling Moving Average / Wilder's Smoothing)
-// RMA uses alpha = 1/length for smoothing
-// RMA = alpha * current + (1 - alpha) * prev_RMA
-// More smoothed than EMA, often used in RSI
+// Same recursion as ta.ema but with alpha = 1/length, so it smooths more
+// slowly. Over the last 4 bars close is 298, 299, 300, 301.
+//
+// Length 2 gives alpha = 0.5, so the arithmetic is exact:
+//   bar 2 seeds with mean(298,299)         -> 298.5
+//   bar 3: 0.5*300 + 0.5*298.5             -> 299.25
+//   bar 4: 0.5*301 + 0.5*299.25            -> 300.125
 
-// RMA with period 5
-rma5 = ta.rma(close, 5)
-log.info(rma5)
+// Bars: 4
 
-// RMA with period 14
-rma14 = ta.rma(close, 14)
-log.info(rma14)
+rma2 = ta.rma(close, 2)
+log.info(rma2)
 
 // Expected output:
-// 299.635008
-// 295.67359715525674
+// na
+// 298.5
+// 299.25
+// 300.125

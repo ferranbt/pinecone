@@ -1,15 +1,25 @@
 // Test ta.rsi (Relative Strength Index)
-// RSI measures momentum, values between 0-100
-// Close is always increasing, so RSI should be 100
+// Wilder-smoothed gains over Wilder-smoothed losses. The first bar has no
+// previous value to difference against, and the averages then need `length`
+// changes, so with length 2 the first reading lands on the third bar.
+// Over the last 4 bars close is 298, 299, 300, 301.
 
-// RSI with period 14
-rsi14 = ta.rsi(close, 14)
-log.info(rsi14)
+// Bars: 4
 
-// RSI with period 7
-rsi7 = ta.rsi(close, 7)
-log.info(rsi7)
+// Every change is a gain, so losses stay at 0 and RSI saturates at 100.
+rsiUp = ta.rsi(close, 2)
+log.info(rsiUp)
+
+// Negating the source makes every change a loss, saturating at the other end.
+rsiDown = ta.rsi(-close, 2)
+log.info(rsiDown)
 
 // Expected output:
+// na
+// na
+// na
+// na
 // 100
+// 0
 // 100
+// 0

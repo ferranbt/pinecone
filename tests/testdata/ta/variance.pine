@@ -1,16 +1,13 @@
-// Test ta.variance (Variance)
-// Variance measures the spread of values from their mean
-// Last 5 closes: 301, 300, 299, 298, 297 (bar 195-199)
-// Mean = 299, Variance = 2
+// Test ta.variance (population variance)
+// Like Pine, na until the window has `length` bars. Over the last 3 bars close
+// is 299, 300, 301: mean 300, so (1 + 0 + 1) / 3.
 
-// Variance of last 5 closes
-var5 = ta.variance(close, 5)
-log.info(var5)
+// Bars: 3
 
-// Variance of last 10 closes
-var10 = ta.variance(close, 10)
-log.info(var10)
+v = ta.variance(close, 3)
+log.info(v)
 
 // Expected output:
-// 2
-// 8.25
+// na
+// na
+// 0.6666666666666666

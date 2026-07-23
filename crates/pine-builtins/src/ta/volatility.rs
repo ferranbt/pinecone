@@ -1,311 +1,142 @@
+use super::moving_averages::{checked_length, smooth_step};
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, SeriesBuffer, Value};
+use std::cell::RefCell;
+use std::rc::Rc;
+
+/// This bar's true range: `max(high - low, |high - close[1]|, |low - close[1]|)`.
+///
+/// `previous_close` is `None` on the first bar, where Pine falls back to
+/// `high - low` unless `handle_na` asks for na instead.
+fn true_range(high: f64, low: f64, previous_close: Option<f64>) -> Option<f64> {
+    match previous_close {
+        Some(close) => Some(
+            (high - low)
+                .max((high - close).abs())
+                .max((low - close).abs()),
+        ),
+        None => Some(high - low),
+    }
+}
+
+/// Reads this bar's high, low and close, which the range builtins all need.
+fn hlc<O: PineOutput>(ctx: &Interpreter<O>) -> Result<(f64, f64, f64), RuntimeError> {
+    let read = |name: &str| -> Result<f64, RuntimeError> {
+        ctx.get_variable(name)
+            .ok_or_else(|| RuntimeError::UndefinedVariable(name.to_string()))?
+            .as_number()
+    };
+    Ok((read("high")?, read("low")?, read("close")?))
+}
 
 /// ta.tr(handle_na) - True Range
-/// True range is max(high - low, abs(high - close[1]), abs(low - close[1]))
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.tr")]
+#[builtin(name = "ta.tr", stateful)]
 pub struct TaTr {
     #[arg(default = false)]
     handle_na: bool,
+    /// Previous bar's close, which the range is measured against.
+    #[state]
+    previous_close: Option<f64>,
 }
 
 impl TaTr {
-    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        // Get high, low, close from context
-        let high = ctx
-            .get_variable("high")
-            .ok_or_else(|| RuntimeError::UndefinedVariable("high".to_string()))?;
-        let low = ctx
-            .get_variable("low")
-            .ok_or_else(|| RuntimeError::UndefinedVariable("low".to_string()))?;
-        let close = ctx
-            .get_variable("close")
-            .ok_or_else(|| RuntimeError::UndefinedVariable("close".to_string()))?;
+    fn execute<O: PineOutput>(
+        &mut self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let (high, low, close) = hlc(ctx)?;
+        let previous_close = self.previous_close.replace(close);
 
-        let high_val = if let Value::Series(s) = high {
-            if let Value::Number(n) = *s.current {
-                n
-            } else {
-                return Err(RuntimeError::TypeError("high must be a number".to_string()));
-            }
-        } else if let Value::Number(n) = high {
-            *n
-        } else {
-            return Err(RuntimeError::TypeError(
-                "high must be a number or series".to_string(),
-            ));
-        };
-
-        let low_val = if let Value::Series(s) = low {
-            if let Value::Number(n) = *s.current {
-                n
-            } else {
-                return Err(RuntimeError::TypeError("low must be a number".to_string()));
-            }
-        } else if let Value::Number(n) = low {
-            *n
-        } else {
-            return Err(RuntimeError::TypeError(
-                "low must be a number or series".to_string(),
-            ));
-        };
-
-        // Get previous close
-        let prev_close = if let Value::Series(s) = close {
-            if let Some(provider) = &ctx.historical_provider {
-                if let Some(Value::Number(n)) = provider.get_historical(&s.id, 1) {
-                    Some(n)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        // Calculate true range
-        let tr = if let Some(pc) = prev_close {
-            let hl = high_val - low_val;
-            let hc = (high_val - pc).abs();
-            let lc = (low_val - pc).abs();
-            hl.max(hc).max(lc)
-        } else {
-            // No previous close available
-            if self.handle_na {
-                high_val - low_val
-            } else {
-                return Ok(Value::Na);
-            }
-        };
-
-        Ok(Value::Number(tr))
-    }
-}
-
-/// ta.atr(length) - Average True Range
-#[derive(BuiltinFunction)]
-#[builtin(name = "ta.atr")]
-pub struct TaAtr {
-    length: f64,
-}
-
-impl TaAtr {
-    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
-
-        // Get high, low, close series from context
-        let high = ctx
-            .get_variable("high")
-            .ok_or_else(|| RuntimeError::UndefinedVariable("high".to_string()))?;
-        let low = ctx
-            .get_variable("low")
-            .ok_or_else(|| RuntimeError::UndefinedVariable("low".to_string()))?;
-        let close = ctx
-            .get_variable("close")
-            .ok_or_else(|| RuntimeError::UndefinedVariable("close".to_string()))?;
-
-        // We need to calculate TR for each bar and then RMA of those TRs
-        let mut tr_values = Vec::new();
-
-        // Calculate current TR
-        let current_tr = {
-            let high_val = if let Value::Series(s) = high {
-                if let Value::Number(n) = *s.current {
-                    n
-                } else {
-                    return Err(RuntimeError::TypeError(
-                        "high must contain numbers".to_string(),
-                    ));
-                }
-            } else if let Value::Number(n) = high {
-                *n
-            } else {
-                return Err(RuntimeError::TypeError(
-                    "high must be a number or series".to_string(),
-                ));
-            };
-
-            let low_val = if let Value::Series(s) = low {
-                if let Value::Number(n) = *s.current {
-                    n
-                } else {
-                    return Err(RuntimeError::TypeError(
-                        "low must contain numbers".to_string(),
-                    ));
-                }
-            } else if let Value::Number(n) = low {
-                *n
-            } else {
-                return Err(RuntimeError::TypeError(
-                    "low must be a number or series".to_string(),
-                ));
-            };
-
-            let prev_close = if let Value::Series(s) = close {
-                if let Some(provider) = &ctx.historical_provider {
-                    if let Some(Value::Number(n)) = provider.get_historical(&s.id, 1) {
-                        Some(n)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
-
-            if let Some(pc) = prev_close {
-                let hl = high_val - low_val;
-                let hc = (high_val - pc).abs();
-                let lc = (low_val - pc).abs();
-                hl.max(hc).max(lc)
-            } else {
-                high_val - low_val
-            }
-        };
-
-        tr_values.push(current_tr);
-
-        // Get historical TR values
-        if let (Value::Series(high_s), Value::Series(low_s), Value::Series(close_s)) =
-            (high, low, close)
-        {
-            if let Some(provider) = &ctx.historical_provider {
-                for i in 1..length * 2 {
-                    let h = if let Some(Value::Number(n)) = provider.get_historical(&high_s.id, i) {
-                        n
-                    } else {
-                        break;
-                    };
-
-                    let l = if let Some(Value::Number(n)) = provider.get_historical(&low_s.id, i) {
-                        n
-                    } else {
-                        break;
-                    };
-
-                    let pc = if let Some(Value::Number(n)) =
-                        provider.get_historical(&close_s.id, i + 1)
-                    {
-                        Some(n)
-                    } else {
-                        None
-                    };
-
-                    let tr = if let Some(prev_c) = pc {
-                        let hl = h - l;
-                        let hc = (h - prev_c).abs();
-                        let lc = (l - prev_c).abs();
-                        hl.max(hc).max(lc)
-                    } else {
-                        h - l
-                    };
-
-                    tr_values.push(tr);
-                }
-            }
-        }
-
-        if tr_values.is_empty() {
+        // With no previous close, `handle_na = true` asks for na rather than
+        // falling back to the bar's own range.
+        if previous_close.is_none() && self.handle_na {
             return Ok(Value::Na);
         }
 
-        // Calculate RMA of TR values
-        let initial_sma: f64 = tr_values
-            .iter()
-            .take(length.min(tr_values.len()))
-            .sum::<f64>()
-            / length.min(tr_values.len()) as f64;
-        let mut rma = initial_sma;
-        let alpha = 1.0 / length as f64;
-
-        for &tr in tr_values
-            .iter()
-            .rev()
-            .skip(length.min(tr_values.len()))
-            .take(tr_values.len() - length.min(tr_values.len()))
-        {
-            rma = alpha * tr + (1.0 - alpha) * rma;
+        match true_range(high, low, previous_close) {
+            Some(tr) => Ok(Value::Number(tr)),
+            None => Ok(Value::Na),
         }
-
-        // Apply current TR
-        rma = alpha * tr_values[0] + (1.0 - alpha) * rma;
-
-        Ok(Value::Number(rma))
     }
 }
 
-/// ta.bb(series, length, mult) - Bollinger Bands
-/// Returns [middle, upper, lower] bands
+/// ta.atr(length) - Average True Range: Wilder-smoothed [`TaTr`].
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.bb")]
-pub struct TaBb<O: PineOutput> {
-    series: Value<O>,
+#[builtin(name = "ta.atr", stateful)]
+pub struct TaAtr {
+    length: f64,
+    #[state]
+    previous_close: Option<f64>,
+    #[state]
+    window: SeriesBuffer<f64>,
+    #[state]
+    previous: Option<f64>,
+}
+
+impl TaAtr {
+    fn execute<O: PineOutput>(
+        &mut self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
+
+        let (high, low, close) = hlc(ctx)?;
+        let previous_close = self.previous_close.replace(close);
+        let Some(tr) = true_range(high, low, previous_close) else {
+            return Ok(Value::Na);
+        };
+
+        let Some(seed) = self.window.observe(tr, length) else {
+            return Ok(Value::Na);
+        };
+
+        let atr = smooth_step(self.previous, tr, 1.0 / length as f64, &seed);
+        self.previous = Some(atr);
+
+        Ok(Value::Number(atr))
+    }
+}
+
+/// ta.bb(series, length, mult) - Bollinger Bands, as `[middle, upper, lower]`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.bb", stateful)]
+pub struct TaBb {
+    series: f64,
     length: f64,
     mult: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaBb<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
+impl TaBb {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
 
-        // Get series values
-        let values = ctx.get_series_values(&self.series, length)?;
-
-        if values.is_empty() {
-            // Return tuple of [na, na, na]
-            let tuple = vec![Value::Na, Value::Na, Value::Na];
-            return Ok(Value::Array(std::rc::Rc::new(std::cell::RefCell::new(
-                tuple,
-            ))));
-        }
-
-        // Calculate basis (SMA)
-        let sum: f64 = values.iter().sum();
-        let basis = sum / values.len() as f64;
-
-        // Calculate standard deviation
-        let variance: f64 = if values.len() == 1 {
-            0.0
-        } else {
-            values
-                .iter()
-                .map(|&val| {
-                    let diff = val - basis;
-                    diff * diff
-                })
-                .sum::<f64>()
-                / values.len() as f64
+        let Some(values) = self.window.observe(self.series, length) else {
+            return Ok(bands(Value::Na, Value::Na, Value::Na));
         };
-        let stdev = variance.sqrt();
 
-        // Calculate bands
-        let dev = self.mult * stdev;
-        let upper = basis + dev;
-        let lower = basis - dev;
+        let basis: f64 = values.iter().sum::<f64>() / length as f64;
+        let variance: f64 = values
+            .iter()
+            .map(|value| (value - basis).powi(2))
+            .sum::<f64>()
+            / length as f64;
 
-        // Return tuple [middle, upper, lower]
-        let tuple = vec![
+        let deviation = self.mult * variance.sqrt();
+        Ok(bands(
             Value::Number(basis),
-            Value::Number(upper),
-            Value::Number(lower),
-        ];
-        Ok(Value::Array(std::rc::Rc::new(std::cell::RefCell::new(
-            tuple,
-        ))))
+            Value::Number(basis + deviation),
+            Value::Number(basis - deviation),
+        ))
     }
+}
+
+/// The `[middle, upper, lower]` tuple `ta.bb` returns.
+fn bands<O: PineOutput>(middle: Value<O>, upper: Value<O>, lower: Value<O>) -> Value<O> {
+    Value::Array(Rc::new(RefCell::new(vec![middle, upper, lower])))
 }

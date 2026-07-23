@@ -1,14 +1,21 @@
 // Test ta.ema (Exponential Moving Average)
-// EMA gives more weight to recent prices
+// Like Pine, na until `length` bars have been seen, then seeded with their
+// simple average and recursed with alpha * source + (1 - alpha) * ema[1].
+// Over the last 5 bars close is 297, 298, 299, 300, 301.
+//
+// Length 3 gives alpha = 2/(3+1) = 0.5, so the arithmetic is exact:
+//   bar 3 seeds with mean(297,298,299)     -> 298
+//   bar 4: 0.5*300 + 0.5*298               -> 299
+//   bar 5: 0.5*301 + 0.5*299               -> 300
 
-// EMA of last 10 closes
-ema10 = ta.ema(close, 10)
-log.info(ema10)
+// Bars: 5
 
-// EMA of last 20 closes
-ema20 = ta.ema(close, 20)
-log.info(ema20)
+ema3 = ta.ema(close, 3)
+log.info(ema3)
 
 // Expected output:
-// 298.4180688134034
-// 294.8496018136784
+// na
+// na
+// 298
+// 299
+// 300

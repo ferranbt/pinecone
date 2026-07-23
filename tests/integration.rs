@@ -4,15 +4,12 @@ mod tests {
     use pine_ast::Program;
     use pine_core::{SymInfo, Timeframe, TimeframeUnit};
     use pine_interpreter::{
-        AlertConditionOutput, Bar, DefaultPineOutput, HistoricalDataProvider, LibraryLoader,
-        LogOutput, Value,
+        AlertConditionOutput, Bar, DefaultPineOutput, LibraryLoader, LogOutput,
     };
     use pine_lexer::Lexer;
     use pine_parser::Parser;
-    use std::cell::Cell;
     use std::fs;
     use std::path::Path;
-    use std::rc::Rc;
 
     /// Generate synthetic OHLCV bar data for testing
     fn generate_test_bars(count: usize) -> Vec<Bar> {
@@ -41,62 +38,6 @@ mod tests {
         }
 
         bars
-    }
-
-    /// Mock historical data provider for tests
-    struct TestHistoricalData {
-        bars: Vec<Bar>,
-        current_index: Rc<Cell<usize>>,
-    }
-
-    impl TestHistoricalData {
-        fn new(bars: Vec<Bar>) -> Self {
-            Self {
-                bars,
-                current_index: Rc::new(Cell::new(0)),
-            }
-        }
-
-        /// Shared handle to the "current bar" index so the caller can advance it
-        /// between executions after the provider has been moved into the script.
-        fn current_handle(&self) -> Rc<Cell<usize>> {
-            self.current_index.clone()
-        }
-    }
-
-    impl HistoricalDataProvider<DefaultPineOutput> for TestHistoricalData {
-        fn get_historical(
-            &self,
-            series_id: &str,
-            offset: usize,
-        ) -> Option<Value<DefaultPineOutput>> {
-            let current_index = self.current_index.get();
-
-            if current_index < offset {
-                return None;
-            }
-
-            let bar_index = current_index - offset;
-            if bar_index >= self.bars.len() {
-                return None;
-            }
-
-            let bar = &self.bars[bar_index];
-            let value = match series_id {
-                "open" => bar.open,
-                "high" => bar.high,
-                "low" => bar.low,
-                "close" => bar.close,
-                "volume" => bar.volume,
-                "hl2" => (bar.high + bar.low) / 2.0,
-                "hlc3" => (bar.high + bar.low + bar.close) / 3.0,
-                "hlcc4" => (bar.high + bar.low + bar.close * 2.0) / 4.0,
-                "ohlc4" => (bar.open + bar.high + bar.low + bar.close) / 4.0,
-                _ => return None,
-            };
-
-            Some(Value::Number(value))
-        }
     }
 
     enum ExpectedResult {
@@ -228,29 +169,25 @@ mod tests {
     fn execute_pine_script_with_logger(source: &str) -> eyre::Result<Vec<String>> {
         let library_loader = TestLibraryLoader::new();
 
-        // Generate historical bar data for TA functions
         let bars = generate_test_bars(200);
-        let historical_data = TestHistoricalData::new(bars.clone());
-        let current_index = historical_data.current_handle();
 
-        let mut script = ScriptBuilder::with_code(source)
+        let mut script = ScriptBuilder::<DefaultPineOutput>::with_code(source)
             .with_library_loader(Box::new(library_loader))
-            .with_historical_provider(Box::new(historical_data))
             .with_syminfo(test_syminfo())
             .with_timeframe(test_timeframe())
             .compile()?;
 
         // Run over the final `bar_count` bars, keeping interpreter state across
         // them, and collect every log emitted. `// Bars: N` opts into multi-bar
-        // execution to exercise cross-bar state (`var` persistence, user-series
-        // history, stateful function locals); the default is the last bar only.
+        // execution, which is what builds series history and stateful builtins'
+        // windows — a fixture reaching back with `close[1]` or calling `ta.sma`
+        // needs enough bars to fill. The default is the last bar only.
         let bar_count = extract_bar_count(source).unwrap_or(1).min(bars.len());
         let start = bars.len() - bar_count;
 
         let mut logs = Vec::new();
         let mut last_output = None;
-        for (index, bar) in bars.iter().enumerate().skip(start) {
-            current_index.set(index);
+        for bar in bars.iter().skip(start) {
             let pine_output = script.execute(bar)?;
             logs.extend(pine_output.get_logs().iter().map(|log| log.message.clone()));
             last_output = Some(pine_output);

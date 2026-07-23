@@ -1,16 +1,13 @@
 // Test ta.dev (Mean Absolute Deviation)
-// MAD measures average distance from the mean
-// Last 5 closes: 297, 298, 299, 300, 301
-// Mean = 299, MAD = (2+1+0+1+2)/5 = 1.2
+// Like Pine, na until the window has `length` bars. Over the last 3 bars close
+// is 299, 300, 301: mean 300, so (1 + 0 + 1) / 3.
 
-// Mean Absolute Deviation of last 5 closes
-dev5 = ta.dev(close, 5)
-log.info(dev5)
+// Bars: 3
 
-// Mean Absolute Deviation of last 10 closes
-dev10 = ta.dev(close, 10)
-log.info(dev10)
+d = ta.dev(close, 3)
+log.info(d)
 
 // Expected output:
-// 1.2
-// 2.5
+// na
+// na
+// 0.6666666666666666

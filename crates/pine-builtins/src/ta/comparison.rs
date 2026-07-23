@@ -1,321 +1,327 @@
+use super::moving_averages::checked_length;
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
+use pine_interpreter::{Interpreter, PineOutput, RuntimeError, SeriesBuffer, Value};
 
 /// ta.change(source, length) - Difference between current and N bars ago
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.change")]
-pub struct TaChange<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.change", stateful)]
+pub struct TaChange {
+    source: f64,
     #[arg(default = 1.0)]
     length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaChange<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+impl TaChange {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
-
-        if let Value::Series(series) = &self.source {
-            let current = if let Value::Number(n) = *series.current {
-                n
-            } else {
-                return Err(RuntimeError::TypeError(
-                    "Series must contain numbers".to_string(),
-                ));
-            };
-
-            if length == 0 {
-                return Ok(Value::Number(0.0));
-            }
-
-            // Get value N bars ago
-            if let Some(provider) = &ctx.historical_provider {
-                if let Some(Value::Number(prev)) = provider.get_historical(&series.id, length) {
-                    return Ok(Value::Number(current - prev));
-                }
-            }
-
-            // Not enough data
-            Ok(Value::Na)
-        } else if let Value::Number(_) = self.source {
-            // Single number has no change
-            Ok(Value::Number(0.0))
-        } else {
-            Err(RuntimeError::TypeError(
-                "source must be a number or series".to_string(),
-            ))
+        if length == 0 {
+            return Ok(Value::Number(0.0));
         }
+
+        // Reaching `length` bars back needs `length + 1` values in hand.
+        let Some(values) = self.window.observe(self.source, length + 1) else {
+            return Ok(Value::Na);
+        };
+
+        Ok(Value::Number(values[0] - values[length]))
     }
 }
 
 /// ta.highest(source, length) - Highest value over N bars
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.highest")]
-pub struct TaHighest<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.highest", stateful)]
+pub struct TaHighest {
+    source: f64,
     length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaHighest<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
+impl TaHighest {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
 
-        let values = ctx.get_series_values(&self.source, length)?;
-
-        if values.is_empty() {
+        let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
-        }
+        };
 
-        let max = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        Ok(Value::Number(max))
+        Ok(Value::Number(
+            values.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+        ))
     }
 }
 
 /// ta.lowest(source, length) - Lowest value over N bars
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.lowest")]
-pub struct TaLowest<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.lowest", stateful)]
+pub struct TaLowest {
+    source: f64,
     length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaLowest<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
+impl TaLowest {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
 
-        let values = ctx.get_series_values(&self.source, length)?;
-
-        if values.is_empty() {
+        let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
-        }
+        };
 
-        let min = values.iter().cloned().fold(f64::INFINITY, f64::min);
-        Ok(Value::Number(min))
+        Ok(Value::Number(
+            values.iter().copied().fold(f64::INFINITY, f64::min),
+        ))
     }
 }
 
-/// ta.cross(source1, source2) - True if two series crossed
-#[derive(BuiltinFunction)]
-#[builtin(name = "ta.cross")]
-pub struct TaCross<O: PineOutput> {
-    source1: Value<O>,
-    source2: Value<O>,
-}
-
-impl<O: PineOutput> TaCross<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let vals1 = ctx.get_series_values(&self.source1, 2)?;
-        let vals2 = ctx.get_series_values(&self.source2, 2)?;
-
-        if vals1.len() < 2 || vals2.len() < 2 {
-            return Ok(Value::Bool(false));
+/// The offset of the extreme value in `values` (newest first), as the negative
+/// bar count Pine reports: 0 is the current bar, -1 the one before it.
+fn extreme_offset(values: &[f64], better: fn(f64, f64) -> bool) -> f64 {
+    let mut best = 0;
+    for (i, &value) in values.iter().enumerate() {
+        if better(value, values[best]) {
+            best = i;
         }
-
-        // Cross happens when (prev1 < prev2 && curr1 > curr2) || (prev1 > prev2 && curr1 < curr2)
-        let crossed = (vals1[1] < vals2[1] && vals1[0] > vals2[0])
-            || (vals1[1] > vals2[1] && vals1[0] < vals2[0]);
-
-        Ok(Value::Bool(crossed))
     }
-}
-
-/// ta.crossover(source1, source2) - True if source1 crossed over source2
-#[derive(BuiltinFunction)]
-#[builtin(name = "ta.crossover")]
-pub struct TaCrossover<O: PineOutput> {
-    source1: Value<O>,
-    source2: Value<O>,
-}
-
-impl<O: PineOutput> TaCrossover<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let vals1 = ctx.get_series_values(&self.source1, 2)?;
-        let vals2 = ctx.get_series_values(&self.source2, 2)?;
-
-        if vals1.len() < 2 || vals2.len() < 2 {
-            return Ok(Value::Bool(false));
-        }
-
-        // Crossover: prev1 <= prev2 && curr1 > curr2
-        let crossed_over = vals1[1] <= vals2[1] && vals1[0] > vals2[0];
-
-        Ok(Value::Bool(crossed_over))
-    }
-}
-
-/// ta.crossunder(source1, source2) - True if source1 crossed under source2
-#[derive(BuiltinFunction)]
-#[builtin(name = "ta.crossunder")]
-pub struct TaCrossunder<O: PineOutput> {
-    source1: Value<O>,
-    source2: Value<O>,
-}
-
-impl<O: PineOutput> TaCrossunder<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let vals1 = ctx.get_series_values(&self.source1, 2)?;
-        let vals2 = ctx.get_series_values(&self.source2, 2)?;
-
-        if vals1.len() < 2 || vals2.len() < 2 {
-            return Ok(Value::Bool(false));
-        }
-
-        // Crossunder: prev1 >= prev2 && curr1 < curr2
-        let crossed_under = vals1[1] >= vals2[1] && vals1[0] < vals2[0];
-
-        Ok(Value::Bool(crossed_under))
-    }
-}
-
-/// ta.rising(source, length) - Test if source is rising for length bars
-#[derive(BuiltinFunction)]
-#[builtin(name = "ta.rising")]
-pub struct TaRising<O: PineOutput> {
-    source: Value<O>,
-    length: f64,
-}
-
-impl<O: PineOutput> TaRising<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Ok(Value::Bool(false));
-        }
-
-        let values = ctx.get_series_values(&self.source, length + 1)?;
-
-        if values.len() <= length {
-            return Ok(Value::Bool(false));
-        }
-
-        // Check if current value is greater than all previous values
-        let current = values[0];
-        for value in values.iter().take(length + 1).skip(1) {
-            if current <= *value {
-                return Ok(Value::Bool(false));
-            }
-        }
-
-        Ok(Value::Bool(true))
-    }
-}
-
-/// ta.falling(source, length) - Test if source is falling for length bars
-#[derive(BuiltinFunction)]
-#[builtin(name = "ta.falling")]
-pub struct TaFalling<O: PineOutput> {
-    source: Value<O>,
-    length: f64,
-}
-
-impl<O: PineOutput> TaFalling<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Ok(Value::Bool(false));
-        }
-
-        let values = ctx.get_series_values(&self.source, length + 1)?;
-
-        if values.len() <= length {
-            return Ok(Value::Bool(false));
-        }
-
-        // Check if current value is less than all previous values
-        let current = values[0];
-        for value in values.iter().take(length + 1).skip(1) {
-            if current >= *value {
-                return Ok(Value::Bool(false));
-            }
-        }
-
-        Ok(Value::Bool(true))
+    // Negating 0 would give `-0`, which prints as "-0" rather than "0".
+    if best == 0 {
+        0.0
+    } else {
+        -(best as f64)
     }
 }
 
 /// ta.highestbars(source, length) - Offset to highest value (0 = current bar)
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.highestbars")]
-pub struct TaHighestbars<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.highestbars", stateful)]
+pub struct TaHighestbars {
+    source: f64,
     length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaHighestbars<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
+impl TaHighestbars {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
 
-        let values = ctx.get_series_values(&self.source, length)?;
-
-        if values.is_empty() {
+        let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
-        }
+        };
 
-        // Find index of maximum value
-        let mut max_idx = 0;
-        let mut max_val = values[0];
-
-        for (i, &val) in values.iter().enumerate() {
-            if val > max_val {
-                max_val = val;
-                max_idx = i;
-            }
-        }
-
-        // Return negative offset (0 = current, -1 = 1 bar ago, etc.)
-        Ok(Value::Number(-(max_idx as f64)))
+        Ok(Value::Number(extreme_offset(&values, |a, b| a > b)))
     }
 }
 
 /// ta.lowestbars(source, length) - Offset to lowest value (0 = current bar)
 #[derive(BuiltinFunction)]
-#[builtin(name = "ta.lowestbars")]
-pub struct TaLowestbars<O: PineOutput> {
-    source: Value<O>,
+#[builtin(name = "ta.lowestbars", stateful)]
+pub struct TaLowestbars {
+    source: f64,
     length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
 }
 
-impl<O: PineOutput> TaLowestbars<O> {
-    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+impl TaLowestbars {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
+
+        let Some(values) = self.window.observe(self.source, length) else {
+            return Ok(Value::Na);
+        };
+
+        Ok(Value::Number(extreme_offset(&values, |a, b| a < b)))
+    }
+}
+
+/// ta.rising(source, length) - Test if source rose on each of the last N bars
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.rising", stateful)]
+pub struct TaRising {
+    source: f64,
+    length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
+}
+
+impl TaRising {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
         if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
+            return Ok(Value::Bool(false));
         }
 
-        let values = ctx.get_series_values(&self.source, length)?;
+        let Some(values) = self.window.observe(self.source, length + 1) else {
+            return Ok(Value::Bool(false));
+        };
 
-        if values.is_empty() {
-            return Ok(Value::Na);
+        Ok(Value::Bool(values.windows(2).all(|pair| pair[0] > pair[1])))
+    }
+}
+
+/// ta.falling(source, length) - Test if source fell on each of the last N bars
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.falling", stateful)]
+pub struct TaFalling {
+    source: f64,
+    length: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
+}
+
+impl TaFalling {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = self.length as usize;
+        if length == 0 {
+            return Ok(Value::Bool(false));
         }
 
-        // Find index of minimum value
-        let mut min_idx = 0;
-        let mut min_val = values[0];
+        let Some(values) = self.window.observe(self.source, length + 1) else {
+            return Ok(Value::Bool(false));
+        };
 
-        for (i, &val) in values.iter().enumerate() {
-            if val < min_val {
-                min_val = val;
-                min_idx = i;
-            }
-        }
+        Ok(Value::Bool(values.windows(2).all(|pair| pair[0] < pair[1])))
+    }
+}
 
-        // Return negative offset (0 = current, -1 = 1 bar ago, etc.)
-        Ok(Value::Number(-(min_idx as f64)))
+/// How two series sat relative to each other on this bar and the last, which is
+/// all the cross tests need.
+struct Crossing {
+    now_above: bool,
+    was_above: bool,
+}
+
+impl Crossing {
+    /// `None` until both series have two bars of history.
+    fn observe(
+        first: &mut SeriesBuffer<f64>,
+        second: &mut SeriesBuffer<f64>,
+        source1: f64,
+        source2: f64,
+    ) -> Option<Self> {
+        // Both sides advance together, so they fill on the same bar.
+        let firsts = first.observe(source1, 2);
+        let seconds = second.observe(source2, 2);
+        let (firsts, seconds) = (firsts?, seconds?);
+
+        Some(Self {
+            now_above: firsts[0] > seconds[0],
+            was_above: firsts[1] > seconds[1],
+        })
+    }
+}
+
+/// ta.cross(source1, source2) - Test if two series crossed in either direction
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.cross", stateful)]
+pub struct TaCross {
+    source1: f64,
+    source2: f64,
+    #[state]
+    first: SeriesBuffer<f64>,
+    #[state]
+    second: SeriesBuffer<f64>,
+}
+
+impl TaCross {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let Some(crossing) = Crossing::observe(
+            &mut self.first,
+            &mut self.second,
+            self.source1,
+            self.source2,
+        ) else {
+            return Ok(Value::Bool(false));
+        };
+
+        Ok(Value::Bool(crossing.now_above != crossing.was_above))
+    }
+}
+
+/// ta.crossover(source1, source2) - Test if source1 crossed above source2
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.crossover", stateful)]
+pub struct TaCrossover {
+    source1: f64,
+    source2: f64,
+    #[state]
+    first: SeriesBuffer<f64>,
+    #[state]
+    second: SeriesBuffer<f64>,
+}
+
+impl TaCrossover {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let Some(crossing) = Crossing::observe(
+            &mut self.first,
+            &mut self.second,
+            self.source1,
+            self.source2,
+        ) else {
+            return Ok(Value::Bool(false));
+        };
+
+        Ok(Value::Bool(crossing.now_above && !crossing.was_above))
+    }
+}
+
+/// ta.crossunder(source1, source2) - Test if source1 crossed below source2
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.crossunder", stateful)]
+pub struct TaCrossunder {
+    source1: f64,
+    source2: f64,
+    #[state]
+    first: SeriesBuffer<f64>,
+    #[state]
+    second: SeriesBuffer<f64>,
+}
+
+impl TaCrossunder {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let Some(crossing) = Crossing::observe(
+            &mut self.first,
+            &mut self.second,
+            self.source1,
+            self.source2,
+        ) else {
+            return Ok(Value::Bool(false));
+        };
+
+        Ok(Value::Bool(!crossing.now_above && crossing.was_above))
     }
 }
