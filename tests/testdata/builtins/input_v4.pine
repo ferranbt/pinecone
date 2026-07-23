@@ -1,18 +1,13 @@
 //@version=4
 // v4 input(): same overloaded `input()`, but the type is a namespaced constant
-// (`type=input.integer`). Returns the default; type/minval/options are ignored.
+// (`type=input.integer`).
+//
+// v4 has no `log.*` namespace — bare `log` is math's natural logarithm — so this
+// fixture can't print. It asserts the v4 syntax compiles and runs cleanly; the
+// returned values are asserted in input_v5.pine.
 length = input(14, "Length", type=input.integer, minval=1)
 factor = input(2.5, "Factor", type=input.float)
 useClose = input(true, "Use Close", type=input.bool)
 maType = input("EMA", "MA Type", options=["EMA", "SMA"])
 
-log.info(length)
-log.info(factor)
-log.info(useClose)
-log.info(maType)
-
 // Expected output:
-// 14
-// 2.5
-// true
-// EMA

@@ -1,10 +1,10 @@
 //@version=4
 // v4 hline: the linestyle is a bare constant (`linestyle=dotted`), not
-// `hline.style_dotted`. Still recorded into the line sink.
-h = hline(0, title="Zero Level", linestyle=dotted)
-log.info(line.get_y1(h))
-log.info(line.get_y2(h))
+// `hline.style_dotted`.
+//
+// v4 has no `log.*` namespace — bare `log` is math's natural logarithm — so this
+// fixture can't print. It asserts the v4 syntax compiles and runs cleanly; the
+// recorded values are asserted in hline.pine.
+h = hline(0, title = "Zero Level", linestyle = dotted)
 
 // Expected output:
-// 0
-// 0
