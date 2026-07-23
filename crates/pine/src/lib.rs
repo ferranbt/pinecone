@@ -151,7 +151,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
         let source = self.source.as_str();
         let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
 
-        let mut lexer = Lexer::new(source);
+        let mut lexer = Lexer::with_version(source, version);
         let tokens = lexer.tokenize()?;
 
         let mut parser = Parser::new(tokens);

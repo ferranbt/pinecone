@@ -1,3 +1,4 @@
+use pine_core::PineVersion;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -117,10 +118,18 @@ pub struct Lexer {
     indent_stack: Vec<usize>,   // Stack of indentation levels
     pending_tokens: Vec<Token>, // Queue for Indent/Dedent tokens
     paren_depth: usize,         // Open parentheses; while > 0, layout tokens are suppressed
+    version: PineVersion,       // Decides which words are keywords rather than identifiers
 }
 
 impl Lexer {
+    /// Lex as [`PineVersion::LATEST`]. Use [`Lexer::with_version`] when the
+    /// script's `//@version=` has already been read — some words are only
+    /// keywords in later versions.
     pub fn new(input: &str) -> Self {
+        Self::with_version(input, PineVersion::LATEST)
+    }
+
+    pub fn with_version(input: &str, version: PineVersion) -> Self {
         Self {
             input: input.chars().collect(),
             current: 0,
@@ -129,6 +138,7 @@ impl Lexer {
             indent_stack: vec![0], // Start with base indentation level
             pending_tokens: vec![],
             paren_depth: 0,
+            version,
         }
     }
 
@@ -224,7 +234,9 @@ impl Lexer {
             "var" => TokenType::Var,
             "varip" => TokenType::Varip,
             "const" => TokenType::Const,
-            "type" => TokenType::Type,
+            // `type` introduces a user-defined type from v5 on; before that it
+            // is an ordinary name, and scripts do use it as one.
+            "type" if self.version >= PineVersion::V5 => TokenType::Type,
             "enum" => TokenType::Enum,
             "method" => TokenType::Method,
             "export" => TokenType::Export,
@@ -937,6 +949,18 @@ mod tests {
         assert!(matches!(tokens[6].typ, TokenType::Int));
         assert!(matches!(tokens[7].typ, TokenType::Float));
         assert!(matches!(tokens[8].typ, TokenType::Na));
+        Ok(())
+    }
+
+    #[test]
+    fn test_type_is_a_keyword_only_from_v5() -> eyre::Result<()> {
+        // v5 introduced user-defined types; before that `type` is just a name,
+        // and v4 scripts do use it as one (e.g. `_id(type) =>`).
+        let tokens = Lexer::with_version("type", PineVersion::V4).tokenize()?;
+        assert!(matches!(&tokens[0].typ, TokenType::Ident(s) if s == "type"));
+
+        let tokens = Lexer::with_version("type", PineVersion::V5).tokenize()?;
+        assert!(matches!(tokens[0].typ, TokenType::Type));
         Ok(())
     }
 

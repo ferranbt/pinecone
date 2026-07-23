@@ -288,11 +288,12 @@ pub fn register_namespace_objects<
 /// Per-bar variables, rebuilt for each [`Bar`] and registered before it executes.
 ///
 /// The compile-time counterpart is [`register_namespace_objects`]; this holds the
-/// namespaces whose values change every bar. For now that is only `barstate`.
+/// values that change every bar.
 pub fn register_per_bar<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
     vec![
         ("barstate".to_string(), barstate::register(bar)),
         ("time".to_string(), time::register_bar_time(bar)),
+        ("timenow".to_string(), time::register_timenow()),
     ]
 }
 

@@ -4,10 +4,21 @@ use pine_interpreter::{
     Bar, BuiltinFn, EvaluatedArg, Interpreter, PineOutput, RuntimeError, Value,
 };
 use std::rc::Rc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// The per-bar `time` variable: the bar's opening UNIX timestamp (milliseconds).
 pub fn register_bar_time<O: PineOutput>(bar: &Bar) -> Value<O> {
     Value::Number(bar.time as f64)
+}
+
+/// The `timenow` variable: the current UTC time in milliseconds. Unlike `time`
+/// this is wall-clock rather than bar data, so it is re-read for every bar.
+pub fn register_timenow<O: PineOutput>() -> Value<O> {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(since_epoch) => Value::Number(since_epoch.as_millis() as f64),
+        // A clock set before 1970: report "unknown" rather than claim 1970.
+        Err(_) => Value::Na,
+    }
 }
 
 /// UNIX milliseconds (UTC) for the given date parts, or `None` if out of range.

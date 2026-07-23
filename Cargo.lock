@@ -1431,6 +1431,7 @@ name = "pine-lexer"
 version = "0.1.0"
 dependencies = [
  "eyre",
+ "pine-core",
  "thiserror",
 ]
 
