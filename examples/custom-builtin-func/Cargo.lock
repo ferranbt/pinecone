@@ -53,6 +53,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "autocfg"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
+
+[[package]]
+name = "chrono"
+version = "0.4.45"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aa79e62e7697b8e29b513a68abacf485adcd1fe8284a4316c5ae868e6633327"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "clap"
 version = "4.5.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -97,6 +112,27 @@ name = "colorchoice"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
+
+[[package]]
+name = "csv"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52cd9d68cf7efc6ddfaaee42e7288d3a99d613d4b50f76ce9827ae0c6e14f938"
+dependencies = [
+ "csv-core",
+ "itoa",
+ "ryu",
+ "serde_core",
+]
+
+[[package]]
+name = "csv-core"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "704a3c26996a80471189265814dbc2c257598b96b8a7feae2d31ace646bb9782"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "custom-builtin-func"
@@ -151,6 +187,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
 
 [[package]]
+name = "num-traits"
+version = "0.2.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -170,6 +215,7 @@ dependencies = [
  "pine-ast",
  "pine-builtins",
  "pine-core",
+ "pine-data",
  "pine-diagnostics",
  "pine-interpreter",
  "pine-lexer",
@@ -197,6 +243,7 @@ dependencies = [
 name = "pine-builtins"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "pine-builtin-macro",
  "pine-core",
  "pine-interpreter",
@@ -206,6 +253,16 @@ dependencies = [
 name = "pine-core"
 version = "0.1.0"
 dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "pine-data"
+version = "0.1.0"
+dependencies = [
+ "csv",
+ "pine-core",
+ "serde",
  "thiserror",
 ]
 
@@ -226,6 +283,7 @@ name = "pine-lexer"
 version = "0.1.0"
 dependencies = [
  "eyre",
+ "pine-core",
  "thiserror",
 ]
 
@@ -268,6 +326,12 @@ checksum = "21b2ebcf727b7760c461f091f9f0f539b77b8e87f2fd88131e7f1b433b3cece4"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "ryu"
+version = "1.0.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
 name = "serde"

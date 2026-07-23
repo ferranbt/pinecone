@@ -79,23 +79,17 @@ fn main() {
     let mut custom_variables: HashMap<String, Value<CustomOutput>> = HashMap::new();
     custom_variables.insert("alert".to_string(), create_alert_builtin());
 
-    let mut script = ScriptBuilder::<CustomOutput>::with_code(script_source)
+    let script = ScriptBuilder::<CustomOutput>::with_code(script_source)
         .with_custom_variables(custom_variables)
+        .with_data(pine::data::synthetic(3))
         .compile()
         .expect("Compilation failed");
 
-    let bar = pine_interpreter::Bar {
-        open: 101.0,
-        high: 105.0,
-        low: 100.0,
-        close: 103.0,
-        volume: 1500.0,
-        ..Default::default()
-    };
+    let outputs = script.run().expect("Execution failed");
 
-    let output = script.execute(&bar).expect("Execution failed");
-
-    for alert in output.get_alerts() {
-        println!("{}", alert);
+    for output in &outputs {
+        for alert in output.get_alerts() {
+            println!("{}", alert);
+        }
     }
 }

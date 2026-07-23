@@ -5,6 +5,7 @@ rust-version = "1.83"
 [workspace]
 members = [
     "crates/pine-core",
+    "crates/pine-data",
     "crates/pine-lexer",
     "crates/pine-ast",
     "crates/pine-diagnostics",
@@ -23,6 +24,7 @@ resolver = "2"
 
 [workspace.dependencies]
 pine-core = { path = "crates/pine-core" }
+pine-data = { path = "crates/pine-data" }
 pine-lexer = { path = "crates/pine-lexer" }
 pine-parser = { path = "crates/pine-parser" }
 pine-ast = { path = "crates/pine-ast" }
@@ -40,3 +42,4 @@ clap = { version = "4.5", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = { version = "0.4", default-features = false, features = ["std"] }
+csv = "1.3"

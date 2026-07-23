@@ -2,42 +2,27 @@
 mod tests {
     use pine::ScriptBuilder;
     use pine_ast::Program;
+    use pine_core::Data;
     use pine_core::{SymInfo, Timeframe, TimeframeUnit};
-    use pine_interpreter::{
-        AlertConditionOutput, Bar, DefaultPineOutput, LibraryLoader, LogOutput,
-    };
+    use pine_data::{CsvSource, DataSource};
+    use pine_interpreter::{AlertConditionOutput, DefaultPineOutput, LibraryLoader, LogOutput};
     use pine_lexer::Lexer;
     use pine_parser::Parser;
     use std::fs;
     use std::path::Path;
 
-    /// Generate synthetic OHLCV bar data for testing
-    fn generate_test_bars(count: usize) -> Vec<Bar> {
-        let mut bars = Vec::with_capacity(count);
+    /// The bars every fixture runs against, read from `tests/data/bars.csv`.
+    fn test_data() -> Data {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("data")
+            .join("bars.csv");
 
-        for i in 0..count {
-            let base = 100.0 + (i as f64);
-            bars.push(Bar {
-                open: base,
-                high: base + 5.0,
-                low: base - 5.0,
-                close: base + 2.0,
-                volume: 1000.0 + (i as f64 * 10.0),
-                index: i as u64,
-                // A distinct per-bar timestamp so the `time` fixture can assert it.
-                time: (i as i64) * 1000,
-                // Dummy barstate
-                is_first: true,
-                is_last: false,
-                is_new: true,
-                is_confirmed: false,
-                is_history: true,
-                is_realtime: false,
-                is_last_confirmed_history: true,
-            });
-        }
-
-        bars
+        CsvSource::from_path(&path)
+            .expect("bar fixture should load")
+            .with_syminfo(test_syminfo())
+            .load()
+            .expect("bar fixture should load")
+            .with_timeframe(test_timeframe())
     }
 
     enum ExpectedResult {
@@ -169,32 +154,29 @@ mod tests {
     fn execute_pine_script_with_logger(source: &str) -> eyre::Result<Vec<String>> {
         let library_loader = TestLibraryLoader::new();
 
-        let bars = generate_test_bars(200);
+        // A script is replayed over every bar it is given, so the fixture's
+        // `// Bars: N` chooses how much history it sees by trimming the data
+        // rather than by stopping the run early. The default is the last bar,
+        // which is what most fixtures assert against.
+        let mut data = test_data();
+        let bar_count = extract_bar_count(source).unwrap_or(1).min(data.bars.len());
+        data.bars = data.bars.split_off(data.bars.len() - bar_count);
 
-        let mut script = ScriptBuilder::<DefaultPineOutput>::with_code(source)
+        let outputs = ScriptBuilder::<DefaultPineOutput>::with_code(source)
             .with_library_loader(Box::new(library_loader))
-            .with_syminfo(test_syminfo())
-            .with_timeframe(test_timeframe())
-            .compile()?;
+            .with_data(data)
+            .compile()?
+            .run()?;
 
-        // Run over the final `bar_count` bars, keeping interpreter state across
-        // them, and collect every log emitted. `// Bars: N` opts into multi-bar
-        // execution, which is what builds series history and stateful builtins'
-        // windows — a fixture reaching back with `close[1]` or calling `ta.sma`
-        // needs enough bars to fill. The default is the last bar only.
-        let bar_count = extract_bar_count(source).unwrap_or(1).min(bars.len());
-        let start = bars.len() - bar_count;
+        let mut logs: Vec<String> = outputs
+            .iter()
+            .flat_map(|output| output.get_logs())
+            .map(|log| log.message.clone())
+            .collect();
 
-        let mut logs = Vec::new();
-        let mut last_output = None;
-        for bar in bars.iter().skip(start) {
-            let pine_output = script.execute(bar)?;
-            logs.extend(pine_output.get_logs().iter().map(|log| log.message.clone()));
-            last_output = Some(pine_output);
-        }
         // After the logs, surface the final bar's declared alert conditions as
         // `(alert): <message>` lines so fixtures can assert them.
-        if let Some(output) = last_output {
+        if let Some(output) = outputs.last() {
             for alert in output.alertconditions() {
                 logs.push(format!("(alert): {}", alert.message));
             }

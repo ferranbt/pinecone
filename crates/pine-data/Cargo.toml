@@ -1,0 +1,10 @@
+[package]
+name = "pine-data"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pine-core = { workspace = true }
+csv = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }

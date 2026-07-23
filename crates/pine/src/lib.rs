@@ -1,15 +1,22 @@
 // Re-export all public types from sub-crates
 pub use pine_ast as ast;
 pub use pine_builtins as builtins;
+use pine_builtins::DefaultPineOutput;
+pub use pine_core as core;
+pub use pine_data as data;
 pub use pine_interpreter as interpreter;
 pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
+mod run;
+
+pub use run::RunResult;
+
 use pine_ast::Program;
-use pine_core::{PineVersion, SymInfo, Timeframe, VersionError};
+use pine_core::{Bar, Data, PineVersion, SymInfo, Timeframe, VersionError};
 use pine_diagnostics::Diagnostic;
 use pine_interpreter::{
-    AlertConditionOutput, Bar, BoxOutput, FillOutput, GlobalOutput, IndicatorOutput, InputOutput,
+    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, IndicatorOutput, InputOutput,
     Interpreter, LabelOutput, LibraryLoader, LineOutput, LogOutput, PineOutput, PlotOutput,
     RuntimeError, TableOutput, Value,
 };
@@ -84,6 +91,7 @@ pub struct ScriptBuilder<O: PineOutput> {
     library_loader: Option<Box<dyn LibraryLoader>>,
     syminfo: Option<SymInfo>,
     timeframe: Option<Timeframe>,
+    data: Option<Data>,
 }
 
 impl<O: PineOutput> ScriptBuilder<O> {
@@ -94,6 +102,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
             library_loader: None,
             syminfo: None,
             timeframe: None,
+            data: None,
         }
     }
 
@@ -123,6 +132,18 @@ impl<O: PineOutput> ScriptBuilder<O> {
         self
     }
 
+    /// The market to run over: the bars, and the symbol and timeframe they
+    /// belong to.
+    ///
+    /// The data describes itself, so it fills in `syminfo.*` and `timeframe.*`
+    /// too. An explicit [`ScriptBuilder::with_syminfo`] or
+    /// [`ScriptBuilder::with_timeframe`] still wins, whichever order they are
+    /// called in.
+    pub fn with_data(mut self, data: Data) -> Self {
+        self.data = Some(data);
+        self
+    }
+
     /// Compile PineScript source code into a Script with default output
     pub fn compile(self) -> Result<Script<O>, Error>
     where
@@ -138,6 +159,12 @@ impl<O: PineOutput> ScriptBuilder<O> {
             + AlertConditionOutput
             + FillOutput,
     {
+        // The data describes itself; explicit builder settings override it.
+        let data = self.data.unwrap_or_default();
+        let syminfo = self.syminfo.unwrap_or(data.syminfo);
+        let timeframe = self.timeframe.unwrap_or(data.timeframe);
+        let bars = data.bars;
+
         let source = self.source.as_str();
         let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
 
@@ -149,7 +176,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
         let program = Program::new(statements);
 
         let namespaces =
-            pine_builtins::register_namespace_objects(version, self.syminfo, self.timeframe);
+            pine_builtins::register_namespace_objects(version, Some(syminfo), Some(timeframe));
 
         // The names sema accepts without a user declaration: the registered
         // namespaces, the per-bar variables `execute` sets (barstate + OHLCV),
@@ -200,21 +227,28 @@ impl<O: PineOutput> ScriptBuilder<O> {
         Ok(Script {
             program,
             interpreter,
+            bars,
         })
     }
 }
 
-/// A compiled PineScript program that can be executed multiple times
+/// A compiled PineScript program, and the bars it will run over.
 ///
-/// This represents a parsed PineScript program that maintains state
-/// across multiple bar executions, just like in TradingView.
+/// State accumulates across bars — series history, `var` locals, and every
+/// stateful builtin's window — exactly as it does in TradingView. That makes a
+/// `Script` single-use: [`Script::run`] takes it by value so a second run
+/// cannot inherit the first one's state.
 pub struct Script<O: PineOutput> {
     program: Program,
     interpreter: Interpreter<O>,
+    /// Bars from the builder's source; empty when none was given.
+    bars: Vec<Bar>,
 }
 
 impl<O: PineOutput> Script<O> {
-    pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
+    /// Run one bar. Private: bars must be replayed in order from the first, so
+    /// [`Script::run`] is the only way in.
+    fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
         // Load bar data as Series variables so TA functions can access historical data
         use interpreter::{Series, Value};
 
@@ -251,13 +285,18 @@ impl<O: PineOutput> Script<O> {
         Ok(output)
     }
 
-    /// Execute the script with multiple bars sequentially
-    ///
-    /// Each bar is processed in order, maintaining state between them.
-    pub fn execute_bars(&mut self, bars: &[Bar]) -> Result<(), Error> {
-        for bar in bars {
-            self.execute(bar)?;
-        }
-        Ok(())
+    /// Replay the script over every bar from its source, returning what each
+    /// one produced. [`RunResult::collect`] turns those into columns.
+    pub fn run(mut self) -> Result<Vec<O>, Error> {
+        let bars = std::mem::take(&mut self.bars);
+        bars.iter().map(|bar| self.execute(bar)).collect()
     }
+}
+
+pub fn execute(source: &str, data: Data) -> Result<(), Error> {
+    ScriptBuilder::<DefaultPineOutput>::with_code(source)
+        .with_data(data)
+        .compile()?
+        .run()
+        .map(|_| ())
 }

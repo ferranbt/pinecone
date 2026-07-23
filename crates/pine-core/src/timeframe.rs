@@ -42,7 +42,36 @@ impl Default for Timeframe {
     }
 }
 
+/// Milliseconds in each unit Pine can express a regular period in. Ordered
+/// coarsest first, because a weekly gap is also a whole number of days and of
+/// minutes — the coarsest unit that divides it is the one Pine would name.
+const UNIT_MILLIS: [(TimeframeUnit, i64); 4] = [
+    (TimeframeUnit::Weekly, 7 * 24 * 60 * 60 * 1000),
+    (TimeframeUnit::Daily, 24 * 60 * 60 * 1000),
+    (TimeframeUnit::Minutes, 60 * 1000),
+    (TimeframeUnit::Seconds, 1000),
+];
+
 impl Timeframe {
+    /// The period covered by a gap of `millis` between two bars, or `None` if
+    /// no whole unit divides it.
+    ///
+    /// Months are never inferred: their length varies, so a monthly series has
+    /// no single gap to recognise.
+    pub fn from_millis(millis: i64) -> Option<Self> {
+        if millis <= 0 {
+            return None;
+        }
+
+        UNIT_MILLIS
+            .iter()
+            .find(|(_, size)| millis % size == 0)
+            .map(|&(unit, size)| Self {
+                multiplier: (millis / size) as u32,
+                unit,
+            })
+    }
+
     /// The Pine period string, e.g. `"3D"`, `"60"`, `"5S"`.
     pub fn period(&self) -> String {
         format!("{}{}", self.multiplier, self.unit.suffix())

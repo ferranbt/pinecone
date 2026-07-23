@@ -6,23 +6,31 @@ Pinecone executes PineScript code (TradingView's scripting language) with suppor
 
 ## Features
 
-- Full PineScript v5 language support
+- PineScript v4 and v5 language support
 - Technical analysis functions (moving averages, oscillators, etc.)
 - Drawing objects (plots, labels, boxes)
+- Market data from CSV files, or any source you implement
 - Modular output system - extend with [custom types and builtins](examples/custom-builtin-func)
 - Type-safe generic architecture
 
 ## Example
 
+A script is replayed over a whole series of bars — series history and indicator
+state build up as they execute.
+
 ```rust
-use pine::ScriptBuilder;
+use pine::data::{CsvSource, DataSource};
+use pine::{RunResult, ScriptBuilder};
 
-let script = ScriptBuilder::with_code(r#"
-    fast_ma = ta.sma(close, 10)
-    slow_ma = ta.sma(close, 20)
-    plot(fast_ma, color=color.blue)
-    plot(slow_ma, color=color.red)
-"#).compile()?;
+let data = CsvSource::from_path("btc_1h.csv")?.load()?;
 
-let output = script.execute(&bar)?;
+let outputs = ScriptBuilder::with_code(r#"
+    fast = ta.sma(close, 10)
+    slow = ta.sma(close, 20)
+    plot(fast, title="fast")
+    plot(slow, title="slow")
+"#)
+.with_data(data)
+.compile()?
+.run()?;
 ```

@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 // Re-export for convenience
-pub use pine_interpreter::Bar;
+pub use pine_core::Bar;
 pub use pine_interpreter::BuiltinFn;
 pub use pine_interpreter::DefaultPineOutput;
 pub use pine_interpreter::EvaluatedArg;

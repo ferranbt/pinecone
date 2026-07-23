@@ -1,9 +1,8 @@
-use pine::ScriptBuilder;
-use pine_builtins::DefaultPineOutput;
-use pine_interpreter::Bar;
+use pine_core::Bar;
+use pine_core::Data;
 
 /// Generate synthetic OHLCV bar data for benchmarking
-pub fn generate_bars(count: usize) -> Vec<Bar> {
+pub fn generate_bars(count: usize) -> Data {
     let mut bars = Vec::with_capacity(count);
     let mut price = 100.0;
 
@@ -32,15 +31,8 @@ pub fn generate_bars(count: usize) -> Vec<Bar> {
         price = close;
     }
 
-    bars
-}
-
-/// Compile `source` and run it over every bar.
-///
-/// Series history and stateful builtins accumulate as bars execute, so a script
-/// that looks back has to be replayed from the start rather than evaluated at a
-/// single bar. This measures the whole replay.
-pub fn execute_with_history(source: &str, bars: &[Bar]) -> Result<(), pine::Error> {
-    let mut script = ScriptBuilder::<DefaultPineOutput>::with_code(source).compile()?;
-    script.execute_bars(bars)
+    Data {
+        bars,
+        ..Default::default()
+    }
 }

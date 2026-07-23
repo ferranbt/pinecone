@@ -130,7 +130,7 @@ pub struct PineBox {
 }
 
 /// Represents a plot output
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Plot {
     pub series: f64,
     pub title: String,
