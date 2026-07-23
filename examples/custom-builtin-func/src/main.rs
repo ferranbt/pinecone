@@ -5,8 +5,8 @@
 /// 2. A custom builtin function that works with the custom output
 use pine::ScriptBuilder;
 use pine_interpreter::{
-    impl_output_traits_delegate, DefaultPineOutput, EvaluatedArg, FunctionCallArgs, Interpreter,
-    PineOutput, RuntimeError, Value,
+    impl_output_traits_delegate, Builtin, DefaultPineOutput, EvaluatedArg, FunctionCallArgs,
+    Interpreter, PineOutput, RuntimeError, Value,
 };
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -64,7 +64,7 @@ impl AlertFunc {
 }
 
 fn create_alert_builtin<O: PineOutput + AlertOutput + 'static>() -> Value<O> {
-    Value::BuiltinFunction(Rc::new(AlertFunc::execute))
+    Value::BuiltinFunction(Builtin::untyped(Rc::new(AlertFunc::execute)))
 }
 
 fn main() {
