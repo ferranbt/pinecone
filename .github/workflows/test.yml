@@ -49,6 +49,17 @@ jobs:
       - name: Run integration tests
         run: cargo test -p pine-integration-tests --test integration -- --nocapture
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Cross-checks the fixtures against PineTS
+      - name: Cross-check against PineTS
+        working-directory: tests/pinets
+        run: |
+          npm install
+          node check.mjs
+
   corpus-tests:
     name: Run corpus tests
     runs-on: ubuntu-latest

@@ -433,7 +433,10 @@ pub struct Interpreter<O: PineOutput> {
     /// function-local `var` at two call sites initializes independently.
     /// Tracked separately from `variables` so a `var` declaration can shadow a
     /// pre-existing host-injected variable (e.g. `var close = 10`).
-    var_decls_initialized: std::collections::HashSet<(u32, String)>,
+    ///
+    /// The value is the bar it initialized on, so a reassignment can tell that
+    /// there is no previous bar to read back yet.
+    var_decls_initialized: HashMap<(u32, String), u64>,
     /// Lexical id of the call site currently executing (0 at top level). Scopes
     /// `var` init-once tracking to the active call site.
     current_call_id: u32,
@@ -506,7 +509,7 @@ impl<O: PineOutput> Interpreter<O> {
             output: O::default(),
             user_series_history: HashMap::new(),
             function_local_state: HashMap::new(),
-            var_decls_initialized: std::collections::HashSet::new(),
+            var_decls_initialized: HashMap::new(),
             current_call_id: 0,
             bar_seq: 0,
         }
@@ -644,10 +647,10 @@ impl<O: PineOutput> Interpreter<O> {
                 // declaration can shadow a pre-existing host-injected builtin.
                 if is_var_persistent {
                     let init_key = (self.current_call_id, name.clone());
-                    if self.var_decls_initialized.contains(&init_key) {
+                    if self.var_decls_initialized.contains_key(&init_key) {
                         return Ok(None);
                     }
-                    self.var_decls_initialized.insert(init_key);
+                    self.var_decls_initialized.insert(init_key, self.bar_seq);
                 }
                 // Non-`var` declarations (e.g. `ha_bull_4h = expr`) re-execute on every bar.
                 // Push the previous value to history so `name[1]` lookbacks work, exactly as
@@ -679,9 +682,17 @@ impl<O: PineOutput> Interpreter<O> {
                 // history BEFORE evaluating the RHS so that [1] lookback in the expression
                 // sees the correct previous-bar value.  Non-var variables push after eval
                 // (their old value was already pushed by VarDecl, or there is no VarDecl).
+                //
+                // Nothing is pushed on the bar the `var` initialized: there is no
+                // previous bar yet, and inventing one would make `acc[1]` read the
+                // initializer instead of na.
                 if let Expr::Variable(name) = target {
                     if let Some(var) = self.variables.get(name) {
-                        if var.is_var_persistent {
+                        let born_this_bar = self
+                            .var_decls_initialized
+                            .get(&(self.current_call_id, name.clone()))
+                            == Some(&self.bar_seq);
+                        if var.is_var_persistent && !born_this_bar {
                             push_history(&mut self.user_series_history, name, var.value.clone());
                         }
                     }

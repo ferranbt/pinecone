@@ -25,8 +25,6 @@ const CHECK = ['ta/', 'math/', 'operators/', 'series/'];
 // Divergences we are not treating as our bugs. Pass --all to check them anyway.
 const SKIP = {
     'ta/tr.pine': 'PineTS ignores handle_na on the first bar; the docs side with us',
-    'ta/mfi.pine': 'unresolved warm-up length difference',
-    'series/var_history_before_rhs.pine': 'unresolved var-history timing difference',
 };
 
 const args = process.argv.slice(2);
@@ -179,3 +177,7 @@ console.log(
         `${diverged.length} diverge · ${errored.length} PineTS errors · ` +
         `${checkAll ? 0 : skipped.length} skipped`
 );
+
+// A divergence fails the run. A fixture PineTS cannot run is its limitation,
+// not our regression, so it does not.
+if (diverged.length) process.exitCode = 1;

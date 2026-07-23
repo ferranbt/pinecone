@@ -1,17 +1,19 @@
 //@version=5
 indicator("ta/mfi")
 // Test ta.mfi (Money Flow Index)
-// Each bar's money flow is signed by the direction of the source, so the first
-// bar has no direction and `length` flows are needed after that.
+//
+// The first bar's change is na, and an na ternary condition takes the else
+// branch, so that bar's flow counts towards BOTH the up and the down sum. That
+// is why the first reading is not yet saturated: once the first bar rolls out
+// of the window, only same-direction flow is left.
 
 // Bars: 4
 
-// Every fixture bar closes higher than the last, so all flow is positive and
-// the negative side stays at 0 — the saturated end of the index.
+// Every fixture bar closes higher than the last.
 mfiUp = ta.mfi(close, 3)
 log.info(str.tostring(mfiUp))
 
-// Negating the source makes every bar a down bar, saturating at the other end.
+// Negating the source makes every bar a down bar, mirroring the index.
 mfiDown = ta.mfi(-close, 3)
 log.info(str.tostring(mfiDown))
 
@@ -20,7 +22,7 @@ log.info(str.tostring(mfiDown))
 // NaN
 // NaN
 // NaN
-// NaN
-// NaN
+// 75.1259802774245
+// 24.874019722575497
 // 100
 // 0

@@ -3,11 +3,14 @@ indicator("series/var_history_before_rhs")
 // Series lookback on a `var` variable inside its own reassignment: the previous
 // value must be committed to history BEFORE the RHS is evaluated, so `acc[1]`
 // sees the previous bar's value. (Getting this order wrong lags every recursive
-// series, e.g. Heikin-Ashi, by one bar.)
+// series, e.g. Heikin-Ashi, by one bar — this would count 1, 1, 1.)
+//
+// `acc[1]` is na on the first bar, since no bar has completed yet, so a counter
+// has to bring it back with nz().
 
 // Bars: 3
 var acc = 0.0
-acc := acc[1] + 1.0
+acc := nz(acc[1]) + 1.0
 log.info(str.tostring(acc))
 
 // Expected output:
