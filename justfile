@@ -41,6 +41,15 @@ bench:
 bench-one name:
     cargo bench --bench {{name}}
 
+# Cross-check the fixtures against PineTS (a separate Pine implementation).
+# Pass a path fragment to narrow it, e.g. `just pinets-check ta/`.
+pinets-check filter="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd tests/pinets
+    [ -d node_modules ] || npm install
+    node check.mjs {{filter}}
+
 # Compile all examples to verify they build
 compile-examples:
     #!/usr/bin/env bash

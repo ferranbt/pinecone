@@ -1,0 +1,12 @@
+{
+  "name": "pinecone-pinets-check",
+  "private": true,
+  "type": "module",
+  "description": "Runs the fixtures through PineTS, a separate open-source Pine Script implementation, and reports where its output disagrees with a fixture's expected block. A cross-check against a second implementation, not a source of truth.",
+  "scripts": {
+    "check": "node check.mjs"
+  },
+  "dependencies": {
+    "pinets": "0.9.29"
+  }
+}
