@@ -1,3 +1,5 @@
+//@version=5
+indicator("types/udt_fields")
 // Test UDT field access and modification
 
 type Point

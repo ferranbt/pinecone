@@ -1,3 +1,5 @@
+//@version=5
+indicator("math/max")
 // Test math.max with variadic arguments
 result1 = math.max(5, 3)
 result2 = math.max(10, 5, 3, 8)

@@ -1,3 +1,5 @@
+//@version=5
+indicator("control_flow/member_access")
 // Test member access on objects
 
 // Access color constants from color namespace

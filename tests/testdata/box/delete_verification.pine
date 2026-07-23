@@ -1,3 +1,5 @@
+//@version=5
+indicator("box/delete_verification")
 // Test that box.delete() actually removes the box
 // When we try to access a deleted box, we should get an error
 

@@ -1,3 +1,5 @@
+//@version=5
+indicator("series/expressions")
 // Test using series in expressions
 //
 // Lookbacks read from history built as bars execute, so an expression reaching

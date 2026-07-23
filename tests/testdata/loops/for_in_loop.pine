@@ -1,3 +1,5 @@
+//@version=5
+indicator("loops/for_in_loop")
 // Test for...in loops
 
 // Simple for in loop

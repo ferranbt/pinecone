@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/highest_lowest")
 // Test ta.highest and ta.lowest — the extreme VALUE over the window.
 // Like Pine, na until the window has `length` bars. Over the last 3 bars close
 // is 299, 300, 301.

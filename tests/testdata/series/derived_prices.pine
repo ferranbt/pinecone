@@ -1,3 +1,5 @@
+//@version=5
+indicator("series/derived_prices")
 // The derived price series are set per bar alongside OHLCV, and their history
 // accumulates as bars execute — so `hl2[1]` is na until a second bar has run.
 // Previous bar: open = 298, high = 303, low = 293, close = 300.

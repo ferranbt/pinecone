@@ -1,5 +1,6 @@
 // A supported //@version annotation compiles normally.
 //@version=6
+indicator("basics/version_declared")
 log.info(str.tostring(1 + 1))
 
 // Expected output:

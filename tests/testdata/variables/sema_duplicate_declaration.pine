@@ -1,3 +1,5 @@
+//@version=5
+indicator("variables/sema_duplicate_declaration")
 x = 1
 x = 2
 

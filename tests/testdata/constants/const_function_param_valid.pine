@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/const_function_param_valid")
 // Test that const function parameters work with const arguments
 
 add(const int x, const int y) => x + y

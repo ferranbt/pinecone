@@ -1,3 +1,5 @@
+//@version=5
+indicator("math/basic")
 // Test basic math functions
 
 // abs

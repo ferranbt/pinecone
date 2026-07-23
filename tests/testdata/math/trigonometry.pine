@@ -1,3 +1,5 @@
+//@version=5
+indicator("math/trigonometry")
 // Test trigonometric functions
 
 // Convert to radians for testing

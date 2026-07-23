@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/na_comparison_conditions")
 // Pine semantics: a comparison that yields na is falsy as a condition, so it
 // takes the false/else branch. Regression guard: Eq/NotEq once returned a
 // structural bool (`1 != na` -> true), which leaked truthiness into `if`

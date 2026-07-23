@@ -1,3 +1,5 @@
+//@version=5
+indicator("control_flow/if_expression")
 // Test if expressions that return values
 
 // Simple if expression returning value

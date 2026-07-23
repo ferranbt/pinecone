@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/shape")
 // shape.* constants resolve to their string tag.
 log.info(str.tostring(shape.circle))
 log.info(str.tostring(shape.cross))

@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/const_basic")
 // Test basic const variable usage
 
 const int x = 10

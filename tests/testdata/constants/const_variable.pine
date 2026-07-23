@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/const_variable")
 // Test const variable declarations
 
 const int x = 10

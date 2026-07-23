@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/roc")
 // Test ta.roc (Rate of Change)
 // ROC = ((current - N bars ago) / N bars ago) * 100, so it needs N+1 values.
 // Over the last 6 bars close is 296..301.

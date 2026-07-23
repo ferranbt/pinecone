@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/cum")
 // Test ta.cum (running total from the first executed bar)
 // `cum` accumulates as bars execute rather than reading back through history,
 // so it is asserted across bars. Over the last 3 bars close is 299, 300, 301

@@ -1,3 +1,5 @@
+//@version=5
+indicator("array/clear")
 // Test array.clear
 
 a = array.new_float(0, 0.0)

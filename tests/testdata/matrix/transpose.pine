@@ -1,3 +1,5 @@
+//@version=5
+indicator("matrix/transpose")
 // Test matrix transpose
 m = matrix.new<float>(2, 3, 0.0)
 matrix.set(m, 0, 0, 1.0)

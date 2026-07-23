@@ -1,3 +1,5 @@
+//@version=5
+indicator("types/enum_with_values")
 // Test enums with explicit string values
 enum Signal
     buy = "Buy signal"

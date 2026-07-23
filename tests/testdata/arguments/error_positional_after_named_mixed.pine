@@ -1,3 +1,5 @@
+//@version=5
+indicator("arguments/error_positional_after_named_mixed")
 // Test that positional arguments cannot appear after any named argument
 // Even when mixing positional and named
 

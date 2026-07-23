@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/error_const_reassignment")
 // Test that const variables cannot be reassigned
 
 const int x = 10

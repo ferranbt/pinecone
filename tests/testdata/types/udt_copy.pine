@@ -1,3 +1,5 @@
+//@version=5
+indicator("types/udt_copy")
 // Test UDT copy method
 type pivotPoint
     int x

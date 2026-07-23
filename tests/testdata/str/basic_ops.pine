@@ -1,3 +1,5 @@
+//@version=5
+indicator("str/basic_ops")
 // Test string basic operations
 
 // String length

@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/error_const_param_simple")
 // Simpler test for const parameter validation
 
 f(const int x) => x + 1

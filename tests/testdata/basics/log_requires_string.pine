@@ -1,0 +1,7 @@
+//@version=5
+indicator("basics/log_requires_string")
+// log.* types its message as `string`, matching Pine, so a raw number is a type
+// error — it must be converted with `str.tostring` first.
+log.info(42)
+
+// Expected error: log.info expects a string message

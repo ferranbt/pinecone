@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/builtin_color_constants")
 // Test builtin color constants
 
 red_val = color.red

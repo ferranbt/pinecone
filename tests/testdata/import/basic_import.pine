@@ -1,3 +1,5 @@
+//@version=5
+indicator("import/basic_import")
 // Test basic import functionality
 
 import mylib as lib

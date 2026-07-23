@@ -1,6 +1,8 @@
+//@version=5
+indicator("errors/undefined_function")
 // Test calling undefined function - should fail
 
 var x = undefinedFunction(10)
 
 // Expected error:
-// error [unknown-function] 3:26: unknown function `undefinedFunction`
+// error [unknown-function] 5:26: unknown function `undefinedFunction`

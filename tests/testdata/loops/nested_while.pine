@@ -1,3 +1,5 @@
+//@version=5
+indicator("loops/nested_while")
 // Test nested while loops
 
 // Nested while loop. The inner counter is a plain (non-var) declaration so

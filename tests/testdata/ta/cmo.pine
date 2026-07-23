@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/cmo")
 // Test ta.cmo (Chande Momentum Oscillator)
 // 100 * (gains - losses) / (gains + losses) over the last N changes, which
 // needs N+1 values. Close only ever rises here, so there are no losses.

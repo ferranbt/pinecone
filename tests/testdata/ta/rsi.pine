@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/rsi")
 // Test ta.rsi (Relative Strength Index)
 // Wilder-smoothed gains over Wilder-smoothed losses. The first bar has no
 // previous value to difference against, and the averages then need `length`

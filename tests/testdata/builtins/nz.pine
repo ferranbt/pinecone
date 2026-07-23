@@ -1,3 +1,5 @@
+//@version=5
+indicator("builtins/nz")
 // Test nz() function
 result1 = nz(na)
 result2 = nz(na, 42.0)

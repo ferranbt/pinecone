@@ -1,3 +1,5 @@
+//@version=5
+indicator("functions/user_defined")
 // Test user-defined functions
 
 // Simple function

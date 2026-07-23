@@ -1,3 +1,5 @@
+//@version=5
+indicator("variables/sema_assign_undeclared")
 x := 5
 
 // Expected error:

@@ -1,3 +1,5 @@
+//@version=5
+indicator("builtins/sema_reassign_builtin")
 close := 5
 
 // Expected error:

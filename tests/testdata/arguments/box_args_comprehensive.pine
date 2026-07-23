@@ -1,3 +1,5 @@
+//@version=5
+indicator("arguments/box_args_comprehensive")
 // Test argument variations with box.new function
 // box.new(left, top, right, bottom, border_color, bgcolor, text, text_size, text_color, xloc, extend, border_width, border_style)
 

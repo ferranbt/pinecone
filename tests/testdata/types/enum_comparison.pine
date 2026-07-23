@@ -1,3 +1,5 @@
+//@version=5
+indicator("types/enum_comparison")
 // Test enum comparison
 
 enum Signal

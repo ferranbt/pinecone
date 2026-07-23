@@ -1,3 +1,5 @@
+//@version=5
+indicator("box/copy_delete")
 // Test box copy and delete
 original = box.new(5, 150.0, 15, 100.0, text="Original Box")
 log.info(str.tostring(box.get_left(original)))

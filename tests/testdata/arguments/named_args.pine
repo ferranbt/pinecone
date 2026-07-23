@@ -1,3 +1,5 @@
+//@version=5
+indicator("arguments/named_args")
 // Test named arguments for plot function
 // Note: plot() now returns void and stores output internally
 

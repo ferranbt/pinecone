@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/hma")
 // Test ta.hma (Hull Moving Average)
 // wma(2 * wma(source, length/2) - wma(source, length), sqrt(length)), so it
 // needs `length` bars for the inner averages and sqrt(length)-1 more for the

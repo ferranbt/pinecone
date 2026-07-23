@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/location")
 // location.* constants resolve to their string tag.
 log.info(str.tostring(location.abovebar))
 log.info(str.tostring(location.belowbar))

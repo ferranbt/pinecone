@@ -1,3 +1,5 @@
+//@version=5
+indicator("series/var_history_before_rhs")
 // Series lookback on a `var` variable inside its own reassignment: the previous
 // value must be committed to history BEFORE the RHS is evaluated, so `acc[1]`
 // sees the previous bar's value. (Getting this order wrong lags every recursive

@@ -1,3 +1,5 @@
+//@version=5
+indicator("str/manipulation")
 // Test string manipulation functions
 
 // Substring

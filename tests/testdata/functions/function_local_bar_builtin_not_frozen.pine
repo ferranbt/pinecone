@@ -1,3 +1,5 @@
+//@version=5
+indicator("functions/function_local_bar_builtin_not_frozen")
 // A host bar builtin (`open`) read inside a user function must reflect the
 // CURRENT bar on every bar — it must not be frozen at the first call's value.
 // Regression: the call-site local-state save kept every non-parameter name in

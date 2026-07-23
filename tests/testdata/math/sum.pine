@@ -1,3 +1,5 @@
+//@version=5
+indicator("math/sum")
 // Test math.sum with variadic arguments
 result1 = math.sum(5, 3)
 result2 = math.sum(10, 5, 3, 8)

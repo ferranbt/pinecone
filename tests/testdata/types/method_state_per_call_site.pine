@@ -1,3 +1,5 @@
+//@version=5
+indicator("types/method_state_per_call_site")
 // Methods keep local state across bars, per CALL SITE — like plain functions.
 // A `var` inside a method initializes once and accumulates across bars, and two
 // call sites of the same method keep independent state. So both counters log

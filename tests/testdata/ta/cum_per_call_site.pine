@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/cum_per_call_site")
 // A stateful builtin keeps its memory per CALL SITE, so two `ta.cum` calls
 // accumulate independently even though they are the same function.
 // Over the last 3 bars close is 299, 300, 301 and open is 297, 298, 299.

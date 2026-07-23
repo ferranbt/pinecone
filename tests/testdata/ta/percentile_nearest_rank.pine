@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/percentile_nearest_rank")
 // Test ta.percentile_nearest_rank (percentile by the nearest-rank method)
 // Like Pine, na until the window has `length` bars. Over the last 3 bars close
 // is 299, 300, 301, so the sorted window is [299, 300, 301].

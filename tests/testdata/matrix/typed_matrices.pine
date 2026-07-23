@@ -1,3 +1,5 @@
+//@version=5
+indicator("matrix/typed_matrices")
 // Test all valid matrix types
 
 // Int matrix

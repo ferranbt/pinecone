@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/cross")
 // Test ta.cross, ta.crossover, ta.crossunder
 // Bar 198: close=300, open=298, Bar 199: close=301, open=299
 // Testing if close crosses over open

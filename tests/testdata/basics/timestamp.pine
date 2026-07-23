@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/timestamp")
 // timestamp(...) builds a UNIX timestamp (ms) from date parts.
 // 2019-01-01 00:00 UTC = 1546300800000 ms.
 log.info(str.tostring(timestamp(2019, 1, 1, 0, 0)))

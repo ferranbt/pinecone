@@ -1,3 +1,5 @@
+//@version=5
+indicator("color/constants")
 // Test all standard color constants
 
 // Test all 17 standard PineScript colors

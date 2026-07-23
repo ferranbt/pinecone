@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/atr")
 // Test ta.atr (Average True Range)
 // Wilder-smoothed true range, so it is na until `length` bars have been seen
 // and then starts from their simple average. Every fixture bar has a true

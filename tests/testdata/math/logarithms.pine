@@ -1,3 +1,5 @@
+//@version=5
+indicator("math/logarithms")
 // Test logarithmic and exponential functions
 
 // Natural logarithm

@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/barstate")
 // barstate.* are per-bar booleans, and the flags behind them follow from where
 // a bar sits in the series rather than being set by hand.
 //

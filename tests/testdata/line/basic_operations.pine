@@ -1,3 +1,5 @@
+//@version=5
+indicator("line/basic_operations")
 // Test line basic operations: create, read back endpoints, interpolate price.
 l = line.new(0, 10.0, 10, 30.0)
 log.info(str.tostring(line.get_x1(l)))

@@ -1,3 +1,5 @@
+//@version=5
+indicator("plot/plot_variations")
 // Test different plot functions
 plotarrow(10.0, title="Arrow")
 plotbar(100.0, 110.0, 90.0, 105.0, title="Bar")

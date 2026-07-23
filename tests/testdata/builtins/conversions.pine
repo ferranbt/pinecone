@@ -1,3 +1,5 @@
+//@version=5
+indicator("builtins/conversions")
 // Test bool(), int(), float() conversions
 
 // bool() tests

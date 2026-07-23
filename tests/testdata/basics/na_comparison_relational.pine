@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/na_comparison_relational")
 // Pine semantics: `<` `>` `<=` `>=` where either operand is na yield na. This
 // also holds when the na arrives as a computed NaN inside a number (e.g.
 // math.sqrt(-1.0)) rather than the `na` value.

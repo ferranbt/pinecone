@@ -1,3 +1,5 @@
+//@version=5
+indicator("variables/compound_assignment")
 // Test compound assignment operators
 
 // Addition assignment

@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/linreg")
 // Test ta.linreg (Linear Regression)
 // Over the last 5 bars close is 297..301 — a perfect uptrend with slope 1, so
 // the fitted line passes exactly through the current bar.

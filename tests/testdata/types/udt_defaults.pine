@@ -1,3 +1,5 @@
+//@version=5
+indicator("types/udt_defaults")
 // Test UDT with default values
 
 type BarInfo

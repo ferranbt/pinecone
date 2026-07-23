@@ -1,3 +1,5 @@
+//@version=5
+indicator("array/push")
 // Test array.push
 
 a = array.new_float(0, 0.0)

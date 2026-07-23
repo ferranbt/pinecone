@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/error_namespace_reassignment")
 // Test that namespace objects (color, math, etc.) cannot be reassigned
 
 color := "test"  // This should fail

@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/format")
 // format.* constants resolve to their string tag.
 log.info(str.tostring(format.inherit))
 log.info(str.tostring(format.price))

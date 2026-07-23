@@ -1,3 +1,5 @@
+//@version=5
+indicator("matrix/fill_copy")
 // Test matrix fill and copy
 m = matrix.new<float>(2, 2, 1.0)
 log.info(str.tostring(matrix.get(m, 0, 0)))

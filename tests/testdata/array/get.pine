@@ -1,3 +1,5 @@
+//@version=5
+indicator("array/get")
 // Test array.get
 
 a = array.new_float(3, 10.0)

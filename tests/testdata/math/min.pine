@@ -1,3 +1,5 @@
+//@version=5
+indicator("math/min")
 // Test math.min with variadic arguments
 result1 = math.min(5, 3)
 result2 = math.min(10, 5, 3, 8)

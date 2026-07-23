@@ -1,3 +1,5 @@
+//@version=5
+indicator("types/udt_simple")
 // Test user-defined types (UDT) - simple creation
 
 // Define a simple type

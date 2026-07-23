@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/na_comparison_equality")
 // Pine semantics: `==` / `!=` where either operand is na yield na, including
 // `na == na` (testing for na requires the na() function). This also holds when
 // the na arrives as a computed NaN inside a number (e.g. math.sqrt(-1.0))

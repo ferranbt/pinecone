@@ -1,3 +1,5 @@
+//@version=5
+indicator("time/timenow")
 // `timenow` is the current UTC time in milliseconds. It is wall-clock, so it
 // can only be asserted relatively: it must sit past a fixed date in the past.
 log.info(str.tostring(timenow > timestamp(2024, 1, 1, 0, 0)))

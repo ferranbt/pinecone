@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/time")
 // `time` is the bar's opening UNIX timestamp, supplied per bar by the host. The
 // harness sets time = index * 1000, so the final bar (index 199) has time 199000.
 log.info(str.tostring(time))

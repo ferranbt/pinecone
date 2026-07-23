@@ -1,3 +1,5 @@
+//@version=5
+indicator("control_flow/ternary")
 // Test ternary (conditional) expressions
 
 // Simple ternary

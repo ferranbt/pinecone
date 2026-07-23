@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/sma")
 // Test ta.sma (Simple Moving Average)
 // Like Pine, na until the window has `length` bars. Over the last 5 bars close
 // is 297, 298, 299, 300, 301.

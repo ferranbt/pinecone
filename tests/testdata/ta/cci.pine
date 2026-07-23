@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/cci")
 // Test ta.cci (Commodity Channel Index)
 // (source - sma) / (0.015 * mean absolute deviation) over the window.
 // Over the last 5 bars close is 297..301, so sma = 299 and mad = 1.2.

@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/alertcondition")
 // alertcondition fires only on bars where the condition is true. On the final
 // test bar close > open, so only the Bull alert fires. The harness surfaces each
 // fired alert as `(alert): <message>` after the logs.

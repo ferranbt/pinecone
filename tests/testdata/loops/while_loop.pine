@@ -1,3 +1,5 @@
+//@version=5
+indicator("loops/while_loop")
 // Test while loops
 
 // Simple while loop

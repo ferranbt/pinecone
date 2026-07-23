@@ -1,3 +1,5 @@
+//@version=5
+indicator("labels/basic_operations")
 // Test label functions
 lbl = label.new(0, 100.0, "Test Label")
 log.info(str.tostring(label.get_text(lbl)))

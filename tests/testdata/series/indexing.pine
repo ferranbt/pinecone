@@ -1,3 +1,5 @@
+//@version=5
+indicator("series/indexing")
 // Test series indexing (accessing historical values)
 //
 // A series' history accumulates as bars execute, so a lookback deeper than the

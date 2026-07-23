@@ -1,3 +1,5 @@
+//@version=5
+indicator("types/enum_simple")
 // Test enum definitions and values
 
 // Define enum with titles

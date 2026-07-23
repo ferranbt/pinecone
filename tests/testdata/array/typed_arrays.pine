@@ -1,3 +1,5 @@
+//@version=5
+indicator("array/typed_arrays")
 // Test all valid typed arrays
 
 // Int array

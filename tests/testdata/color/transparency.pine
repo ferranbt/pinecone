@@ -1,3 +1,5 @@
+//@version=5
+indicator("color/transparency")
 // Test color transparency operations
 
 // Create base color

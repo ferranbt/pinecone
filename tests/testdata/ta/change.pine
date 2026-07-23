@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/change")
 // Test ta.change (Difference between current and N bars ago)
 // Close rises by 1 each bar, so every change equals the bar distance once
 // enough bars have been seen.

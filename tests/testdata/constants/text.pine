@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/text")
 // text.* constants resolve to their string tag.
 log.info(str.tostring(text.align_left))
 log.info(str.tostring(text.align_center))

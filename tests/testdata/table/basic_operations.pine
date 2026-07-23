@@ -1,3 +1,5 @@
+//@version=5
+indicator("table/basic_operations")
 // table.* create / mutate / delete. Tables have no getters in Pine, so this
 // asserts the ids from table.new and that the cell / style / delete calls run
 // without error (cell contents can't be read back from a script).

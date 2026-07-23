@@ -1,3 +1,5 @@
+//@version=5
+indicator("color/gradient")
 // Test color.from_gradient
 
 // Create gradient endpoints

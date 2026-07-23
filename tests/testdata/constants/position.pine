@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/position")
 // position.* constants resolve to their string tag.
 log.info(str.tostring(position.top_left))
 log.info(str.tostring(position.top_right))

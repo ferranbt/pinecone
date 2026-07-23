@@ -1,4 +1,5 @@
 //@version=4
+study("line/hline_v4")
 // v4 hline: the linestyle is a bare constant (`linestyle=dotted`), not
 // `hline.style_dotted`.
 //

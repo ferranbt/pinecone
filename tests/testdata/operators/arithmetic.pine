@@ -1,3 +1,5 @@
+//@version=5
+indicator("operators/arithmetic")
 // Test arithmetic operators
 
 // Addition

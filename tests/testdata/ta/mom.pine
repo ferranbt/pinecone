@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/mom")
 // Test ta.mom (Momentum)
 // Reaching 5 bars back needs 6 values, so like Pine this is na until the
 // window fills. Over the last 6 bars close is 296..301.

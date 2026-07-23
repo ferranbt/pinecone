@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/mfi")
 // Test ta.mfi (Money Flow Index)
 // Each bar's money flow is signed by the direction of the source, so the first
 // bar has no direction and `length` flows are needed after that.

@@ -1,3 +1,5 @@
+//@version=5
+indicator("constants/order")
 // order.* constants resolve to their string tag.
 log.info(str.tostring(order.ascending))
 log.info(str.tostring(order.descending))

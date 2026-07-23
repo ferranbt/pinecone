@@ -1,4 +1,5 @@
 //@version=5
+indicator("builtins/input_v5")
 // v5 input: the type IS the function name (`input.int(...)`). Returns the
 // default; minval/options only shape the settings UI.
 length = input.int(14, "Length", minval=1)

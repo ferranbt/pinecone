@@ -1,3 +1,5 @@
+//@version=5
+indicator("control_flow/switch")
 // Test switch expressions
 
 // Basic switch

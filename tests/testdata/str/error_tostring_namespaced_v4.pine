@@ -1,4 +1,5 @@
 //@version=4
+study("str/error_tostring_namespaced_v4")
 // `str.tostring` does not exist in v4 — it is the v5 replacement for the global
 // `tostring`, so reaching for it here must fail rather than silently resolve.
 text = str.tostring(42)

@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/lazy_and_evaluates_right")
 // A true left operand does not decide `and`, so the right operand IS evaluated.
 // Here that reaches an out-of-bounds array access, which errors — proving the
 // operand was not skipped.

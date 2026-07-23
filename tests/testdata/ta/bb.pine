@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/bb")
 // Test ta.bb (Bollinger Bands)
 // Over the last 5 bars close is 297..301, so the basis is 299 and the
 // population variance is (4+1+0+1+4)/5 = 2, giving stdev sqrt(2).

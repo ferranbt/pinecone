@@ -1,3 +1,5 @@
+//@version=5
+indicator("errors/undefined_variable")
 // Test undefined variable access - should fail
 
 var x = 10

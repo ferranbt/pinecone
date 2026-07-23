@@ -1,3 +1,5 @@
+//@version=5
+indicator("import/import_enum")
 // Test importing and using an exported enum
 
 import mylib as lib

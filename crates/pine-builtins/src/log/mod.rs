@@ -47,10 +47,11 @@ fn format_message<O: PineOutput>(
         | Some(EvaluatedArg::Named {
             value: Value::Na, ..
         }) => Ok(String::new()),
-        Some(EvaluatedArg::Positional(other))
-        | Some(EvaluatedArg::Named { value: other, .. }) => Err(RuntimeError::TypeError(format!(
-            "log.{name} expects a string message, got {other:?}"
-        ))),
+        Some(EvaluatedArg::Positional(other)) | Some(EvaluatedArg::Named { value: other, .. }) => {
+            Err(RuntimeError::TypeError(format!(
+                "log.{name} expects a string message, got {other:?}"
+            )))
+        }
         None => Ok(String::new()),
     }
 }

@@ -1,3 +1,5 @@
+//@version=5
+indicator("variables/varip_persists_across_bars")
 // varip persists across bars like var; the intrabar-update distinction only
 // matters in realtime, which this bar-by-bar harness does not exercise.
 

@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/highestbars_lowestbars")
 // Test ta.highestbars and ta.lowestbars — WHERE the extreme sits, not what it
 // is. Both report an offset back from the current bar: 0 is this bar, -1 the
 // one before it, and so on, so the result is always zero or negative.

@@ -1,3 +1,5 @@
+//@version=5
+indicator("control_flow/if_reassignment")
 // Test if statements with := reassignment
 
 // If-else if-else with reassignment (negative case)

@@ -1,3 +1,5 @@
+//@version=5
+indicator("box/setters")
 // Test box setter functions
 b = box.new(0, 100.0, 10, 50.0, text="Initial Text")
 

@@ -1,3 +1,5 @@
+//@version=5
+indicator("array/new_and_size")
 // Test array.new_float and array.size
 
 a_float = array.new_float(3, 10.0)

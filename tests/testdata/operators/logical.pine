@@ -1,3 +1,5 @@
+//@version=5
+indicator("operators/logical")
 // Test logical operators
 
 // AND operator

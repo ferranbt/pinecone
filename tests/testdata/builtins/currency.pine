@@ -1,3 +1,5 @@
+//@version=5
+indicator("builtins/currency")
 // Test currency constants
 log.info(str.tostring(currency.AED))
 log.info(str.tostring(currency.ARS))

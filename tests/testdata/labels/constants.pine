@@ -1,3 +1,5 @@
+//@version=5
+indicator("labels/constants")
 // Test label constants
 log.info(str.tostring(label.style_arrowdown))
 log.info(str.tostring(label.style_arrowup))

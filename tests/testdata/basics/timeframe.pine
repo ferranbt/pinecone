@@ -1,3 +1,5 @@
+//@version=5
+indicator("basics/timeframe")
 // timeframe.* is host-supplied data. The harness compiles with period "3D",
 // so this asserts the passthrough (period) and the derived classification
 // (multiplier / is* flags).

@@ -1,3 +1,5 @@
+//@version=5
+indicator("labels/setters")
 // Test label setter functions
 lbl = label.new(0, 100.0, "Initial")
 

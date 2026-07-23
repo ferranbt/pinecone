@@ -1,3 +1,5 @@
+//@version=5
+indicator("ta/stoch")
 // Test ta.stoch (where source sits inside the recent high/low range, as 0..100)
 // Needs `length` bars of high and low. Over the last 5 bars the highest high is
 // 304 and the lowest low is 290, so the range is 14 and close is 301.

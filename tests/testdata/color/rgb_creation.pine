@@ -1,3 +1,5 @@
+//@version=5
+indicator("color/rgb_creation")
 // Test color.rgb creation
 
 // Create basic RGB colors

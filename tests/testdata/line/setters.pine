@@ -1,3 +1,5 @@
+//@version=5
+indicator("line/setters")
 // Test line setters: set_xy1/set_xy2 and the single-coordinate setters.
 l = line.new(0, 0.0, 1, 1.0)
 line.set_xy1(l, 2, 20.0)
