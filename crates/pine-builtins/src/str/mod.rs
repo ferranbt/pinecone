@@ -247,9 +247,10 @@ struct StrPos {
 
 impl StrPos {
     fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        // The spec: "the position of the first occurrence ..., 'na' otherwise".
         match self.source.find(&self.str) {
-            Some(pos) => Ok(Value::Number(pos as f64)),
-            None => Ok(Value::Number(-1.0)),
+            Some(pos) => Ok(Value::Int(pos as i64)),
+            None => Ok(Value::Na),
         }
     }
 }

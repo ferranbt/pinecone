@@ -12,7 +12,7 @@ log.info(str.tostring(sub2))
 rep1 = str.replace_all("hello world world", "world", "rust")
 log.info(str.tostring(rep1))
 
-// Position
+// Position. A substring that is not present yields na, not a sentinel index.
 pos1 = str.pos("hello world", "world")
 pos2 = str.pos("hello world", "xyz")
 log.info(str.tostring(pos1))
@@ -39,7 +39,7 @@ log.info(str.tostring(str2))
 // world
 // hello rust rust
 // 6
-// -1
+// NaN
 // ababab
 // 123.45
 // 67
