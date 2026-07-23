@@ -3,7 +3,8 @@
 //! Unlike the compile-time namespaces, these change every bar, so they are built
 //! per bar from the [`Bar`]'s flags (see `register_per_bar` in the crate root).
 
-use pine_interpreter::{Bar, PineOutput, Value};
+use pine_core::Bar;
+use pine_interpreter::{PineOutput, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;

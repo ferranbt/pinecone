@@ -1,7 +1,8 @@
 mod test_data;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use test_data::{execute_with_history, generate_bars};
+use pine::execute;
+use test_data::generate_bars;
 
 fn bench_moving_averages(c: &mut Criterion) {
     let mut group = c.benchmark_group("ta/moving_averages");
@@ -15,12 +16,12 @@ fn bench_moving_averages(c: &mut Criterion) {
     ];
 
     for lookback in [50, 100, 200].iter() {
-        let bars = generate_bars(*lookback);
+        let data = generate_bars(*lookback);
 
         for (name, source) in scripts.iter() {
             group.bench_with_input(BenchmarkId::new(*name, lookback), source, |b, source| {
                 b.iter(|| {
-                    execute_with_history(black_box(source), &bars).unwrap();
+                    execute(black_box(source), data.clone()).unwrap();
                 });
             });
         }
@@ -41,12 +42,12 @@ fn bench_oscillators(c: &mut Criterion) {
     ];
 
     for lookback in [50, 100, 200].iter() {
-        let bars = generate_bars(*lookback);
+        let data = generate_bars(*lookback);
 
         for (name, source) in scripts.iter() {
             group.bench_with_input(BenchmarkId::new(*name, lookback), source, |b, source| {
                 b.iter(|| {
-                    execute_with_history(black_box(source), &bars).unwrap();
+                    execute(black_box(source), data.clone()).unwrap();
                 });
             });
         }
@@ -65,12 +66,12 @@ fn bench_volatility(c: &mut Criterion) {
     ];
 
     for lookback in [50, 100, 200].iter() {
-        let bars = generate_bars(*lookback);
+        let data = generate_bars(*lookback);
 
         for (name, source) in scripts.iter() {
             group.bench_with_input(BenchmarkId::new(*name, lookback), source, |b, source| {
                 b.iter(|| {
-                    execute_with_history(black_box(source), &bars).unwrap();
+                    execute(black_box(source), data.clone()).unwrap();
                 });
             });
         }
@@ -91,12 +92,12 @@ fn bench_comparison(c: &mut Criterion) {
     ];
 
     for lookback in [50, 100, 200].iter() {
-        let bars = generate_bars(*lookback);
+        let data = generate_bars(*lookback);
 
         for (name, source) in scripts.iter() {
             group.bench_with_input(BenchmarkId::new(*name, lookback), source, |b, source| {
                 b.iter(|| {
-                    execute_with_history(black_box(source), &bars).unwrap();
+                    execute(black_box(source), data.clone()).unwrap();
                 });
             });
         }

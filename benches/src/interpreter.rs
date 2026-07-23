@@ -2,8 +2,8 @@ mod test_data;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use pine::interpreter::DefaultPineOutput;
-use pine::ScriptBuilder;
-use test_data::{execute_with_history, generate_bars};
+use pine::{execute, ScriptBuilder};
+use test_data::generate_bars;
 
 const TEST_SCRIPTS: &[(&str, &str)] = &[
     ("simple", include_str!("../test_data/simple.pine")),
@@ -18,12 +18,12 @@ const TEST_SCRIPTS: &[(&str, &str)] = &[
 
 fn bench_single_bar(c: &mut Criterion) {
     let mut group = c.benchmark_group("interpreter/single_bar");
-    let bars = generate_bars(200); // Generate enough bars for historical lookback
+    let data = generate_bars(200); // Generate enough bars for historical lookback
 
     for (name, source) in TEST_SCRIPTS {
         group.bench_with_input(BenchmarkId::from_parameter(name), source, |b, source| {
             b.iter(|| {
-                execute_with_history(black_box(source), &bars).unwrap();
+                execute(black_box(source), data.clone()).unwrap();
             });
         });
     }
