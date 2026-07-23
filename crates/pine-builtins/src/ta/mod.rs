@@ -67,6 +67,14 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
         "dev".to_string(),
         Value::BuiltinFunction(Rc::new(TaDev::<O>::builtin_fn)),
     );
+    ta_ns.insert(
+        "percentile_nearest_rank".to_string(),
+        Value::BuiltinFunction(Rc::new(TaPercentileNearestRank::<O>::builtin_fn)),
+    );
+    ta_ns.insert(
+        "cum".to_string(),
+        Value::BuiltinFunction(Rc::new(TaCum::<O>::builtin_fn)),
+    );
 
     // Volatility
     ta_ns.insert(
@@ -148,6 +156,14 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     ta_ns.insert(
         "linreg".to_string(),
         Value::BuiltinFunction(Rc::new(TaLinreg::<O>::builtin_fn)),
+    );
+    ta_ns.insert(
+        "stoch".to_string(),
+        Value::BuiltinFunction(Rc::new(TaStoch::<O>::builtin_fn)),
+    );
+    ta_ns.insert(
+        "mfi".to_string(),
+        Value::BuiltinFunction(Rc::new(TaMfi::<O>::builtin_fn)),
     );
 
     if matches!(version, PineVersion::V5 | PineVersion::V6) {

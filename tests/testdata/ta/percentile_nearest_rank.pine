@@ -1,0 +1,24 @@
+// Test ta.percentile_nearest_rank (percentile by the nearest-rank method)
+// Last 5 closes sorted ascending: 297, 298, 299, 300, 301
+
+// Median: rank = ceil(50/100 * 5) = 3 -> the 3rd smallest
+p50 = ta.percentile_nearest_rank(close, 5, 50)
+log.info(p50)
+
+// rank = ceil(20/100 * 5) = 1 -> the smallest
+p20 = ta.percentile_nearest_rank(close, 5, 20)
+log.info(p20)
+
+// rank = ceil(100/100 * 5) = 5 -> the largest
+p100 = ta.percentile_nearest_rank(close, 5, 100)
+log.info(p100)
+
+// rank = 0 clamps up to 1 -> the smallest
+p0 = ta.percentile_nearest_rank(close, 5, 0)
+log.info(p0)
+
+// Expected output:
+// 299
+// 297
+// 301
+// 297

@@ -129,6 +129,66 @@ impl<O: PineOutput> TaMedian<O> {
     }
 }
 
+/// ta.percentile_nearest_rank(source, length, percentage) - Percentile by the
+/// nearest-rank method: the smallest value at or below which `percentage` of the
+/// last `length` values fall.
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.percentile_nearest_rank")]
+pub struct TaPercentileNearestRank<O: PineOutput> {
+    source: Value<O>,
+    length: f64,
+    percentage: f64,
+}
+
+impl<O: PineOutput> TaPercentileNearestRank<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let length = self.length as usize;
+        if length == 0 {
+            return Err(RuntimeError::TypeError(
+                "length must be greater than 0".to_string(),
+            ));
+        }
+
+        let mut values = ctx.get_series_values(&self.source, length)?;
+
+        if values.is_empty() {
+            return Ok(Value::Na);
+        }
+
+        values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Nearest rank: n = ceil(P/100 * N), 1-based, clamped into the sample.
+        let rank = (self.percentage / 100.0 * values.len() as f64).ceil() as usize;
+        let index = rank.clamp(1, values.len()) - 1;
+
+        Ok(Value::Number(values[index]))
+    }
+}
+
+/// ta.cum(source) - Running total of `source` from the first bar onwards.
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.cum")]
+pub struct TaCum<O: PineOutput> {
+    source: Value<O>,
+}
+
+impl<O: PineOutput> TaCum<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        // `usize::MAX` means "the whole history": `get_series_values` stops as
+        // soon as the provider runs out of bars.
+        let values = ctx.get_series_values(&self.source, usize::MAX)?;
+
+        if values.is_empty() {
+            return Ok(Value::Na);
+        }
+
+        // Pine's `cum` skips na rather than poisoning the total.
+        Ok(Value::Number(
+            values.iter().filter(|v| v.is_finite()).sum::<f64>(),
+        ))
+    }
+}
+
 /// ta.dev(source, length) - Mean Absolute Deviation
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.dev")]
