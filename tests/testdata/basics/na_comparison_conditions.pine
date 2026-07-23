@@ -5,11 +5,11 @@
 // where `[1]` is na.
 
 // An na != comparison used as a ternary condition takes the else branch
-log.info(1 != na ? 10 : 20)
+log.info(str.tostring(1 != na ? 10 : 20))
 
 // A computed NaN comparison used as a ternary condition takes the else branch
 nanv = math.sqrt(-1.0)
-log.info(nanv != nanv ? 1.0 : 2.0)
+log.info(str.tostring(nanv != nanv ? 1.0 : 2.0))
 
 // Mirrors the day-boundary pattern: with `prev` na, the comparison is na
 // (falsy), so the guarded branch must not run and x stays 0.
@@ -18,7 +18,7 @@ flag = 1 != prev
 x = 0
 if flag
     x := 1
-log.info(x)
+log.info(str.tostring(x))
 
 // Expected output:
 // 20

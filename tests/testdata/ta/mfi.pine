@@ -7,18 +7,18 @@
 // Every fixture bar closes higher than the last, so all flow is positive and
 // the negative side stays at 0 — the saturated end of the index.
 mfiUp = ta.mfi(close, 3)
-log.info(mfiUp)
+log.info(str.tostring(mfiUp))
 
 // Negating the source makes every bar a down bar, saturating at the other end.
 mfiDown = ta.mfi(-close, 3)
-log.info(mfiDown)
+log.info(str.tostring(mfiDown))
 
 // Expected output:
-// na
-// na
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
 // 100
 // 0

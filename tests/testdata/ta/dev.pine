@@ -5,9 +5,9 @@
 // Bars: 3
 
 d = ta.dev(close, 3)
-log.info(d)
+log.info(str.tostring(d))
 
 // Expected output:
-// na
-// na
+// NaN
+// NaN
 // 0.6666666666666666

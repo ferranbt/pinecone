@@ -6,11 +6,11 @@
 
 // Windows [297,298,299], [298,299,300], [299,300,301]
 sma3 = ta.sma(close, 3)
-log.info(sma3)
+log.info(str.tostring(sma3))
 
 // Expected output:
-// na
-// na
+// NaN
+// NaN
 // 298
 // 299
 // 300

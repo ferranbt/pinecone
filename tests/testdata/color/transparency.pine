@@ -13,18 +13,18 @@ t1 = color.t(trans1)
 t2 = color.t(trans2)
 t3 = color.t(trans3)
 
-log.info(t1)
-log.info(t2)
-log.info(t3)
+log.info(str.tostring(t1))
+log.info(str.tostring(t2))
+log.info(str.tostring(t3))
 
 // Check that RGB components are preserved
 r1 = color.r(trans1)
 g1 = color.g(trans1)
 b1 = color.b(trans1)
 
-log.info(r1)
-log.info(g1)
-log.info(b1)
+log.info(str.tostring(r1))
+log.info(str.tostring(g1))
+log.info(str.tostring(b1))
 
 // Expected output:
 // 25

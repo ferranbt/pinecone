@@ -24,20 +24,20 @@ div3 = -10 / 2
 mod1 = 10 % 3
 mod2 = 15 % 4
 
-log.info(add1)
-log.info(add2)
-log.info(add3)
-log.info(sub1)
-log.info(sub2)
-log.info(sub3)
-log.info(mul1)
-log.info(mul2)
-log.info(mul3)
-log.info(div1)
-log.info(div2)
-log.info(div3)
-log.info(mod1)
-log.info(mod2)
+log.info(str.tostring(add1))
+log.info(str.tostring(add2))
+log.info(str.tostring(add3))
+log.info(str.tostring(sub1))
+log.info(str.tostring(sub2))
+log.info(str.tostring(sub3))
+log.info(str.tostring(mul1))
+log.info(str.tostring(mul2))
+log.info(str.tostring(mul3))
+log.info(str.tostring(div1))
+log.info(str.tostring(div2))
+log.info(str.tostring(div3))
+log.info(str.tostring(mod1))
+log.info(str.tostring(mod2))
 
 // Expected output:
 // 15

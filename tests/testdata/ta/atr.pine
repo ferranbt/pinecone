@@ -6,11 +6,11 @@
 // Bars: 5
 
 atr5 = ta.atr(5)
-log.info(atr5)
+log.info(str.tostring(atr5))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 10

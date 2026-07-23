@@ -6,7 +6,7 @@ var result1 = switch x
     1 => "one"
     2 => "two"
     3 => "three"
-log.info(result1)
+log.info(str.tostring(result1))
 
 // Switch with different value
 var y = 1
@@ -14,7 +14,7 @@ var result2 = switch y
     1 => "first"
     2 => "second"
     3 => "third"
-log.info(result2)
+log.info(str.tostring(result2))
 
 // Switch with numbers as result
 var z = 3
@@ -22,7 +22,7 @@ var result3 = switch z
     1 => 10
     2 => 20
     3 => 30
-log.info(result3)
+log.info(str.tostring(result3))
 
 // Expected output:
 // two

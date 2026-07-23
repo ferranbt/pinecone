@@ -5,15 +5,15 @@
 // Bars: 3
 
 high3 = ta.highest(close, 3)
-log.info(high3)
+log.info(str.tostring(high3))
 
 low3 = ta.lowest(close, 3)
-log.info(low3)
+log.info(str.tostring(low3))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 301
 // 299

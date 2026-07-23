@@ -3,42 +3,42 @@
 // math.sqrt(-1.0)) rather than the `na` value.
 
 // An na operand makes relational operators yield na
-log.info(na < 1)
-log.info(1 < na)
-log.info(na > 1)
-log.info(1 > na)
-log.info(na <= 1)
-log.info(na >= 1)
+log.info(str.tostring(na < 1))
+log.info(str.tostring(1 < na))
+log.info(str.tostring(na > 1))
+log.info(str.tostring(1 > na))
+log.info(str.tostring(na <= 1))
+log.info(str.tostring(na >= 1))
 
 // A computed NaN number behaves the same as na
 nanv = math.sqrt(-1.0)
-log.info(nanv < 1)
-log.info(1 < nanv)
-log.info(nanv > 1)
-log.info(1 > nanv)
-log.info(nanv <= 1)
-log.info(nanv >= 1)
+log.info(str.tostring(nanv < 1))
+log.info(str.tostring(1 < nanv))
+log.info(str.tostring(nanv > 1))
+log.info(str.tostring(1 > nanv))
+log.info(str.tostring(nanv <= 1))
+log.info(str.tostring(nanv >= 1))
 
 // Without an na operand, relational operators stay boolean
-log.info(1 < 2)
-log.info(2 < 1)
-log.info(2 > 1)
-log.info(1 <= 1)
-log.info(1 >= 2)
+log.info(str.tostring(1 < 2))
+log.info(str.tostring(2 < 1))
+log.info(str.tostring(2 > 1))
+log.info(str.tostring(1 <= 1))
+log.info(str.tostring(1 >= 2))
 
 // Expected output:
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
 // true
 // false
 // true

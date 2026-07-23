@@ -1,16 +1,16 @@
 // Test the syminfo namespace exposes the host-supplied symbol information.
 // The integration harness compiles every script with a fixed SymInfo (see
 // test_syminfo in integration.rs); these are its values.
-log.info(syminfo.ticker)
-log.info(syminfo.tickerid)
-log.info(syminfo.description)
-log.info(syminfo.prefix)
-log.info(syminfo.currency)
-log.info(syminfo.basecurrency)
-log.info(syminfo.mintick)
-log.info(syminfo.pointvalue)
-log.info(syminfo.timezone)
-log.info(syminfo.session)
+log.info(str.tostring(syminfo.ticker))
+log.info(str.tostring(syminfo.tickerid))
+log.info(str.tostring(syminfo.description))
+log.info(str.tostring(syminfo.prefix))
+log.info(str.tostring(syminfo.currency))
+log.info(str.tostring(syminfo.basecurrency))
+log.info(str.tostring(syminfo.mintick))
+log.info(str.tostring(syminfo.pointvalue))
+log.info(str.tostring(syminfo.timezone))
+log.info(str.tostring(syminfo.session))
 
 // Expected output:
 // AAPL

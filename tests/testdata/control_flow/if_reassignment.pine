@@ -13,7 +13,7 @@ else if x < 10
 else
     result := 2
 
-log.info(result)
+log.info(str.tostring(result))
 
 // If-else if-else with reassignment (large case)
 var y = 100
@@ -28,7 +28,7 @@ else if y < 10
 else
     result2 := 2
 
-log.info(result2)
+log.info(str.tostring(result2))
 
 // If-else if-else with reassignment (small case)
 var z = 5
@@ -43,7 +43,7 @@ else if z < 10
 else
     result3 := 2
 
-log.info(result3)
+log.info(str.tostring(result3))
 
 // Expected output:
 // -1

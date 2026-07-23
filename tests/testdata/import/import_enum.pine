@@ -4,7 +4,7 @@ import mylib as lib
 
 // Use exported enum
 dir = lib.Direction.UP
-log.info(dir)
+log.info(str.tostring(dir))
 
 // Expected output:
-// Enum(Direction::UP)
+// Direction::UP

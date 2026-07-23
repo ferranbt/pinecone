@@ -8,29 +8,29 @@
 
 // Change from the previous bar
 change = close[0] - close[1]
-log.info(change)
+log.info(str.tostring(change))
 
 // Average of this bar and the previous one
 avg = (close[0] + close[1]) / 2
-log.info(avg)
+log.info(str.tostring(avg))
 
 // Comparing against a missing bar is na, not false
 is_rising = close[0] > close[1]
-log.info(is_rising)
+log.info(str.tostring(is_rising))
 
 // Sum over 3 bars needs all three of them
 sum3 = close[0] + close[1] + close[2]
-log.info(sum3)
+log.info(str.tostring(sum3))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 1
 // 299.5
 // true
-// na
+// NaN
 // 1
 // 300.5
 // true

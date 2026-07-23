@@ -6,21 +6,21 @@
 
 // 100 * (301 - 290) / 14
 stochClose = ta.stoch(close, high, low, 5)
-log.info(stochClose)
+log.info(str.tostring(stochClose))
 
 // Length 1 fills immediately: each bar's own range is high - low = 10, and
 // close sits 7 above the low, so this is 70 on every bar.
 stochOneBar = ta.stoch(close, high, low, 1)
-log.info(stochOneBar)
+log.info(str.tostring(stochOneBar))
 
 // Expected output:
-// na
+// NaN
 // 70
-// na
+// NaN
 // 70
-// na
+// NaN
 // 70
-// na
+// NaN
 // 70
 // 78.57142857142857
 // 70

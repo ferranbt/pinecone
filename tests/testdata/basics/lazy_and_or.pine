@@ -6,26 +6,26 @@
 arr = array.new_float(0, 0.0)
 
 // Left operand decides, so the erroring right operand is skipped
-log.info(true or (array.get(arr, 0) > 0))
-log.info(false and (array.get(arr, 0) > 0))
+log.info(str.tostring(true or (array.get(arr, 0) > 0)))
+log.info(str.tostring(false and (array.get(arr, 0) > 0)))
 
 // Left operand does not decide, so the right operand is evaluated (its value
 // is needed) and the result is correct
-log.info(false or true)
-log.info(true and false)
+log.info(str.tostring(false or true))
+log.info(str.tostring(true and false))
 
 // An na left operand cannot decide alone, so the right operand's value decides
 cond = na
-log.info(cond or true)
-log.info(cond and true)
+log.info(str.tostring(cond or true))
+log.info(str.tostring(cond and true))
 
 // Three-valued results are unchanged by laziness
-log.info(true or na)
-log.info(false or na)
-log.info(na or false)
-log.info(false and na)
-log.info(true and na)
-log.info(na and false)
+log.info(str.tostring(true or na))
+log.info(str.tostring(false or na))
+log.info(str.tostring(na or false))
+log.info(str.tostring(false and na))
+log.info(str.tostring(true and na))
+log.info(str.tostring(na and false))
 
 // Expected output:
 // true
@@ -33,10 +33,10 @@ log.info(na and false)
 // true
 // false
 // true
-// na
+// NaN
 // true
-// na
-// na
+// NaN
+// NaN
 // false
-// na
+// NaN
 // false

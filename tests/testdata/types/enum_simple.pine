@@ -17,9 +17,9 @@ is_buy = x == Signal.buy
 is_sell = y == Signal.sell
 is_neutral = z == Signal.neutral
 
-log.info(is_buy)
-log.info(is_sell)
-log.info(is_neutral)
+log.info(str.tostring(is_buy))
+log.info(str.tostring(is_sell))
+log.info(str.tostring(is_neutral))
 
 // Expected output:
 // true

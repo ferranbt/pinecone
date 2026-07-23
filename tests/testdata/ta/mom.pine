@@ -6,12 +6,12 @@
 
 // 301 - 296
 mom5 = ta.mom(close, 5)
-log.info(mom5)
+log.info(str.tostring(mom5))
 
 // Expected output:
-// na
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
 // 5

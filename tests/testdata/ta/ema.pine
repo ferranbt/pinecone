@@ -11,11 +11,11 @@
 // Bars: 5
 
 ema3 = ta.ema(close, 3)
-log.info(ema3)
+log.info(str.tostring(ema3))
 
 // Expected output:
-// na
-// na
+// NaN
+// NaN
 // 298
 // 299
 // 300

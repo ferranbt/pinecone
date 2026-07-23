@@ -10,10 +10,10 @@
 // Bars: 4
 
 rma2 = ta.rma(close, 2)
-log.info(rma2)
+log.info(str.tostring(rma2))
 
 // Expected output:
-// na
+// NaN
 // 298.5
 // 299.25
 // 300.125

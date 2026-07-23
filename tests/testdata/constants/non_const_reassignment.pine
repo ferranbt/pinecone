@@ -2,7 +2,7 @@
 
 int a = 10
 a := 20
-log.info(a)
+log.info(str.tostring(a))
 
 // Expected output:
 // 20

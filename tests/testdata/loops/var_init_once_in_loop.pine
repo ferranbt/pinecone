@@ -16,7 +16,7 @@ while i < 3
         j := j + 1
     i := i + 1
 
-log.info(sum)
+log.info(str.tostring(sum))
 
 // Expected output:
 // 0

@@ -6,12 +6,12 @@
 
 // 5 gains of 1, no losses -> 100 * 5 / 5
 cmo5 = ta.cmo(close, 5)
-log.info(cmo5)
+log.info(str.tostring(cmo5))
 
 // Expected output:
-// na
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
 // 100

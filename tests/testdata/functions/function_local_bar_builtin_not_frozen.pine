@@ -8,7 +8,7 @@
 // Bars: 4
 f() =>
     open + 10.0
-log.info(f())
+log.info(str.tostring(f()))
 
 // Expected output:
 // 306

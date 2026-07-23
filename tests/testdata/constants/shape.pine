@@ -1,9 +1,9 @@
 // shape.* constants resolve to their string tag.
-log.info(shape.circle)
-log.info(shape.cross)
-log.info(shape.triangleup)
-log.info(shape.labeldown)
-log.info(shape.arrowup)
+log.info(str.tostring(shape.circle))
+log.info(str.tostring(shape.cross))
+log.info(str.tostring(shape.triangleup))
+log.info(str.tostring(shape.labeldown))
+log.info(str.tostring(shape.arrowup))
 
 // Expected output:
 // circle

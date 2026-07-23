@@ -7,11 +7,11 @@ const int b = 20
 
 // Literals are const
 result1 = add(5, 10)
-log.info(result1)
+log.info(str.tostring(result1))
 
 // Const variables are const
 result2 = add(a, b)
-log.info(result2)
+log.info(str.tostring(result2))
 
 // Expected output:
 // 15

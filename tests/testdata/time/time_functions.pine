@@ -5,51 +5,51 @@ epoch = 0
 
 // Year at epoch
 y1 = year(epoch)
-log.info(y1)
+log.info(str.tostring(y1))
 
 // Month at epoch (January = 1)
 m1 = month(epoch)
-log.info(m1)
+log.info(str.tostring(m1))
 
 // Day of month at epoch
 d1 = dayofmonth(epoch)
-log.info(d1)
+log.info(str.tostring(d1))
 
 // Day of week at epoch (Thursday = 5)
 dow1 = dayofweek(epoch)
-log.info(dow1)
+log.info(str.tostring(dow1))
 
 // Hour at epoch
 h1 = hour(epoch)
-log.info(h1)
+log.info(str.tostring(h1))
 
 // Minute at epoch
 min1 = minute(epoch)
-log.info(min1)
+log.info(str.tostring(min1))
 
 // Second at epoch
 sec1 = second(epoch)
-log.info(sec1)
+log.info(str.tostring(sec1))
 
 // Test with 1 hour in milliseconds
 one_hour = 3600000
 h2 = hour(one_hour)
-log.info(h2)
+log.info(str.tostring(h2))
 
 // Test with 30 minutes
 thirty_min = 1800000
 min2 = minute(thirty_min)
-log.info(min2)
+log.info(str.tostring(min2))
 
 // Test with 45 seconds
 fortyfive_sec = 45000
 sec2 = second(fortyfive_sec)
-log.info(sec2)
+log.info(str.tostring(sec2))
 
 // Test with 1 day after epoch (Friday = 6)
 one_day = 86400000
 dow2 = dayofweek(one_day)
-log.info(dow2)
+log.info(str.tostring(dow2))
 
 // Expected output:
 // 1970

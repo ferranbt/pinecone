@@ -8,13 +8,13 @@
 // Bars: 2
 
 trDefault = ta.tr()
-log.info(trDefault)
+log.info(str.tostring(trDefault))
 
 trHandleNa = ta.tr(true)
-log.info(trHandleNa)
+log.info(str.tostring(trHandleNa))
 
 // Expected output:
 // 10
-// na
+// NaN
 // 10
 // 10

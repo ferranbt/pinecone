@@ -6,16 +6,16 @@
 
 // Window [299,300,301] -> the middle value
 med3 = ta.median(close, 3)
-log.info(med3)
+log.info(str.tostring(med3))
 
 // Fills a bar earlier; even-sized windows average the middle two
 med2 = ta.median(close, 2)
-log.info(med2)
+log.info(str.tostring(med2))
 
 // Expected output:
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
 // 299.5
 // 300
 // 300.5

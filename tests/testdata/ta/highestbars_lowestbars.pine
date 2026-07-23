@@ -7,13 +7,13 @@
 
 // Bars: 3
 
-log.info(ta.highestbars(close, 3))
-log.info(ta.lowestbars(close, 3))
+log.info(str.tostring(ta.highestbars(close, 3)))
+log.info(str.tostring(ta.lowestbars(close, 3)))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 0
 // -2

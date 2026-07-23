@@ -12,9 +12,9 @@ label.set_textalign(lbl, "left")
 label.set_tooltip(lbl, "Tooltip text")
 
 // Verify values
-log.info(label.get_text(lbl))
-log.info(label.get_x(lbl))
-log.info(label.get_y(lbl))
+log.info(str.tostring(label.get_text(lbl)))
+log.info(str.tostring(label.get_x(lbl)))
+log.info(str.tostring(label.get_y(lbl)))
 
 // Expected output:
 // New Text

@@ -1,8 +1,8 @@
 // display.* constants resolve to their string tag.
-log.info(display.none)
-log.info(display.all)
-log.info(display.data_window)
-log.info(display.status_line)
+log.info(str.tostring(display.none))
+log.info(str.tostring(display.all))
+log.info(str.tostring(display.data_window))
+log.info(str.tostring(display.status_line))
 
 // Expected output:
 // none

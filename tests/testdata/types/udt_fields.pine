@@ -10,8 +10,8 @@ p = Point.new(100, 50.5)
 // Access fields
 x1 = p.x
 y1 = p.y
-log.info(x1)
-log.info(y1)
+log.info(str.tostring(x1))
+log.info(str.tostring(y1))
 
 // Modify fields
 p.x := 200
@@ -20,8 +20,8 @@ p.y := 75.5
 // Access modified fields
 x2 = p.x
 y2 = p.y
-log.info(x2)
-log.info(y2)
+log.info(str.tostring(x2))
+log.info(str.tostring(y2))
 
 // Expected output:
 // 100

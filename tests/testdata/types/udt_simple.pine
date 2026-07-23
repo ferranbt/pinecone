@@ -15,8 +15,8 @@ p2 = Point.new(10.0, 20.0)
 x1 = p2.x
 y1 = p2.y
 
-log.info(x1)
-log.info(y1)
+log.info(str.tostring(x1))
+log.info(str.tostring(y1))
 
 // Expected output:
 // 10

@@ -13,7 +13,7 @@ while i < 3
         j := j + 1
     i := i + 1
 
-log.info(sum)
+log.info(str.tostring(sum))
 
 // While with both break and continue
 var k = 0
@@ -26,7 +26,7 @@ while k < 20
         continue
     sum2 := sum2 + k
 
-log.info(sum2)
+log.info(str.tostring(sum2))
 
 // Expected output:
 // 3

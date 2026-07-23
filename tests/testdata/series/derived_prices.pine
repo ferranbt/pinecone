@@ -6,26 +6,26 @@
 // Bars: 2
 
 // (304 + 294) / 2
-log.info(hl2[0])
+log.info(str.tostring(hl2[0]))
 
 // (304 + 294 + 301) / 3
-log.info(hlc3[0])
+log.info(str.tostring(hlc3[0]))
 
 // (304 + 294 + 301 * 2) / 4
-log.info(hlcc4[0])
+log.info(str.tostring(hlcc4[0]))
 
 // (299 + 304 + 294 + 301) / 4
-log.info(ohlc4[0])
+log.info(str.tostring(ohlc4[0]))
 
 // (303 + 293) / 2, and na on the first bar
-log.info(hl2[1])
+log.info(str.tostring(hl2[1]))
 
 // Expected output:
 // 298
 // 298.6666666666667
 // 299
 // 298.5
-// na
+// NaN
 // 299
 // 299.6666666666667
 // 300

@@ -9,7 +9,7 @@ f_counter() =>
     n
 
 c = f_counter()
-log.info(c)
+log.info(str.tostring(c))
 
 // Expected output:
 // 1

@@ -2,7 +2,7 @@
 // When we try to access a deleted label, we should get an error
 
 lbl = label.new(5, 150.0, "Test Label")
-log.info(label.get_text(lbl))
+log.info(str.tostring(label.get_text(lbl)))
 
 // Delete the label
 label.delete(lbl)

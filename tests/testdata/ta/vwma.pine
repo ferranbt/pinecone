@@ -6,11 +6,11 @@
 
 // 4440250 / 14850
 vwma5 = ta.vwma(close, 5)
-log.info(vwma5)
+log.info(str.tostring(vwma5))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 299.006734006734

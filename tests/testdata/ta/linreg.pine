@@ -5,11 +5,11 @@
 // Bars: 5
 
 linreg5 = ta.linreg(close, 5, 0)
-log.info(linreg5)
+log.info(str.tostring(linreg5))
 
 // Expected output:
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
 // 301

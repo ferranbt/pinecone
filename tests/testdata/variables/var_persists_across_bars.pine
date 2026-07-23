@@ -5,7 +5,7 @@
 // Bars: 3
 var count = 0
 count := count + 1
-log.info(count)
+log.info(str.tostring(count))
 
 // Expected output:
 // 1

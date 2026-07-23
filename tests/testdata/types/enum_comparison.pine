@@ -16,10 +16,10 @@ different = x == z
 not_same = x != z
 not_different = x != y
 
-log.info(same)
-log.info(different)
-log.info(not_same)
-log.info(not_different)
+log.info(str.tostring(same))
+log.info(str.tostring(different))
+log.info(str.tostring(not_same))
+log.info(str.tostring(not_different))
 
 // Expected output:
 // true

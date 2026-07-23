@@ -3,22 +3,22 @@
 // Addition assignment
 var x = 10
 x += 5
-log.info(x)
+log.info(str.tostring(x))
 
 // Subtraction assignment
 var y = 20
 y -= 7
-log.info(y)
+log.info(str.tostring(y))
 
 // Multiplication assignment
 var z = 5
 z *= 3
-log.info(z)
+log.info(str.tostring(z))
 
 // Division assignment
 var w = 30
 w /= 6
-log.info(w)
+log.info(str.tostring(w))
 
 // Expected output:
 // 15

@@ -6,13 +6,13 @@
 // Bars: 3
 
 // 299, then 299+300, then 299+300+301
-log.info(ta.cum(close))
+log.info(str.tostring(ta.cum(close)))
 
 // 2970, then 2970+2980, then 2970+2980+2990
-log.info(ta.cum(volume))
+log.info(str.tostring(ta.cum(volume)))
 
 // A constant still accumulates once per bar.
-log.info(ta.cum(1))
+log.info(str.tostring(ta.cum(1)))
 
 // Expected output:
 // 299

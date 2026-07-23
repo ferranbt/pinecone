@@ -5,9 +5,9 @@
 // Bars: 3
 
 v = ta.variance(close, 3)
-log.info(v)
+log.info(str.tostring(v))
 
 // Expected output:
-// na
-// na
+// NaN
+// NaN
 // 0.6666666666666666

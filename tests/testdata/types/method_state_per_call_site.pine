@@ -15,8 +15,8 @@ method tick(Ctr this) =>
 c = Ctr.new()
 a = c.tick()
 b = c.tick()
-log.info(a)
-log.info(b)
+log.info(str.tostring(a))
+log.info(str.tostring(b))
 
 // Expected output:
 // 1

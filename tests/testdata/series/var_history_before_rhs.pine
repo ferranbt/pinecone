@@ -6,7 +6,7 @@
 // Bars: 3
 var acc = 0.0
 acc := acc[1] + 1.0
-log.info(acc)
+log.info(str.tostring(acc))
 
 // Expected output:
 // 1

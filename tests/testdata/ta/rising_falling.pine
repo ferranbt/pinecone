@@ -6,10 +6,10 @@
 // Bars: 4
 
 is_rising = ta.rising(close, 3)
-log.info(is_rising)
+log.info(str.tostring(is_rising))
 
 is_falling = ta.falling(close, 3)
-log.info(is_falling)
+log.info(str.tostring(is_falling))
 
 // Expected output:
 // false

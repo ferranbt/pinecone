@@ -6,10 +6,10 @@
 
 // (301 + 2*300 + 2*299 + 298) / 6 = 1797 / 6
 swmaClose = ta.swma(close)
-log.info(swmaClose)
+log.info(str.tostring(swmaClose))
 
 // Expected output:
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
 // 299.5

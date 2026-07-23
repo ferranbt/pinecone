@@ -10,15 +10,15 @@ middle = color.from_gradient(50, 0, 100, black, white)
 top = color.from_gradient(100, 0, 100, black, white)
 
 // Check bottom (should be black)
-log.info(bottom)
+log.info(str.tostring(bottom))
 
 // Check middle (should be gray ~50)
-log.info(middle)
+log.info(str.tostring(middle))
 
 // Check top (should be white-ish 100)
-log.info(top)
+log.info(str.tostring(top))
 
 // Expected output:
-// Color(rgba(0, 0, 0, 0))
-// Color(rgba(50, 50, 50, 0))
-// Color(rgba(100, 100, 100, 0))
+// rgba(0, 0, 0, 0)
+// rgba(50, 50, 50, 0)
+// rgba(100, 100, 100, 0)

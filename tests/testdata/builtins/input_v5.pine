@@ -6,10 +6,10 @@ factor = input.float(2.5, "Factor")
 useClose = input.bool(true, "Use Close")
 maType = input.string("EMA", "MA Type", options=["EMA", "SMA"])
 
-log.info(length)
-log.info(factor)
-log.info(useClose)
-log.info(maType)
+log.info(str.tostring(length))
+log.info(str.tostring(factor))
+log.info(str.tostring(useClose))
+log.info(str.tostring(maType))
 
 // Expected output:
 // 14

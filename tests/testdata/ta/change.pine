@@ -5,15 +5,15 @@
 // Bars: 3
 
 change1 = ta.change(close, 1)
-log.info(change1)
+log.info(str.tostring(change1))
 
 change2 = ta.change(close, 2)
-log.info(change2)
+log.info(str.tostring(change2))
 
 // Expected output:
-// na
-// na
+// NaN
+// NaN
 // 1
-// na
+// NaN
 // 1
 // 2

@@ -2,14 +2,14 @@
 l = line.new(0, 0.0, 1, 1.0)
 line.set_xy1(l, 2, 20.0)
 line.set_xy2(l, 4, 40.0)
-log.info(line.get_x1(l))
-log.info(line.get_y1(l))
-log.info(line.get_x2(l))
-log.info(line.get_y2(l))
+log.info(str.tostring(line.get_x1(l)))
+log.info(str.tostring(line.get_y1(l)))
+log.info(str.tostring(line.get_x2(l)))
+log.info(str.tostring(line.get_y2(l)))
 line.set_x1(l, 3)
 line.set_y2(l, 50.0)
-log.info(line.get_x1(l))
-log.info(line.get_y2(l))
+log.info(str.tostring(line.get_x1(l)))
+log.info(str.tostring(line.get_y2(l)))
 
 // Expected output:
 // 2

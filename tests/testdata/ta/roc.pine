@@ -6,12 +6,12 @@
 
 // ((301 - 296) / 296) * 100
 roc5 = ta.roc(close, 5)
-log.info(roc5)
+log.info(str.tostring(roc5))
 
 // Expected output:
-// na
-// na
-// na
-// na
-// na
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
 // 1.6891891891891893

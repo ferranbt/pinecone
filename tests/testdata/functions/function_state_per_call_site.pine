@@ -12,8 +12,8 @@ f_counter() =>
 
 a = f_counter()
 b = f_counter()
-log.info(a)
-log.info(b)
+log.info(str.tostring(a))
+log.info(str.tostring(b))
 
 // Expected output:
 // 1

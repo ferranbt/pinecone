@@ -19,8 +19,8 @@ label.set(100, 200)
 finalX = label.x
 finalY = label.y
 
-log.info(finalX)
-log.info(finalY)
+log.info(str.tostring(finalX))
+log.info(str.tostring(finalY))
 
 // Expected output:
 // 100

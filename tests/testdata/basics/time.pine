@@ -1,7 +1,7 @@
 // `time` is the bar's opening UNIX timestamp, supplied per bar by the host. The
 // harness sets time = index * 1000, so the final bar (index 199) has time 199000.
-log.info(time)
-log.info(time > 0)
+log.info(str.tostring(time))
+log.info(str.tostring(time > 0))
 
 // Expected output:
 // 199000

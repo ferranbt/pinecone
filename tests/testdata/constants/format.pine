@@ -1,9 +1,9 @@
 // format.* constants resolve to their string tag.
-log.info(format.inherit)
-log.info(format.price)
-log.info(format.volume)
-log.info(format.percent)
-log.info(format.mintick)
+log.info(str.tostring(format.inherit))
+log.info(str.tostring(format.price))
+log.info(str.tostring(format.volume))
+log.info(str.tostring(format.percent))
+log.info(str.tostring(format.mintick))
 
 // Expected output:
 // inherit

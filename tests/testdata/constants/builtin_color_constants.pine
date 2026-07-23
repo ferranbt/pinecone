@@ -9,9 +9,9 @@ r = color.r(red_val)
 g = color.g(green_val)
 b = color.b(blue_val)
 
-log.info(r)
-log.info(g)
-log.info(b)
+log.info(str.tostring(r))
+log.info(str.tostring(g))
+log.info(str.tostring(b))
 
 // Expected output:
 // 255

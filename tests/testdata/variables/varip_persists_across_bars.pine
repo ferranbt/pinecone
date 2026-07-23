@@ -4,7 +4,7 @@
 // Bars: 3
 varip count = 0
 count := count + 1
-log.info(count)
+log.info(str.tostring(count))
 
 // Expected output:
 // 1
