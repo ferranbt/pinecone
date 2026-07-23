@@ -1,33 +1,46 @@
 //! Bars from Yahoo Finance's chart endpoint — the one `yfinance` uses.
 
 use crate::{fetch, DataError, DataSource};
-use pine_core::{Data, Ohlcv, SymInfo};
+use pine_core::{Data, Ohlcv, SymInfo, Timeframe};
 
 /// Candles for a Yahoo Finance symbol: equities, ETFs, indices, FX and crypto.
 ///
 /// ```no_run
 /// # use pine_data::{DataSource, YahooSource};
-/// let data = YahooSource::new("AAPL", "1d").range("6mo").load()?;
-/// # Ok::<(), pine_data::DataError>(())
+/// let data = YahooSource::new("AAPL", "1d".parse()?).range("6mo").load()?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone)]
 pub struct YahooSource {
     symbol: String,
-    interval: String,
+    timeframe: Timeframe,
     range: String,
 }
 
 impl YahooSource {
     /// `symbol` is a Yahoo ticker such as `"AAPL"`, `"BTC-USD"` or `"^GSPC"`.
-    /// `interval` is one of Yahoo's (`"1m"`, `"1h"`, `"1d"`, `"1wk"`, `"1mo"`).
     ///
     /// Yahoo limits how far back the finer intervals reach — minute data only
     /// goes back days — so a range it will not serve comes back empty.
-    pub fn new(symbol: &str, interval: &str) -> Self {
+    pub fn new(symbol: &str, timeframe: Timeframe) -> Self {
         Self {
             symbol: symbol.to_string(),
-            interval: interval.to_string(),
+            timeframe,
             range: "1mo".to_string(),
+        }
+    }
+
+    /// The timeframe as Yahoo spells its intervals: whole hours as `"1h"`, and
+    /// `"1wk"` / `"1mo"` for the longer periods.
+    fn interval(&self) -> String {
+        let tf = &self.timeframe;
+        match tf.as_minutes() {
+            Some(minutes) if tf.is_minutes() && minutes % 60 == 0 => format!("{}h", minutes / 60),
+            _ if tf.is_minutes() => format!("{}m", tf.multiplier),
+            _ if tf.is_daily() => format!("{}d", tf.multiplier),
+            _ if tf.is_weekly() => format!("{}wk", tf.multiplier),
+            _ if tf.is_monthly() => format!("{}mo", tf.multiplier),
+            _ => format!("{}m", tf.multiplier),
         }
     }
 
@@ -42,7 +55,9 @@ impl DataSource for YahooSource {
     fn load(&self) -> Result<Data, DataError> {
         let url = format!(
             "https://query1.finance.yahoo.com/v8/finance/chart/{}?interval={}&range={}",
-            self.symbol, self.interval, self.range
+            self.symbol,
+            self.interval(),
+            self.range
         );
         let body = fetch(&url)?;
 
@@ -116,12 +131,16 @@ impl DataSource for YahooSource {
             .unwrap_or_default()
             .to_string();
 
-        Ok(Data::from_ohlcv(rows).with_syminfo(SymInfo {
+        let data = Data::from_ohlcv(rows).with_syminfo(SymInfo {
             ticker: self.symbol.clone(),
             tickerid: format!("{exchange}:{}", self.symbol),
             prefix: exchange,
             currency,
             ..SymInfo::default()
-        }))
+        });
+
+        // The requested timeframe is authoritative. Inference would be wrong
+        // here: an equity session leaves a short last bar and uneven gaps.
+        Ok(data.with_timeframe(self.timeframe.clone()))
     }
 }

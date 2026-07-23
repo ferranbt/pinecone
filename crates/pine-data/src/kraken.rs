@@ -1,44 +1,35 @@
 //! Bars from Kraken's public OHLC endpoint.
 
 use crate::{fetch, quoted, DataError, DataSource};
-use pine_core::{Data, Ohlcv, SymInfo};
+use pine_core::{Data, Ohlcv, SymInfo, Timeframe};
 
 /// Candles for a Kraken pair.
 ///
 /// ```no_run
 /// # use pine_data::{DataSource, KrakenSource};
-/// let data = KrakenSource::new("XBTUSD", "1h").load()?;
-/// # Ok::<(), pine_data::DataError>(())
+/// let data = KrakenSource::new("XBTUSD", "1h".parse()?).load()?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone)]
 pub struct KrakenSource {
     pair: String,
-    minutes: u32,
+    timeframe: Timeframe,
 }
 
 impl KrakenSource {
-    /// `pair` is a Kraken pair such as `"XBTUSD"`. `interval` is the same
-    /// spelling the other sources take (`"1m"`, `"1h"`, `"1d"`); Kraken counts
-    /// in minutes, so it is converted. An unrecognised interval falls back to
-    /// one hour.
-    pub fn new(pair: &str, interval: &str) -> Self {
+    /// `pair` is a Kraken pair such as `"XBTUSD"`.
+    pub fn new(pair: &str, timeframe: Timeframe) -> Self {
         Self {
             pair: pair.to_uppercase(),
-            minutes: minutes_of(interval).unwrap_or(60),
+            timeframe,
         }
     }
-}
 
-/// Kraken takes the interval as a number of minutes, and accepts only these.
-fn minutes_of(interval: &str) -> Option<u32> {
-    let (count, unit) = interval.split_at(interval.len().checked_sub(1)?);
-    let count: u32 = count.parse().ok()?;
-    match unit {
-        "m" => Some(count),
-        "h" => Some(count * 60),
-        "d" => Some(count * 60 * 24),
-        "w" => Some(count * 60 * 24 * 7),
-        _ => None,
+    /// Kraken asks for the interval as a number of minutes. A timeframe with no
+    /// whole-minute length (sub-minute, or a month) has none, and Kraken serves
+    /// neither, so it falls back to the hour its API defaults to.
+    fn minutes(&self) -> u32 {
+        self.timeframe.as_minutes().unwrap_or(60)
     }
 }
 
@@ -46,7 +37,8 @@ impl DataSource for KrakenSource {
     fn load(&self) -> Result<Data, DataError> {
         let url = format!(
             "https://api.kraken.com/0/public/OHLC?pair={}&interval={}",
-            self.pair, self.minutes
+            self.pair,
+            self.minutes()
         );
         let body = fetch(&url)?;
 
@@ -99,29 +91,14 @@ impl DataSource for KrakenSource {
             .collect::<Option<Vec<_>>>()
             .ok_or_else(|| bad("unexpected candle shape".to_string()))?;
 
-        Ok(Data::from_ohlcv(rows).with_syminfo(SymInfo {
-            ticker: self.pair.clone(),
-            tickerid: format!("KRAKEN:{}", self.pair),
-            prefix: "KRAKEN".to_string(),
-            type_: "crypto".to_string(),
-            ..SymInfo::default()
-        }))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::minutes_of;
-
-    #[test]
-    fn intervals_convert_to_kraken_minutes() {
-        assert_eq!(minutes_of("1m"), Some(1));
-        assert_eq!(minutes_of("15m"), Some(15));
-        assert_eq!(minutes_of("1h"), Some(60));
-        assert_eq!(minutes_of("4h"), Some(240));
-        assert_eq!(minutes_of("1d"), Some(1440));
-        assert_eq!(minutes_of("1w"), Some(10080));
-        assert_eq!(minutes_of("bogus"), None);
-        assert_eq!(minutes_of(""), None);
+        Ok(Data::from_ohlcv(rows)
+            .with_syminfo(SymInfo {
+                ticker: self.pair.clone(),
+                tickerid: format!("KRAKEN:{}", self.pair),
+                prefix: "KRAKEN".to_string(),
+                type_: "crypto".to_string(),
+                ..SymInfo::default()
+            })
+            .with_timeframe(self.timeframe.clone()))
     }
 }

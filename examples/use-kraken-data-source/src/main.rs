@@ -17,7 +17,7 @@ plot(slow, title="slow")
 "#;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let data = KrakenSource::new("XBTUSD", "1h").load()?;
+    let data = KrakenSource::new("XBTUSD", "1h".parse()?).load()?;
     println!(
         "{}: {} bars at {}",
         data.syminfo.tickerid,
@@ -25,8 +25,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         data.timeframe.period()
     );
 
-    // A script is replayed over every bar, so `run` hands back one output per
-    // bar; `RunResult` turns those into a column per plot.
     let outputs = ScriptBuilder::<DefaultPineOutput>::with_code(SCRIPT)
         .with_data(data)
         .compile()?
@@ -36,7 +34,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fast = result.plot("fast").expect("fast is plotted");
     let slow = result.plot("slow").expect("slow is plotted");
 
-    match (fast.last().copied().flatten(), slow.last().copied().flatten()) {
+    match (
+        fast.last().copied().flatten(),
+        slow.last().copied().flatten(),
+    ) {
         (Some(fast), Some(slow)) => {
             let trend = if fast > slow { "above" } else { "below" };
             println!("fast {fast:.2} is {trend} slow {slow:.2}");
