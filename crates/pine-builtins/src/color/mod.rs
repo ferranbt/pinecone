@@ -137,33 +137,15 @@ pub fn register<O: PineOutput>() -> Value<O> {
     let mut color_ns: std::collections::HashMap<String, Value<O>> =
         std::collections::HashMap::new();
 
-    color_ns.insert(
-        "new".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorNew::<O>::builtin_fn)),
-    );
-    color_ns.insert(
-        "rgb".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorRgb::builtin_fn::<O>)),
-    );
-    color_ns.insert(
-        "r".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorR::<O>::builtin_fn)),
-    );
-    color_ns.insert(
-        "g".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorG::<O>::builtin_fn)),
-    );
-    color_ns.insert(
-        "b".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorB::<O>::builtin_fn)),
-    );
-    color_ns.insert(
-        "t".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorT::<O>::builtin_fn)),
-    );
+    color_ns.insert("new".to_string(), ColorNew::<O>::builtin_value());
+    color_ns.insert("rgb".to_string(), ColorRgb::builtin_value::<O>());
+    color_ns.insert("r".to_string(), ColorR::<O>::builtin_value());
+    color_ns.insert("g".to_string(), ColorG::<O>::builtin_value());
+    color_ns.insert("b".to_string(), ColorB::<O>::builtin_value());
+    color_ns.insert("t".to_string(), ColorT::<O>::builtin_value());
     color_ns.insert(
         "from_gradient".to_string(),
-        Value::BuiltinFunction(Rc::new(ColorFromGradient::<O>::builtin_fn)),
+        ColorFromGradient::<O>::builtin_value(),
     );
 
     color_ns.insert("aqua".to_string(), Value::new_color(0, 255, 255, 0));

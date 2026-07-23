@@ -422,78 +422,27 @@ fn get_line_mut<O: PineOutput + LineOutput>(
 pub fn register<O: PineOutput + LineOutput>(version: PineVersion) -> Vec<(String, Value<O>)> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
 
-    members.insert(
-        "new".to_string(),
-        Value::BuiltinFunction(Rc::new(LineNew::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_x1".to_string(),
-        Value::BuiltinFunction(Rc::new(LineSetX1::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_y1".to_string(),
-        Value::BuiltinFunction(Rc::new(LineSetY1::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_x2".to_string(),
-        Value::BuiltinFunction(Rc::new(LineSetX2::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_y2".to_string(),
-        Value::BuiltinFunction(Rc::new(LineSetY2::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_xy1".to_string(),
-        Value::BuiltinFunction(Rc::new(LineSetXy1::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_xy2".to_string(),
-        Value::BuiltinFunction(Rc::new(LineSetXy2::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set_color".to_string(),
-        Value::BuiltinFunction(Rc::new(LineSetColor::builtin_fn::<O>)),
-    );
-    members.insert(
-        "set_width".to_string(),
-        Value::BuiltinFunction(Rc::new(LineSetWidth::builtin_fn::<O>)),
-    );
-    members.insert(
-        "set_style".to_string(),
-        Value::BuiltinFunction(Rc::new(LineSetStyle::builtin_fn::<O>)),
-    );
+    members.insert("new".to_string(), LineNew::<O>::builtin_value());
+    members.insert("set_x1".to_string(), LineSetX1::<O>::builtin_value());
+    members.insert("set_y1".to_string(), LineSetY1::<O>::builtin_value());
+    members.insert("set_x2".to_string(), LineSetX2::<O>::builtin_value());
+    members.insert("set_y2".to_string(), LineSetY2::<O>::builtin_value());
+    members.insert("set_xy1".to_string(), LineSetXy1::<O>::builtin_value());
+    members.insert("set_xy2".to_string(), LineSetXy2::<O>::builtin_value());
+    members.insert("set_color".to_string(), LineSetColor::builtin_value::<O>());
+    members.insert("set_width".to_string(), LineSetWidth::builtin_value::<O>());
+    members.insert("set_style".to_string(), LineSetStyle::builtin_value::<O>());
     members.insert(
         "set_extend".to_string(),
-        Value::BuiltinFunction(Rc::new(LineSetExtend::builtin_fn::<O>)),
+        LineSetExtend::builtin_value::<O>(),
     );
-    members.insert(
-        "get_x1".to_string(),
-        Value::BuiltinFunction(Rc::new(LineGetX1::builtin_fn::<O>)),
-    );
-    members.insert(
-        "get_y1".to_string(),
-        Value::BuiltinFunction(Rc::new(LineGetY1::builtin_fn::<O>)),
-    );
-    members.insert(
-        "get_x2".to_string(),
-        Value::BuiltinFunction(Rc::new(LineGetX2::builtin_fn::<O>)),
-    );
-    members.insert(
-        "get_y2".to_string(),
-        Value::BuiltinFunction(Rc::new(LineGetY2::builtin_fn::<O>)),
-    );
-    members.insert(
-        "get_price".to_string(),
-        Value::BuiltinFunction(Rc::new(LineGetPrice::builtin_fn::<O>)),
-    );
-    members.insert(
-        "delete".to_string(),
-        Value::BuiltinFunction(Rc::new(LineDelete::builtin_fn::<O>)),
-    );
-    members.insert(
-        "copy".to_string(),
-        Value::BuiltinFunction(Rc::new(LineCopy::builtin_fn::<O>)),
-    );
+    members.insert("get_x1".to_string(), LineGetX1::builtin_value::<O>());
+    members.insert("get_y1".to_string(), LineGetY1::builtin_value::<O>());
+    members.insert("get_x2".to_string(), LineGetX2::builtin_value::<O>());
+    members.insert("get_y2".to_string(), LineGetY2::builtin_value::<O>());
+    members.insert("get_price".to_string(), LineGetPrice::builtin_value::<O>());
+    members.insert("delete".to_string(), LineDelete::builtin_value::<O>());
+    members.insert("copy".to_string(), LineCopy::builtin_value::<O>());
 
     // Style constants.
     for style in [

@@ -5,7 +5,6 @@ use pine_interpreter::{
     Plotshape as PlotshapeStruct, RuntimeError, Value,
 };
 use std::collections::HashMap;
-use std::rc::Rc;
 
 /// plot() - Plots a series of data on the chart
 #[derive(BuiltinFunction)]
@@ -350,30 +349,12 @@ impl<O: PineOutput + PlotOutput> Plotshape<O> {
 pub fn register_plot_functions<O: PineOutput + PlotOutput>() -> HashMap<String, Value<O>> {
     let mut functions: HashMap<String, Value<O>> = HashMap::new();
 
-    functions.insert(
-        "plot".to_string(),
-        Value::BuiltinFunction(Rc::new(Plot::<O>::builtin_fn)),
-    );
-    functions.insert(
-        "plotarrow".to_string(),
-        Value::BuiltinFunction(Rc::new(Plotarrow::<O>::builtin_fn)),
-    );
-    functions.insert(
-        "plotbar".to_string(),
-        Value::BuiltinFunction(Rc::new(Plotbar::<O>::builtin_fn)),
-    );
-    functions.insert(
-        "plotcandle".to_string(),
-        Value::BuiltinFunction(Rc::new(Plotcandle::<O>::builtin_fn)),
-    );
-    functions.insert(
-        "plotchar".to_string(),
-        Value::BuiltinFunction(Rc::new(Plotchar::<O>::builtin_fn)),
-    );
-    functions.insert(
-        "plotshape".to_string(),
-        Value::BuiltinFunction(Rc::new(Plotshape::<O>::builtin_fn)),
-    );
+    functions.insert("plot".to_string(), Plot::<O>::builtin_value());
+    functions.insert("plotarrow".to_string(), Plotarrow::<O>::builtin_value());
+    functions.insert("plotbar".to_string(), Plotbar::<O>::builtin_value());
+    functions.insert("plotcandle".to_string(), Plotcandle::<O>::builtin_value());
+    functions.insert("plotchar".to_string(), Plotchar::<O>::builtin_value());
+    functions.insert("plotshape".to_string(), Plotshape::<O>::builtin_value());
 
     functions
 }

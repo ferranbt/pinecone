@@ -7,7 +7,6 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_interpreter::{Color, GlobalOutput, Interpreter, PineOutput, RuntimeError, Value};
 use std::collections::HashMap;
-use std::rc::Rc;
 
 /// bgcolor(color, offset, editable, show_last, title, transp, ...)
 #[derive(BuiltinFunction)]
@@ -74,13 +73,7 @@ impl Barcolor {
 /// The `bgcolor` and `barcolor` global functions.
 pub fn register<O: PineOutput + GlobalOutput>() -> HashMap<String, Value<O>> {
     let mut globals: HashMap<String, Value<O>> = HashMap::new();
-    globals.insert(
-        "bgcolor".to_string(),
-        Value::BuiltinFunction(Rc::new(Bgcolor::builtin_fn::<O>)),
-    );
-    globals.insert(
-        "barcolor".to_string(),
-        Value::BuiltinFunction(Rc::new(Barcolor::builtin_fn::<O>)),
-    );
+    globals.insert("bgcolor".to_string(), Bgcolor::builtin_value::<O>());
+    globals.insert("barcolor".to_string(), Barcolor::builtin_value::<O>());
     globals
 }

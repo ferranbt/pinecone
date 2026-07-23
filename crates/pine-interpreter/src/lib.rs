@@ -1,9 +1,11 @@
 mod num;
 mod output;
 mod series_buffer;
+mod signature;
 
 pub use num::Num;
 pub use series_buffer::{SeriesBuffer, MAX_LOOKBACK};
+pub use signature::{BuiltinSignature, Param, ParamType};
 
 // Re-export output types and traits
 pub use output::{
@@ -136,7 +138,7 @@ pub enum Value<O: PineOutput> {
         params: Vec<pine_ast::FunctionParam>,
         body: Vec<Stmt>,
     },
-    BuiltinFunction(BuiltinFn<O>), // Builtin function pointer
+    BuiltinFunction(Builtin<O>), // Builtin callable plus the arguments it accepts
     Type {
         name: String,
         fields: Vec<TypeField>,
@@ -146,7 +148,7 @@ pub enum Value<O: PineOutput> {
         field_name: String, // The specific field/member name (e.g., "buy")
         title: String,      // The title of this enum member
     }, // Enum member value
-    Color(Color),                  // Color value
+    Color(Color),                // Color value
     Matrix {
         element_type: String, // Type of elements: "int", "float", "string", "bool"
         data: Rc<RefCell<Vec<Vec<Value<O>>>>>, // 2D matrix - mutable shared reference to rows of columns
@@ -288,6 +290,26 @@ impl<O: PineOutput> FunctionCallArgs<O> {
 /// Type signature for builtin functions (can be function pointers or closures)
 pub type BuiltinFn<O> =
     Rc<dyn Fn(&mut Interpreter<O>, FunctionCallArgs<O>) -> Result<Value<O>, RuntimeError>>;
+
+/// A callable builtin together with the arguments it accepts, so semantic
+/// analysis can reject a bad call without running it. Both come from the same
+/// `#[derive(BuiltinFunction)]`, so they cannot drift apart.
+#[derive(Clone)]
+pub struct Builtin<O: PineOutput> {
+    pub call: BuiltinFn<O>,
+    pub signature: BuiltinSignature,
+}
+
+impl<O: PineOutput> Builtin<O> {
+    /// A builtin whose arguments are not described, so nothing is checked.
+    /// For the few callables written by hand rather than derived.
+    pub fn untyped(call: BuiltinFn<O>) -> Self {
+        Self {
+            call,
+            signature: BuiltinSignature::default(),
+        }
+    }
+}
 
 impl<O: PineOutput> Value<O> {
     /// Extract as f64. Na → NaN (propagates via IEEE 754). Type mismatch → Err.
@@ -1408,7 +1430,7 @@ impl<O: PineOutput> Interpreter<O> {
                         // call node's lexical id for per-call-site builtin state.
                         let call_args = FunctionCallArgs::new(type_args.clone(), evaluated_args)
                             .with_call_id(*id);
-                        (builtin_fn)(self, call_args)
+                        (builtin_fn.call)(self, call_args)
                     }
                     // A callable namespace object, like `input(...)` alongside
                     // `input.int(...)`. Objects without a `call` are not callable.
@@ -1447,12 +1469,14 @@ impl<O: PineOutput> Interpreter<O> {
                         // Types have 'new' and 'copy' methods
                         if member == "new" {
                             // Return a constructor function
-                            Ok(Value::BuiltinFunction(Self::create_constructor(
-                                name, fields,
+                            Ok(Value::BuiltinFunction(Builtin::untyped(
+                                Self::create_constructor(name, fields),
                             )))
                         } else if member == "copy" {
                             // Return a copy function
-                            Ok(Value::BuiltinFunction(Self::create_copy_function()))
+                            Ok(Value::BuiltinFunction(Builtin::untyped(
+                                Self::create_copy_function(),
+                            )))
                         } else {
                             Err(RuntimeError::TypeError(format!(
                                 "Type '{}' has no member '{}' (only 'new' and 'copy' are supported)",

@@ -1,0 +1,9 @@
+//@version=5
+indicator("arguments/error_argument_type")
+// A builtin's parameters come from the types it declares, so passing a string
+// where a number is expected is rejected before the script runs.
+
+x = ta.sma(close, "not a number")
+
+// Expected error:
+// error [argument-type] 6:11: `ta.sma` expects a number for `length`, found a string

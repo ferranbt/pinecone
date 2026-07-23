@@ -116,31 +116,13 @@ pub fn register<O: PineOutput>() -> Value<O> {
         std::collections::HashMap::new();
 
     // Generic typed array.new<type>()
-    array_ns.insert(
-        "new".to_string(),
-        Value::BuiltinFunction(Rc::new(ArrayNew::<O>::builtin_fn)),
-    );
+    array_ns.insert("new".to_string(), ArrayNew::<O>::builtin_value());
     // Backward compatible array.new_float()
-    array_ns.insert(
-        "new_float".to_string(),
-        Value::BuiltinFunction(Rc::new(ArrayNewFloat::<O>::builtin_fn)),
-    );
-    array_ns.insert(
-        "clear".to_string(),
-        Value::BuiltinFunction(Rc::new(ArrayClear::<O>::builtin_fn)),
-    );
-    array_ns.insert(
-        "push".to_string(),
-        Value::BuiltinFunction(Rc::new(ArrayPush::<O>::builtin_fn)),
-    );
-    array_ns.insert(
-        "get".to_string(),
-        Value::BuiltinFunction(Rc::new(ArrayGet::<O>::builtin_fn)),
-    );
-    array_ns.insert(
-        "size".to_string(),
-        Value::BuiltinFunction(Rc::new(ArraySize::<O>::builtin_fn)),
-    );
+    array_ns.insert("new_float".to_string(), ArrayNewFloat::<O>::builtin_value());
+    array_ns.insert("clear".to_string(), ArrayClear::<O>::builtin_value());
+    array_ns.insert("push".to_string(), ArrayPush::<O>::builtin_value());
+    array_ns.insert("get".to_string(), ArrayGet::<O>::builtin_value());
+    array_ns.insert("size".to_string(), ArraySize::<O>::builtin_value());
 
     Value::Object {
         type_name: "array".to_string(),

@@ -9,8 +9,8 @@
 
 use std::collections::HashMap;
 
-use pine_ast::{Argument, Expr, Program, Stmt};
-use pine_interpreter::{PineOutput, Value};
+use pine_ast::{Argument, Expr, Literal, Program, Stmt};
+use pine_interpreter::{BuiltinSignature, PineOutput, Value};
 
 use crate::scope::{is_global_only, ScopeStack, SymbolKind};
 use pine_diagnostics::Diagnostic;
@@ -34,6 +34,29 @@ pub struct Analyzer<'a, O: PineOutput> {
 /// The script-declaration functions — a script must have exactly one.
 const SCRIPT_DECLARATIONS: &[&str] = &["study", "indicator", "strategy", "library"];
 
+/// The called name as written, for diagnostics: `plot` or `ta.sma`.
+fn callee_name(callee: &Expr) -> String {
+    match callee {
+        Expr::Variable(name) => name.clone(),
+        Expr::MemberAccess { object, member } => match object.as_ref() {
+            Expr::Variable(namespace) => format!("{namespace}.{member}"),
+            _ => member.clone(),
+        },
+        _ => String::new(),
+    }
+}
+
+/// How to name a literal's type in a diagnostic.
+fn describe_literal(literal: &Literal) -> &'static str {
+    match literal {
+        Literal::Int(_) | Literal::Number(_) => "a number",
+        Literal::String(_) => "a string",
+        Literal::Bool(_) => "a bool",
+        Literal::HexColor(_) => "a color",
+        Literal::Na => "na",
+    }
+}
+
 impl<'a, O: PineOutput> Analyzer<'a, O> {
     pub fn new(builtins: &'a HashMap<String, Value<O>>) -> Self {
         Self {
@@ -47,6 +70,107 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
 
     fn is_builtin(&self, name: &str) -> bool {
         self.builtins.contains_key(name)
+    }
+
+    /// The arguments the called builtin accepts, if the callee names one.
+    ///
+    /// Resolves both a bare name (`plot`) and a namespaced one (`ta.sma`, whose
+    /// namespace is an object of builtins). A name the script has declared
+    /// itself shadows the builtin, and a builtin written by hand carries no
+    /// parameters — both yield `None`, so nothing is checked.
+    fn builtin_signature(&self, callee: &Expr) -> Option<BuiltinSignature> {
+        let value = match callee {
+            Expr::Variable(name) => {
+                if self.scopes.resolve(name).is_some() {
+                    return None;
+                }
+                self.builtins.get(name)?.clone()
+            }
+            Expr::MemberAccess { object, member } => {
+                let Expr::Variable(namespace) = object.as_ref() else {
+                    return None;
+                };
+                if self.scopes.resolve(namespace).is_some() {
+                    return None;
+                }
+                match self.builtins.get(namespace)? {
+                    Value::Object { fields, .. } => fields.borrow().get(member)?.clone(),
+                    _ => return None,
+                }
+            }
+            _ => return None,
+        };
+
+        match value {
+            Value::BuiltinFunction(builtin) if !builtin.signature.params.is_empty() => {
+                Some(builtin.signature)
+            }
+            _ => None,
+        }
+    }
+
+    /// Check a call's arguments against the builtin's parameters: too many
+    /// arguments, an unknown named argument, and an argument whose literal type
+    /// the parameter cannot accept.
+    fn check_builtin_args(
+        &mut self,
+        name: &str,
+        signature: &BuiltinSignature,
+        args: &[Argument],
+        pos: Option<(u32, u32)>,
+    ) {
+        let positional = args
+            .iter()
+            .filter(|arg| matches!(arg, Argument::Positional(_)))
+            .count();
+
+        if let Some(max) = signature.max_positional() {
+            if positional > max {
+                self.emit(
+                    "too-many-arguments",
+                    pos,
+                    format!("`{name}` takes at most {max} arguments, found {positional}"),
+                );
+            }
+        }
+
+        let mut index = 0;
+        for arg in args {
+            let (param, value) = match arg {
+                Argument::Positional(value) => {
+                    let param = signature.positional(index);
+                    index += 1;
+                    (param, value)
+                }
+                Argument::Named { name: label, value } => match signature.named(label) {
+                    Some(param) => (Some(param), value),
+                    None => {
+                        self.emit(
+                            "unknown-argument",
+                            pos,
+                            format!("`{name}` has no argument named `{label}`"),
+                        );
+                        continue;
+                    }
+                },
+            };
+
+            // Only a literal's type is known without inference; anything else
+            // is left to the runtime.
+            let (Some(param), Expr::Literal(literal)) = (param, value) else {
+                continue;
+            };
+            if !param.ty.accepts(literal) {
+                let found = describe_literal(literal);
+                let expected = param.ty.describe();
+                let label = param.name.clone();
+                self.emit(
+                    "argument-type",
+                    pos,
+                    format!("`{name}` expects {expected} for `{label}`, found {found}"),
+                );
+            }
+        }
     }
 
     /// Analyze a whole program, returning the errors found.
@@ -315,6 +439,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     }
                 } else {
                     self.check_expr(callee);
+                }
+                if let Some(signature) = self.builtin_signature(callee) {
+                    let name = callee_name(callee);
+                    self.check_builtin_args(&name, &signature, args, loc.position());
                 }
                 for arg in args {
                     match arg {

@@ -6,7 +6,6 @@ use pine_interpreter::{
 };
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
-use std::rc::Rc;
 
 // Re-export for convenience
 pub use pine_core::Bar;
@@ -250,30 +249,12 @@ pub fn register_namespace_objects<
     }
 
     // Register global builtin functions
-    namespaces.insert(
-        "na".to_string(),
-        Value::BuiltinFunction(Rc::new(Na::<O>::builtin_fn)),
-    );
-    namespaces.insert(
-        "bool".to_string(),
-        Value::BuiltinFunction(Rc::new(Bool::<O>::builtin_fn)),
-    );
-    namespaces.insert(
-        "int".to_string(),
-        Value::BuiltinFunction(Rc::new(Int::<O>::builtin_fn)),
-    );
-    namespaces.insert(
-        "float".to_string(),
-        Value::BuiltinFunction(Rc::new(Float::<O>::builtin_fn)),
-    );
-    namespaces.insert(
-        "nz".to_string(),
-        Value::BuiltinFunction(Rc::new(Nz::<O>::builtin_fn)),
-    );
-    namespaces.insert(
-        "fixnan".to_string(),
-        Value::BuiltinFunction(Rc::new(Fixnan::<O>::builtin_fn)),
-    );
+    namespaces.insert("na".to_string(), Na::<O>::builtin_value());
+    namespaces.insert("bool".to_string(), Bool::<O>::builtin_value());
+    namespaces.insert("int".to_string(), Int::<O>::builtin_value());
+    namespaces.insert("float".to_string(), Float::<O>::builtin_value());
+    namespaces.insert("nz".to_string(), Nz::<O>::builtin_value());
+    namespaces.insert("fixnan".to_string(), Fixnan::<O>::builtin_value());
 
     // Register time/date functions
     for (name, func) in time::register_time_functions() {

@@ -8,7 +8,6 @@ use pine_builtin_macro::BuiltinFunction;
 use pine_interpreter::{
     AlertCondition, AlertConditionOutput, Interpreter, PineOutput, RuntimeError, Value,
 };
-use std::rc::Rc;
 
 /// alertcondition(condition, title, message)
 #[derive(BuiltinFunction)]
@@ -36,5 +35,5 @@ impl<O: PineOutput + AlertConditionOutput> Alertcondition<O> {
 
 /// The `alertcondition` global function value.
 pub fn register<O: PineOutput + AlertConditionOutput>() -> Value<O> {
-    Value::BuiltinFunction(Rc::new(Alertcondition::<O>::builtin_fn))
+    Alertcondition::<O>::builtin_value()
 }

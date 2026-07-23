@@ -197,15 +197,20 @@ impl StrToNumber {
     }
 }
 
-/// str.tostring(value) - Converts value to string
+/// str.tostring(value, format) - Converts value to string
 #[derive(BuiltinFunction)]
 #[builtin(name = "str.tostring")]
 struct StrToString<O: PineOutput> {
     value: Value<O>,
+    /// A `format.*` or `#.###` pattern. Accepted but not yet applied, so the
+    /// rendering below is the default one.
+    #[arg(default = String::new())]
+    format: String,
 }
 
 impl<O: PineOutput> StrToString<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.format;
         let result = match &self.value {
             Value::String(s) => s.clone(),
             Value::Int(n) => n.to_string(),
@@ -274,62 +279,26 @@ impl StrRepeat {
 pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>> {
     let mut str_ns: HashMap<String, Value<O>> = std::collections::HashMap::new();
 
-    str_ns.insert(
-        "length".to_string(),
-        Value::BuiltinFunction(Rc::new(StrLength::builtin_fn::<O>)),
-    );
-    str_ns.insert(
-        "lower".to_string(),
-        Value::BuiltinFunction(Rc::new(StrLower::builtin_fn::<O>)),
-    );
-    str_ns.insert(
-        "upper".to_string(),
-        Value::BuiltinFunction(Rc::new(StrUpper::builtin_fn::<O>)),
-    );
-    str_ns.insert(
-        "contains".to_string(),
-        Value::BuiltinFunction(Rc::new(StrContains::builtin_fn::<O>)),
-    );
+    str_ns.insert("length".to_string(), StrLength::builtin_value::<O>());
+    str_ns.insert("lower".to_string(), StrLower::builtin_value::<O>());
+    str_ns.insert("upper".to_string(), StrUpper::builtin_value::<O>());
+    str_ns.insert("contains".to_string(), StrContains::builtin_value::<O>());
     str_ns.insert(
         "startswith".to_string(),
-        Value::BuiltinFunction(Rc::new(StrStartsWith::builtin_fn::<O>)),
+        StrStartsWith::builtin_value::<O>(),
     );
-    str_ns.insert(
-        "endswith".to_string(),
-        Value::BuiltinFunction(Rc::new(StrEndsWith::builtin_fn::<O>)),
-    );
-    str_ns.insert(
-        "substring".to_string(),
-        Value::BuiltinFunction(Rc::new(StrSubstring::builtin_fn::<O>)),
-    );
-    str_ns.insert(
-        "replace".to_string(),
-        Value::BuiltinFunction(Rc::new(StrReplace::builtin_fn::<O>)),
-    );
+    str_ns.insert("endswith".to_string(), StrEndsWith::builtin_value::<O>());
+    str_ns.insert("substring".to_string(), StrSubstring::builtin_value::<O>());
+    str_ns.insert("replace".to_string(), StrReplace::builtin_value::<O>());
     str_ns.insert(
         "replace_all".to_string(),
-        Value::BuiltinFunction(Rc::new(StrReplaceAll::builtin_fn::<O>)),
+        StrReplaceAll::builtin_value::<O>(),
     );
-    str_ns.insert(
-        "split".to_string(),
-        Value::BuiltinFunction(Rc::new(StrSplit::builtin_fn::<O>)),
-    );
-    str_ns.insert(
-        "tonumber".to_string(),
-        Value::BuiltinFunction(Rc::new(StrToNumber::builtin_fn::<O>)),
-    );
-    str_ns.insert(
-        "tostring".to_string(),
-        Value::BuiltinFunction(Rc::new(StrToString::<O>::builtin_fn)),
-    );
-    str_ns.insert(
-        "pos".to_string(),
-        Value::BuiltinFunction(Rc::new(StrPos::builtin_fn::<O>)),
-    );
-    str_ns.insert(
-        "repeat".to_string(),
-        Value::BuiltinFunction(Rc::new(StrRepeat::builtin_fn::<O>)),
-    );
+    str_ns.insert("split".to_string(), StrSplit::builtin_value::<O>());
+    str_ns.insert("tonumber".to_string(), StrToNumber::builtin_value::<O>());
+    str_ns.insert("tostring".to_string(), StrToString::<O>::builtin_value());
+    str_ns.insert("pos".to_string(), StrPos::builtin_value::<O>());
+    str_ns.insert("repeat".to_string(), StrRepeat::builtin_value::<O>());
 
     let mut out: HashMap<String, Value<O>> = HashMap::new();
 

@@ -1,7 +1,9 @@
 //@version=5
 indicator("arguments/error_unknown_named_arg")
-// Test that unknown named arguments fail
+// An unknown named argument is rejected by semantic analysis, before the script
+// runs, using the parameters the builtin declares.
 
 p = plot(series=100.0, invalid_param=200.0)
 
-// Expected error: Unknown parameter: invalid_param
+// Expected error:
+// error [unknown-argument] 6:9: `plot` has no argument named `invalid_param`

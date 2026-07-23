@@ -7,7 +7,6 @@ use pine_builtin_macro::BuiltinFunction;
 use pine_interpreter::{
     Color, FillObject, FillOutput, Interpreter, PineOutput, RuntimeError, Value,
 };
-use std::rc::Rc;
 
 /// fill(id1, id2, color, title, transp, ...)
 #[derive(BuiltinFunction)]
@@ -43,5 +42,5 @@ impl Fill {
 
 /// The `fill` global function value.
 pub fn register<O: PineOutput + FillOutput>() -> Value<O> {
-    Value::BuiltinFunction(Rc::new(Fill::builtin_fn::<O>))
+    Fill::builtin_value::<O>()
 }

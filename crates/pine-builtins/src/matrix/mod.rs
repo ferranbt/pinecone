@@ -360,49 +360,22 @@ impl<O: PineOutput> MatrixTranspose<O> {
 pub fn register<O: PineOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
 
-    members.insert(
-        "new".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixNew::<O>::builtin_fn)),
-    );
-    members.insert(
-        "get".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixGet::<O>::builtin_fn)),
-    );
-    members.insert(
-        "set".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixSet::<O>::builtin_fn)),
-    );
-    members.insert(
-        "rows".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixRows::<O>::builtin_fn)),
-    );
-    members.insert(
-        "columns".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixColumns::<O>::builtin_fn)),
-    );
+    members.insert("new".to_string(), MatrixNew::<O>::builtin_value());
+    members.insert("get".to_string(), MatrixGet::<O>::builtin_value());
+    members.insert("set".to_string(), MatrixSet::<O>::builtin_value());
+    members.insert("rows".to_string(), MatrixRows::<O>::builtin_value());
+    members.insert("columns".to_string(), MatrixColumns::<O>::builtin_value());
     members.insert(
         "elements_count".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixElementsCount::<O>::builtin_fn)),
+        MatrixElementsCount::<O>::builtin_value(),
     );
-    members.insert(
-        "fill".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixFill::<O>::builtin_fn)),
-    );
-    members.insert(
-        "copy".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixCopy::<O>::builtin_fn)),
-    );
-    members.insert(
-        "add_row".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixAddRow::<O>::builtin_fn)),
-    );
-    members.insert(
-        "add_col".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixAddCol::<O>::builtin_fn)),
-    );
+    members.insert("fill".to_string(), MatrixFill::<O>::builtin_value());
+    members.insert("copy".to_string(), MatrixCopy::<O>::builtin_value());
+    members.insert("add_row".to_string(), MatrixAddRow::<O>::builtin_value());
+    members.insert("add_col".to_string(), MatrixAddCol::<O>::builtin_value());
     members.insert(
         "transpose".to_string(),
-        Value::BuiltinFunction(Rc::new(MatrixTranspose::<O>::builtin_fn)),
+        MatrixTranspose::<O>::builtin_value(),
     );
 
     Value::Object {

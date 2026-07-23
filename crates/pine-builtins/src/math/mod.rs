@@ -414,106 +414,37 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     let mut math_ns: HashMap<String, Value<O>> = HashMap::new();
 
     // Single-argument functions
-    math_ns.insert(
-        "abs".to_string(),
-        Value::BuiltinFunction(Rc::new(MathAbs::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "ceil".to_string(),
-        Value::BuiltinFunction(Rc::new(MathCeil::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "floor".to_string(),
-        Value::BuiltinFunction(Rc::new(MathFloor::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "round".to_string(),
-        Value::BuiltinFunction(Rc::new(MathRound::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "sign".to_string(),
-        Value::BuiltinFunction(Rc::new(MathSign::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "sqrt".to_string(),
-        Value::BuiltinFunction(Rc::new(MathSqrt::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "exp".to_string(),
-        Value::BuiltinFunction(Rc::new(MathExp::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "log".to_string(),
-        Value::BuiltinFunction(Rc::new(MathLog::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "log10".to_string(),
-        Value::BuiltinFunction(Rc::new(MathLog10::builtin_fn::<O>)),
-    );
+    math_ns.insert("abs".to_string(), MathAbs::builtin_value::<O>());
+    math_ns.insert("ceil".to_string(), MathCeil::builtin_value::<O>());
+    math_ns.insert("floor".to_string(), MathFloor::builtin_value::<O>());
+    math_ns.insert("round".to_string(), MathRound::builtin_value::<O>());
+    math_ns.insert("sign".to_string(), MathSign::builtin_value::<O>());
+    math_ns.insert("sqrt".to_string(), MathSqrt::builtin_value::<O>());
+    math_ns.insert("exp".to_string(), MathExp::builtin_value::<O>());
+    math_ns.insert("log".to_string(), MathLog::builtin_value::<O>());
+    math_ns.insert("log10".to_string(), MathLog10::builtin_value::<O>());
 
     // Trigonometric functions
-    math_ns.insert(
-        "sin".to_string(),
-        Value::BuiltinFunction(Rc::new(MathSin::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "cos".to_string(),
-        Value::BuiltinFunction(Rc::new(MathCos::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "tan".to_string(),
-        Value::BuiltinFunction(Rc::new(MathTan::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "asin".to_string(),
-        Value::BuiltinFunction(Rc::new(MathAsin::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "acos".to_string(),
-        Value::BuiltinFunction(Rc::new(MathAcos::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "atan".to_string(),
-        Value::BuiltinFunction(Rc::new(MathAtan::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "toradians".to_string(),
-        Value::BuiltinFunction(Rc::new(MathToRadians::builtin_fn::<O>)),
-    );
-    math_ns.insert(
-        "todegrees".to_string(),
-        Value::BuiltinFunction(Rc::new(MathToDegrees::builtin_fn::<O>)),
-    );
+    math_ns.insert("sin".to_string(), MathSin::builtin_value::<O>());
+    math_ns.insert("cos".to_string(), MathCos::builtin_value::<O>());
+    math_ns.insert("tan".to_string(), MathTan::builtin_value::<O>());
+    math_ns.insert("asin".to_string(), MathAsin::builtin_value::<O>());
+    math_ns.insert("acos".to_string(), MathAcos::builtin_value::<O>());
+    math_ns.insert("atan".to_string(), MathAtan::builtin_value::<O>());
+    math_ns.insert("toradians".to_string(), MathToRadians::builtin_value::<O>());
+    math_ns.insert("todegrees".to_string(), MathToDegrees::builtin_value::<O>());
 
     // Two-argument functions
-    math_ns.insert(
-        "pow".to_string(),
-        Value::BuiltinFunction(Rc::new(MathPow::builtin_fn::<O>)),
-    );
+    math_ns.insert("pow".to_string(), MathPow::builtin_value::<O>());
 
     // Variadic functions
-    math_ns.insert(
-        "min".to_string(),
-        Value::BuiltinFunction(Rc::new(MathMin::<O>::builtin_fn)),
-    );
-    math_ns.insert(
-        "max".to_string(),
-        Value::BuiltinFunction(Rc::new(MathMax::<O>::builtin_fn)),
-    );
-    math_ns.insert(
-        "avg".to_string(),
-        Value::BuiltinFunction(Rc::new(MathAvg::<O>::builtin_fn)),
-    );
-    math_ns.insert(
-        "sum".to_string(),
-        Value::BuiltinFunction(MathSum::builtin_fn::<O>()),
-    );
+    math_ns.insert("min".to_string(), MathMin::<O>::builtin_value());
+    math_ns.insert("max".to_string(), MathMax::<O>::builtin_value());
+    math_ns.insert("avg".to_string(), MathAvg::<O>::builtin_value());
+    math_ns.insert("sum".to_string(), MathSum::builtin_value::<O>());
 
     // Special functions
-    math_ns.insert(
-        "random".to_string(),
-        Value::BuiltinFunction(Rc::new(MathRandom::builtin_fn::<O>)),
-    );
+    math_ns.insert("random".to_string(), MathRandom::builtin_value::<O>());
 
     if matches!(version, PineVersion::V5 | PineVersion::V6) {
         let mut obj: HashMap<String, Value<O>> = HashMap::new();
