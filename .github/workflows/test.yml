@@ -72,6 +72,27 @@ jobs:
       - name: Run corpus tests
         run: cargo test -p pine-integration-tests --test corpus -- --nocapture
 
+  codspeed:
+    name: Benchmarks (CodSpeed)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-codspeed
+
+      - name: Build the benchmarks
+        run: cargo codspeed build
+
+      - name: Run the benchmarks
+        uses: CodSpeedHQ/action@v3
+        with:
+          run: cargo codspeed run
+          token: ${{ secrets.CODSPEED_TOKEN }}
+
   examples:
     name: Build Examples
     runs-on: ubuntu-latest

@@ -50,6 +50,10 @@ pinets-check filter="":
     [ -d node_modules ] || npm install
     node check.mjs {{filter}}
 
+# Run every benchmark once without measuring, to check they still build and run.
+bench-check:
+    cargo bench -p pinecone-benches -- --test
+
 # Compile all examples to verify they build
 compile-examples:
     #!/usr/bin/env bash

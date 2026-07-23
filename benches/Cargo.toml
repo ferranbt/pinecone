@@ -28,7 +28,9 @@ harness = false
 path = "src/technical_analysis.rs"
 
 [dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { package = "codspeed-criterion-compat", version = "2.7", features = [
+    "html_reports",
+] }
 pine.workspace = true
 pine-lexer.workspace = true
 pine-parser.workspace = true
