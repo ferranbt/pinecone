@@ -1,0 +1,24 @@
+//@version=5
+strategy("strategy/default_qty", overlay = true, default_qty_type = strategy.fixed, default_qty_value = 3)
+// An entry with no qty trades the strategy's default_qty_value (3 contracts),
+// and openprofit marks the open position at each close. Over the last 4 bars
+// opens are 296..299 and closes 298..301.
+//   bar 1: entry submitted, still flat
+//   bar 2: fills at 297, long 3, marked at close 299 -> openprofit (299-297)*3 = 6
+//   bar 3: marked at close 300 -> (300-297)*3 = 9
+//   bar 4: marked at close 301 -> (301-297)*3 = 12
+
+// Bars: 4
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.openprofit))
+
+// Expected output:
+// 0 0
+// 3 6
+// 3 9
+// 3 12

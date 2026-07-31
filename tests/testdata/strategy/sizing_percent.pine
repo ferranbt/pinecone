@@ -1,0 +1,21 @@
+//@version=5
+strategy("strategy/sizing_percent", overlay = true, default_qty_type = strategy.percent_of_equity, default_qty_value = 30)
+// Percent-of-equity sizing converts a share of equity to contracts using the
+// close of the bar the order is generated on (Pine sizes at order time). The
+// entry is generated on the first bar (close 300): 30% of 1000000 = 300000, and
+// 300000 / 300 = 1000 contracts.
+//   bar 1: entry generated at close 300 -> 1000 contracts, still flat
+//   bar 2: fills at the next open (299), long 1000
+
+// Bars: 2
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+
+log.info(str.tostring(strategy.position_size))
+
+// Expected output:
+// 0
+// 1000

@@ -1,0 +1,24 @@
+//@version=5
+strategy("strategy/stop_fill", overlay = true)
+// A buy stop sits above price and triggers on a rise. Over the last 4 bars
+// opens are 296..299 and highs are 301..304. A stop at 303 is reached on bar 3
+// (high 303) and fills at the worse of the open and the stop -> 303.
+//   bar 1: stop entry submitted, still flat
+//   bar 2: high 302, no trigger
+//   bar 3: high 303 triggers, fills at 303, long 1 at avg 303
+//   bar 4: unchanged
+
+// Bars: 4
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long, stop = 303)
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.position_avg_price))
+
+// Expected output:
+// 0 NaN
+// 0 NaN
+// 1 303
+// 1 303

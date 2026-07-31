@@ -1,0 +1,26 @@
+//@version=5
+strategy("strategy/commission", overlay = true, commission_type = strategy.commission.cash_per_contract, commission_value = 10)
+// Commission is charged on entry and exit and shows up in equity and netprofit.
+// Over the last 4 bars opens are 296..299 and closes 298..301, one contract:
+//   bar 1: entry submitted; broker set up, equity = initial_capital 1000000
+//   bar 2: fills at 297, pay 10; equity at close 299 = 1000000 - 10 + 2 = 999992
+//   bar 3: close fills at 298, pay 10, realise +1; equity = 999981,
+//          netprofit = 1 - 10 - 10 = -19
+//   bar 4: unchanged
+
+// Bars: 4
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+if step == 2
+    strategy.close("L")
+
+log.info(str.tostring(strategy.equity) + " " + str.tostring(strategy.netprofit) + " " + str.tostring(strategy.closedtrades))
+
+// Expected output:
+// 1000000 0 0
+// 999992 0 0
+// 999981 -19 1
+// 999981 -19 1

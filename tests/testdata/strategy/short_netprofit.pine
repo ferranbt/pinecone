@@ -1,0 +1,25 @@
+//@version=5
+strategy("strategy/short_netprofit", overlay = true)
+// A short into a rising market loses. Over the last 4 bars opens are 296..299
+// and closes 298..301.
+//   bar 1: entry Short submitted
+//   bar 2: fills at 297, short 1
+//   bar 3: close fills at 298, realises (298-297)*(-1) = -1
+//   bar 4: unchanged
+
+// Bars: 4
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("S", strategy.short)
+if step == 2
+    strategy.close("S")
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.netprofit) + " " + str.tostring(strategy.closedtrades))
+
+// Expected output:
+// 0 0 0
+// -1 0 0
+// 0 -1 1
+// 0 -1 1

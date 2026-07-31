@@ -1,0 +1,23 @@
+//@version=5
+strategy("strategy/limit_fill", overlay = true)
+// A buy limit waits for price to reach it. Over the last 4 bars opens are
+// 296..299 and lows are 291..294. A limit at 292 is reached on bar 2 (low 292),
+// filling at the better of the open and the limit -> 292.
+//   bar 1: limit entry submitted, still flat
+//   bar 2: low 292 reaches the limit, fills at 292, long 1 at avg 292
+//   bars 3-4: unchanged
+
+// Bars: 4
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long, limit = 292)
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.position_avg_price))
+
+// Expected output:
+// 0 NaN
+// 1 292
+// 1 292
+// 1 292

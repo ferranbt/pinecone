@@ -1,0 +1,25 @@
+//@version=5
+strategy("strategy/sizing_cash", overlay = true, default_qty_type = strategy.cash, default_qty_value = 594)
+// Cash sizing converts default_qty_value to contracts using the close of the
+// bar the order is generated on (Pine sizes at order time, not fill time). The
+// entry is generated on the first bar (close 297): 594 / 297 = 2 contracts. It
+// then fills at the next open (296), and openprofit marks it at each close.
+//   bar 1: entry generated at close 297 -> 2 contracts, still flat
+//   bar 2: fills at 296, long 2
+//   bars 3-5: (close - 296) * 2
+
+// Bars: 5
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.openprofit))
+
+// Expected output:
+// 0 0
+// 2 4
+// 2 6
+// 2 8
+// 2 10

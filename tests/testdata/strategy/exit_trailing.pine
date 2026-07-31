@@ -1,0 +1,28 @@
+//@version=5
+strategy("strategy/exit_trailing", overlay = true)
+// A trailing stop arms once price moves trail_points ticks past the entry, then
+// follows trail_offset ticks behind the peak, and can fill the same bar it arms.
+// These bars only rise, and the 2000-tick (20.0) offset keeps the stop well
+// below every low, so it arms and ratchets up but never fills — the long is
+// held. The same-bar fill on a retracement is covered by the broker unit tests.
+//   bar 1: entry and trailing exit submitted
+//   bar 2: fills at 296, long 1; the trail arms (high 301 > 297) and trails 20
+//          below the peak, far under the low
+//   bars 3-5: price keeps rising, the stop trails below it, position held
+
+// Bars: 5
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+    strategy.exit("X", from_entry = "L", trail_points = 100, trail_offset = 2000)
+
+log.info(str.tostring(strategy.position_size))
+
+// Expected output:
+// 0
+// 1
+// 1
+// 1
+// 1

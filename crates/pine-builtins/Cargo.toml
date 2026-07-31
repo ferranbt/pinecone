@@ -6,5 +6,6 @@ edition = "2021"
 [dependencies]
 pine-builtin-macro = { workspace = true }
 pine-core = { workspace = true }
+pine-broker = { workspace = true }
 pine-interpreter = { workspace = true }
 chrono = { workspace = true }

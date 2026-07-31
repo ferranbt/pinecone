@@ -1,5 +1,6 @@
 //! The result of replaying a script over a whole series of bars.
 
+use crate::Backtest;
 use pine_interpreter::{
     AlertCondition, AlertConditionOutput, Indicator, IndicatorOutput, Input, InputOutput, LogEntry,
     LogOutput, Plot, PlotOutput,
@@ -19,6 +20,10 @@ pub struct RunResult {
     pub alerts: Vec<AlertCondition>,
     pub indicator: Option<Indicator>,
     pub inputs: Vec<Input>,
+    /// The backtest a `strategy` produced, or `None` for an indicator. Filled in
+    /// by [`crate::Script::result`]; [`RunResult::collect`] leaves it `None`
+    /// because the trade log lives on the broker, not the per-bar outputs.
+    pub backtest: Option<Backtest>,
 }
 
 impl RunResult {

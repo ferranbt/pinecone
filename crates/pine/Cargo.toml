@@ -11,6 +11,7 @@ pine-lexer = { workspace = true }
 pine-parser = { workspace = true }
 pine-interpreter = { workspace = true }
 pine-builtins = { workspace = true }
+pine-broker = { workspace = true }
 pine-sema = { workspace = true }
 pine-diagnostics = { workspace = true }
 eyre = { workspace = true }

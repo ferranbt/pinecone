@@ -1,0 +1,30 @@
+//@version=5
+strategy("strategy/cancel", overlay = true)
+// A cancelled order never fills. Over the last 4 bars opens are 296..299 and
+// highs are 301..304. A sell-stop-limit-free short limit at 303 would fill on
+// bar 3 (high 303), but it is cancelled on bar 2, while a plain market entry
+// submitted the same bar does fill.
+//   bar 1: short limit at 303 submitted
+//   bar 2: high 302, no fill; cancel the short, submit a market long
+//   bar 3: short is gone, the long fills at 298 -> long 1, no closed trades
+//   bar 4: unchanged
+// closedtrades stays 0: had the short survived it would have filled and the
+// long would have reversed it, closing a trade.
+
+// Bars: 4
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("S", strategy.short, limit = 303)
+if step == 2
+    strategy.cancel("S")
+    strategy.entry("L", strategy.long)
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.closedtrades))
+
+// Expected output:
+// 0 0
+// 0 0
+// 1 0
+// 1 0
