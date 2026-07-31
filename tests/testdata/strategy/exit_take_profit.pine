@@ -1,0 +1,25 @@
+//@version=5
+strategy("strategy/exit_take_profit", overlay = true)
+// strategy.exit places a take-profit that fills when price reaches it. Over the
+// last 5 bars opens are 295..299 and highs are 300..304.
+//   bar 1: entry Long and its exit submitted
+//   bar 2: entry fills at 296, long 1; high 301 has not reached the 302 limit
+//   bar 3: high 302 reaches the take-profit, sells 1 at 302, realises +6
+//   bars 4-5: unchanged
+
+// Bars: 5
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+    strategy.exit("X", from_entry = "L", limit = 302)
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.netprofit) + " " + str.tostring(strategy.closedtrades))
+
+// Expected output:
+// 0 0 0
+// 1 0 0
+// 0 6 1
+// 0 6 1
+// 0 6 1

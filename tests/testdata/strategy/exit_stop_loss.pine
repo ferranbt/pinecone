@@ -1,0 +1,26 @@
+//@version=5
+strategy("strategy/exit_stop_loss", overlay = true)
+// A stop-loss given in ticks sits a distance from the entry (mintick 0.01). A
+// short at 296 with loss = 600 ticks stops out at 296 + 6 = 302. Over the last
+// 5 bars opens are 295..299 and highs are 300..304.
+//   bar 1: entry Short and its exit submitted
+//   bar 2: entry fills at 296, short 1; high 301 has not reached 302
+//   bar 3: high 302 triggers the stop, buys 1 at 302, realises -6
+//   bars 4-5: unchanged
+
+// Bars: 5
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("S", strategy.short)
+    strategy.exit("X", from_entry = "S", loss = 600)
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.netprofit) + " " + str.tostring(strategy.closedtrades))
+
+// Expected output:
+// 0 0 0
+// -1 0 0
+// 0 -6 1
+// 0 -6 1
+// 0 -6 1

@@ -1,0 +1,25 @@
+//@version=5
+strategy("strategy/entry_close", overlay = true)
+// A market entry fills at the next bar's open, a close at the one after that.
+// Over the last 4 bars opens are 296..299 and closes 298..301, so:
+//   bar 1: entry submitted; broker just set up, flat, equity = initial_capital
+//   bar 2: entry fills at 297, long 1, marked at close 299 -> equity 1000002
+//   bar 3: close fills at 298, realises 1, flat, 1 closed trade -> equity 1000001
+//   bar 4: nothing pending, unchanged
+
+// Bars: 4
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+if step == 2
+    strategy.close("L")
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.equity) + " " + str.tostring(strategy.closedtrades))
+
+// Expected output:
+// 0 1000000 0
+// 1 1000002 0
+// 0 1000001 1
+// 0 1000001 1

@@ -1,0 +1,30 @@
+//@version=5
+strategy("strategy/pyramiding", overlay = true, pyramiding = 2)
+// pyramiding caps how many entries can stack in one direction. With 2, a third
+// same-direction entry is rejected. Over the last 6 bars opens are 294..299.
+//   bar 1: entry E1 submitted
+//   bar 2: E1 fills at 295, long 1; E2 submitted
+//   bar 3: E2 fills at 296, long 2; E3 submitted
+//   bar 4: the stack is full (2), so E3 is rejected -> still long 2
+//   bars 5-6: unchanged
+
+// Bars: 6
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("E1", strategy.long)
+if step == 2
+    strategy.entry("E2", strategy.long)
+if step == 3
+    strategy.entry("E3", strategy.long)
+
+log.info(str.tostring(strategy.position_size))
+
+// Expected output:
+// 0
+// 1
+// 2
+// 2
+// 2
+// 2

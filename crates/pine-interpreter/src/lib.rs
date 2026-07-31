@@ -465,6 +465,9 @@ pub struct Interpreter<O: PineOutput> {
     /// Counts bars executed. Stateful builtins compare against it to advance
     /// their state at most once per bar, however often their call site runs.
     bar_seq: u64,
+    /// The simulated broker a `strategy` script trades against. `None` for an
+    /// `indicator`. The `strategy.*` order builtins reach it through `ctx`.
+    pub broker: Option<Box<dyn pine_broker::Broker>>,
 }
 
 /// Names a statement block ASSIGNS (declares or writes) directly — i.e. the true
@@ -534,6 +537,7 @@ impl<O: PineOutput> Interpreter<O> {
             var_decls_initialized: HashMap::new(),
             current_call_id: 0,
             bar_seq: 0,
+            broker: None,
         }
     }
 
@@ -602,6 +606,19 @@ impl<O: PineOutput> Interpreter<O> {
             push_history(&mut self.user_series_history, name, previous);
         }
         self.set_variable(name, value);
+    }
+
+    /// Set a field on a namespace object (e.g. `strategy.position_size`),
+    /// leaving the object's other fields untouched. A no-op if `object` is not
+    /// a registered namespace object.
+    pub fn set_object_field(&mut self, object: &str, field: &str, value: Value<O>) {
+        if let Some(Variable {
+            value: Value::Object { fields, .. },
+            ..
+        }) = self.variables.get(object)
+        {
+            fields.borrow_mut().insert(field.to_string(), value);
+        }
     }
 
     /// Set a const variable (cannot be reassigned)

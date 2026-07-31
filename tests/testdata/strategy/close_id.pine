@@ -1,0 +1,30 @@
+//@version=5
+strategy("strategy/close_id", overlay = true)
+// strategy.close names the entry whose lots it closes, leaving the others open.
+// Two separate long orders build two lots; closing "A" leaves "B". Over the
+// last 5 bars opens are 295..299.
+//   bar 1: order A submitted
+//   bar 2: A fills at 296, long 1; order B submitted
+//   bar 3: B fills at 297, long 2; close("A") submitted
+//   bar 4: close fills at 298, closes only A's lot -> long 1, 1 closed trade
+//   bar 5: unchanged
+
+// Bars: 5
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.order("A", strategy.long)
+if step == 2
+    strategy.order("B", strategy.long)
+if step == 3
+    strategy.close("A")
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.closedtrades))
+
+// Expected output:
+// 0 0
+// 1 0
+// 2 0
+// 1 1
+// 1 1

@@ -1,0 +1,33 @@
+//@version=5
+strategy("strategy/metrics", overlay = true)
+// Gross profit/loss and win/loss counts, from one winning and one losing trade.
+// Over the last 7 bars opens are 293..299. A long is opened then closed for a
+// gain; a short is opened then closed for a loss (the market only rises).
+//   bar 2: long W fills at 294
+//   bar 3: W closes at 295 -> +1, a winning trade
+//   bar 4: short L fills at 296
+//   bar 5: L closes at 297 -> -1, a losing trade
+
+// Bars: 7
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("W", strategy.long)
+if step == 2
+    strategy.close("W")
+if step == 3
+    strategy.entry("L", strategy.short)
+if step == 4
+    strategy.close("L")
+
+log.info(str.tostring(strategy.grossprofit) + " " + str.tostring(strategy.grossloss) + " " + str.tostring(strategy.wintrades) + " " + str.tostring(strategy.losstrades))
+
+// Expected output:
+// 0 0 0 0
+// 0 0 0 0
+// 1 0 1 0
+// 1 0 1 0
+// 1 1 1 1
+// 1 1 1 1
+// 1 1 1 1

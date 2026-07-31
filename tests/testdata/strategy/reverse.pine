@@ -1,0 +1,26 @@
+//@version=5
+strategy("strategy/reverse", overlay = true)
+// An opposite entry reverses: the fill closes the open position and opens the
+// requested one in a single order. Over the last 4 bars opens are 296..299.
+//   bar 1: entry Long submitted
+//   bar 2: fills at 297, long 1
+//   bar 3: entry Short fills at 298, sells 2 -> closes the long (1 closed
+//          trade) and opens short 1
+//   bar 4: unchanged
+
+// Bars: 4
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+if step == 2
+    strategy.entry("S", strategy.short)
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.closedtrades))
+
+// Expected output:
+// 0 0
+// 1 0
+// -1 1
+// -1 1

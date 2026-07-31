@@ -1,0 +1,27 @@
+//@version=5
+strategy("strategy/oca", overlay = true, pyramiding = 5)
+// Two entries in one OCA group: when one fills, the other is cancelled. A buy
+// stop at 301 and a buy limit at 292 share group "G". Over the last 5 bars
+// opens are 295..299, highs 300..304, lows 290..294. (pyramiding is raised so
+// it is the OCA cancel, not the pyramiding cap, that stops a second fill.)
+//   bar 1: both entries submitted
+//   bar 2: high 301 fills the stop (long 1); that cancels the limit, so the
+//          bar's low 291 does not also open a second lot
+//   bars 3-5: unchanged
+
+// Bars: 5
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("up", strategy.long, stop = 301, oca_name = "G", oca_type = strategy.oca.cancel)
+    strategy.entry("down", strategy.long, limit = 292, oca_name = "G", oca_type = strategy.oca.cancel)
+
+log.info(str.tostring(strategy.position_size))
+
+// Expected output:
+// 0
+// 1
+// 1
+// 1
+// 1

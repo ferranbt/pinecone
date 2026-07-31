@@ -1,0 +1,25 @@
+//@version=5
+strategy("strategy/drawdown", overlay = true, initial_capital = 10000)
+// A short held while the market rises loses ground, so equity falls from its
+// 10000 peak and max_drawdown grows. Drawdown marks the position at the bar's
+// adverse extreme (a short's is the high), so over the last 5 bars — opens
+// 295..299, highs 300..304 — the drawdown from the fill at 296 is high - 296.
+//   bar 1: short submitted
+//   bar 2: fills at 296, short 1; high 301 -> drawdown 10000 - 9995 = 5
+//   bars 3-5: highs 302..304 -> drawdown 6, 7, 8
+
+// Bars: 5
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("S", strategy.short)
+
+log.info(str.tostring(strategy.max_drawdown))
+
+// Expected output:
+// 0
+// 5
+// 6
+// 7
+// 8

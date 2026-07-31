@@ -531,6 +531,26 @@ fn generate_field_parsing(
                 }
             }
         }
+    } else if positional_matches.is_empty() {
+        // A builtin with no positional parameters: every positional arg is an
+        // error, and there is no index to advance (matching on it would leave
+        // the increment unreachable).
+        quote! {
+            for arg in args {
+                match arg {
+                    EvaluatedArg::Positional(_) => {
+                        return Err(RuntimeError::TypeError("Too many positional arguments".into()))
+                    }
+                    EvaluatedArg::Named { name: param_name, value: arg_value } => {
+                        let _ = arg_value;
+                        match param_name.as_str() {
+                            #(#named_matches)*
+                            _ => return Err(RuntimeError::TypeError(format!("Unknown parameter: {}", param_name)))
+                        }
+                    }
+                }
+            }
+        }
     } else {
         quote! {
             let mut positional_idx = 0;

@@ -1,0 +1,24 @@
+//@version=5
+strategy("strategy/slippage", overlay = true, slippage = 100)
+// Slippage moves the fill against the order by `slippage` ticks (mintick 0.01),
+// so 100 ticks is 1.00. A long market order that would fill at the open 296
+// instead fills at 297. Over the last 5 bars opens are 295..299.
+//   bar 1: entry submitted, still flat
+//   bar 2: fills at 296 + 1 = 297, long 1 at avg 297
+//   bars 3-5: unchanged
+
+// Bars: 5
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.position_avg_price))
+
+// Expected output:
+// 0 NaN
+// 1 297
+// 1 297
+// 1 297
+// 1 297

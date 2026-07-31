@@ -1,0 +1,25 @@
+//@version=5
+strategy("strategy/runup", overlay = true, initial_capital = 10000)
+// A long held while the market rises gains, so max_runup grows. Run-up marks
+// the position at the bar's favourable extreme (a long's is the high), so over
+// the last 5 bars — opens 295..299, highs 300..304 — the run-up from the fill
+// at 296 is high - 296.
+//   bar 1: long submitted
+//   bar 2: fills at 296, long 1; high 301 -> run-up 10005 - 10000 = 5
+//   bars 3-5: highs 302..304 -> run-up 6, 7, 8
+
+// Bars: 5
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+
+log.info(str.tostring(strategy.max_runup))
+
+// Expected output:
+// 0
+// 5
+// 6
+// 7
+// 8

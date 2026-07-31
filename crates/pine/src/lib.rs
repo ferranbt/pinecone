@@ -8,9 +8,11 @@ pub use pine_interpreter as interpreter;
 pub use pine_lexer as lexer;
 pub use pine_parser as parser;
 
+mod backtest;
 mod run;
 
-pub use run::RunResult;
+pub use backtest::Backtest;
+pub use run::{Run, RunResult};
 
 use pine_ast::Program;
 use pine_core::{Bar, Data, PineVersion, SymInfo, Timeframe, VersionError};
@@ -228,6 +230,12 @@ impl<O: PineOutput> ScriptBuilder<O> {
             program,
             interpreter,
             bars,
+            equity_curve: Vec::new(),
+            last_close: 0.0,
+            equity_peak: f64::NEG_INFINITY,
+            equity_trough: f64::INFINITY,
+            max_drawdown: 0.0,
+            max_runup: 0.0,
         })
     }
 }
@@ -243,6 +251,15 @@ pub struct Script<O: PineOutput> {
     interpreter: Interpreter<O>,
     /// Bars from the builder's source; empty when none was given.
     bars: Vec<Bar>,
+    /// Account value at each bar's close, accumulated while a `strategy` runs.
+    equity_curve: Vec<f64>,
+    /// The last bar's close, used to mark open trades at the run's end.
+    last_close: f64,
+    /// Running equity extremes for `strategy.max_drawdown`/`max_runup`.
+    equity_peak: f64,
+    equity_trough: f64,
+    max_drawdown: f64,
+    max_runup: f64,
 }
 
 impl<O: PineOutput> Script<O> {
@@ -281,15 +298,166 @@ impl<O: PineOutput> Script<O> {
             self.interpreter.set_variable(&name, value);
         }
 
+        // Fill orders left pending by the previous bar before the body runs, so
+        // it reads the position and equity they produced. A no-op unless the
+        // script declared a `strategy`.
+        self.advance_broker(bar);
+
         let output = self.interpreter.execute(&self.program)?;
+
+        // Read after the body so the bar a `strategy` is declared on is counted.
+        if let Some(broker) = self.interpreter.broker.as_ref() {
+            self.equity_curve.push(broker.equity(bar.close));
+            self.last_close = bar.close;
+        }
+
         Ok(output)
     }
 
+    /// Advance the simulated broker one bar and refresh the read-only
+    /// `strategy.*` values from it. The interpreter only holds the broker
+    /// handle; the backtest accounting that maps it onto script variables lives
+    /// here, in the host.
+    fn advance_broker(&mut self, bar: &Bar) {
+        use interpreter::Value;
+
+        let close = bar.close;
+
+        // Read from the broker, then drop the borrow to update `self`'s state.
+        let Some(broker) = self.interpreter.broker.as_mut() else {
+            return;
+        };
+        broker.advance(bar);
+
+        let position = broker.position();
+        let equity = broker.equity(close);
+        let initial = broker.initial_capital();
+        // Equity is monotonic in price, so its intrabar extremes are the marks
+        // at the bar's high and low — lower is adverse, higher favourable.
+        let equity_hi = broker.equity(bar.high);
+        let equity_lo = broker.equity(bar.low);
+        let intrabar_low = equity_hi.min(equity_lo);
+        let intrabar_high = equity_hi.max(equity_lo);
+        let open_profit: f64 = broker.open_trades().iter().map(|t| t.profit(close)).sum();
+        let open_trades = broker.open_trades().len() as i64;
+        let closed_trades = broker.closed_trades().len() as i64;
+
+        let (mut gross_profit, mut gross_loss) = (0.0, 0.0);
+        let (mut wins, mut losses, mut evens) = (0i64, 0i64, 0i64);
+        for trade in broker.closed_trades() {
+            let profit = trade.profit(close); // closed, so the price is ignored
+            if profit > 0.0 {
+                gross_profit += profit;
+                wins += 1;
+            } else if profit < 0.0 {
+                gross_loss -= profit; // positive magnitude, as Pine reports it
+                losses += 1;
+            } else {
+                evens += 1;
+            }
+        }
+
+        // Drawdown/run-up measure the intrabar extreme against a peak/trough
+        // that tracks close equity — an intrabar swing does not move the mark.
+        // Seed with the starting capital (the declaration bar's equity).
+        if self.equity_peak == f64::NEG_INFINITY {
+            self.equity_peak = initial;
+            self.equity_trough = initial;
+        }
+        self.equity_peak = self.equity_peak.max(equity);
+        self.equity_trough = self.equity_trough.min(equity);
+        self.max_drawdown = self.max_drawdown.max(self.equity_peak - intrabar_low);
+        self.max_runup = self.max_runup.max(intrabar_high - self.equity_trough);
+
+        // Pine's identity equity = initial + netprofit + openprofit; derive
+        // netprofit from it so commission can't make the two drift.
+        let net_profit = equity - initial - open_profit;
+        // na, not 0, when flat — matching Pine.
+        let avg_price = if position.size == 0.0 {
+            Value::Na
+        } else {
+            Value::Number(position.avg_price)
+        };
+
+        let refreshed = [
+            ("position_size", Value::Number(position.size)),
+            ("position_avg_price", avg_price),
+            ("equity", Value::Number(equity)),
+            ("netprofit", Value::Number(net_profit)),
+            ("openprofit", Value::Number(open_profit)),
+            ("grossprofit", Value::Number(gross_profit)),
+            ("grossloss", Value::Number(gross_loss)),
+            ("max_drawdown", Value::Number(self.max_drawdown)),
+            ("max_runup", Value::Number(self.max_runup)),
+            ("opentrades", Value::Int(open_trades)),
+            ("closedtrades", Value::Int(closed_trades)),
+            ("wintrades", Value::Int(wins)),
+            ("losstrades", Value::Int(losses)),
+            ("eventrades", Value::Int(evens)),
+        ];
+        for (name, value) in refreshed {
+            self.interpreter.set_object_field("strategy", name, value);
+        }
+    }
+
     /// Replay the script over every bar from its source, returning what each
-    /// one produced. [`RunResult::collect`] turns those into columns.
-    pub fn run(mut self) -> Result<Vec<O>, Error> {
+    /// one produced.
+    pub fn run(mut self) -> Result<Run<O>, Error> {
         let bars = std::mem::take(&mut self.bars);
-        bars.iter().map(|bar| self.execute(bar)).collect()
+        let outputs = bars
+            .iter()
+            .map(|bar| self.execute(bar))
+            .collect::<Result<Vec<O>, Error>>()?;
+        let backtest = self.take_backtest();
+        Ok(Run { outputs, backtest })
+    }
+
+    fn take_backtest(&mut self) -> Option<Backtest> {
+        let broker = self.interpreter.broker.as_ref()?;
+        let close = self.last_close;
+
+        // Closed trades first, then those still open.
+        let mut trades: Vec<_> = broker.closed_trades().to_vec();
+        trades.extend(broker.open_trades().into_iter().cloned());
+
+        let open_profit: f64 = broker.open_trades().iter().map(|t| t.profit(close)).sum();
+        let initial_capital = broker.initial_capital();
+        let position_size = broker.position().size;
+
+        let (mut gross_profit, mut gross_loss) = (0.0, 0.0);
+        let (mut win_trades, mut loss_trades, mut even_trades) = (0, 0, 0);
+        for trade in broker.closed_trades() {
+            let profit = trade.profit(close);
+            if profit > 0.0 {
+                gross_profit += profit;
+                win_trades += 1;
+            } else if profit < 0.0 {
+                gross_loss -= profit;
+                loss_trades += 1;
+            } else {
+                even_trades += 1;
+            }
+        }
+
+        let equity = std::mem::take(&mut self.equity_curve);
+        let final_equity = equity.last().copied().unwrap_or(initial_capital);
+
+        Some(Backtest {
+            initial_capital,
+            net_profit: final_equity - initial_capital - open_profit,
+            open_profit,
+            gross_profit,
+            gross_loss,
+            max_drawdown: self.max_drawdown,
+            max_runup: self.max_runup,
+            win_trades,
+            loss_trades,
+            even_trades,
+            position_size,
+            mark_price: close,
+            equity,
+            trades,
+        })
     }
 }
 

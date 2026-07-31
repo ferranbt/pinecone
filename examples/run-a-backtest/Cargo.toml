@@ -1,0 +1,12 @@
+[package]
+name = "run-a-backtest"
+version = "0.1.0"
+edition = "2021"
+
+# Empty workspace to prevent this from being included in the parent workspace
+[workspace]
+
+[dependencies]
+# Import the local pine crates
+pine = { path = "../../crates/pine" }
+pine-interpreter = { path = "../../crates/pine-interpreter" }

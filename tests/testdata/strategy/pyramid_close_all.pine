@@ -1,0 +1,31 @@
+//@version=5
+strategy("strategy/pyramid_close_all", overlay = true)
+// strategy.order does not reverse or net against the position — it just adds
+// contracts — so two long orders stack into a bigger position, and close_all
+// flattens it, closing each lot oldest-first. Over the last 5 bars opens are
+// 295..299.
+//   bar 1: order O1 submitted
+//   bar 2: O1 fills at 296, long 1; order O2 submitted
+//   bar 3: O2 fills at 297, long 2; close_all submitted
+//   bar 4: close_all fills at 298, closes both lots -> flat, 2 closed trades
+//   bar 5: unchanged
+
+// Bars: 5
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.order("O1", strategy.long)
+if step == 2
+    strategy.order("O2", strategy.long)
+if step == 3
+    strategy.close_all()
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.closedtrades))
+
+// Expected output:
+// 0 0
+// 1 0
+// 2 0
+// 0 2
+// 0 2

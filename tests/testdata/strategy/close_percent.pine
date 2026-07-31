@@ -1,0 +1,27 @@
+//@version=5
+strategy("strategy/close_percent", overlay = true, default_qty_type = strategy.fixed, default_qty_value = 4)
+// strategy.close with qty_percent closes a share of the position. Half of a
+// 4-contract long leaves 2, realising profit on the closed half. Over the last
+// 4 bars opens are 296..299 and closes 298..301.
+//   bar 1: entry submitted
+//   bar 2: fills at 297, long 4
+//   bar 3: close 50% fills at 298, closes 2 -> long 2, realises (298-297)*2 = 2,
+//          and the exited half becomes a closed trade
+//   bar 4: unchanged
+
+// Bars: 4
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+if step == 2
+    strategy.close("L", qty_percent = 50)
+
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.netprofit) + " " + str.tostring(strategy.closedtrades))
+
+// Expected output:
+// 0 0 0
+// 4 0 0
+// 2 2 1
+// 2 2 1

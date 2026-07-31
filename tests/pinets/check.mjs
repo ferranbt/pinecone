@@ -32,6 +32,7 @@ const CHECK = [
     'variables/',
     'arguments/',
     'str/',
+    'strategy/',
 ];
 
 // Divergences we are not treating as our bugs. Pass --all to check them anyway.
@@ -50,6 +51,12 @@ const SKIP = {
     // PineTS assumes a different exchange timezone for its synthetic ticker, so
     // the two cannot be compared. Ours also ignores syminfo.timezone entirely.
     'basics/timestamp.pine': 'timezone assumptions differ; we ignore syminfo.timezone',
+    // PineTS books an open trade's commission into netprofit; the spec says
+    // netprofit is "completed trades" only, so it belongs to openprofit (ours).
+    'strategy/commission.pine': 'PineTS puts open-trade commission in netprofit; the spec sides with us',
+    // The reference says OCA cancels the unfilled order when another in the
+    // group executes, so only one fills (ours). PineTS fills both same-bar.
+    'strategy/oca.pine': 'reference cancels the sibling on execution; PineTS fills both',
 };
 
 const args = process.argv.slice(2);

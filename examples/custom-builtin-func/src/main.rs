@@ -85,7 +85,7 @@ fn main() {
         .compile()
         .expect("Compilation failed");
 
-    let outputs = script.run().expect("Execution failed");
+    let outputs = script.run().expect("Execution failed").outputs;
 
     for output in &outputs {
         for alert in output.get_alerts() {

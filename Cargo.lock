@@ -1428,6 +1428,7 @@ version = "0.1.0"
 dependencies = [
  "eyre",
  "pine-ast",
+ "pine-broker",
  "pine-builtins",
  "pine-core",
  "pine-data",
@@ -1446,6 +1447,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "pine-broker"
+version = "0.1.0"
+dependencies = [
+ "pine-core",
+]
+
+[[package]]
 name = "pine-builtin-macro"
 version = "0.1.0"
 dependencies = [
@@ -1459,6 +1467,7 @@ name = "pine-builtins"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "pine-broker",
  "pine-builtin-macro",
  "pine-core",
  "pine-interpreter",
@@ -1508,6 +1517,7 @@ version = "0.1.0"
 dependencies = [
  "eyre",
  "pine-ast",
+ "pine-broker",
  "pine-lexer",
  "pine-parser",
  "thiserror",
