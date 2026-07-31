@@ -62,10 +62,7 @@ struct StrategyFn {
 }
 
 impl StrategyFn {
-    fn execute<O: PineOutput>(
-        &self,
-        ctx: &mut Interpreter<O>,
-    ) -> Result<Value<O>, RuntimeError> {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let _ = (
             &self.shorttitle,
             self.overlay,
@@ -99,7 +96,11 @@ impl StrategyFn {
             }
 
             ctx.broker = Some(Box::new(broker));
-            ctx.set_object_field("strategy", "initial_capital", Value::Number(initial_capital));
+            ctx.set_object_field(
+                "strategy",
+                "initial_capital",
+                Value::Number(initial_capital),
+            );
             ctx.set_object_field("strategy", "equity", Value::Number(initial_capital));
         }
 
@@ -205,10 +206,7 @@ struct StrategyEntry {
 }
 
 impl StrategyEntry {
-    fn execute<O: PineOutput>(
-        &self,
-        ctx: &mut Interpreter<O>,
-    ) -> Result<Value<O>, RuntimeError> {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let sizing_price = close_of(ctx);
         if let Some(broker) = ctx.broker.as_mut() {
             broker.submit(Order {
@@ -254,10 +252,7 @@ struct StrategyOrder {
 }
 
 impl StrategyOrder {
-    fn execute<O: PineOutput>(
-        &self,
-        ctx: &mut Interpreter<O>,
-    ) -> Result<Value<O>, RuntimeError> {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let sizing_price = close_of(ctx);
         if let Some(broker) = ctx.broker.as_mut() {
             broker.submit(Order {
@@ -296,10 +291,7 @@ struct StrategyClose {
 }
 
 impl StrategyClose {
-    fn execute<O: PineOutput>(
-        &self,
-        ctx: &mut Interpreter<O>,
-    ) -> Result<Value<O>, RuntimeError> {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         if let Some(broker) = ctx.broker.as_mut() {
             // Direction is ignored for a reduce-only order — the broker closes
             // against whatever side is open — so Long is just a placeholder. The
@@ -334,10 +326,7 @@ struct StrategyCloseAll {
 }
 
 impl StrategyCloseAll {
-    fn execute<O: PineOutput>(
-        &self,
-        ctx: &mut Interpreter<O>,
-    ) -> Result<Value<O>, RuntimeError> {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         if let Some(broker) = ctx.broker.as_mut() {
             broker.submit(Order {
                 id: "Close all".to_string(),
@@ -366,10 +355,7 @@ struct StrategyCancel {
 }
 
 impl StrategyCancel {
-    fn execute<O: PineOutput>(
-        &self,
-        ctx: &mut Interpreter<O>,
-    ) -> Result<Value<O>, RuntimeError> {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         if let Some(broker) = ctx.broker.as_mut() {
             broker.cancel(&self.id);
         }
@@ -383,10 +369,7 @@ impl StrategyCancel {
 struct StrategyCancelAll {}
 
 impl StrategyCancelAll {
-    fn execute<O: PineOutput>(
-        &self,
-        ctx: &mut Interpreter<O>,
-    ) -> Result<Value<O>, RuntimeError> {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         if let Some(broker) = ctx.broker.as_mut() {
             broker.cancel_all();
         }
@@ -429,10 +412,7 @@ struct StrategyExit {
 }
 
 impl StrategyExit {
-    fn execute<O: PineOutput>(
-        &self,
-        ctx: &mut Interpreter<O>,
-    ) -> Result<Value<O>, RuntimeError> {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let _ = &self.comment;
         if let Some(broker) = ctx.broker.as_mut() {
             broker.submit_exit(Exit {

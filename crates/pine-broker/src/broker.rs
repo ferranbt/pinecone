@@ -116,7 +116,9 @@ impl<F: FillModel> BarBroker<F> {
             .open
             .iter()
             .filter(|t| target.is_none_or(|id| t.entry_id == id))
-            .fold((0.0, 0.0), |(v, q), t| (v + t.entry_price * t.size, q + t.size));
+            .fold((0.0, 0.0), |(v, q), t| {
+                (v + t.entry_price * t.size, q + t.size)
+            });
         if qty == 0.0 {
             0.0
         } else {
@@ -217,7 +219,8 @@ impl<F: FillModel> BarBroker<F> {
                 // Pine sizes a default-qty order from the close of the bar it
                 // was generated on; fall back to the fill price if unstamped.
                 let sizing_price = order.sizing_price.unwrap_or(price);
-                self.sizing.contracts(sizing_price, self.equity(sizing_price))
+                self.sizing
+                    .contracts(sizing_price, self.equity(sizing_price))
             }
         };
         let net = self.net_size();
@@ -273,7 +276,13 @@ impl<F: FillModel> BarBroker<F> {
             let hit = sl
                 .and_then(|p| self.leg_fill(OrderKind::Stop(p), exit_dir, bar))
                 .or_else(|| {
-                    trail_stop.filter(|&ts| if dir > 0.0 { bar.low <= ts } else { bar.high >= ts })
+                    trail_stop.filter(|&ts| {
+                        if dir > 0.0 {
+                            bar.low <= ts
+                        } else {
+                            bar.high >= ts
+                        }
+                    })
                 })
                 .or_else(|| tp.and_then(|p| self.leg_fill(OrderKind::Limit(p), exit_dir, bar)));
 
