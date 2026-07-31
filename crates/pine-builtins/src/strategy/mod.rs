@@ -142,25 +142,6 @@ fn close_of<O: PineOutput>(ctx: &Interpreter<O>) -> f64 {
     }
 }
 
-/// The direction an order trades, from the `strategy.long`/`strategy.short`
-/// constants.
-fn direction_of(tag: &str) -> Direction {
-    if tag == "short" {
-        Direction::Short
-    } else {
-        Direction::Long
-    }
-}
-
-/// The One-Cancels-All behaviour from an `oca_type` constant.
-fn oca_type_of(tag: &str) -> OcaType {
-    match tag {
-        "cancel" => OcaType::Cancel,
-        "reduce" => OcaType::Reduce,
-        _ => OcaType::None,
-    }
-}
-
 /// A string argument as an option, mapping the empty default to `None` — used
 /// for an OCA group name and an exit's `from_entry`.
 fn non_empty(name: &str) -> Option<String> {
@@ -211,7 +192,7 @@ impl StrategyEntry {
         if let Some(broker) = ctx.broker.as_mut() {
             broker.submit(Order {
                 id: self.id.clone(),
-                direction: direction_of(&self.direction),
+                direction: Direction::from(self.direction.as_str()),
                 qty: self.qty,
                 qty_percent: None,
                 sizing_price: Some(sizing_price),
@@ -220,7 +201,7 @@ impl StrategyEntry {
                 reverses: true,
                 close_target: None,
                 oca_name: non_empty(&self.oca_name),
-                oca_type: oca_type_of(&self.oca_type),
+                oca_type: OcaType::from(self.oca_type.as_str()),
                 comment: self.comment.clone(),
             });
         }
@@ -257,7 +238,7 @@ impl StrategyOrder {
         if let Some(broker) = ctx.broker.as_mut() {
             broker.submit(Order {
                 id: self.id.clone(),
-                direction: direction_of(&self.direction),
+                direction: Direction::from(self.direction.as_str()),
                 qty: self.qty,
                 qty_percent: None,
                 sizing_price: Some(sizing_price),
@@ -266,7 +247,7 @@ impl StrategyOrder {
                 reverses: false,
                 close_target: None,
                 oca_name: non_empty(&self.oca_name),
-                oca_type: oca_type_of(&self.oca_type),
+                oca_type: OcaType::from(self.oca_type.as_str()),
                 comment: self.comment.clone(),
             });
         }

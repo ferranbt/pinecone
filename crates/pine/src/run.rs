@@ -3,9 +3,18 @@
 use crate::Backtest;
 use pine_interpreter::{
     AlertCondition, AlertConditionOutput, Indicator, IndicatorOutput, Input, InputOutput, LogEntry,
-    LogOutput, Plot, PlotOutput,
+    LogOutput, PineOutput, Plot, PlotOutput,
 };
 use std::collections::BTreeMap;
+
+/// What a full replay produced. Owns its data, so the `Script` is dropped once
+/// [`Script::run`] returns.
+pub struct Run<O: PineOutput> {
+    /// What each bar produced; [`RunResult::collect`] turns these into columns.
+    pub outputs: Vec<O>,
+    /// The backtest, or `None` if the script declared no `strategy`.
+    pub backtest: Option<Backtest>,
+}
 
 /// A run's per-bar outputs turned into columns.
 ///
@@ -20,10 +29,6 @@ pub struct RunResult {
     pub alerts: Vec<AlertCondition>,
     pub indicator: Option<Indicator>,
     pub inputs: Vec<Input>,
-    /// The backtest a `strategy` produced, or `None` for an indicator. Filled in
-    /// by [`crate::Script::result`]; [`RunResult::collect`] leaves it `None`
-    /// because the trade log lives on the broker, not the per-bar outputs.
-    pub backtest: Option<Backtest>,
 }
 
 impl RunResult {

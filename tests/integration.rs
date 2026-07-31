@@ -166,7 +166,8 @@ mod tests {
             .with_library_loader(Box::new(library_loader))
             .with_data(data)
             .compile()?
-            .run()?;
+            .run()?
+            .outputs;
 
         let mut logs: Vec<String> = outputs
             .iter()

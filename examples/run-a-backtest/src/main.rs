@@ -16,14 +16,13 @@ fn main() {
             strategy.close("Long")
     "#;
 
-    let result = ScriptBuilder::<DefaultPineOutput>::with_code(script_source)
+    let run = ScriptBuilder::<DefaultPineOutput>::with_code(script_source)
         .with_data(pine::data::synthetic(10))
         .compile()
         .expect("Compilation failed")
-        .result()
+        .run()
         .expect("Execution failed");
-
-    let backtest = result.backtest.expect("the script declared a strategy");
+    let backtest = run.backtest.expect("the script declared a strategy");
 
     println!("Net profit:    {:.2}", backtest.net_profit);
     println!("Final equity:  {:.2}", backtest.final_equity());

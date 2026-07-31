@@ -16,16 +16,15 @@ pub struct BarBroker<F: FillModel> {
     commission: Option<Commission>,
     /// How an order without an explicit `qty` is sized.
     sizing: Sizing,
-    /// Maximum concurrent open entries in one direction (`pyramiding`), with 0
-    /// meaning one.
+    /// Maximum concurrent open entries in one direction (`pyramiding`).
     max_entries: usize,
     /// Tick size, so `strategy.exit` distances given in ticks become prices.
     mintick: f64,
     /// Starting capital, kept so `strategy.netprofit` can be derived from the
     /// equity identity.
     initial: f64,
+    /// Cash balance; commission is charged here, price P&L in `realized`.
     cash: f64,
-    /// Realised profit booked from closed trades.
     realized: f64,
 
     /// Pending orders keyed by id, so a resubmission replaces rather than
@@ -67,11 +66,6 @@ impl<F: FillModel> BarBroker<F> {
         self
     }
 
-    pub fn with_default_qty(mut self, qty: f64) -> Self {
-        self.sizing = Sizing::Contracts(qty);
-        self
-    }
-
     pub fn with_sizing(mut self, sizing: Sizing) -> Self {
         self.sizing = sizing;
         self
@@ -82,14 +76,11 @@ impl<F: FillModel> BarBroker<F> {
         self
     }
 
-    /// Set the pyramiding limit — the most concurrent entries allowed in one
-    /// direction. Pine treats 0 as one.
     pub fn with_pyramiding(mut self, pyramiding: usize) -> Self {
         self.max_entries = pyramiding.max(1);
         self
     }
 
-    /// Number of open lots on the same side as `direction`.
     fn open_lots_toward(&self, direction: Direction) -> usize {
         self.open
             .iter()
@@ -156,8 +147,6 @@ impl<F: FillModel> BarBroker<F> {
             let lot = &self.open[index];
             let closed = signed_qty.abs().min(lot.size.abs());
             let closed_signed = closed * lot.size.signum();
-            // Entry commission from the lot it closes, plus this fill's exit
-            // commission for the same portion.
             let entry_share = lot.commission * closed / lot.size.abs();
             let exit_share = order_commission * closed / order_qty_abs;
 

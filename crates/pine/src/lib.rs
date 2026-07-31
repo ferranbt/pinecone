@@ -12,7 +12,7 @@ mod backtest;
 mod run;
 
 pub use backtest::Backtest;
-pub use run::RunResult;
+pub use run::{Run, RunResult};
 
 use pine_ast::Program;
 use pine_core::{Bar, Data, PineVersion, SymInfo, Timeframe, VersionError};
@@ -305,9 +305,7 @@ impl<O: PineOutput> Script<O> {
 
         let output = self.interpreter.execute(&self.program)?;
 
-        // Record the bar's equity for the backtest curve. Read after the body,
-        // so the bar a `strategy` is declared on contributes its first point;
-        // the body only submits orders, so it does not change the mark.
+        // Read after the body so the bar a `strategy` is declared on is counted.
         if let Some(broker) = self.interpreter.broker.as_ref() {
             self.equity_curve.push(broker.equity(bar.close));
             self.last_close = bar.close;
@@ -325,8 +323,7 @@ impl<O: PineOutput> Script<O> {
 
         let close = bar.close;
 
-        // Read everything from the broker, then drop the borrow so the running
-        // drawdown state (on `self`) can be updated.
+        // Read from the broker, then drop the borrow to update `self`'s state.
         let Some(broker) = self.interpreter.broker.as_mut() else {
             return;
         };
@@ -335,9 +332,8 @@ impl<O: PineOutput> Script<O> {
         let position = broker.position();
         let equity = broker.equity(close);
         let initial = broker.initial_capital();
-        // Equity is monotonic in price for a fixed position, so its intrabar
-        // extremes are just the marks at the bar's high and low: the lower is
-        // the adverse mark (used for drawdown), the higher the favourable one.
+        // Equity is monotonic in price, so its intrabar extremes are the marks
+        // at the bar's high and low — lower is adverse, higher favourable.
         let equity_hi = broker.equity(bar.high);
         let equity_lo = broker.equity(bar.low);
         let intrabar_low = equity_hi.min(equity_lo);
@@ -346,29 +342,24 @@ impl<O: PineOutput> Script<O> {
         let open_trades = broker.open_trades().len() as i64;
         let closed_trades = broker.closed_trades().len() as i64;
 
-        // A closed trade's profit is realised, so its mark price is ignored.
         let (mut gross_profit, mut gross_loss) = (0.0, 0.0);
         let (mut wins, mut losses, mut evens) = (0i64, 0i64, 0i64);
         for trade in broker.closed_trades() {
-            let profit = trade.profit(close);
+            let profit = trade.profit(close); // closed, so the price is ignored
             if profit > 0.0 {
                 gross_profit += profit;
                 wins += 1;
             } else if profit < 0.0 {
-                // Accumulated as a positive magnitude, matching Pine's report.
-                gross_loss -= profit;
+                gross_loss -= profit; // positive magnitude, as Pine reports it
                 losses += 1;
             } else {
                 evens += 1;
             }
         }
 
-        // Drawdown is the drop from the running peak of bar-close equity to the
-        // intrabar low; run-up the rise from the trough to the intrabar high.
-        // The peak/trough track close equity — an intrabar swing does not reset
-        // the high-water mark — matching Pine. Seed them with the starting
-        // capital, the equity on the declaration bar (before this method first
-        // sees the broker).
+        // Drawdown/run-up measure the intrabar extreme against a peak/trough
+        // that tracks close equity — an intrabar swing does not move the mark.
+        // Seed with the starting capital (the declaration bar's equity).
         if self.equity_peak == f64::NEG_INFINITY {
             self.equity_peak = initial;
             self.equity_trough = initial;
@@ -378,12 +369,10 @@ impl<O: PineOutput> Script<O> {
         self.max_drawdown = self.max_drawdown.max(self.equity_peak - intrabar_low);
         self.max_runup = self.max_runup.max(intrabar_high - self.equity_trough);
 
-        // Pine defines equity = initial_capital + netprofit + openprofit, so
-        // derive netprofit from that identity rather than re-summing closed
-        // trades — the two agree only when commission is folded in, and this way
-        // they cannot drift.
+        // Pine's identity equity = initial + netprofit + openprofit; derive
+        // netprofit from it so commission can't make the two drift.
         let net_profit = equity - initial - open_profit;
-        // Pine reports position_avg_price as na, not 0, when flat.
+        // na, not 0, when flat — matching Pine.
         let avg_price = if position.size == 0.0 {
             Value::Na
         } else {
@@ -412,19 +401,22 @@ impl<O: PineOutput> Script<O> {
     }
 
     /// Replay the script over every bar from its source, returning what each
-    /// one produced. [`RunResult::collect`] turns those into columns.
-    pub fn run(mut self) -> Result<Vec<O>, Error> {
+    /// one produced.
+    pub fn run(mut self) -> Result<Run<O>, Error> {
         let bars = std::mem::take(&mut self.bars);
-        bars.iter().map(|bar| self.execute(bar)).collect()
+        let outputs = bars
+            .iter()
+            .map(|bar| self.execute(bar))
+            .collect::<Result<Vec<O>, Error>>()?;
+        let backtest = self.take_backtest();
+        Ok(Run { outputs, backtest })
     }
 
-    /// The backtest a `strategy` produced — its equity curve and trade log — or
-    /// `None` if the script declared no strategy. Called after the bars run.
     fn take_backtest(&mut self) -> Option<Backtest> {
         let broker = self.interpreter.broker.as_ref()?;
         let close = self.last_close;
 
-        // Closed trades first, then those still open, matching the equity order.
+        // Closed trades first, then those still open.
         let mut trades: Vec<_> = broker.closed_trades().to_vec();
         trades.extend(broker.open_trades().into_iter().cloned());
 
@@ -432,7 +424,6 @@ impl<O: PineOutput> Script<O> {
         let initial_capital = broker.initial_capital();
         let position_size = broker.position().size;
 
-        // Closed-trade tallies, the final value of the per-bar `strategy.*`.
         let (mut gross_profit, mut gross_loss) = (0.0, 0.0);
         let (mut win_trades, mut loss_trades, mut even_trades) = (0, 0, 0);
         for trade in broker.closed_trades() {
@@ -453,7 +444,6 @@ impl<O: PineOutput> Script<O> {
 
         Some(Backtest {
             initial_capital,
-            // Same identity the per-bar values use: equity = initial + net + open.
             net_profit: final_equity - initial_capital - open_profit,
             open_profit,
             gross_profit,
@@ -468,23 +458,6 @@ impl<O: PineOutput> Script<O> {
             equity,
             trades,
         })
-    }
-
-    /// Replay the script and collect everything into a [`RunResult`]: the
-    /// per-bar plots and logs, and — for a `strategy` — the backtest.
-    pub fn result(mut self) -> Result<RunResult, Error>
-    where
-        O: PlotOutput + LogOutput + AlertConditionOutput + IndicatorOutput + InputOutput,
-    {
-        let bars = std::mem::take(&mut self.bars);
-        let outputs = bars
-            .iter()
-            .map(|bar| self.execute(bar))
-            .collect::<Result<Vec<O>, Error>>()?;
-
-        let mut result = RunResult::collect(&outputs);
-        result.backtest = self.take_backtest();
-        Ok(result)
     }
 }
 

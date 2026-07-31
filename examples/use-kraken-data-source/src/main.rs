@@ -28,7 +28,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let outputs = ScriptBuilder::<DefaultPineOutput>::with_code(SCRIPT)
         .with_data(data)
         .compile()?
-        .run()?;
+        .run()?
+        .outputs;
     let result = pine::RunResult::collect(&outputs);
 
     let fast = result.plot("fast").expect("fast is plotted");

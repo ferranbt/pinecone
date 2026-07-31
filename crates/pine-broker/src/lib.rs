@@ -36,6 +36,17 @@ impl Direction {
     }
 }
 
+impl From<&str> for Direction {
+    /// From the `strategy.long`/`strategy.short` constants; anything else long.
+    fn from(tag: &str) -> Self {
+        if tag == "short" {
+            Direction::Short
+        } else {
+            Direction::Long
+        }
+    }
+}
+
 /// The price condition that decides when an order fills.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OrderKind {
@@ -109,6 +120,17 @@ pub enum OcaType {
     Cancel,
     /// Shrink the group's other unfilled orders by the filled size.
     Reduce,
+}
+
+impl From<&str> for OcaType {
+    /// From the `strategy.oca.*` constants; anything else is no group.
+    fn from(tag: &str) -> Self {
+        match tag {
+            "cancel" => OcaType::Cancel,
+            "reduce" => OcaType::Reduce,
+            _ => OcaType::None,
+        }
+    }
 }
 
 /// A submitted order, before it fills. Replaces any pending order with the same
