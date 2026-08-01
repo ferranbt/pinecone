@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 pine-ast = { workspace = true }
 pine-broker = { workspace = true }
+pine-core = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]

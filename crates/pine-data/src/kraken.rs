@@ -1,45 +1,36 @@
 //! Bars from Kraken's public OHLC endpoint.
 
-use crate::{fetch, quoted, DataError, DataSource};
-use pine_core::{Data, Ohlcv, SymInfo, Timeframe};
+use crate::{fetch, quoted, DataError};
+use pine_core::{Data, DataProvider, Ohlcv, ProviderError, SymInfo, Timeframe};
 
-/// Candles for a Kraken pair.
+/// Kraken's public OHLC endpoint, as a [`DataProvider`]: it fetches whatever pair
+/// and timeframe are asked for.
 ///
 /// ```no_run
-/// # use pine_data::{DataSource, KrakenSource};
-/// let data = KrakenSource::new("XBTUSD", "1h".parse()?).load()?;
-/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// # use pine_data::KrakenSource;
+/// # use pine_core::DataProvider;
+/// let data = KrakenSource::new().request("XBTUSD", "60".parse()?)?;
+/// # Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
 /// ```
-#[derive(Debug, Clone)]
-pub struct KrakenSource {
-    pair: String,
-    timeframe: Timeframe,
-}
+#[derive(Debug, Clone, Default)]
+pub struct KrakenSource;
 
 impl KrakenSource {
-    /// `pair` is a Kraken pair such as `"XBTUSD"`.
-    pub fn new(pair: &str, timeframe: Timeframe) -> Self {
-        Self {
-            pair: pair.to_uppercase(),
-            timeframe,
-        }
-    }
-
-    /// Kraken asks for the interval as a number of minutes. A timeframe with no
-    /// whole-minute length (sub-minute, or a month) has none, and Kraken serves
-    /// neither, so it falls back to the hour its API defaults to.
-    fn minutes(&self) -> u32 {
-        self.timeframe.as_minutes().unwrap_or(60)
+    pub fn new() -> Self {
+        Self
     }
 }
 
-impl DataSource for KrakenSource {
-    fn load(&self) -> Result<Data, DataError> {
-        let url = format!(
-            "https://api.kraken.com/0/public/OHLC?pair={}&interval={}",
-            self.pair,
-            self.minutes()
-        );
+impl DataProvider for KrakenSource {
+    fn request(&self, symbol: &str, timeframe: Timeframe) -> Result<Data, ProviderError> {
+        let pair = symbol.to_uppercase();
+        // Kraken asks for the interval as a number of minutes; a sub-minute or
+        // month timeframe has none, and Kraken serves neither, so it falls back
+        // to the hour its API defaults to.
+        let minutes = timeframe.as_minutes().unwrap_or(60);
+
+        let url =
+            format!("https://api.kraken.com/0/public/OHLC?pair={pair}&interval={minutes}");
         let body = fetch(&url)?;
 
         let bad = |message: String| DataError::Provider {
@@ -57,7 +48,8 @@ impl DataSource for KrakenSource {
                     .iter()
                     .filter_map(|e| e.as_str())
                     .collect::<Vec<_>>()
-                    .join(", ")));
+                    .join(", "))
+                .into());
             }
         }
 
@@ -72,7 +64,7 @@ impl DataSource for KrakenSource {
             .iter()
             .find(|(key, _)| key.as_str() != "last")
             .and_then(|(_, value)| value.as_array())
-            .ok_or_else(|| bad(format!("no candles for {}", self.pair)))?;
+            .ok_or_else(|| bad(format!("no candles for {pair}")))?;
 
         let rows = candles
             .iter()
@@ -93,12 +85,12 @@ impl DataSource for KrakenSource {
 
         Ok(Data::from_ohlcv(rows)
             .with_syminfo(SymInfo {
-                ticker: self.pair.clone(),
-                tickerid: format!("KRAKEN:{}", self.pair),
+                ticker: pair.clone(),
+                tickerid: format!("KRAKEN:{pair}"),
                 prefix: "KRAKEN".to_string(),
                 type_: "crypto".to_string(),
                 ..SymInfo::default()
             })
-            .with_timeframe(self.timeframe.clone()))
+            .with_timeframe(timeframe))
     }
 }

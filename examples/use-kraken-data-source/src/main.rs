@@ -3,8 +3,9 @@
 /// Fetches hourly BTC/USD candles from Kraken and runs a moving-average
 /// crossover over them. The data carries its own symbol and timeframe, so
 /// `syminfo.*` and `timeframe.*` are filled in without being set by hand.
+use pine::core::DataProvider;
 use pine::ScriptBuilder;
-use pine_data::{DataSource, KrakenSource};
+use pine_data::KrakenSource;
 use pine_interpreter::DefaultPineOutput;
 
 const SCRIPT: &str = r#"
@@ -17,7 +18,7 @@ plot(slow, title="slow")
 "#;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let data = KrakenSource::new("XBTUSD", "1h".parse()?).load()?;
+    let data = KrakenSource::new().request("XBTUSD", "60".parse()?)?;
     println!(
         "{}: {} bars at {}",
         data.syminfo.tickerid,

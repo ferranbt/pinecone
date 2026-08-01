@@ -1,0 +1,46 @@
+//@version=5
+indicator("request/security multi")
+// Two request.security calls in one script are cached per call site, so each
+// keeps its own series. Here close and high are requested at "5" and logged
+// together each bar, giving interleaved close/high pairs (106/109, 111/114,
+// 116/119) once the 5-minute bars confirm.
+
+// Bars: 15
+// Data: request_bars.csv
+
+c = request.security(syminfo.tickerid, "5", close)
+h = request.security(syminfo.tickerid, "5", high)
+log.info(str.tostring(c))
+log.info(str.tostring(h))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// 106
+// 109
+// 106
+// 109
+// 106
+// 109
+// 106
+// 109
+// 106
+// 109
+// 111
+// 114
+// 111
+// 114
+// 111
+// 114
+// 111
+// 114
+// 111
+// 114
+// 116
+// 119

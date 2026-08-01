@@ -12,6 +12,7 @@ mod backtest;
 mod run;
 
 pub use backtest::Backtest;
+pub use pine_core::DataProvider;
 pub use run::{Run, RunResult};
 
 use pine_ast::Program;
@@ -25,6 +26,7 @@ use pine_interpreter::{
 use pine_lexer::{Lexer, LexerError};
 use pine_parser::{Parser, ParserError};
 use std::collections::HashMap;
+use std::rc::Rc;
 
 /// Error type for Pine operations
 #[derive(Debug)]
@@ -91,6 +93,7 @@ pub struct ScriptBuilder<O: PineOutput> {
     source: String,
     custom_variables: HashMap<String, Value<O>>,
     library_loader: Option<Box<dyn LibraryLoader>>,
+    request_provider: Option<Box<dyn DataProvider>>,
     syminfo: Option<SymInfo>,
     timeframe: Option<Timeframe>,
     data: Option<Data>,
@@ -102,6 +105,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
             source: source.to_string(),
             custom_variables: HashMap::new(),
             library_loader: None,
+            request_provider: None,
             syminfo: None,
             timeframe: None,
             data: None,
@@ -118,6 +122,13 @@ impl<O: PineOutput> ScriptBuilder<O> {
     /// Resolves `import` statements. Without one, importing a library fails.
     pub fn with_library_loader(mut self, loader: Box<dyn LibraryLoader>) -> Self {
         self.library_loader = Some(loader);
+        self
+    }
+
+    /// Supplies bars for `request.security`. Without one, `request.security`
+    /// returns na.
+    pub fn with_request_provider(mut self, provider: Box<dyn DataProvider>) -> Self {
+        self.request_provider = Some(provider);
         self
     }
 
@@ -166,6 +177,24 @@ impl<O: PineOutput> ScriptBuilder<O> {
         let syminfo = self.syminfo.unwrap_or(data.syminfo);
         let timeframe = self.timeframe.unwrap_or(data.timeframe);
         let bars = data.bars;
+
+        // `request.security`'s feed. An explicit provider (a real exchange) wins;
+        // otherwise the chart's own bars serve it, so `request.security` at a
+        // higher timeframe resamples the data already loaded — one source.
+        let request_provider: Rc<dyn DataProvider> = match self.request_provider {
+            Some(provider) => Rc::from(provider),
+            None => Rc::new(pine_data::StaticProvider::new(Data {
+                syminfo: syminfo.clone(),
+                timeframe: timeframe.clone(),
+                bars: bars.clone(),
+            })),
+        };
+        // The chart's bar spacing, so `request.security_lower_tf` can reject a
+        // request that is not actually lower than the chart timeframe.
+        let chart_period = bars
+            .windows(2)
+            .next()
+            .map(|pair| pair[1].time - pair[0].time);
 
         let source = self.source.as_str();
         let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
@@ -216,6 +245,9 @@ impl<O: PineOutput> ScriptBuilder<O> {
         if let Some(library_loader) = self.library_loader {
             interpreter.set_library_loader(library_loader);
         }
+        // The feed `request.security` draws from, reached through `ctx`.
+        interpreter.request_provider = Some(request_provider);
+        interpreter.chart_period = chart_period;
 
         // Register namespace objects as const variables
         for (name, value) in namespaces {

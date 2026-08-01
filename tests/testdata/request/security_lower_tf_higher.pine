@@ -1,0 +1,13 @@
+//@version=5
+indicator("request/security_lower_tf higher")
+// request.security_lower_tf must be given a timeframe no coarser than the
+// chart's. The data is minute-spaced (see `// Data:`), so requesting "5" — a
+// coarser timeframe — is an error, as in Pine.
+
+// Bars: 15
+// Data: request_bars.csv
+
+lower = request.security_lower_tf(syminfo.tickerid, "5", close)
+log.info(str.tostring(lower))
+
+// Expected error: Type error: request.security_lower_tf: timeframe "5" is not lower than the chart timeframe

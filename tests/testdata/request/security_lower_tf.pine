@@ -1,0 +1,28 @@
+//@version=5
+indicator("request/security_lower_tf")
+// request.security_lower_tf returns an array of the expression's intrabar values
+// for the current chart bar. Here the requested timeframe equals the chart's, so
+// each bar has a single intrabar — itself — giving a one-element array of close.
+
+// Bars: 15
+// Data: request_bars.csv
+
+lower = request.security_lower_tf(syminfo.tickerid, "1", close)
+log.info(str.tostring(lower))
+
+// Expected output:
+// [102]
+// [103]
+// [104]
+// [105]
+// [106]
+// [107]
+// [108]
+// [109]
+// [110]
+// [111]
+// [112]
+// [113]
+// [114]
+// [115]
+// [116]

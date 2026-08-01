@@ -60,6 +60,9 @@ pub struct Param {
     pub required: bool,
     /// True for a trailing parameter that soaks up any number of arguments.
     pub variadic: bool,
+    /// True when the argument is passed unevaluated (as a captured `Expr`),
+    /// for intrinsics like `request.security` that run it in another context.
+    pub lazy: bool,
 }
 
 /// The parameters a builtin accepts, in positional order.
@@ -81,6 +84,16 @@ impl BuiltinSignature {
 
     pub fn named(&self, name: &str) -> Option<&Param> {
         self.params.iter().find(|param| param.name == name)
+    }
+
+    /// Whether the positional argument at `index` is passed unevaluated.
+    pub fn positional_is_lazy(&self, index: usize) -> bool {
+        self.positional(index).is_some_and(|param| param.lazy)
+    }
+
+    /// Whether the named argument `name` is passed unevaluated.
+    pub fn named_is_lazy(&self, name: &str) -> bool {
+        self.named(name).is_some_and(|param| param.lazy)
     }
 
     /// The most positional arguments accepted, or `None` when variadic.

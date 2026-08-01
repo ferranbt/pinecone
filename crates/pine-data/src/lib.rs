@@ -12,6 +12,7 @@ use pine_core::{Data, Ohlcv};
 
 // `::csv` is the crate; the module below shadows the bare name here.
 mod csv;
+mod resample;
 
 mod binance;
 mod kraken;
@@ -20,13 +21,13 @@ mod yahoo;
 pub use binance::BinanceSource;
 pub use csv::CsvSource;
 pub use kraken::KrakenSource;
+pub use resample::{resample, StaticProvider};
 pub use yahoo::YahooSource;
 
-/// Fetch a URL, returning the body. Blocking on purpose: [`DataSource::load`]
-/// is sync so that running a script stays sync all the way down.
 pub(crate) fn fetch(url: &str) -> Result<String, DataError> {
+    // This call blocks on purpose such that a Script execution
+    // stays sync all the way down
     ureq::get(url)
-        // Some providers reject the default agent.
         .set("User-Agent", "pinecone/0.1")
         .call()
         .map_err(|source| DataError::Http {
@@ -84,9 +85,4 @@ pub enum DataError {
         provider: &'static str,
         message: String,
     },
-}
-
-/// Somewhere [`Data`] can be loaded from — a file, an exchange, a fixture.
-pub trait DataSource {
-    fn load(&self) -> Result<Data, DataError>;
 }

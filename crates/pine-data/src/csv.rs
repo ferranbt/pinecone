@@ -1,7 +1,7 @@
 //! Bars read from a CSV file.
 
-use crate::{DataError, DataSource};
-use pine_core::{Data, Ohlcv, SymInfo};
+use crate::{DataError, StaticProvider};
+use pine_core::{Data, DataProvider, Ohlcv, ProviderError, SymInfo, Timeframe};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -49,6 +49,23 @@ impl CsvSource {
         self
     }
 
+    /// The file's bars as a [`Data`], timeframe inferred from their spacing. This
+    /// is a fixed dataset; [`request`](DataProvider::request) serves the same
+    /// bars, resampled up when a coarser timeframe is asked for.
+    pub fn load(&self) -> Result<Data, DataError> {
+        let file = std::fs::File::open(&self.path).map_err(|source| DataError::Read {
+            path: self.path.display().to_string(),
+            source: source.into(),
+        })?;
+
+        let rows = self.read(file).map_err(|source| DataError::Read {
+            path: self.path.display().to_string(),
+            source,
+        })?;
+
+        Ok(Data::from_ohlcv(rows).with_syminfo(self.syminfo.clone()))
+    }
+
     fn read(&self, source: impl Read) -> Result<Vec<Ohlcv>, csv::Error> {
         csv::ReaderBuilder::new()
             .comment(Some(b'#'))
@@ -70,19 +87,11 @@ impl CsvSource {
     }
 }
 
-impl DataSource for CsvSource {
-    fn load(&self) -> Result<Data, DataError> {
-        let file = std::fs::File::open(&self.path).map_err(|source| DataError::Read {
-            path: self.path.display().to_string(),
-            source: source.into(),
-        })?;
-
-        let rows = self.read(file).map_err(|source| DataError::Read {
-            path: self.path.display().to_string(),
-            source,
-        })?;
-
-        Ok(Data::from_ohlcv(rows).with_syminfo(self.syminfo.clone()))
+impl DataProvider for CsvSource {
+    /// Serve the file's bars, resampling to a coarser `timeframe` like any other
+    /// static feed — the [`StaticProvider`] path over the loaded [`Data`].
+    fn request(&self, symbol: &str, timeframe: Timeframe) -> Result<Data, ProviderError> {
+        StaticProvider::new(self.load()?).request(symbol, timeframe)
     }
 }
 

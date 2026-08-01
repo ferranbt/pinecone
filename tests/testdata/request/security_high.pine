@@ -1,0 +1,28 @@
+//@version=5
+indicator("request/security high")
+// request.security aggregates OHLC, not just close: a 5-minute bar's `high` is
+// the maximum over its five minutes. highs are 105..119, so the 5-minute highs
+// are 109, 114 and 119, each visible once its bar confirms (non-repainting).
+
+// Bars: 15
+// Data: request_bars.csv
+
+htf = request.security(syminfo.tickerid, "5", high)
+log.info(str.tostring(htf))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 109
+// 109
+// 109
+// 109
+// 109
+// 114
+// 114
+// 114
+// 114
+// 114
+// 119

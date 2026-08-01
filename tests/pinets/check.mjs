@@ -6,14 +6,15 @@
 //   node check.mjs            # the conformance folders (see CHECK)
 //   node check.mjs ta/        # any path containing "ta/", ignoring CHECK
 
-import { PineTS } from 'pinets';
+import { PineTS, BaseProvider } from 'pinets';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const testdata = join(here, '..', 'testdata');
-const barsCsv = join(here, '..', 'data', 'bars.csv');
+const dataDir = join(here, '..', 'data');
+const barsCsv = join(dataDir, 'bars.csv');
 
 // The folders we hold to PineTS conformance: the numeric and semantic core,
 // where PineTS is a trustworthy oracle. Representation-heavy areas — constants,
@@ -33,6 +34,7 @@ const CHECK = [
     'arguments/',
     'str/',
     'strategy/',
+    'request/',
 ];
 
 // Divergences we are not treating as our bugs. Pass --all to check them anyway.
@@ -82,9 +84,9 @@ function fixtures(dir) {
     return out;
 }
 
-/** The bars every fixture runs against, oldest first. */
-function loadBars() {
-    const rows = readFileSync(barsCsv, 'utf8')
+/** Bars from a `time,open,high,low,close,volume` CSV, oldest first. */
+function readBars(path) {
+    const rows = readFileSync(path, 'utf8')
         .split('\n')
         .map((l) => l.trim())
         .filter((l) => l && !l.startsWith('#') && !l.startsWith('time'));
@@ -118,14 +120,47 @@ function expectedOutput(source) {
     return lines;
 }
 
+function dataFile(source) {
+    const name = source
+        .split('\n')
+        .map((l) => l.trim())
+        .find((l) => l.startsWith('// Data:'))
+        ?.slice('// Data:'.length)
+        .trim();
+    return name ? join(dataDir, name) : null;
+}
+
+function nativeTimeframe(stepMs) {
+    const minutes = stepMs / 60_000;
+    return Number.isInteger(minutes) && minutes >= 1 ? String(minutes) : '1';
+}
+
 /** Trailing bar count from a `// Bars: N` directive; the default is one bar. */
 function barCount(source) {
     const match = source.match(/^\s*\/\/ Bars:\s*(\d+)/m);
     return match ? Math.max(1, Number(match[1])) : 1;
 }
 
-/** Run `source` over `bars` and return the log lines, timestamp prefix stripped. */
-async function runPineTS(source, bars) {
+class StaticProvider extends BaseProvider {
+    constructor(bars, nativeTimeframe) {
+        super({ requiresApiKey: false, providerName: 'Static' });
+        this._bars = bars;
+        this._nativeTimeframe = nativeTimeframe;
+    }
+    getSupportedTimeframes() {
+        return new Set([this._nativeTimeframe]);
+    }
+    async getSymbolInfo(ticker) {
+        return { tickerid: ticker, ticker, mintick: 0.01, type: 'stock', currency: 'USD' };
+    }
+    async _getMarketDataNative(_ticker, _timeframe, limit) {
+        const bars = this._bars;
+        return limit > 0 && bars.length > limit ? bars.slice(bars.length - limit) : bars;
+    }
+}
+
+// Run `source` over `bars` and return the log lines, timestamp prefix stripped
+async function runPineTS(source, bars, provider, chartTimeframe) {
     const logs = [];
     const original = process.stdout.write.bind(process.stdout);
     process.stdout.write = (chunk) => {
@@ -136,7 +171,9 @@ async function runPineTS(source, bars) {
         return true;
     };
     try {
-        const pine = new PineTS(bars, 'TEST', '1', bars.length);
+        const pine = provider
+            ? new PineTS(provider, 'TEST', chartTimeframe, bars.length)
+            : new PineTS(bars, 'TEST', '1', bars.length);
         await pine.run(source);
     } finally {
         process.stdout.write = original;
@@ -172,12 +209,20 @@ for (const name of all) {
     const expected = expectedOutput(source);
     if (expected === null) continue; // error fixture or nothing to print
 
-    const bars = loadBars();
+    // A fixture that names its own `// Data:` CSV runs against those bars; the
+    // rest use the shared bars.csv.
+    const named = dataFile(source);
+    const bars = readBars(named || barsCsv);
     const used = bars.slice(bars.length - barCount(source));
+    const step = used.length > 1 ? used[1].openTime - used[0].openTime : 60_000;
+    const chartTimeframe = nativeTimeframe(step);
+    const provider = name.startsWith('request/')
+        ? new StaticProvider(used, chartTimeframe)
+        : null;
 
     let actual;
     try {
-        actual = await runPineTS(source, used);
+        actual = await runPineTS(source, used, provider, chartTimeframe);
     } catch (error) {
         errored.push({ name, error: error.message });
         continue;

@@ -1,8 +1,11 @@
 //@version=5
 indicator("basics/timeframe")
-// timeframe.* is host-supplied data. The harness compiles with period "3D",
-// so this asserts the passthrough (period) and the derived classification
-// (multiplier / is* flags).
+// timeframe.* is derived from the bar data. This fixture's bars are three days
+// apart (see `// Data:`), so the timeframe is "3D": this asserts the period
+// passthrough and the derived classification (multiplier / is* flags).
+
+// Data: three_day.csv
+
 log.info(str.tostring(timeframe.period))
 log.info(str.tostring(timeframe.multiplier))
 log.info(str.tostring(timeframe.isdaily))

@@ -139,6 +139,9 @@ pub enum Value<O: PineOutput> {
         body: Vec<Stmt>,
     },
     BuiltinFunction(Builtin<O>), // Builtin callable plus the arguments it accepts
+    /// An unevaluated expression, passed to a builtin that captured it (a lazy
+    /// parameter) to run in another context — e.g. `request.security`.
+    Expr(Rc<Expr>),
     Type {
         name: String,
         fields: Vec<TypeField>,
@@ -187,6 +190,7 @@ impl<O: PineOutput> std::fmt::Debug for Value<O> {
             } => write!(f, "Object({}:{:?})", type_name, fields),
             Value::Function { params, .. } => write!(f, "Function({} params)", params.len()),
             Value::BuiltinFunction(_) => write!(f, "BuiltinFunction"),
+            Value::Expr(_) => write!(f, "Expr"),
             Value::Type { name, .. } => write!(f, "Type({})", name),
             Value::Enum {
                 enum_name,
@@ -468,6 +472,12 @@ pub struct Interpreter<O: PineOutput> {
     /// The simulated broker a `strategy` script trades against. `None` for an
     /// `indicator`. The `strategy.*` order builtins reach it through `ctx`.
     pub broker: Option<Box<dyn pine_broker::Broker>>,
+    /// The feed `request.security` draws other symbols/timeframes from, and the
+    /// chart's bar spacing in ms (for `request.security_lower_tf`). `None` when
+    /// no host provider is set. The `request.*` builtins reach these through
+    /// `ctx`, the same way `strategy.*` reaches the broker.
+    pub request_provider: Option<Rc<dyn pine_core::DataProvider>>,
+    pub chart_period: Option<i64>,
 }
 
 /// Names a statement block ASSIGNS (declares or writes) directly — i.e. the true
@@ -538,6 +548,8 @@ impl<O: PineOutput> Interpreter<O> {
             current_call_id: 0,
             bar_seq: 0,
             broker: None,
+            request_provider: None,
+            chart_period: None,
         }
     }
 
@@ -550,6 +562,16 @@ impl<O: PineOutput> Interpreter<O> {
     /// Set the library loader
     pub fn set_library_loader(&mut self, library_loader: Box<dyn LibraryLoader>) {
         self.library_loader = Some(library_loader);
+    }
+
+    /// A copy of every defined variable's value, so a secondary interpreter
+    /// (`request.security`) can start from the same namespaces and builtins
+    /// without re-registering them.
+    pub fn snapshot(&self) -> HashMap<String, Value<O>> {
+        self.variables
+            .iter()
+            .map(|(name, var)| (name.clone(), var.value.clone()))
+            .collect()
     }
 
     /// Get the exported items from this interpreter (for library mode)
@@ -634,12 +656,16 @@ impl<O: PineOutput> Interpreter<O> {
     }
 
     /// Helper to evaluate arguments and validate positional-before-named rule
+    /// Evaluate a call's arguments. A parameter marked lazy in `signature`
+    /// receives its argument unevaluated, as a captured [`Value::Expr`].
     fn evaluate_arguments(
         &mut self,
         args: &[Argument],
+        signature: Option<&BuiltinSignature>,
     ) -> Result<Vec<EvaluatedArg<O>>, RuntimeError> {
         let mut evaluated_args = Vec::new();
         let mut seen_named = false;
+        let mut positional_index = 0;
 
         for arg in args {
             match arg {
@@ -649,12 +675,15 @@ impl<O: PineOutput> Interpreter<O> {
                             "Positional arguments cannot follow named arguments".to_string(),
                         ));
                     }
-                    let value = self.eval_expr(expr)?;
+                    let lazy = signature.is_some_and(|s| s.positional_is_lazy(positional_index));
+                    let value = self.eval_or_capture(expr, lazy)?;
                     evaluated_args.push(EvaluatedArg::Positional(value));
+                    positional_index += 1;
                 }
                 Argument::Named { name, value: expr } => {
                     seen_named = true;
-                    let value = self.eval_expr(expr)?;
+                    let lazy = signature.is_some_and(|s| s.named_is_lazy(name));
+                    let value = self.eval_or_capture(expr, lazy)?;
                     evaluated_args.push(EvaluatedArg::Named {
                         name: name.clone(),
                         value,
@@ -664,6 +693,16 @@ impl<O: PineOutput> Interpreter<O> {
         }
 
         Ok(evaluated_args)
+    }
+
+    /// Evaluate `expr`, or capture it unevaluated as a [`Value::Expr`] when the
+    /// parameter it binds to is lazy.
+    fn eval_or_capture(&mut self, expr: &Expr, lazy: bool) -> Result<Value<O>, RuntimeError> {
+        if lazy {
+            Ok(Value::Expr(Rc::new(expr.clone())))
+        } else {
+            self.eval_expr(expr)
+        }
     }
 
     fn execute_stmt(&mut self, stmt: &Stmt) -> Result<Option<Value<O>>, RuntimeError> {
@@ -1413,7 +1452,7 @@ impl<O: PineOutput> Interpreter<O> {
                             // Evaluate the other arguments
                             let mut evaluated_args: Vec<EvaluatedArg<O>> =
                                 vec![EvaluatedArg::Positional(obj_value)];
-                            evaluated_args.extend(self.evaluate_arguments(args)?);
+                            evaluated_args.extend(self.evaluate_arguments(args, None)?);
 
                             // Call the method (treating it like a function),
                             // threading the call site id so method-local state
@@ -1428,12 +1467,15 @@ impl<O: PineOutput> Interpreter<O> {
                     }
                 }
 
-                // Not a method call, proceed with regular function call
-                // Evaluate arguments and validate positional-before-named rule
-                let evaluated_args = self.evaluate_arguments(args)?;
-
-                // Evaluate the callee expression to get the function
+                // Not a method call, proceed with regular function call.
+                // Resolve the callee first so a builtin's lazy parameters can
+                // capture their arguments unevaluated.
                 let callee_value = self.eval_expr(callee)?;
+                let signature = match &callee_value {
+                    Value::BuiltinFunction(builtin) => Some(builtin.signature.clone()),
+                    _ => None,
+                };
+                let evaluated_args = self.evaluate_arguments(args, signature.as_ref())?;
 
                 // Call the function based on its type
                 match callee_value {

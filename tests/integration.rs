@@ -3,26 +3,20 @@ mod tests {
     use pine::ScriptBuilder;
     use pine_ast::Program;
     use pine_core::Data;
-    use pine_core::{SymInfo, Timeframe, TimeframeUnit};
-    use pine_data::{CsvSource, DataSource};
+    use pine_core::SymInfo;
+    use pine_data::CsvSource;
     use pine_interpreter::{AlertConditionOutput, DefaultPineOutput, LibraryLoader, LogOutput};
     use pine_lexer::Lexer;
     use pine_parser::Parser;
     use std::fs;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
-    /// The bars every fixture runs against, read from `tests/data/bars.csv`.
-    fn test_data() -> Data {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("data")
-            .join("bars.csv");
-
+    fn load_test_data(path: PathBuf) -> Data {
         CsvSource::from_path(&path)
             .expect("bar fixture should load")
             .with_syminfo(test_syminfo())
             .load()
             .expect("bar fixture should load")
-            .with_timeframe(test_timeframe())
     }
 
     enum ExpectedResult {
@@ -111,17 +105,11 @@ mod tests {
         }
     }
 
-    /// Number of trailing bars to run a script over, from an optional
-    /// `// Bars: N` directive. Absent means the default single (last) bar.
-    fn extract_bar_count(source: &str) -> Option<usize> {
-        for line in source.lines() {
-            if let Some(rest) = line.trim().strip_prefix("// Bars:") {
-                if let Ok(n) = rest.trim().parse::<usize>() {
-                    return Some(n.max(1));
-                }
-            }
-        }
-        None
+    fn directive<T: std::str::FromStr>(source: &str, marker: &str) -> Option<T> {
+        source
+            .lines()
+            .find_map(|l| l.trim().strip_prefix(marker))
+            .and_then(|rest| rest.trim().parse().ok())
     }
 
     /// Fixed symbol information every script is compiled with, so a fixture can
@@ -142,24 +130,23 @@ mod tests {
         }
     }
 
-    /// Fixed timeframe every script is compiled with, so a fixture can assert
-    /// `timeframe.*` against known values (period "3D" → multiplier 3, daily).
-    fn test_timeframe() -> Timeframe {
-        Timeframe {
-            multiplier: 3,
-            unit: TimeframeUnit::Daily,
-        }
-    }
-
     fn execute_pine_script_with_logger(source: &str) -> eyre::Result<Vec<String>> {
         let library_loader = TestLibraryLoader::new();
+
+        // Use the `// Data: <name>` to choose which data set of ohlc bars
+        // to use for the simulation, defaulting to the shared bars.csv.
+        let name = directive::<String>(source, "// Data:").unwrap_or_else(|| "bars.csv".into());
+        let data_file = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("data")
+            .join(name);
+        let mut data = load_test_data(data_file);
 
         // A script is replayed over every bar it is given, so the fixture's
         // `// Bars: N` chooses how much history it sees by trimming the data
         // rather than by stopping the run early. The default is the last bar,
-        // which is what most fixtures assert against.
-        let mut data = test_data();
-        let bar_count = extract_bar_count(source).unwrap_or(1).min(data.bars.len());
+        let bar_count = directive::<usize>(source, "// Bars:")
+            .unwrap_or(1)
+            .clamp(1, data.bars.len());
         data.bars = data.bars.split_off(data.bars.len() - bar_count);
 
         let outputs = ScriptBuilder::<DefaultPineOutput>::with_code(source)

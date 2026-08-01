@@ -1,0 +1,33 @@
+//@version=5
+indicator("request/security")
+// request.security with no host provider resamples the chart's own bars. This
+// fixture's data is minute-spaced (see `// Data:`), so "5" aggregates every 5
+// bars into one 5-minute bar. A bar is only visible once its last minute closes
+// (non-repainting), so the value is na until the first 5-minute bar confirms,
+// then steps each time a new one does.
+//
+// close is 102..116; the 5-minute bars confirm on bars 4 (close 106),
+// 9 (close 111) and 14 (close 116).
+
+// Bars: 15
+// Data: request_bars.csv
+
+htf = request.security(syminfo.tickerid, "5", close)
+log.info(str.tostring(htf))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 106
+// 106
+// 106
+// 106
+// 106
+// 111
+// 111
+// 111
+// 111
+// 111
+// 116
