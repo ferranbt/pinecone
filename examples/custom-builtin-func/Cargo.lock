@@ -473,6 +473,7 @@ name = "pine-builtins"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "pine-ast",
  "pine-broker",
  "pine-builtin-macro",
  "pine-core",
@@ -508,6 +509,7 @@ version = "0.1.0"
 dependencies = [
  "pine-ast",
  "pine-broker",
+ "pine-core",
  "thiserror",
 ]
 

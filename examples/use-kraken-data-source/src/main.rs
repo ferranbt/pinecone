@@ -17,7 +17,7 @@ plot(fast, title="fast")
 plot(slow, title="slow")
 "#;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let data = KrakenSource::new().request("XBTUSD", "60".parse()?)?;
     println!(
         "{}: {} bars at {}",
