@@ -48,9 +48,9 @@ impl DataProvider for StaticProvider {
         if !symbol.is_empty() && symbol != self.data.syminfo.tickerid {
             return Err(format!("no data for symbol {symbol:?}").into());
         }
-        let tf_ms = timeframe.to_millis().ok_or_else(|| {
-            format!("cannot resample to timeframe {:?}", timeframe.period())
-        })?;
+        let tf_ms = timeframe
+            .to_millis()
+            .ok_or_else(|| format!("cannot resample to timeframe {:?}", timeframe.period()))?;
         // Native spacing from the bars themselves; can't go below it.
         let native = self
             .data

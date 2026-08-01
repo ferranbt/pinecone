@@ -29,8 +29,7 @@ impl DataProvider for KrakenSource {
         // to the hour its API defaults to.
         let minutes = timeframe.as_minutes().unwrap_or(60);
 
-        let url =
-            format!("https://api.kraken.com/0/public/OHLC?pair={pair}&interval={minutes}");
+        let url = format!("https://api.kraken.com/0/public/OHLC?pair={pair}&interval={minutes}");
         let body = fetch(&url)?;
 
         let bad = |message: String| DataError::Provider {

@@ -151,7 +151,7 @@ pub enum Value<O: PineOutput> {
         field_name: String, // The specific field/member name (e.g., "buy")
         title: String,      // The title of this enum member
     }, // Enum member value
-    Color(Color),                // Color value
+    Color(Color), // Color value
     Matrix {
         element_type: String, // Type of elements: "int", "float", "string", "bool"
         data: Rc<RefCell<Vec<Vec<Value<O>>>>>, // 2D matrix - mutable shared reference to rows of columns
