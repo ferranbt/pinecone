@@ -1,0 +1,29 @@
+//@version=5
+indicator("request/security req15")
+// A coarser request over minute data (see `// Data:`): at "15" the fifteen
+// one-minute bars fall into a single 15-minute bar, which only confirms on the
+// last one. So the value is na for the whole run until the final bar, where it
+// is that 15-minute bar's close.
+
+// Bars: 15
+// Data: request_bars.csv
+
+htf = request.security(syminfo.tickerid, "15", close)
+log.info(str.tostring(htf))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// 116

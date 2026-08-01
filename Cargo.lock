@@ -1467,6 +1467,7 @@ name = "pine-builtins"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "pine-ast",
  "pine-broker",
  "pine-builtin-macro",
  "pine-core",
@@ -1518,6 +1519,7 @@ dependencies = [
  "eyre",
  "pine-ast",
  "pine-broker",
+ "pine-core",
  "pine-lexer",
  "pine-parser",
  "thiserror",

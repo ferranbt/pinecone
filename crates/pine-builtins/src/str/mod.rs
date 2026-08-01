@@ -211,34 +211,43 @@ struct StrToString<O: PineOutput> {
 impl<O: PineOutput> StrToString<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let _ = &self.format;
-        let result = match &self.value {
-            Value::String(s) => s.clone(),
-            Value::Int(n) => n.to_string(),
-            Value::Number(n) => n.to_string(),
-            Value::Bool(b) => if *b { "true" } else { "false" }.to_string(),
-            Value::Na => "NaN".to_string(),
-            Value::Color(color) => {
-                format!("rgba({}, {}, {}, {})", color.r, color.g, color.b, color.t)
-            }
-            Value::Array(_) => "[Array]".to_string(),
-            Value::Series(series) => format!("[Series:{}]", series.id),
-            Value::Object { type_name, .. } => format!("[Object:{}]", type_name),
-            Value::Function { .. } => "[Function]".to_string(),
-            Value::BuiltinFunction(_) => "[BuiltinFunction]".to_string(),
-            Value::Type { name, .. } => format!("[Type:{}]", name),
-            Value::Enum {
-                enum_name,
-                field_name,
-                ..
-            } => format!("{}::{}", enum_name, field_name),
-            Value::Matrix { data, .. } => {
-                let matrix_ref = data.borrow();
-                let rows = matrix_ref.len();
-                let cols = if rows > 0 { matrix_ref[0].len() } else { 0 };
-                format!("[Matrix:{}x{}]", rows, cols)
-            }
-        };
-        Ok(Value::String(result))
+        Ok(Value::String(render_value(&self.value)))
+    }
+}
+
+/// Render a value the way `str.tostring` does. Arrays render their elements the
+/// same way inside `[...]`, matching Pine (`str.tostring([102]) == "[102]"`).
+fn render_value<O: PineOutput>(value: &Value<O>) -> String {
+    match value {
+        Value::String(s) => s.clone(),
+        Value::Int(n) => n.to_string(),
+        Value::Number(n) => n.to_string(),
+        Value::Bool(b) => if *b { "true" } else { "false" }.to_string(),
+        Value::Na => "NaN".to_string(),
+        Value::Color(color) => {
+            format!("rgba({}, {}, {}, {})", color.r, color.g, color.b, color.t)
+        }
+        Value::Array(arr) => {
+            let parts: Vec<String> = arr.borrow().iter().map(render_value).collect();
+            format!("[{}]", parts.join(", "))
+        }
+        Value::Series(series) => format!("[Series:{}]", series.id),
+        Value::Object { type_name, .. } => format!("[Object:{}]", type_name),
+        Value::Function { .. } => "[Function]".to_string(),
+        Value::BuiltinFunction(_) => "[BuiltinFunction]".to_string(),
+        Value::Expr(_) => "[Expr]".to_string(),
+        Value::Type { name, .. } => format!("[Type:{}]", name),
+        Value::Enum {
+            enum_name,
+            field_name,
+            ..
+        } => format!("{}::{}", enum_name, field_name),
+        Value::Matrix { data, .. } => {
+            let matrix_ref = data.borrow();
+            let rows = matrix_ref.len();
+            let cols = if rows > 0 { matrix_ref[0].len() } else { 0 };
+            format!("[Matrix:{}x{}]", rows, cols)
+        }
     }
 }
 

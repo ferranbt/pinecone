@@ -32,6 +32,7 @@ mod log;
 mod math;
 mod matrix;
 mod plot;
+mod request;
 mod str;
 mod strategy;
 mod syminfo;
@@ -219,6 +220,7 @@ pub fn register_namespace_objects<
     for (name, value) in indicator::register(version) {
         namespaces.insert(name, value);
     }
+    namespaces.insert("request".to_string(), request::register());
     namespaces.insert("strategy".to_string(), strategy::register(version));
     namespaces.insert("alertcondition".to_string(), alertcondition::register());
     namespaces.insert("fill".to_string(), fill::register());

@@ -88,6 +88,15 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
         )
     };
 
+    // `builtin_fn` carries `O` only when the method does (a plain-field struct).
+    // A struct that declares `O` itself already has it in scope, so calling
+    // `builtin_fn` there must not re-supply it with a turbofish.
+    let builtin_fn_call = if input.generics.params.is_empty() {
+        quote! { Self::builtin_fn::<O>() }
+    } else {
+        quote! { Self::builtin_fn() }
+    };
+
     let body = quote! {
         // Extract type parameters first
         #type_param_extraction
@@ -193,7 +202,7 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
                 /// accepts, so a caller registers one thing, not two.
                 pub fn builtin_value #fn_generics () -> ::pine_interpreter::Value<O> {
                     ::pine_interpreter::Value::BuiltinFunction(::pine_interpreter::Builtin {
-                        call: Self::builtin_fn::<O>(),
+                        call: #builtin_fn_call,
                         signature: Self::signature(),
                     })
                 }
@@ -374,6 +383,7 @@ fn generate_signature(
             let field_ty = &field.ty;
             let type_str = quote! { #field_ty }.to_string();
             let variadic = is_field_variadic(field);
+            let lazy = is_field_lazy(field);
             let (has_default, _) = parse_field_default(field);
             // A defaulted, variadic or Option field may be omitted.
             let required = !has_default && !variadic && !type_str.contains("Option");
@@ -401,6 +411,7 @@ fn generate_signature(
                     ty: #ty,
                     required: #required,
                     variadic: #variadic,
+                    lazy: #lazy,
                 }
             }
         });
@@ -629,6 +640,20 @@ fn is_field_variadic(field: &Field) -> bool {
                 if tokens_str.contains("variadic") {
                     return true;
                 }
+            }
+        }
+    }
+    false
+}
+
+/// `#[arg(lazy)]` marks a param the interpreter passes unevaluated, as a
+/// captured `Value::Expr` — for a builtin that replays the expression itself
+/// (e.g. `request.security`). The field's type must be `Value<O>`.
+fn is_field_lazy(field: &Field) -> bool {
+    for attr in &field.attrs {
+        if let Meta::List(meta_list) = &attr.meta {
+            if meta_list.path.is_ident("arg") && meta_list.tokens.to_string().contains("lazy") {
+                return true;
             }
         }
     }
