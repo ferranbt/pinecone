@@ -147,4 +147,3 @@ mod tests {
         assert!(Data::from_ohlcv([]).bars.is_empty());
     }
 }
-
