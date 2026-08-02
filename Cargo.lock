@@ -1423,23 +1423,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b3cff922bd51709b605d9ead9aa71031d81447142d828eb4a6eba76fe619f9b"
 
 [[package]]
-name = "pine"
-version = "0.1.0"
-dependencies = [
- "eyre",
- "pine-ast",
- "pine-broker",
- "pine-builtins",
- "pine-core",
- "pine-data",
- "pine-diagnostics",
- "pine-interpreter",
- "pine-lexer",
- "pine-parser",
- "pine-sema",
-]
-
-[[package]]
 name = "pine-ast"
 version = "0.1.0"
 dependencies = [
@@ -1502,11 +1485,11 @@ name = "pine-integration-tests"
 version = "0.1.0"
 dependencies = [
  "eyre",
- "pine",
  "pine-ast",
  "pine-core",
  "pine-data",
  "pine-interpreter",
+ "pine-lang",
  "pine-lexer",
  "pine-parser",
  "walkdir",
@@ -1523,6 +1506,23 @@ dependencies = [
  "pine-lexer",
  "pine-parser",
  "thiserror",
+]
+
+[[package]]
+name = "pine-lang"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "pine-ast",
+ "pine-broker",
+ "pine-builtins",
+ "pine-core",
+ "pine-data",
+ "pine-diagnostics",
+ "pine-interpreter",
+ "pine-lexer",
+ "pine-parser",
+ "pine-sema",
 ]
 
 [[package]]
@@ -1590,11 +1590,11 @@ name = "pinecone-benches"
 version = "0.1.0"
 dependencies = [
  "codspeed-criterion-compat",
- "pine",
  "pine-ast",
  "pine-builtins",
  "pine-core",
  "pine-interpreter",
+ "pine-lang",
  "pine-lexer",
  "pine-parser",
 ]

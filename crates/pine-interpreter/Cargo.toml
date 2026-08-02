@@ -1,7 +1,9 @@
 [package]
 name = "pine-interpreter"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
+description = "Interpreter and runtime for Pine Script."
+license.workspace = true
 
 [dependencies]
 pine-ast = { workspace = true }

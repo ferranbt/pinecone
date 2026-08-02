@@ -1,6 +1,8 @@
 [workspace.package]
+version = "0.1.0"
 edition = "2021"
 rust-version = "1.83"
+license = "MPL-2.0"
 
 [workspace]
 members = [
@@ -24,20 +26,20 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-pine-broker = { path = "crates/pine-broker" }
-pine-core = { path = "crates/pine-core" }
-pine-data = { path = "crates/pine-data" }
-pine-lexer = { path = "crates/pine-lexer" }
-pine-parser = { path = "crates/pine-parser" }
-pine-ast = { path = "crates/pine-ast" }
-pine-diagnostics = { path = "crates/pine-diagnostics" }
-pine-interpreter = { path = "crates/pine-interpreter" }
-pine-builtin-macro = { path = "crates/pine-builtin-macro" }
-pine-builtins = { path = "crates/pine-builtins" }
-pine-lint = { path = "crates/pine-lint" }
-pine-sema = { path = "crates/pine-sema" }
-pine = { path = "crates/pine" }
-pine-reference = { path = "crates/pine-reference" }
+pine-broker = { path = "crates/pine-broker", version = "0.1.0" }
+pine-core = { path = "crates/pine-core", version = "0.1.0" }
+pine-data = { path = "crates/pine-data", version = "0.1.0" }
+pine-lexer = { path = "crates/pine-lexer", version = "0.1.0" }
+pine-parser = { path = "crates/pine-parser", version = "0.1.0" }
+pine-ast = { path = "crates/pine-ast", version = "0.1.0" }
+pine-diagnostics = { path = "crates/pine-diagnostics", version = "0.1.0" }
+pine-interpreter = { path = "crates/pine-interpreter", version = "0.1.0" }
+pine-builtin-macro = { path = "crates/pine-builtin-macro", version = "0.1.0" }
+pine-builtins = { path = "crates/pine-builtins", version = "0.1.0" }
+pine-lint = { path = "crates/pine-lint", version = "0.1.0" }
+pine-sema = { path = "crates/pine-sema", version = "0.1.0" }
+pine-lang = { path = "crates/pine", version = "0.1.0" }
+pine-reference = { path = "crates/pine-reference", version = "0.1.0" }
 eyre = "0.6"
 thiserror = "2.0"
 clap = { version = "4.5", features = ["derive"] }

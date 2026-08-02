@@ -1,7 +1,9 @@
 [package]
 name = "pine-broker"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
+description = "Simulated broker for backtesting Pine Script strategies."
+license.workspace = true
 
 [dependencies]
 pine-core = { workspace = true }

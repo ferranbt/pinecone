@@ -1,7 +1,9 @@
 [package]
 name = "pine-ast"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
+description = "Abstract syntax tree for Pine Script."
+license.workspace = true
 
 [dependencies]
 serde.workspace = true

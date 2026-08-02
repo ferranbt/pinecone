@@ -2,7 +2,7 @@
 ///
 /// Fetches hourly BTC/USD candles from Kraken and runs a moving-average
 /// crossover over them.
-use pine::ScriptBuilder;
+use pine_lang::ScriptBuilder;
 use pine_data::KrakenSource;
 use pine_interpreter::DefaultPineOutput;
 
@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .compile()?
         .run()?
         .outputs;
-    let result = pine::RunResult::collect(&outputs);
+    let result = pine_lang::RunResult::collect(&outputs);
 
     let fast = result.plot("fast").expect("fast is plotted");
     let slow = result.plot("slow").expect("slow is plotted");

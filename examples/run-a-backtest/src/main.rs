@@ -2,7 +2,7 @@
 ///
 /// Declares a `strategy`, replays it over synthetic bars, and reads the
 /// equity curve and trade log back from the `RunResult`.
-use pine::ScriptBuilder;
+use pine_lang::ScriptBuilder;
 use pine_interpreter::DefaultPineOutput;
 
 fn main() {
@@ -17,7 +17,7 @@ fn main() {
     "#;
 
     let run = ScriptBuilder::<DefaultPineOutput>::with_code(script_source)
-        .with_data(pine::data::synthetic(10))
+        .with_data(pine_lang::data::synthetic(10))
         .compile()
         .expect("Compilation failed")
         .run()

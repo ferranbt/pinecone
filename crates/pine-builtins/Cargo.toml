@@ -1,7 +1,9 @@
 [package]
 name = "pine-builtins"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
+description = "Built-in functions and namespaces for the Pine Script interpreter."
+license.workspace = true
 
 [dependencies]
 pine-builtin-macro = { workspace = true }

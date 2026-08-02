@@ -3,9 +3,9 @@
 //!
 //! The corpus is cloned on demand (it is gitignored).
 
-use pine::ScriptBuilder;
 use pine_core::{Data, PineVersion};
 use pine_interpreter::DefaultPineOutput;
+use pine_lang::ScriptBuilder;
 use std::fs;
 use std::path::Path;
 use std::process::Command;

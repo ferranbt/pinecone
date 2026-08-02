@@ -1,7 +1,9 @@
 [package]
 name = "pine-core"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
+description = "Core types shared across the Pine Script toolchain: bars, symbols, timeframes, and versions."
+license.workspace = true
 
 [dependencies]
 thiserror = { workspace = true }
