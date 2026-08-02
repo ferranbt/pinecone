@@ -170,7 +170,7 @@ impl DataProvider for YahooSource {
 
         // The requested timeframe is authoritative. Inference would be wrong
         // here: an equity session leaves a short last bar and uneven gaps.
-        Ok(data.with_timeframe(timeframe))
+        Ok(data)
     }
 }
 

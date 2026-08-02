@@ -2,22 +2,27 @@
 mod tests {
     use pine::ScriptBuilder;
     use pine_ast::Program;
-    use pine_core::Data;
-    use pine_core::SymInfo;
-    use pine_data::CsvSource;
+    use pine_core::{SymInfo, Timeframe, TimeframeUnit};
+    use pine_data::StaticProvider;
     use pine_interpreter::{AlertConditionOutput, DefaultPineOutput, LibraryLoader, LogOutput};
     use pine_lexer::Lexer;
     use pine_parser::Parser;
     use std::fs;
     use std::path::{Path, PathBuf};
 
-    fn load_test_data(path: PathBuf) -> Data {
-        CsvSource::from_path(&path)
+    fn load_test_data(path: PathBuf) -> StaticProvider {
+        StaticProvider::from_csv(&path)
             .expect("bar fixture should load")
             .with_syminfo(test_syminfo())
-            .load()
-            .expect("bar fixture should load")
     }
+
+    const TICKER_NAME: &str = "AAPL";
+
+    /// The timeframe of the shared bars.csv
+    const DEFAULT_TIMEFRAME: Timeframe = Timeframe {
+        multiplier: 1,
+        unit: TimeframeUnit::Seconds,
+    };
 
     enum ExpectedResult {
         Output(Vec<String>),
@@ -116,7 +121,7 @@ mod tests {
     /// assert `syminfo.*` against known values.
     fn test_syminfo() -> SymInfo {
         SymInfo {
-            ticker: "AAPL".to_string(),
+            ticker: TICKER_NAME.to_string(),
             tickerid: "NASDAQ:AAPL".to_string(),
             description: "Apple Inc.".to_string(),
             prefix: "NASDAQ".to_string(),
@@ -134,24 +139,27 @@ mod tests {
         let library_loader = TestLibraryLoader::new();
 
         // Use the `// Data: <name>` to choose which data set of ohlc bars
-        // to use for the simulation, defaulting to the shared bars.csv.
+        // defaults to bars.csv.
         let name = directive::<String>(source, "// Data:").unwrap_or_else(|| "bars.csv".into());
         let data_file = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("data")
             .join(name);
-        let mut data = load_test_data(data_file);
 
-        // A script is replayed over every bar it is given, so the fixture's
-        // `// Bars: N` chooses how much history it sees by trimming the data
-        // rather than by stopping the run early. The default is the last bar,
-        let bar_count = directive::<usize>(source, "// Bars:")
-            .unwrap_or(1)
-            .clamp(1, data.bars.len());
-        data.bars = data.bars.split_off(data.bars.len() - bar_count);
+        let provider = load_test_data(data_file);
+
+        // Use `// Timeframe:` to set a custom timeframe, defaults to 1 second
+        let timeframe =
+            directive::<Timeframe>(source, "// Timeframe:").unwrap_or(DEFAULT_TIMEFRAME);
+
+        // Use `// Bars: N` to choose how many bars to use.
+        let bar_count = directive::<usize>(source, "// Bars:").unwrap_or(1);
 
         let outputs = ScriptBuilder::<DefaultPineOutput>::with_code(source)
             .with_library_loader(Box::new(library_loader))
-            .with_data(data)
+            .with_ticker(TICKER_NAME.to_string())
+            .with_timeframe(timeframe)
+            .with_bar_count(bar_count)
+            .with_request_provider(Box::new(provider))
             .compile()?
             .run()?
             .outputs;

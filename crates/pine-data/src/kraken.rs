@@ -104,15 +104,13 @@ impl DataProvider for KrakenSource {
 
         let rows = candles.into_iter().map(Ohlcv::from);
 
-        Ok(Data::from_ohlcv(rows)
-            .with_syminfo(SymInfo {
-                ticker: pair.clone(),
-                tickerid: format!("KRAKEN:{pair}"),
-                prefix: "KRAKEN".to_string(),
-                type_: "crypto".to_string(),
-                ..SymInfo::default()
-            })
-            .with_timeframe(timeframe))
+        Ok(Data::from_ohlcv(rows).with_syminfo(SymInfo {
+            ticker: pair.clone(),
+            tickerid: format!("KRAKEN:{pair}"),
+            prefix: "KRAKEN".to_string(),
+            type_: "crypto".to_string(),
+            ..SymInfo::default()
+        }))
     }
 }
 

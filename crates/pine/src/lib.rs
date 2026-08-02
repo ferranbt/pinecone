@@ -16,7 +16,7 @@ pub use pine_core::DataProvider;
 pub use run::{Run, RunResult};
 
 use pine_ast::Program;
-use pine_core::{Bar, Data, PineVersion, SymInfo, Timeframe, VersionError};
+use pine_core::{Bar, Data, PineVersion, Timeframe, VersionError};
 use pine_diagnostics::Diagnostic;
 use pine_interpreter::{
     AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, IndicatorOutput, InputOutput,
@@ -40,6 +40,9 @@ pub enum Error {
     /// The script's `//@version=N` annotation names a version this toolchain
     /// cannot compile.
     Version(VersionError),
+    /// No bars to run over: neither data nor a provider was given, or the
+    /// provider could not produce the requested feed.
+    Data(pine_core::ProviderError),
 }
 
 impl std::fmt::Display for Error {
@@ -49,6 +52,7 @@ impl std::fmt::Display for Error {
             Error::Parser(e) => write!(f, "Parser error: {}", e),
             Error::Runtime(e) => write!(f, "Runtime error: {}", e),
             Error::Version(e) => write!(f, "Version error: {}", e),
+            Error::Data(e) => write!(f, "Data error: {}", e),
             // One diagnostic per line, so multiple errors are simply appended.
             Error::Sema(diags) => {
                 for (i, d) in diags.iter().enumerate() {
@@ -94,9 +98,10 @@ pub struct ScriptBuilder<O: PineOutput> {
     custom_variables: HashMap<String, Value<O>>,
     library_loader: Option<Box<dyn LibraryLoader>>,
     request_provider: Option<Box<dyn DataProvider>>,
-    syminfo: Option<SymInfo>,
-    timeframe: Option<Timeframe>,
+    ticker: Option<String>,
+    timeframe: Timeframe,
     data: Option<Data>,
+    bar_count: Option<usize>,
 }
 
 impl<O: PineOutput> ScriptBuilder<O> {
@@ -106,9 +111,10 @@ impl<O: PineOutput> ScriptBuilder<O> {
             custom_variables: HashMap::new(),
             library_loader: None,
             request_provider: None,
-            syminfo: None,
-            timeframe: None,
+            ticker: None,
+            timeframe: Timeframe::default(),
             data: None,
+            bar_count: None,
         }
     }
 
@@ -132,16 +138,22 @@ impl<O: PineOutput> ScriptBuilder<O> {
         self
     }
 
-    /// Symbol information exposed to the script as `syminfo.*`
-    pub fn with_syminfo(mut self, syminfo: SymInfo) -> Self {
-        self.syminfo = Some(syminfo);
+    pub fn with_ticker(mut self, ticker: String) -> Self {
+        self.ticker = Some(ticker);
         self
     }
 
     /// The chart timeframe exposed to the script as `timeframe.*`. Without one,
     /// the namespace is populated with defaults.
     pub fn with_timeframe(mut self, timeframe: Timeframe) -> Self {
-        self.timeframe = Some(timeframe);
+        self.timeframe = timeframe;
+        self
+    }
+
+    /// Run over only the last `bar_count` bars of the feed. Without one, the
+    /// whole feed is used.
+    pub fn with_bar_count(mut self, bar_count: usize) -> Self {
+        self.bar_count = Some(bar_count);
         self
     }
 
@@ -172,23 +184,31 @@ impl<O: PineOutput> ScriptBuilder<O> {
             + AlertConditionOutput
             + FillOutput,
     {
-        // The data describes itself; explicit builder settings override it.
-        let data = self.data.unwrap_or_default();
-        let syminfo = self.syminfo.unwrap_or(data.syminfo);
-        let timeframe = self.timeframe.unwrap_or(data.timeframe);
-        let bars = data.bars;
+        let data = match self.data {
+            Some(data) => data,
+            None => {
+                let provider = self
+                    .request_provider
+                    .as_ref()
+                    .ok_or_else(|| Error::Data("no data or request provider set".into()))?;
 
-        // `request.security`'s feed. An explicit provider (a real exchange) wins;
-        // otherwise the chart's own bars serve it, so `request.security` at a
-        // higher timeframe resamples the data already loaded — one source.
-        let request_provider: Rc<dyn DataProvider> = match self.request_provider {
-            Some(provider) => Rc::from(provider),
-            None => Rc::new(pine_data::StaticProvider::new(Data {
-                syminfo: syminfo.clone(),
-                timeframe: timeframe.clone(),
-                bars: bars.clone(),
-            })),
+                let ticker = self.ticker.clone().unwrap_or_default();
+                provider
+                    .request(&ticker, self.timeframe.clone())
+                    .map_err(Error::Data)?
+            }
         };
+
+        let syminfo = data.syminfo;
+        let timeframe = self.timeframe;
+
+        // Keep only the last `bar_count` bars when the caller limited the run.
+        let mut bars = data.bars;
+        if let Some(n) = self.bar_count {
+            let len = bars.len();
+            bars = bars.split_off(len.saturating_sub(n.max(1)));
+        }
+
         // The chart's bar spacing, so `request.security_lower_tf` can reject a
         // request that is not actually lower than the chart timeframe.
         let chart_period = bars
@@ -246,7 +266,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
             interpreter.set_library_loader(library_loader);
         }
         // The feed `request.security` draws from, reached through `ctx`.
-        interpreter.request_provider = Some(request_provider);
+        interpreter.request_provider = self.request_provider.map(Rc::from);
         interpreter.chart_period = chart_period;
 
         // Register namespace objects as const variables

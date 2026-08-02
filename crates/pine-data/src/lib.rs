@@ -10,18 +10,15 @@
 
 use pine_core::{Data, Ohlcv};
 
-// `::csv` is the crate; the module below shadows the bare name here.
-mod csv;
-mod resample;
+mod static_provider;
 
 mod binance;
 mod kraken;
 mod yahoo;
 
 pub use binance::BinanceSource;
-pub use csv::CsvSource;
 pub use kraken::KrakenSource;
-pub use resample::{resample, StaticProvider};
+pub use static_provider::{resample, StaticProvider};
 pub use yahoo::YahooSource;
 
 pub(crate) fn fetch(url: &str) -> Result<String, DataError> {

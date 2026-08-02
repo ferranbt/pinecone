@@ -1,10 +1,9 @@
 //@version=5
 indicator("basics/timeframe")
-// timeframe.* is derived from the bar data. This fixture's bars are three days
-// apart (see `// Data:`), so the timeframe is "3D": this asserts the period
-// passthrough and the derived classification (multiplier / is* flags).
+// timeframe.* comes from the `// Timeframe:` directive: this asserts the period
+// passthrough and the derived classification (multiplier / is* flags) for "3D".
 
-// Data: three_day.csv
+// Timeframe: 3D
 
 log.info(str.tostring(timeframe.period))
 log.info(str.tostring(timeframe.multiplier))

@@ -120,25 +120,21 @@ function expectedOutput(source) {
     return lines;
 }
 
-function dataFile(source) {
-    const name = source
-        .split('\n')
-        .map((l) => l.trim())
-        .find((l) => l.startsWith('// Data:'))
-        ?.slice('// Data:'.length)
-        .trim();
-    return name ? join(dataDir, name) : null;
+/** The value after a `// Marker:` directive line, or null. */
+function directive(source, marker) {
+    return (
+        source
+            .split('\n')
+            .map((l) => l.trim())
+            .find((l) => l.startsWith(marker))
+            ?.slice(marker.length)
+            .trim() ?? null
+    );
 }
 
 function nativeTimeframe(stepMs) {
     const minutes = stepMs / 60_000;
     return Number.isInteger(minutes) && minutes >= 1 ? String(minutes) : '1';
-}
-
-/** Trailing bar count from a `// Bars: N` directive; the default is one bar. */
-function barCount(source) {
-    const match = source.match(/^\s*\/\/ Bars:\s*(\d+)/m);
-    return match ? Math.max(1, Number(match[1])) : 1;
 }
 
 class StaticProvider extends BaseProvider {
@@ -209,13 +205,12 @@ for (const name of all) {
     const expected = expectedOutput(source);
     if (expected === null) continue; // error fixture or nothing to print
 
-    // A fixture that names its own `// Data:` CSV runs against those bars; the
-    // rest use the shared bars.csv.
-    const named = dataFile(source);
-    const bars = readBars(named || barsCsv);
-    const used = bars.slice(bars.length - barCount(source));
+    const named = directive(source, '// Data:');
+    const bars = readBars(named ? join(dataDir, named) : barsCsv);
+    const barCount = Math.max(1, Number(directive(source, '// Bars:')) || 1);
+    const used = bars.slice(bars.length - barCount);
     const step = used.length > 1 ? used[1].openTime - used[0].openTime : 60_000;
-    const chartTimeframe = nativeTimeframe(step);
+    const chartTimeframe = directive(source, '// Timeframe:') ?? nativeTimeframe(step);
     const provider = name.startsWith('request/')
         ? new StaticProvider(used, chartTimeframe)
         : null;
