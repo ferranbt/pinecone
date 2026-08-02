@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use pine_lang::ScriptBuilder;
     use pine_ast::Program;
     use pine_core::{SymInfo, Timeframe, TimeframeUnit};
     use pine_data::StaticProvider;
     use pine_interpreter::{AlertConditionOutput, DefaultPineOutput, LibraryLoader, LogOutput};
+    use pine_lang::ScriptBuilder;
     use pine_lexer::Lexer;
     use pine_parser::Parser;
     use std::fs;
