@@ -5,8 +5,6 @@ use pine_core::{Data, DataProvider, Ohlcv, ProviderError, SymInfo, Timeframe};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-/// One row of a bar file. Column order does not matter — rows are matched to
-/// these fields by the header names.
 #[derive(serde::Deserialize)]
 struct Row {
     /// Opening time as a UNIX timestamp in milliseconds.
@@ -30,9 +28,6 @@ pub struct CsvSource {
 }
 
 impl CsvSource {
-    /// Read `path`, failing if it cannot be parsed. The symbol defaults to a
-    /// placeholder; set it with [`CsvSource::with_syminfo`] when a script reads
-    /// `syminfo.*`.
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self, DataError> {
         let source = Self {
             path: path.as_ref().to_path_buf(),

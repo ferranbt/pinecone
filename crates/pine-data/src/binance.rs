@@ -98,3 +98,18 @@ impl DataProvider for BinanceSource {
         Ok(data.with_timeframe(timeframe))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_binance() {
+        let data = BinanceSource::new()
+            .limit(500)
+            .request("BTCUSDT", "60".parse().unwrap())
+            .unwrap();
+
+        assert_eq!(data.bars.len(), 500);
+    }
+}
