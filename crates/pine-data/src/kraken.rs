@@ -1,7 +1,9 @@
 //! Bars from Kraken's public OHLC endpoint.
 
-use crate::{fetch, quoted, DataError};
+use crate::{fetch, DataError};
 use pine_core::{Data, DataProvider, Ohlcv, ProviderError, SymInfo, Timeframe};
+use serde::{de, Deserialize, Deserializer};
+use std::collections::HashMap;
 
 /// Kraken's public OHLC endpoint, as a [`DataProvider`]: it fetches whatever pair
 /// and timeframe are asked for.
@@ -21,6 +23,57 @@ impl KrakenSource {
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct HttpResult {
+    #[serde(default)]
+    error: Vec<String>,
+    result: Option<OhlcResult>,
+}
+
+// The candles sit under Kraken's own name for the pair — "XBTUSD" comes back as
+// "XXBTZUSD" — so they are whichever key `last` is not.
+#[derive(Debug, Deserialize)]
+struct OhlcResult {
+    #[allow(dead_code)]
+    last: i64,
+    #[serde(flatten)]
+    pairs: HashMap<String, Vec<Candle>>,
+}
+
+// [time, open, high, low, close, vwap, volume, count], the prices as strings.
+#[derive(Debug, Deserialize)]
+struct Candle(
+    i64,
+    #[serde(deserialize_with = "quoted")] f64,
+    #[serde(deserialize_with = "quoted")] f64,
+    #[serde(deserialize_with = "quoted")] f64,
+    #[serde(deserialize_with = "quoted")] f64,
+    #[serde(deserialize_with = "quoted")] f64,
+    #[serde(deserialize_with = "quoted")] f64,
+    i64,
+);
+
+impl From<Candle> for Ohlcv {
+    fn from(candle: Candle) -> Self {
+        let Candle(time, open, high, low, close, _vwap, volume, _count) = candle;
+        Ohlcv {
+            // Kraken timestamps are seconds; a bar's time is in ms.
+            time: time * 1000,
+            open,
+            high,
+            low,
+            close,
+            volume,
+        }
+    }
+}
+
+fn quoted<'de, D: Deserializer<'de>>(deserializer: D) -> Result<f64, D::Error> {
+    <&str>::deserialize(deserializer)?
+        .parse()
+        .map_err(de::Error::custom)
+}
+
 impl DataProvider for KrakenSource {
     fn request(&self, symbol: &str, timeframe: Timeframe) -> Result<Data, ProviderError> {
         let pair = symbol.to_uppercase();
@@ -37,59 +90,40 @@ impl DataProvider for KrakenSource {
             message,
         };
 
-        let json: serde_json::Value =
+        let response: HttpResult =
             serde_json::from_str(&body).map_err(|e| bad(format!("{e}: {body:.200}")))?;
 
-        // Kraken reports failures in an `error` array rather than by status.
-        if let Some(errors) = json.get("error").and_then(|e| e.as_array()) {
-            if !errors.is_empty() {
-                return Err(bad(errors
-                    .iter()
-                    .filter_map(|e| e.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", "))
-                .into());
-            }
+        if !response.error.is_empty() {
+            return Err(bad(response.error.join(", ")).into());
         }
 
-        // `result` holds the candles under Kraken's own name for the pair —
-        // "XBTUSD" comes back as "XXBTZUSD" — alongside a `last` cursor, so the
-        // candles are whichever other key is there.
-        let result = json
-            .get("result")
-            .and_then(|r| r.as_object())
-            .ok_or_else(|| bad("no result".to_string()))?;
-        let candles = result
-            .iter()
-            .find(|(key, _)| key.as_str() != "last")
-            .and_then(|(_, value)| value.as_array())
+        let candles = response
+            .result
+            .and_then(|result| result.pairs.into_values().next())
             .ok_or_else(|| bad(format!("no candles for {pair}")))?;
 
-        let rows = candles
-            .iter()
-            .map(|c| {
-                Some(Ohlcv {
-                    // Kraken timestamps are seconds; a bar's time is in ms.
-                    time: c.get(0)?.as_i64()? * 1000,
-                    open: quoted(c.get(1)?)?,
-                    high: quoted(c.get(2)?)?,
-                    low: quoted(c.get(3)?)?,
-                    close: quoted(c.get(4)?)?,
-                    // [5] is vwap; volume is [6].
-                    volume: quoted(c.get(6)?)?,
-                })
-            })
-            .collect::<Option<Vec<_>>>()
-            .ok_or_else(|| bad("unexpected candle shape".to_string()))?;
+        let rows = candles.into_iter().map(Ohlcv::from);
 
-        Ok(Data::from_ohlcv(rows)
-            .with_syminfo(SymInfo {
-                ticker: pair.clone(),
-                tickerid: format!("KRAKEN:{pair}"),
-                prefix: "KRAKEN".to_string(),
-                type_: "crypto".to_string(),
-                ..SymInfo::default()
-            })
-            .with_timeframe(timeframe))
+        Ok(Data::from_ohlcv(rows).with_syminfo(SymInfo {
+            ticker: pair.clone(),
+            tickerid: format!("KRAKEN:{pair}"),
+            prefix: "KRAKEN".to_string(),
+            type_: "crypto".to_string(),
+            ..SymInfo::default()
+        }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_kraken() {
+        let data = KrakenSource::new()
+            .request("XBTUSD", "60".parse().unwrap())
+            .unwrap();
+
+        assert_ne!(data.bars.len(), 0);
     }
 }

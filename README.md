@@ -19,10 +19,10 @@ A script is replayed over a whole series of bars — series history and indicato
 state build up as they execute.
 
 ```rust
-use pine::data::{CsvSource, DataSource};
-use pine::{RunResult, ScriptBuilder};
+use pine::data::StaticProvider;
+use pine::ScriptBuilder;
 
-let data = CsvSource::from_path("btc_1h.csv")?.load()?;
+let provider = StaticProvider::from_csv("btc_1h.csv")?;
 
 let outputs = ScriptBuilder::with_code(r#"
     fast = ta.sma(close, 10)
@@ -30,7 +30,8 @@ let outputs = ScriptBuilder::with_code(r#"
     plot(fast, title="fast")
     plot(slow, title="slow")
 "#)
-.with_data(data)
+.with_timeframe("60".parse()?)
+.with_request_provider(Box::new(provider))
 .compile()?
 .run()?;
 ```

@@ -4,7 +4,7 @@
 //! The corpus is cloned on demand (it is gitignored).
 
 use pine::ScriptBuilder;
-use pine_core::PineVersion;
+use pine_core::{Data, PineVersion};
 use pine_interpreter::DefaultPineOutput;
 use std::fs;
 use std::path::Path;
@@ -71,7 +71,10 @@ fn test_corpus() -> eyre::Result<()> {
             };
 
             let relative_path = path.strip_prefix(&corpus_dir).unwrap_or(path);
-            match ScriptBuilder::<DefaultPineOutput>::with_code(&source).compile() {
+            match ScriptBuilder::<DefaultPineOutput>::with_code(&source)
+                .with_data(Data::default())
+                .compile()
+            {
                 Ok(_) => println!("✅ {}", relative_path.display()),
                 Err(err) => {
                     println!("❌ {}\n{}\n", relative_path.display(), err);

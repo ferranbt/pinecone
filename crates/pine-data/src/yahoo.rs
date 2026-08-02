@@ -1,7 +1,8 @@
-//! Bars from Yahoo Finance's chart endpoint — the one `yfinance` uses.
+//! Bars from Yahoo Finance's chart endpoint
 
 use crate::{fetch, DataError};
 use pine_core::{Data, DataProvider, Ohlcv, ProviderError, SymInfo, Timeframe};
+use serde::Deserialize;
 
 /// Yahoo Finance's chart endpoint (the one `yfinance` uses) as a [`DataProvider`]
 /// for equities, ETFs, indices, FX and crypto: it fetches whatever symbol and
@@ -55,6 +56,58 @@ impl YahooSource {
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct HttpResult {
+    chart: Chart,
+}
+
+#[derive(Debug, Deserialize)]
+struct Chart {
+    result: Option<Vec<Res>>,
+    error: Option<ChartError>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ChartError {
+    code: String,
+    description: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Res {
+    meta: Metadata,
+    #[serde(default)]
+    timestamp: Vec<i64>,
+    indicators: Indicators,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Metadata {
+    exchange_name: Option<String>,
+    currency: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Indicators {
+    #[serde(default)]
+    quote: Vec<Quote>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct Quote {
+    #[serde(default)]
+    open: Vec<Option<f64>>,
+    #[serde(default)]
+    high: Vec<Option<f64>>,
+    #[serde(default)]
+    low: Vec<Option<f64>>,
+    #[serde(default)]
+    close: Vec<Option<f64>>,
+    #[serde(default)]
+    volume: Vec<Option<f64>>,
+}
+
 impl DataProvider for YahooSource {
     fn request(&self, symbol: &str, timeframe: Timeframe) -> Result<Data, ProviderError> {
         let url = format!(
@@ -70,70 +123,42 @@ impl DataProvider for YahooSource {
             message,
         };
 
-        let json: serde_json::Value =
+        let response: HttpResult =
             serde_json::from_str(&body).map_err(|e| bad(format!("{e}: {body:.200}")))?;
-        let chart = json
-            .get("chart")
-            .ok_or_else(|| bad("no chart".to_string()))?;
 
-        // Yahoo reports failures in the body rather than by status.
-        if let Some(error) = chart.get("error").filter(|e| !e.is_null()) {
-            return Err(bad(error.to_string()).into());
+        if let Some(error) = response.chart.error {
+            return Err(bad(format!("{}: {}", error.code, error.description)).into());
         }
 
-        let result = chart
-            .get("result")
-            .and_then(|r| r.get(0))
+        let result = response
+            .chart
+            .result
+            .and_then(|results| results.into_iter().next())
             .ok_or_else(|| bad(format!("no data for {symbol}")))?;
-
-        let times = result
-            .get("timestamp")
-            .and_then(|t| t.as_array())
-            .ok_or_else(|| bad("no timestamps".to_string()))?;
         let quote = result
-            .get("indicators")
-            .and_then(|i| i.get("quote"))
-            .and_then(|q| q.get(0))
-            .ok_or_else(|| bad("no quotes".to_string()))?;
+            .indicators
+            .quote
+            .into_iter()
+            .next()
+            .unwrap_or_default();
 
-        // The prices come back as parallel columns rather than one array per
-        // candle, and a gap in the data is a null in every column.
-        let column = |name: &str| quote.get(name).and_then(|c| c.as_array());
-        let (opens, highs, lows, closes, volumes) = (
-            column("open"),
-            column("high"),
-            column("low"),
-            column("close"),
-            column("volume"),
-        );
-
-        let rows = (0..times.len())
+        let rows = (0..result.timestamp.len())
             .filter_map(|i| {
-                let at = |c: Option<&Vec<serde_json::Value>>| c?.get(i)?.as_f64();
+                let at = |column: &[Option<f64>]| column.get(i).copied().flatten();
                 Some(Ohlcv {
                     // Yahoo timestamps are seconds; a bar's time is in ms.
-                    time: times.get(i)?.as_i64()? * 1000,
-                    open: at(opens)?,
-                    high: at(highs)?,
-                    low: at(lows)?,
-                    close: at(closes)?,
-                    volume: at(volumes).unwrap_or(0.0),
+                    time: result.timestamp.get(i)? * 1000,
+                    open: at(&quote.open)?,
+                    high: at(&quote.high)?,
+                    low: at(&quote.low)?,
+                    close: at(&quote.close)?,
+                    volume: at(&quote.volume).unwrap_or(0.0),
                 })
             })
             .collect::<Vec<_>>();
 
-        let exchange = result
-            .get("meta")
-            .and_then(|m| m.get("exchangeName"))
-            .and_then(|e| e.as_str())
-            .unwrap_or("YAHOO")
-            .to_string();
-        let currency = result
-            .get("meta")
-            .and_then(|m| m.get("currency"))
-            .and_then(|c| c.as_str())
-            .unwrap_or_default()
-            .to_string();
+        let exchange = result.meta.exchange_name.unwrap_or("YAHOO".to_string());
+        let currency = result.meta.currency.unwrap_or_default();
 
         let data = Data::from_ohlcv(rows).with_syminfo(SymInfo {
             ticker: symbol.to_string(),
@@ -145,6 +170,21 @@ impl DataProvider for YahooSource {
 
         // The requested timeframe is authoritative. Inference would be wrong
         // here: an equity session leaves a short last bar and uneven gaps.
-        Ok(data.with_timeframe(timeframe))
+        Ok(data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_yahoo() {
+        let data = YahooSource::new()
+            .range("6mo")
+            .request("AAPL", "1D".parse().unwrap())
+            .unwrap();
+
+        assert_ne!(data.bars.len(), 0);
     }
 }
