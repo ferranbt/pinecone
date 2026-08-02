@@ -4,6 +4,8 @@ version.workspace = true
 edition = "2021"
 description = "Abstract syntax tree for Pine Script."
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 serde.workspace = true

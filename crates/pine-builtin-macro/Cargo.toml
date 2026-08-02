@@ -4,6 +4,8 @@ version.workspace = true
 edition = "2021"
 description = "Derive macro for defining Pine Script builtin functions."
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [lib]
 proc-macro = true

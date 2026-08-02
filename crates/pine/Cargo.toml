@@ -4,6 +4,8 @@ version.workspace = true
 edition = "2021"
 description = "A Pine Script compiler, interpreter, and backtesting engine in Rust."
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 pine-core = { workspace = true }

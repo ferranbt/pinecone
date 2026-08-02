@@ -4,6 +4,8 @@ version.workspace = true
 edition = "2021"
 description = "Semantic analysis for Pine Script."
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 pine-ast = { workspace = true }
