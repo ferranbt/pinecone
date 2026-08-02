@@ -1,7 +1,9 @@
 [package]
 name = "pine-lexer"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
+description = "Lexer for Pine Script."
+license.workspace = true
 
 [dependencies]
 eyre = { workspace = true }

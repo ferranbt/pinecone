@@ -3,7 +3,7 @@
 //!
 //! The corpus is cloned on demand (it is gitignored).
 
-use pine::ScriptBuilder;
+use pine_lang::ScriptBuilder;
 use pine_core::{Data, PineVersion};
 use pine_interpreter::DefaultPineOutput;
 use std::fs;

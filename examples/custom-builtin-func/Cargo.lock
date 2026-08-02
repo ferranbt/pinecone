@@ -175,10 +175,10 @@ dependencies = [
 name = "custom-builtin-func"
 version = "0.1.0"
 dependencies = [
- "pine",
  "pine-ast",
  "pine-builtins",
  "pine-interpreter",
+ "pine-lang",
  "pine-lexer",
  "pine-parser",
 ]
@@ -429,23 +429,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
-name = "pine"
-version = "0.1.0"
-dependencies = [
- "eyre",
- "pine-ast",
- "pine-broker",
- "pine-builtins",
- "pine-core",
- "pine-data",
- "pine-diagnostics",
- "pine-interpreter",
- "pine-lexer",
- "pine-parser",
- "pine-sema",
-]
-
-[[package]]
 name = "pine-ast"
 version = "0.1.0"
 dependencies = [
@@ -511,6 +494,23 @@ dependencies = [
  "pine-broker",
  "pine-core",
  "thiserror",
+]
+
+[[package]]
+name = "pine-lang"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "pine-ast",
+ "pine-broker",
+ "pine-builtins",
+ "pine-core",
+ "pine-data",
+ "pine-diagnostics",
+ "pine-interpreter",
+ "pine-lexer",
+ "pine-parser",
+ "pine-sema",
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 mod test_data;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use pine::execute;
+use pine_lang::execute;
 use test_data::generate_bars;
 
 fn bench_moving_averages(c: &mut Criterion) {

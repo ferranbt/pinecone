@@ -3,7 +3,7 @@
 /// This example demonstrates how to extend Pinecone with:
 /// 1. A custom output type that stores additional data (alerts)
 /// 2. A custom builtin function that works with the custom output
-use pine::ScriptBuilder;
+use pine_lang::ScriptBuilder;
 use pine_interpreter::{
     impl_output_traits_delegate, Builtin, DefaultPineOutput, EvaluatedArg, FunctionCallArgs,
     Interpreter, PineOutput, RuntimeError, Value,
@@ -81,7 +81,7 @@ fn main() {
 
     let script = ScriptBuilder::<CustomOutput>::with_code(script_source)
         .with_custom_variables(custom_variables)
-        .with_data(pine::data::synthetic(3))
+        .with_data(pine_lang::data::synthetic(3))
         .compile()
         .expect("Compilation failed");
 

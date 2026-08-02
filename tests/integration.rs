@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use pine::ScriptBuilder;
+    use pine_lang::ScriptBuilder;
     use pine_ast::Program;
     use pine_core::{SymInfo, Timeframe, TimeframeUnit};
     use pine_data::StaticProvider;

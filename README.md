@@ -13,14 +13,21 @@ Pinecone executes PineScript code (TradingView's scripting language) with suppor
 - Modular output system - extend with [custom types and builtins](examples/custom-builtin-func)
 - Type-safe generic architecture
 
+## Install
+
+```toml
+[dependencies]
+pine-lang = "0.1"
+```
+
 ## Example
 
 A script is replayed over a whole series of bars — series history and indicator
 state build up as they execute.
 
 ```rust
-use pine::data::StaticProvider;
-use pine::ScriptBuilder;
+use pine_lang::data::StaticProvider;
+use pine_lang::ScriptBuilder;
 
 let provider = StaticProvider::from_csv("btc_1h.csv")?;
 

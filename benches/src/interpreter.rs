@@ -1,8 +1,8 @@
 mod test_data;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use pine::interpreter::DefaultPineOutput;
-use pine::{execute, ScriptBuilder};
+use pine_lang::interpreter::DefaultPineOutput;
+use pine_lang::{execute, ScriptBuilder};
 use test_data::generate_bars;
 
 const TEST_SCRIPTS: &[(&str, &str)] = &[
