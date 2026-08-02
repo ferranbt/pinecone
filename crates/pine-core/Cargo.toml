@@ -4,6 +4,8 @@ version.workspace = true
 edition = "2021"
 description = "Core types shared across the Pine Script toolchain: bars, symbols, timeframes, and versions."
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 thiserror = { workspace = true }

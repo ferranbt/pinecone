@@ -4,6 +4,8 @@ version.workspace = true
 edition = "2021"
 description = "Built-in functions and namespaces for the Pine Script interpreter."
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 pine-builtin-macro = { workspace = true }

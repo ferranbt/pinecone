@@ -4,6 +4,8 @@ version.workspace = true
 edition = "2021"
 description = "Parser for Pine Script."
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [[bin]]
 name = "pine-parser"

@@ -4,5 +4,7 @@ version.workspace = true
 edition = "2021"
 description = "Diagnostics for the Pine Script toolchain."
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
