@@ -443,6 +443,9 @@ fn generate_field_parsing(
     let mut field_decls = Vec::new();
     let mut positional_matches = Vec::new();
     let mut named_matches = Vec::new();
+    // Each positional parameter as (assignment, has_default), in order, for the
+    // arity-aware binding built after the loop.
+    let mut positional_params: Vec<(proc_macro2::TokenStream, bool)> = Vec::new();
     let mut variadic_field: Option<&syn::Ident> = None;
     let mut non_variadic_count = 0;
     let mut arg_position = 0; // Track positional argument index (excluding type params)
@@ -505,6 +508,7 @@ fn generate_field_parsing(
         positional_matches.push(quote! {
             #current_position => { #positional_assign }
         });
+        positional_params.push((positional_assign, has_default));
         arg_position += 1;
 
         // Generate named assignment
@@ -514,6 +518,41 @@ fn generate_field_parsing(
             #field_name_str => { #named_assign }
         });
     }
+
+    // An arity overload — an optional parameter followed by a required one, as
+    // in `ta.highest(source, length)` where the one-argument form `ta.highest(length)`
+    // drops `source` — needs the trailing required parameters bound first when a
+    // call passes fewer positionals than parameters. `required_after[i]` counts
+    // the required parameters past `i`; a leading optional is only given a
+    // positional when there is one to spare beyond those.
+    let required_after: Vec<usize> = (0..positional_params.len())
+        .map(|i| {
+            positional_params[i + 1..]
+                .iter()
+                .filter(|(_, has_default)| !has_default)
+                .count()
+        })
+        .collect();
+    let needs_arity = positional_params
+        .iter()
+        .enumerate()
+        .any(|(i, (_, has_default))| *has_default && required_after[i] > 0);
+    let arity_binds: Vec<proc_macro2::TokenStream> = positional_params
+        .iter()
+        .enumerate()
+        .map(|(i, (assign, has_default))| {
+            let is_required = !has_default;
+            let ra = required_after[i];
+            quote! {
+                if #is_required || (__n - __consumed) > #ra {
+                    if let Some(arg_value) = __it.next() {
+                        __consumed += 1;
+                        #assign
+                    }
+                }
+            }
+        })
+        .collect();
 
     // Generate the argument parsing loop
     let arg_parsing = if let Some(variadic_name) = variadic_field {
@@ -560,6 +599,47 @@ fn generate_field_parsing(
                         }
                     }
                 }
+            }
+        }
+    } else if needs_arity {
+        quote! {
+            // A named argument fixes a parameter by name, so positional binding
+            // stays index-based there; only an all-positional call needs the
+            // arity rule that lets a leading optional be dropped.
+            let __has_named = args.iter().any(|a| matches!(a, EvaluatedArg::Named { .. }));
+            if __has_named {
+                let mut positional_idx = 0;
+                for arg in args {
+                    match arg {
+                        EvaluatedArg::Positional(arg_value) => {
+                            match positional_idx {
+                                #(#positional_matches)*
+                                _ => return Err(RuntimeError::TypeError("Too many positional arguments".into()))
+                            }
+                            positional_idx += 1;
+                        }
+                        EvaluatedArg::Named { name: param_name, value: arg_value } => {
+                            match param_name.as_str() {
+                                #(#named_matches)*
+                                _ => return Err(RuntimeError::TypeError(format!("Unknown parameter: {}", param_name)))
+                            }
+                        }
+                    }
+                }
+            } else {
+                let mut __positionals: Vec<Value<O>> = Vec::new();
+                for arg in args {
+                    if let EvaluatedArg::Positional(arg_value) = arg {
+                        __positionals.push(arg_value);
+                    }
+                }
+                let __n = __positionals.len();
+                if __n > #non_variadic_count as usize {
+                    return Err(RuntimeError::TypeError("Too many positional arguments".into()));
+                }
+                let mut __it = __positionals.into_iter();
+                let mut __consumed = 0usize;
+                #(#arity_binds)*
             }
         }
     } else {

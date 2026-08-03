@@ -1,0 +1,18 @@
+//@version=5
+indicator("ta/highestbars_lowestbars_default_source")
+// The one-argument overloads default the source to `high` / `low`. Highs rise
+// across the window, so the highest high is the current bar (0); lows also rise,
+// so the lowest low is the oldest bar in the window (-2).
+
+// Bars: 3
+
+log.info(str.tostring(ta.highestbars(3)))
+log.info(str.tostring(ta.lowestbars(3)))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 0
+// -2

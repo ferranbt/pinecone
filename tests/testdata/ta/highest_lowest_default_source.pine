@@ -1,0 +1,19 @@
+//@version=5
+indicator("ta/highest_lowest_default_source")
+// The one-argument overloads ta.highest(length) / ta.lowest(length) default the
+// source to the bar's `high` / `low` (the two-argument form names the source).
+// Over the last 3 bars high is 302, 303, 304 and low is 292, 293, 294, so the
+// window's highest high is 304 and its lowest low is 292.
+
+// Bars: 3
+
+log.info(str.tostring(ta.highest(3)))
+log.info(str.tostring(ta.lowest(3)))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 304
+// 292

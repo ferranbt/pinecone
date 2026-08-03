@@ -1,0 +1,17 @@
+//@version=5
+indicator("ta/highest_overload_forms")
+// The overloaded ta.highest agrees across every call form: the one-argument form
+// (source defaults to high), the explicit two-argument form, and the named form.
+// Each is evaluated every bar so the windows stay in step, then compared on the
+// last bar.
+
+// Bars: 5
+
+one = ta.highest(3)
+two = ta.highest(high, 3)
+named = ta.highest(length = 3)
+if barstate.islast
+    log.info(str.tostring(one == two and named == two))
+
+// Expected output:
+// true

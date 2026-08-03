@@ -1,0 +1,11 @@
+//@version=5
+indicator("ta/highest_missing_length")
+// `length` is required in both overloads, so calling ta.highest with no
+// arguments is an error even though `source` may be omitted.
+
+// Bars: 3
+
+log.info(str.tostring(ta.highest()))
+
+// Expected error:
+// Missing required parameter: length

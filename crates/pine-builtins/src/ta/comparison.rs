@@ -3,6 +3,16 @@ use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, SeriesBuffer};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 
+/// The current-bar value of a built-in price series (`high`, `low`, …). Used as
+/// the default `source` for the one-argument overloads of `ta.highest` and its
+/// siblings, where `ta.highest(length)` reads `high` and `ta.lowest(length)`
+/// reads `low`.
+fn bar_source<O: PineOutput>(ctx: &Interpreter<O>, name: &str) -> f64 {
+    ctx.get_variable(name)
+        .and_then(|value| value.as_number().ok())
+        .unwrap_or(f64::NAN)
+}
+
 /// ta.change(source, length) - Difference between current and N bars ago
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.change", stateful)]
@@ -37,6 +47,7 @@ impl TaChange {
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.highest", stateful)]
 pub struct TaHighest {
+    #[arg(default = bar_source(ctx, "high"))]
     source: f64,
     length: f64,
     #[state]
@@ -64,6 +75,7 @@ impl TaHighest {
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.lowest", stateful)]
 pub struct TaLowest {
+    #[arg(default = bar_source(ctx, "low"))]
     source: f64,
     length: f64,
     #[state]
@@ -108,6 +120,7 @@ fn extreme_offset(values: &[f64], better: fn(f64, f64) -> bool) -> f64 {
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.highestbars", stateful)]
 pub struct TaHighestbars {
+    #[arg(default = bar_source(ctx, "high"))]
     source: f64,
     length: f64,
     #[state]
@@ -133,6 +146,7 @@ impl TaHighestbars {
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.lowestbars", stateful)]
 pub struct TaLowestbars {
+    #[arg(default = bar_source(ctx, "low"))]
     source: f64,
     length: f64,
     #[state]

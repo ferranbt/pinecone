@@ -40,6 +40,12 @@ const CHECK = [
 // Divergences we are not treating as our bugs. Pass --all to check them anyway.
 const SKIP = {
     'ta/tr.pine': 'PineTS ignores handle_na on the first bar; the docs side with us',
+    // PineTS 0.9.29 implements the one-argument overload of ta.highest/ta.lowest
+    // (our value fixtures agree) but returns na for the one-argument ta.highestbars
+    // /ta.lowestbars. The spec defines that form (source defaults to high/low), so
+    // the docs side with us.
+    'ta/highestbars_lowestbars_default_source.pine':
+        'PineTS lacks the one-argument ta.highestbars/ta.lowestbars overload; the docs side with us',
     'basics/alertcondition.pine': 'our harness reports alerts as a synthetic log line',
     'basics/barstate.pine': 'barstate flags come from our full series, not the sliced run',
     'basics/timeframe.pine': 'the harness timeframe is not the one PineTS is told',
