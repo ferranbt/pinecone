@@ -1,0 +1,19 @@
+[package]
+name = "pine-format"
+version.workspace = true
+edition = "2021"
+description = "An opinionated formatter for Pine Script."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[[bin]]
+name = "pine-format"
+path = "bin/pine-format.rs"
+
+[dependencies]
+pine-ast = { workspace = true }
+pine-core = { workspace = true }
+pine-lexer = { workspace = true }
+pine-parser = { workspace = true }
+clap = { workspace = true }

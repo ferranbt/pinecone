@@ -1,0 +1,9 @@
+r = switch x
+    1=>"one"
+    2 =>  "two"
+    => "other"
+----
+r = switch x
+    1 => "one"
+    2 => "two"
+    true => "other"

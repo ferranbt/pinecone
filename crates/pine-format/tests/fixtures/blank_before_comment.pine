@@ -1,0 +1,9 @@
+a = 1
+
+// section
+b = 2
+----
+a = 1
+
+// section
+b = 2
