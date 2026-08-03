@@ -20,7 +20,7 @@
 //! let mut builtins: HashMap<String, Value<DefaultPineOutput>> = HashMap::new();
 //! builtins.insert("close".to_string(), Value::Na);
 //!
-//! let errors = pine_sema::analyze(&program, &builtins);
+//! let errors = pine_sema::analyze(&program, &builtins, None);
 //! assert_eq!(errors.len(), 1);
 //! assert_eq!(errors[0].rule, "undeclared-variable");
 //! ```
@@ -30,9 +30,10 @@ mod scope;
 mod symbols;
 
 pub use analyzer::Analyzer;
+pub use pine_core::LibraryLoader;
 pub use pine_diagnostics::{Diagnostic, Severity};
 pub use scope::SymbolKind;
-pub use symbols::{ScopeId, ScopeKind, Symbol, SymbolId, SymbolTable};
+pub use symbols::{FileId, ScopeId, ScopeKind, Symbol, SymbolId, SymbolTable};
 
 use pine_ast::Program;
 use pine_core::PineOutput;
@@ -46,11 +47,16 @@ use std::collections::HashMap;
 /// `pine_builtins::register_namespace_objects` plus the per-bar variables) — the
 /// names that resolve without a user declaration. It is taken as the full value
 /// map so later passes can inspect the objects' types.
+///
+/// `loader`, when present, resolves `import`ed libraries so `alias.export`
+/// resolves cross-file (and a library's own errors are reported, tagged with the
+/// library path). Without it, imports declare only the alias.
 pub fn analyze<O: PineOutput>(
     program: &Program,
     builtins: &HashMap<String, Value<O>>,
+    loader: Option<&dyn LibraryLoader>,
 ) -> Vec<Diagnostic> {
-    Analyzer::new(builtins).analyze(program)
+    Analyzer::new(builtins, loader).analyze(program)
 }
 
 /// Analyze a program and also return the [`SymbolTable`] reconstructed from the
@@ -58,6 +64,7 @@ pub fn analyze<O: PineOutput>(
 pub fn analyze_with_symbols<O: PineOutput>(
     program: &Program,
     builtins: &HashMap<String, Value<O>>,
+    loader: Option<&dyn LibraryLoader>,
 ) -> (Vec<Diagnostic>, SymbolTable) {
-    Analyzer::new(builtins).into_analysis(program)
+    Analyzer::new(builtins, loader).into_analysis(program)
 }

@@ -254,11 +254,12 @@ impl<O: PineOutput> ScriptBuilder<O> {
             builtins.insert(name.clone(), value.clone());
         }
 
-        // Semantic pre-check: reject if sema produces errors
-        let errors: Vec<_> = pine_sema::analyze(&program, &builtins)
-            .into_iter()
-            .filter(|diagnostic| diagnostic.severity == pine_diagnostics::Severity::Error)
-            .collect();
+        // Semantic pre-check: reject if sema produces errors.
+        let errors: Vec<_> =
+            pine_sema::analyze(&program, &builtins, self.library_loader.as_deref())
+                .into_iter()
+                .filter(|diagnostic| diagnostic.severity == pine_diagnostics::Severity::Error)
+                .collect();
         if !errors.is_empty() {
             return Err(Error::Sema(errors));
         }

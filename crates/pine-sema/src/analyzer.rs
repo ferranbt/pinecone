@@ -9,47 +9,47 @@
 
 use std::collections::{HashMap, HashSet};
 
-use pine_ast::{Argument, Expr, FunctionParam, Literal, Loc, Program, Stmt};
-use pine_core::PineOutput;
+use pine_ast::{Argument, ExportItem, Expr, FunctionParam, Literal, Loc, Program, Stmt};
+use pine_core::{LibraryLoader, PineOutput};
 use pine_interpreter::{BuiltinSignature, Value};
+use pine_parser::Parser;
 
 use crate::scope::{is_global_only, SymbolKind};
-use crate::symbols::{ScopeId, ScopeKind, Symbol, SymbolId, SymbolTable};
+use crate::symbols::{FileId, ScopeId, ScopeKind, Symbol, SymbolId, SymbolTable};
 use pine_diagnostics::Diagnostic;
 
 pub struct Analyzer<'a, O: PineOutput> {
     diagnostics: Vec<Diagnostic>,
-    /// Number of enclosing loops in the *current function*. Reset across
-    /// function boundaries — a loop never spans a function.
+    /// Enclosing loops in the current function (reset at function boundaries).
     loop_depth: u32,
-    /// The runtime's registered built-ins — namespaces, global functions, and
-    /// per-bar variables that exist without a user declaration. Supplied by the
-    /// caller rather than hardcoded here. Kept as the full value map (not just
-    /// names) so later passes can inspect the objects' types.
+    /// The runtime's registered built-ins (namespaces, globals, per-bar variables).
     builtins: &'a HashMap<String, Value<O>>,
-    /// How many script declarations (`indicator`/`strategy`/`library`) have been
-    /// seen. A script may have at most one.
+    /// Script declarations seen (indicator/strategy/library); at most one allowed.
     declarations: u32,
-    /// User-declared free functions, `name -> (required, total)` parameter
-    /// counts, recorded as each declaration is walked so a later call can be
-    /// arity-checked. Methods are excluded (their receiver complicates arity).
+    /// Free functions, `name -> (required, total)` param counts, for arity checks.
     functions: HashMap<String, (usize, usize)>,
-    /// Every user type/enum name, collected up front so an annotation may refer
-    /// to a type declared later in the file.
+    /// User type/enum names, collected up front for forward-referencing annotations.
     user_types: HashSet<String>,
-    /// The functions whose bodies enclose the point being analyzed; the last is
-    /// the one a call is currently being made from, so the call can be added to
-    /// the graph as an edge out of it.
+    /// Functions enclosing the current point; the last is the caller of any call.
     fn_stack: Vec<String>,
-    /// The call graph, one entry per call: `(caller, callee, call-site)`. Built
-    /// during the walk and scanned afterwards — a callee that reaches back to its
-    /// caller closes a cycle, which is recursion (Pine forbids it).
+    /// The call graph `(caller, callee, call-site)`, scanned afterwards for cycles.
     call_edges: Vec<CallEdge>,
-    /// The durable symbol table — the analyzer resolves names against it and
-    /// records declarations into it as it walks. `scope_ids` tracks the current
-    /// scope (its last element is the innermost).
+    /// The durable symbol table; `scope_ids` tracks the current (innermost-last) scope.
     symbols: SymbolTable,
     scope_ids: Vec<ScopeId>,
+    /// Resolves `import` paths to source; absent means no cross-file resolution.
+    loader: Option<&'a dyn LibraryLoader>,
+}
+
+/// Per-file state saved and restored around analyzing a library.
+struct FileState {
+    scope_ids: Vec<ScopeId>,
+    loop_depth: u32,
+    functions: HashMap<String, (usize, usize)>,
+    user_types: HashSet<String>,
+    declarations: u32,
+    fn_stack: Vec<String>,
+    call_edges: Vec<CallEdge>,
 }
 
 /// One call-graph edge: `(caller, callee, call-site position)`.
@@ -58,10 +58,7 @@ type CallEdge = (String, String, Option<(u32, u32)>);
 /// The script-declaration functions — a script must have exactly one.
 const SCRIPT_DECLARATIONS: &[&str] = &["study", "indicator", "strategy", "library"];
 
-/// The built-in type names an annotation may name without a user declaration.
-/// Qualifiers (`series`/`simple`/`const`/`input`) are a separate field, and the
-/// generic collection forms (`array<…>`) are not captured as annotations, so a
-/// bare `array`/`matrix`/`map` is all that reaches here for those.
+/// Built-in type names an annotation may use without a user declaration.
 const BUILTIN_TYPES: &[&str] = &[
     "int", "float", "bool", "string", "color", "line", "linefill", "label", "box", "table",
     "polyline", "array", "matrix", "map",
@@ -81,8 +78,7 @@ fn callee_name(callee: &Expr) -> String {
     }
 }
 
-/// Whether `start` reaches `target` in the call graph. A direct self-call
-/// (`start == target`) counts, so this finds a node that participates in a cycle.
+/// Whether `start` reaches `target` in the call graph (a self-call counts).
 fn reaches(start: &str, target: &str, adjacency: &HashMap<&str, Vec<&str>>) -> bool {
     if start == target {
         return true;
@@ -117,7 +113,10 @@ fn describe_literal(literal: &Literal) -> &'static str {
 }
 
 impl<'a, O: PineOutput> Analyzer<'a, O> {
-    pub fn new(builtins: &'a HashMap<String, Value<O>>) -> Self {
+    pub fn new(
+        builtins: &'a HashMap<String, Value<O>>,
+        loader: Option<&'a dyn LibraryLoader>,
+    ) -> Self {
         Self {
             diagnostics: Vec::new(),
             loop_depth: 0,
@@ -129,6 +128,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             call_edges: Vec::new(),
             symbols: SymbolTable::new(),
             scope_ids: vec![SymbolTable::GLOBAL],
+            loader,
         }
     }
 
@@ -138,54 +138,57 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         *self.scope_ids.last().expect("scope stack is never empty")
     }
 
+    fn current_file(&self) -> FileId {
+        self.symbols.scope_file(self.current_scope())
+    }
+
+    fn current_lib(&self) -> Option<String> {
+        let file = self.current_file();
+        (file != SymbolTable::MAIN).then(|| self.symbols.file_path(file).to_string())
+    }
+
     /// Open a nested scope in the symbol tree and make it current.
     fn enter_scope(&mut self, kind: ScopeKind) {
         let child = self.symbols.open_scope(self.current_scope(), kind);
         self.scope_ids.push(child);
     }
 
-    /// Close the scope opened by [`enter_scope`](Self::enter_scope). Its symbols
-    /// stay in the table (as a child scope) but are no longer on the resolution
-    /// path, since resolution walks parents.
+    /// Close the current scope; its symbols stay in the table as a child scope.
     fn exit_scope(&mut self) {
         self.scope_ids.pop();
     }
 
-    /// Record a bare-name declaration in the symbol table at the current scope.
-    fn record(&mut self, symbol: Symbol) -> SymbolId {
+    /// Declare a symbol, stamped with the current file.
+    fn record(&mut self, mut symbol: Symbol) -> SymbolId {
+        symbol.file = self.current_file();
         self.symbols.declare(symbol)
     }
 
-    /// Resolve `name` from the current scope outward — the analyzer's single
-    /// name lookup, against the symbol table.
+    /// Resolve `name` from the current scope outward.
     fn resolve(&self, name: &str) -> Option<SymbolKind> {
         self.symbols
             .resolve(self.current_scope(), name)
             .map(|symbol| symbol.kind)
     }
 
-    /// Record a use of `name` at `loc` in the occurrence index, if it resolves
-    /// to a user symbol (builtins and unresolved names have no symbol to point
-    /// at). This is what makes find-references and rename possible.
+    /// Record a use of `name`, if it resolves to a user symbol.
     fn record_use(&mut self, name: &str, loc: Loc) {
         let scope = self.current_scope();
         if let Some(id) = self.symbols.resolve_id(scope, name) {
-            self.symbols.record_use(loc.position(), id);
+            let file = self.current_file();
+            self.symbols.record_use(file, loc.position(), id);
         }
     }
 
-    /// The user type a declaration has, when it can be known without inference:
-    /// an explicit annotation naming a type/enum, or a `Type.new()` initializer.
-    /// Drives member resolution (`v.field`).
+    /// A declaration's user type, from an annotation or a `Type.new()` initializer.
     fn infer_var_type(
         &self,
         type_annotation: Option<&String>,
         initializer: Option<&Expr>,
     ) -> Option<SymbolId> {
-        let scope = self.current_scope();
         if let Some(annotation) = type_annotation {
             let base = annotation.trim_end_matches("[]");
-            if let Some(id) = self.symbols.resolve_id(scope, base) {
+            if let Some(id) = self.symbols.resolve_id(self.current_scope(), base) {
                 if matches!(
                     self.symbols.symbol(id).kind,
                     SymbolKind::Type | SymbolKind::Enum
@@ -194,14 +197,13 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 }
             }
         }
+        // A `Type.new(...)` (or `lib.Type.new(...)`) constructor initializer.
         if let Some(Expr::Call { callee, .. }) = initializer {
             if let Expr::MemberAccess { object, member, .. } = callee.as_ref() {
                 if member == "new" {
-                    if let Expr::Variable { name, .. } = object.as_ref() {
-                        if let Some(id) = self.symbols.resolve_id(scope, name) {
-                            if self.symbols.symbol(id).kind == SymbolKind::Type {
-                                return Some(id);
-                            }
+                    if let Some(id) = self.expr_type(object) {
+                        if self.symbols.symbol(id).kind == SymbolKind::Type {
+                            return Some(id);
                         }
                     }
                 }
@@ -210,15 +212,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         None
     }
 
-    /// The type/enum symbol a member access reads a member from: an enum/type
-    /// named directly (`Enum.Case`), or a variable of a known user type
-    /// (`v.field`). `None` when the type is unknown — no member is resolved, so
-    /// this never guesses.
-    fn expr_type(&self, expr: &Expr) -> Option<SymbolId> {
-        let Expr::Variable { name, .. } = expr else {
-            return None;
-        };
-        let id = self.symbols.resolve_id(self.current_scope(), name)?;
+    /// The type/enum a symbol denotes: itself, or a variable's `type_ref`.
+    fn owner_type(&self, id: SymbolId) -> Option<SymbolId> {
         let symbol = self.symbols.symbol(id);
         match symbol.kind {
             SymbolKind::Type | SymbolKind::Enum => Some(id),
@@ -227,16 +222,45 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
+    /// The type/enum an expression's member access reads from (`Enum.Case`,
+    /// `v.field`, `lib.Point`), or `None` when the type is unknown.
+    fn expr_type(&self, expr: &Expr) -> Option<SymbolId> {
+        let id = match expr {
+            Expr::Variable { name, .. } => self.symbols.resolve_id(self.current_scope(), name)?,
+            Expr::MemberAccess { object, member, .. } => self.resolve_member(object, member)?,
+            _ => return None,
+        };
+        self.owner_type(id)
+    }
+
+    /// The declaration `object.member` points at: a library export, or a member
+    /// of the object's user type.
+    fn resolve_member(&self, object: &Expr, member: &str) -> Option<SymbolId> {
+        if let Some(module) = self.alias_module(object) {
+            return self.symbols.exported_id(module, member);
+        }
+        let owner = self.expr_type(object)?;
+        self.symbols.member_id(owner, member)
+    }
+
+    /// The imported library's global scope, if `object` is an import alias.
+    fn alias_module(&self, object: &Expr) -> Option<ScopeId> {
+        let Expr::Variable { name, .. } = object else {
+            return None;
+        };
+        let id = self.symbols.resolve_id(self.current_scope(), name)?;
+        let symbol = self.symbols.symbol(id);
+        (symbol.kind == SymbolKind::Import)
+            .then_some(symbol.module)
+            .flatten()
+    }
+
     fn is_builtin(&self, name: &str) -> bool {
         self.builtins.contains_key(name)
     }
 
-    /// The arguments the called builtin accepts, if the callee names one.
-    ///
-    /// Resolves both a bare name (`plot`) and a namespaced one (`ta.sma`, whose
-    /// namespace is an object of builtins). A name the script has declared
-    /// itself shadows the builtin, and a builtin written by hand carries no
-    /// parameters — both yield `None`, so nothing is checked.
+    /// The signature of the builtin the callee names (`plot` or `ta.sma`), or
+    /// `None` — a user-shadowed name or a builtin with no declared parameters.
     fn builtin_signature(&self, callee: &Expr) -> Option<BuiltinSignature> {
         let value = match callee {
             Expr::Variable { name, .. } => {
@@ -271,9 +295,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
-    /// Check a call's arguments against the builtin's parameters: too many
-    /// arguments, too few, an unknown named argument, and an argument whose
-    /// literal type the parameter cannot accept.
+    /// Check a call against the builtin's parameters: too many/few arguments, an
+    /// unknown named argument, and a literal of the wrong type.
     fn check_builtin_args(
         &mut self,
         name: &str,
@@ -334,11 +357,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             }
         }
 
-        // A valid call supplies at least one argument per required parameter, so
-        // fewer arguments than required parameters is a guaranteed missing one.
-        // Counting arguments rather than matching them to positions keeps this
-        // sound for overloads with an optional leading parameter, such as
-        // `ta.highest(length)`, where `source` may be dropped.
+        // Counting (not position-matching) required params stays sound for
+        // leading-optional overloads like `ta.highest(length)`.
         let required = signature
             .params
             .iter()
@@ -356,10 +376,9 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
-    /// Walk the program once: emit diagnostics and fill the symbol table.
-    fn run(&mut self, program: &Program) {
-        // Types are global and may be referenced by an annotation before their
-        // declaration, so collect their names before the ordered walk.
+    /// Analyze one file in its own scope, type set, and call graph.
+    fn run_file(&mut self, program: &Program) {
+        // Types may be referenced before their declaration, so collect them first.
         for stmt in &program.statements {
             match stmt {
                 Stmt::TypeDecl { name, .. } | Stmt::EnumDecl { name, .. } => {
@@ -374,22 +393,79 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         self.detect_recursion();
     }
 
+    /// Swap in fresh state for a library, returning the caller's to restore.
+    fn enter_file(&mut self, root: ScopeId) -> FileState {
+        FileState {
+            scope_ids: std::mem::replace(&mut self.scope_ids, vec![root]),
+            loop_depth: std::mem::take(&mut self.loop_depth),
+            functions: std::mem::take(&mut self.functions),
+            user_types: std::mem::take(&mut self.user_types),
+            declarations: std::mem::take(&mut self.declarations),
+            fn_stack: std::mem::take(&mut self.fn_stack),
+            call_edges: std::mem::take(&mut self.call_edges),
+        }
+    }
+
+    fn exit_file(&mut self, saved: FileState) {
+        self.scope_ids = saved.scope_ids;
+        self.loop_depth = saved.loop_depth;
+        self.functions = saved.functions;
+        self.user_types = saved.user_types;
+        self.declarations = saved.declarations;
+        self.fn_stack = saved.fn_stack;
+        self.call_edges = saved.call_edges;
+    }
+
+    /// Analyze the library at `path` once. Registering it before the walk lets a
+    /// re-entrant import find it, which breaks cycles.
+    fn resolve_import(&mut self, path: &str) -> Option<(FileId, ScopeId)> {
+        if let Some(file) = self.symbols.file_by_path(path) {
+            return Some((file, self.symbols.file_root(file)));
+        }
+        let loader = self.loader?;
+        let source = match loader.load_library(path) {
+            Ok(source) => source,
+            Err(err) => {
+                self.emit(
+                    "import-error",
+                    None,
+                    format!("cannot load library `{path}`: {err}"),
+                );
+                return None;
+            }
+        };
+        let program = match Parser::parse_source(&source) {
+            Ok(program) => program,
+            Err(err) => {
+                self.emit(
+                    "import-parse-error",
+                    None,
+                    format!("cannot parse library `{path}`: {err}"),
+                );
+                return None;
+            }
+        };
+        let (file, root) = self.symbols.add_file(path);
+        let saved = self.enter_file(root);
+        self.run_file(&program);
+        self.exit_file(saved);
+        Some((file, root))
+    }
+
     /// Analyze a whole program, returning the errors found.
     pub fn analyze(mut self, program: &Program) -> Vec<Diagnostic> {
-        self.run(program);
+        self.run_file(program);
         self.diagnostics
     }
 
     /// Analyze a whole program, returning both the errors and the symbol table
     /// reconstructed from the same walk.
     pub fn into_analysis(mut self, program: &Program) -> (Vec<Diagnostic>, SymbolTable) {
-        self.run(program);
+        self.run_file(program);
         (self.diagnostics, self.symbols)
     }
 
-    /// Scan the call graph for cycles. An edge whose callee can reach its caller
-    /// again closes a cycle — the caller is (directly or indirectly) recursive,
-    /// which Pine forbids. Reported at the offending call site.
+    /// Report call-graph cycles as recursion (Pine forbids it), at the call site.
     fn detect_recursion(&mut self) {
         let cycles: Vec<CallEdge> = {
             let mut adjacency: HashMap<&str, Vec<&str>> = HashMap::new();
@@ -413,16 +489,16 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
     }
 
     fn emit(&mut self, rule: &'static str, pos: Option<(u32, u32)>, message: impl Into<String>) {
-        self.diagnostics.push(Diagnostic::error(rule, pos, message));
+        self.diagnostics
+            .push(Diagnostic::error(rule, pos, message).in_file(self.current_lib()));
     }
 
     fn warn(&mut self, rule: &'static str, pos: Option<(u32, u32)>, message: impl Into<String>) {
         self.diagnostics
-            .push(Diagnostic::warning(rule, pos, message));
+            .push(Diagnostic::warning(rule, pos, message).in_file(self.current_lib()));
     }
 
-    /// Declaring a name that a built-in already owns hides the built-in. Pine
-    /// allows it but warns, so this is a warning, not an error.
+    /// Warn that a declaration shadows a built-in (Pine allows it, but warns).
     fn check_shadow(&mut self, name: &str) {
         if self.is_builtin(name) {
             self.warn(
@@ -433,9 +509,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
-    /// Reject a type annotation that names neither a built-in type nor a
-    /// user-declared type/enum. Array suffixes (`Foo[]`) share their element's
-    /// type name.
+    /// Reject a type annotation that is neither a built-in nor a declared type.
     fn check_type_annotation(&mut self, annotation: Option<&String>) {
         let Some(annotation) = annotation else {
             return;
@@ -447,8 +521,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         self.emit("unknown-type", None, format!("unknown type `{base}`"));
     }
 
-    /// Check a call's argument count against a user function's parameters, using
-    /// the same count-based bounds as the built-in checker.
+    /// Check a user-function call's argument count against its parameters.
     fn check_call_arity(
         &mut self,
         name: &str,
@@ -472,11 +545,15 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
-    /// Record a user function, check its parameter annotations, and walk its body
-    /// with the name on the recursion stack. The name is declared *before* the
-    /// body so a call to it inside reads as recursion.
-    fn analyze_function(&mut self, name: &str, loc: Loc, params: &[FunctionParam], body: &[Stmt]) {
-        // Declare the function symbol in the enclosing scope before its body.
+    /// Record a user function and walk its body. Declared before the body so a
+    /// self-call inside reads as recursion.
+    fn analyze_function(
+        &mut self,
+        name: &str,
+        loc: Loc,
+        params: &[FunctionParam],
+        body: &[Stmt],
+    ) -> SymbolId {
         let scope = self.current_scope();
         if self.symbols.declared_locally(scope, name) {
             self.emit(
@@ -485,7 +562,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 format!("`{name}` is already declared in this scope"),
             );
         }
-        self.record(
+        let id = self.record(
             Symbol::new(name, SymbolKind::Function, loc.position(), scope)
                 .with_params(params.iter().map(|p| p.name.clone()).collect()),
         );
@@ -509,11 +586,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             body,
         );
         self.fn_stack.pop();
+        id
     }
 
-    /// Declare `name` in the current scope, reporting a duplicate if it already
-    /// exists there. Pine has no hoisting — names become visible in source
-    /// order — so this is called at each declaration's position.
+    /// Declare `name` in the current scope, reporting a same-scope duplicate.
     fn declare(&mut self, name: &str, kind: SymbolKind, loc: Loc) -> SymbolId {
         let scope = self.current_scope();
         if self.symbols.declared_locally(scope, name) {
@@ -535,8 +611,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         self.exit_scope();
     }
 
-    /// Visit a loop body: its own scope, with `loop_depth` raised so
-    /// `break`/`continue` are legal inside it.
+    /// Visit a loop body with `loop_depth` raised so `break`/`continue` are legal.
     fn loop_body(&mut self, body: &[Stmt]) {
         self.loop_depth += 1;
         for stmt in body {
@@ -545,8 +620,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         self.loop_depth -= 1;
     }
 
-    /// Visit a function/method/lambda body in a fresh scope with `params`
-    /// bound. Loop context does not cross into a function.
+    /// Visit a function body in a fresh scope with `params` bound.
     fn function_body<'p>(
         &mut self,
         params: impl Iterator<Item = (&'p str, Option<&'p Expr>, Loc, Option<&'p String>)>,
@@ -592,10 +666,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.check_type_annotation(type_annotation.as_ref());
                 self.check_shadow(name);
                 if let Some(Expr::Function { params, body }) = initializer {
-                    // A named function definition `f(x) => …`, which the parser
-                    // lowers to a lambda-valued variable. `analyze_function`
-                    // records it before its body, so a call to it inside the body
-                    // reads as recursion and calls resolve and are arity-checked.
+                    // A named function `f(x) => …`, lowered to a lambda-valued var.
                     self.analyze_function(name, *loc, params, body);
                 } else {
                     // Check the initializer *before* declaring the name, so a
@@ -717,26 +788,31 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 name,
                 params,
                 body,
+                export,
                 loc,
-                ..
             } => {
                 self.check_shadow(name);
-                self.analyze_function(name, *loc, params, body);
+                let id = self.analyze_function(name, *loc, params, body);
+                if *export {
+                    self.symbols.mark_exported(id);
+                }
             }
             Stmt::MethodDecl {
                 name,
                 params,
                 body,
+                export,
                 loc,
-                ..
             } => {
-                // Methods may share a name (overload by receiver type), so the
-                // name is not declared/duplicate-checked; just check the body.
+                // Methods overload by receiver type, so the name is not duplicate-checked.
                 let scope = self.current_scope();
-                self.record(
+                let id = self.record(
                     Symbol::new(name, SymbolKind::Function, loc.position(), scope)
                         .with_params(params.iter().map(|p| p.name.clone()).collect()),
                 );
+                if *export {
+                    self.symbols.mark_exported(id);
+                }
                 for param in params {
                     self.check_type_annotation(param.type_annotation.as_ref());
                 }
@@ -753,9 +829,15 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 );
             }
             Stmt::TypeDecl {
-                name, fields, loc, ..
+                name,
+                fields,
+                export,
+                loc,
             } => {
                 let owner = self.declare(name, SymbolKind::Type, *loc);
+                if *export {
+                    self.symbols.mark_exported(owner);
+                }
                 for field in fields {
                     self.check_type_annotation(Some(&field.type_annotation));
                     self.symbols.declare_member(
@@ -767,19 +849,35 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 }
             }
             Stmt::EnumDecl {
-                name, fields, loc, ..
+                name,
+                fields,
+                export,
+                loc,
             } => {
                 let owner = self.declare(name, SymbolKind::Enum, *loc);
+                if *export {
+                    self.symbols.mark_exported(owner);
+                }
                 for field in fields {
                     self.symbols
                         .declare_member(owner, &field.name, field.loc.position(), None);
                 }
             }
-            Stmt::Import { alias, loc, .. } => {
-                self.declare(alias, SymbolKind::Import, *loc);
+            Stmt::Import { path, alias, loc } => {
+                let id = self.declare(alias, SymbolKind::Import, *loc);
+                if let Some((_, root)) = self.resolve_import(path) {
+                    self.symbols.set_module(id, root);
+                }
             }
-            // `export` re-exports an already-declared item; nothing to resolve.
-            Stmt::Export { .. } => {}
+            // `export name` re-exports an already-declared item: mark it exported.
+            Stmt::Export { item } => {
+                let name = match item {
+                    ExportItem::Function(name) | ExportItem::Type(name) => name,
+                };
+                if let Some(id) = self.symbols.resolve_id(self.current_scope(), name) {
+                    self.symbols.mark_exported(id);
+                }
+            }
         }
     }
 
@@ -915,19 +1013,16 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.check_expr(expr);
                 self.check_expr(index);
             }
-            // The member itself is not validated (that is Tier 3 signature
-            // checking), but when the object's type is known its member resolves
-            // to a declaration, so record the use.
+            // When the object's type is known, record the member's occurrence.
             Expr::MemberAccess {
                 object,
                 member,
                 member_loc,
             } => {
                 self.check_expr(object);
-                if let Some(type_id) = self.expr_type(object) {
-                    if let Some(member_id) = self.symbols.member_id(type_id, member) {
-                        self.symbols.record_use(member_loc.position(), member_id);
-                    }
+                if let Some(id) = self.resolve_member(object, member) {
+                    let file = self.current_file();
+                    self.symbols.record_use(file, member_loc.position(), id);
                 }
             }
             Expr::Ternary {
