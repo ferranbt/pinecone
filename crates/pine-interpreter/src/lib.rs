@@ -24,10 +24,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use thiserror::Error;
 
-pub trait LibraryLoader {
-    /// Return the source of the library at `path`
-    fn load_library(&self, path: &str) -> Result<String, String>;
-}
+pub use pine_core::LibraryLoader;
 
 /// Record `value` as what `name` held on a completed bar, so `name[n]` can reach
 /// it. Entries beyond [`MAX_LOOKBACK`] are dropped.

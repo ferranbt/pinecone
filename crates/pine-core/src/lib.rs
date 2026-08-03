@@ -1,9 +1,11 @@
 mod bar;
+mod library;
 mod syminfo;
 mod timeframe;
 mod version;
 
 pub use bar::{Bar, Data, Ohlcv};
+pub use library::{FileResolver, LibraryLoader};
 pub use syminfo::SymInfo;
 pub use timeframe::{Timeframe, TimeframeError, TimeframeUnit};
 pub use version::{PineVersion, VersionError};

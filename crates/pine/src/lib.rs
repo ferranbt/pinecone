@@ -12,7 +12,7 @@ mod backtest;
 mod run;
 
 pub use backtest::Backtest;
-pub use pine_core::DataProvider;
+pub use pine_core::{DataProvider, FileResolver, LibraryLoader};
 pub use run::{Run, RunResult};
 
 use pine_ast::Program;
@@ -20,7 +20,7 @@ use pine_core::{Bar, Data, PineVersion, Timeframe, VersionError};
 use pine_diagnostics::Diagnostic;
 use pine_interpreter::{
     AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, IndicatorOutput, InputOutput,
-    Interpreter, LabelOutput, LibraryLoader, LineOutput, LogOutput, PineOutput, PlotOutput,
+    Interpreter, LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput,
     RuntimeError, TableOutput, Value,
 };
 use pine_lexer::{Lexer, LexerError};
