@@ -12,8 +12,7 @@ pine-ast = { workspace = true }
 pine-core = { workspace = true }
 pine-diagnostics = { workspace = true }
 pine-interpreter = { workspace = true }
+pine-parser = { workspace = true }
 
 [dev-dependencies]
 pine-lexer = { workspace = true }
-pine-parser = { workspace = true }
-pine-interpreter = { workspace = true }

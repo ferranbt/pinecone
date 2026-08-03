@@ -32,6 +32,7 @@ pub struct Diagnostic {
     pub severity: Severity,
     pub message: String,
     pub pos: Option<(u32, u32)>,
+    pub file: Option<String>,
 }
 
 impl Diagnostic {
@@ -46,7 +47,15 @@ impl Diagnostic {
             severity,
             message: message.into(),
             pos,
+            file: None,
         }
+    }
+
+    /// Attribute this finding to `file` (an imported library). `None` leaves it
+    /// on the main script.
+    pub fn in_file(mut self, file: Option<String>) -> Self {
+        self.file = file;
+        self
     }
 
     pub fn error(rule: &'static str, pos: Option<(u32, u32)>, message: impl Into<String>) -> Self {
@@ -74,21 +83,16 @@ impl Diagnostic {
 
 impl fmt::Display for Diagnostic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.pos {
-            Some((line, col)) => write!(
-                f,
-                "{sev} [{rule}] {line}:{col}: {msg}",
-                sev = self.severity,
-                rule = self.rule,
-                msg = self.message,
-            ),
-            None => write!(
-                f,
-                "{sev} [{rule}]: {msg}",
-                sev = self.severity,
-                rule = self.rule,
-                msg = self.message,
-            ),
+        let sev = self.severity;
+        let rule = self.rule;
+        let msg = &self.message;
+        match (&self.file, self.pos) {
+            (None, Some((line, col))) => write!(f, "{sev} [{rule}] {line}:{col}: {msg}"),
+            (None, None) => write!(f, "{sev} [{rule}]: {msg}"),
+            (Some(path), Some((line, col))) => {
+                write!(f, "{sev} [{rule}] {path}:{line}:{col}: {msg}")
+            }
+            (Some(path), None) => write!(f, "{sev} [{rule}] {path}: {msg}"),
         }
     }
 }
