@@ -24,11 +24,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use thiserror::Error;
 
-/// Trait for loading external libraries
-pub trait LibraryLoader {
-    /// Load a library from the given path and return its Program AST
-    fn load_library(&self, path: &str) -> Result<Program, String>;
-}
+pub use pine_core::LibraryLoader;
 
 /// Record `value` as what `name` held on a completed bar, so `name[n]` can reach
 /// it. Entries beyond [`MAX_LOOKBACK`] are dropped.
@@ -1092,56 +1088,48 @@ impl<O: PineOutput> Interpreter<O> {
             }
 
             Stmt::Import { path, alias } => {
-                // Try to load the library - fail if no loader is available
-                if let Some(ref loader) = self.library_loader {
-                    match loader.load_library(path) {
-                        Ok(library_program) => {
-                            // Create a new interpreter for the library
-                            let mut library_interp = Interpreter::new();
-
-                            // Execute the library program (without a bar context for simplicity)
-                            library_interp.execute(&library_program)?;
-
-                            // Get the exports from the library
-                            let library_exports = library_interp.exports();
-
-                            // Import methods from the library
-                            for (method_name, method_defs) in &library_interp.methods {
-                                for method_def in method_defs {
-                                    self.methods
-                                        .entry(method_name.clone())
-                                        .or_default()
-                                        .push(method_def.clone());
-                                }
-                            }
-
-                            // Create a namespace object containing the exported items
-                            let namespace: Value<O> = Value::Object {
-                                type_name: alias.clone(),
-                                fields: Rc::new(RefCell::new(library_exports.clone())),
-                                call: None,
-                            };
-                            self.variables.insert(
-                                alias.clone(),
-                                Variable {
-                                    value: namespace,
-                                    is_const: false,
-                                    is_var_persistent: false,
-                                },
-                            );
-                        }
-                        Err(e) => {
-                            return Err(RuntimeError::LibraryError(format!(
-                                "Failed to load library '{}': {}",
-                                path, e
-                            )));
-                        }
+                let source = match &self.library_loader {
+                    Some(loader) => loader.load_library(path),
+                    None => {
+                        return Err(RuntimeError::LibraryError(
+                            "Cannot import library: no library loader configured".to_string(),
+                        ))
                     }
-                } else {
-                    return Err(RuntimeError::LibraryError(
-                        "Cannot import library: no library loader configured".to_string(),
-                    ));
                 }
+                .map_err(|e| {
+                    RuntimeError::LibraryError(format!("Failed to load library '{}': {}", path, e))
+                })?;
+
+                let library_program = pine_parser::Parser::parse_source(&source).map_err(|e| {
+                    RuntimeError::LibraryError(format!("Failed to parse library '{}': {}", path, e))
+                })?;
+
+                let mut library_interp = Interpreter::new();
+                library_interp.execute(&library_program)?;
+                let library_exports = library_interp.exports();
+
+                for (method_name, method_defs) in &library_interp.methods {
+                    for method_def in method_defs {
+                        self.methods
+                            .entry(method_name.clone())
+                            .or_default()
+                            .push(method_def.clone());
+                    }
+                }
+
+                let namespace: Value<O> = Value::Object {
+                    type_name: alias.clone(),
+                    fields: Rc::new(RefCell::new(library_exports.clone())),
+                    call: None,
+                };
+                self.variables.insert(
+                    alias.clone(),
+                    Variable {
+                        value: namespace,
+                        is_const: false,
+                        is_var_persistent: false,
+                    },
+                );
                 Ok(None)
             }
 

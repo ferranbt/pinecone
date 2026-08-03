@@ -38,6 +38,7 @@ fn bench_compile_only(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(name), source, |b, source| {
             b.iter(|| {
                 let _ = ScriptBuilder::<DefaultPineOutput>::with_code(black_box(source))
+                    .with_data(pine_lang::core::Data::default())
                     .compile()
                     .unwrap();
             });

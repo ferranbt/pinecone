@@ -25,6 +25,9 @@ pub enum ParserError {
 
     #[error("Expected identifier after '.' at line {0}")]
     ExpectedIdentifierAfterDot(usize),
+
+    #[error(transparent)]
+    Lexer(#[from] pine_lexer::LexerError),
 }
 
 impl From<ParserError> for String {
@@ -77,6 +80,12 @@ impl Parser {
             current: 0,
             next_call_id: 1,
         }
+    }
+
+    /// Lex and parse `source` into a program in one step.
+    pub fn parse_source(source: &str) -> Result<Program, ParserError> {
+        let tokens = pine_lexer::Lexer::new(source).tokenize()?;
+        Ok(Program::new(Self::new(tokens).parse()?))
     }
 
     fn next_call_id(&mut self) -> u32 {
