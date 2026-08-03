@@ -1,0 +1,9 @@
+//@version=5
+indicator("errors/user_function_too_many_args")
+// A user function rejects more arguments than it declares.
+
+f(a) => a
+x = f(1, 2)
+
+// Expected error:
+// error [too-many-arguments] 6:6: `f` takes at most 1 arguments, found 2

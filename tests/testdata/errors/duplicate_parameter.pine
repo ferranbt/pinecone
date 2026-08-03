@@ -1,0 +1,8 @@
+//@version=5
+indicator("errors/duplicate_parameter")
+// A parameter name may appear only once.
+
+f(x, x) => x
+
+// Expected error:
+// error [duplicate-parameter]: parameter `x` is declared more than once

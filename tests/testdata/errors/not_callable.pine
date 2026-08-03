@@ -1,0 +1,9 @@
+//@version=5
+indicator("errors/not_callable")
+// A value cannot be called like a function.
+
+x = 5
+y = x()
+
+// Expected error:
+// error [not-callable] 6:6: `x` is a variable, not a function

@@ -1,0 +1,8 @@
+//@version=5
+indicator("errors/unknown_type")
+// A type annotation must name a built-in or a declared type.
+
+UnknownType x = na
+
+// Expected error:
+// error [unknown-type]: unknown type `UnknownType`

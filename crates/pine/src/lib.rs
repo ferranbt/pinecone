@@ -254,10 +254,13 @@ impl<O: PineOutput> ScriptBuilder<O> {
             builtins.insert(name.clone(), value.clone());
         }
 
-        // Semantic pre-check: reject invalid programs before execution.
-        let diagnostics = pine_sema::analyze(&program, &builtins);
-        if !diagnostics.is_empty() {
-            return Err(Error::Sema(diagnostics));
+        // Semantic pre-check: reject if sema produces errors
+        let errors: Vec<_> = pine_sema::analyze(&program, &builtins)
+            .into_iter()
+            .filter(|diagnostic| diagnostic.severity == pine_diagnostics::Severity::Error)
+            .collect();
+        if !errors.is_empty() {
+            return Err(Error::Sema(errors));
         }
 
         // Create interpreter and load builtin namespace objects

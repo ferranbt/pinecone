@@ -7,9 +7,9 @@
 //! global-vs-local), which the default recurse-everything walk doesn't express.
 //! So we hand-write the recursion and interleave the scope bookkeeping.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use pine_ast::{Argument, Expr, Literal, Program, Stmt};
+use pine_ast::{Argument, Expr, FunctionParam, Literal, Program, Stmt};
 use pine_core::PineOutput;
 use pine_interpreter::{BuiltinSignature, Value};
 
@@ -30,10 +30,37 @@ pub struct Analyzer<'a, O: PineOutput> {
     /// How many script declarations (`indicator`/`strategy`/`library`) have been
     /// seen. A script may have at most one.
     declarations: u32,
+    /// User-declared free functions, `name -> (required, total)` parameter
+    /// counts, recorded as each declaration is walked so a later call can be
+    /// arity-checked. Methods are excluded (their receiver complicates arity).
+    functions: HashMap<String, (usize, usize)>,
+    /// Every user type/enum name, collected up front so an annotation may refer
+    /// to a type declared later in the file.
+    user_types: HashSet<String>,
+    /// The functions whose bodies enclose the point being analyzed; the last is
+    /// the one a call is currently being made from, so the call can be added to
+    /// the graph as an edge out of it.
+    fn_stack: Vec<String>,
+    /// The call graph, one entry per call: `(caller, callee, call-site)`. Built
+    /// during the walk and scanned afterwards — a callee that reaches back to its
+    /// caller closes a cycle, which is recursion (Pine forbids it).
+    call_edges: Vec<CallEdge>,
 }
+
+/// One call-graph edge: `(caller, callee, call-site position)`.
+type CallEdge = (String, String, Option<(u32, u32)>);
 
 /// The script-declaration functions — a script must have exactly one.
 const SCRIPT_DECLARATIONS: &[&str] = &["study", "indicator", "strategy", "library"];
+
+/// The built-in type names an annotation may name without a user declaration.
+/// Qualifiers (`series`/`simple`/`const`/`input`) are a separate field, and the
+/// generic collection forms (`array<…>`) are not captured as annotations, so a
+/// bare `array`/`matrix`/`map` is all that reaches here for those.
+const BUILTIN_TYPES: &[&str] = &[
+    "int", "float", "bool", "string", "color", "line", "linefill", "label", "box", "table",
+    "polyline", "array", "matrix", "map",
+];
 
 /// The called name as written, for diagnostics: `plot` or `ta.sma`.
 fn callee_name(callee: &Expr) -> String {
@@ -45,6 +72,30 @@ fn callee_name(callee: &Expr) -> String {
         },
         _ => String::new(),
     }
+}
+
+/// Whether `start` reaches `target` in the call graph. A direct self-call
+/// (`start == target`) counts, so this finds a node that participates in a cycle.
+fn reaches(start: &str, target: &str, adjacency: &HashMap<&str, Vec<&str>>) -> bool {
+    if start == target {
+        return true;
+    }
+    let mut stack = vec![start];
+    let mut seen = HashSet::new();
+    while let Some(node) = stack.pop() {
+        if !seen.insert(node) {
+            continue;
+        }
+        if let Some(callees) = adjacency.get(node) {
+            for &callee in callees {
+                if callee == target {
+                    return true;
+                }
+                stack.push(callee);
+            }
+        }
+    }
+    false
 }
 
 /// How to name a literal's type in a diagnostic.
@@ -66,6 +117,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             loop_depth: 0,
             builtins,
             declarations: 0,
+            functions: HashMap::new(),
+            user_types: HashSet::new(),
+            fn_stack: Vec::new(),
+            call_edges: Vec::new(),
         }
     }
 
@@ -197,14 +252,127 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
 
     /// Analyze a whole program, returning the errors found.
     pub fn analyze(mut self, program: &Program) -> Vec<Diagnostic> {
+        // Types are global and may be referenced by an annotation before their
+        // declaration, so collect their names before the ordered walk.
+        for stmt in &program.statements {
+            match stmt {
+                Stmt::TypeDecl { name, .. } | Stmt::EnumDecl { name, .. } => {
+                    self.user_types.insert(name.clone());
+                }
+                _ => {}
+            }
+        }
         for stmt in &program.statements {
             self.check_stmt(stmt);
         }
+        self.detect_recursion();
         self.diagnostics
+    }
+
+    /// Scan the call graph for cycles. An edge whose callee can reach its caller
+    /// again closes a cycle — the caller is (directly or indirectly) recursive,
+    /// which Pine forbids. Reported at the offending call site.
+    fn detect_recursion(&mut self) {
+        let cycles: Vec<CallEdge> = {
+            let mut adjacency: HashMap<&str, Vec<&str>> = HashMap::new();
+            for (caller, callee, _) in &self.call_edges {
+                adjacency.entry(caller).or_default().push(callee);
+            }
+            self.call_edges
+                .iter()
+                .filter(|(caller, callee, _)| reaches(callee, caller, &adjacency))
+                .cloned()
+                .collect()
+        };
+        for (caller, callee, pos) in cycles {
+            let message = if caller == callee {
+                format!("`{caller}` calls itself; Pine does not allow recursion")
+            } else {
+                format!("`{caller}` and `{callee}` call each other; Pine does not allow recursion")
+            };
+            self.emit("recursion", pos, message);
+        }
     }
 
     fn emit(&mut self, rule: &'static str, pos: Option<(u32, u32)>, message: impl Into<String>) {
         self.diagnostics.push(Diagnostic::error(rule, pos, message));
+    }
+
+    fn warn(&mut self, rule: &'static str, pos: Option<(u32, u32)>, message: impl Into<String>) {
+        self.diagnostics
+            .push(Diagnostic::warning(rule, pos, message));
+    }
+
+    /// Declaring a name that a built-in already owns hides the built-in. Pine
+    /// allows it but warns, so this is a warning, not an error.
+    fn check_shadow(&mut self, name: &str) {
+        if self.is_builtin(name) {
+            self.warn(
+                "shadows-builtin",
+                None,
+                format!("declaration of `{name}` shadows a built-in"),
+            );
+        }
+    }
+
+    /// Reject a type annotation that names neither a built-in type nor a
+    /// user-declared type/enum. Array suffixes (`Foo[]`) share their element's
+    /// type name.
+    fn check_type_annotation(&mut self, annotation: Option<&String>) {
+        let Some(annotation) = annotation else {
+            return;
+        };
+        let base = annotation.trim_end_matches("[]");
+        if BUILTIN_TYPES.contains(&base) || self.user_types.contains(base) {
+            return;
+        }
+        self.emit("unknown-type", None, format!("unknown type `{base}`"));
+    }
+
+    /// Check a call's argument count against a user function's parameters, using
+    /// the same count-based bounds as the built-in checker.
+    fn check_call_arity(
+        &mut self,
+        name: &str,
+        supplied: usize,
+        required: usize,
+        total: usize,
+        pos: Option<(u32, u32)>,
+    ) {
+        if supplied < required {
+            self.emit(
+                "too-few-arguments",
+                pos,
+                format!("`{name}` requires at least {required} arguments, found {supplied}"),
+            );
+        } else if supplied > total {
+            self.emit(
+                "too-many-arguments",
+                pos,
+                format!("`{name}` takes at most {total} arguments, found {supplied}"),
+            );
+        }
+    }
+
+    /// Record a user function's arity, check its parameter annotations, and walk
+    /// its body with the name on the recursion stack. The name must already be
+    /// declared so a call to it inside the body reads as recursion.
+    fn analyze_function(&mut self, name: &str, params: &[FunctionParam], body: &[Stmt]) {
+        // A parameter with a default may be omitted, so it is not required.
+        let required = params.iter().filter(|p| p.default_value.is_none()).count();
+        self.functions
+            .insert(name.to_string(), (required, params.len()));
+        for param in params {
+            self.check_type_annotation(param.type_annotation.as_ref());
+        }
+        self.fn_stack.push(name.to_string());
+        self.function_body(
+            params
+                .iter()
+                .map(|p| (p.name.as_str(), p.default_value.as_ref())),
+            body,
+        );
+        self.fn_stack.pop();
     }
 
     /// Declare `name` in the current scope, reporting a duplicate if it already
@@ -253,7 +421,14 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             if let Some(default) = default {
                 self.check_expr(default);
             }
-            self.scopes.declare(name, SymbolKind::Var);
+            self.check_shadow(name);
+            if self.scopes.declare(name, SymbolKind::Var).is_some() {
+                self.emit(
+                    "duplicate-parameter",
+                    None,
+                    format!("parameter `{name}` is declared more than once"),
+                );
+            }
         }
         for stmt in body {
             self.check_stmt(stmt);
@@ -265,21 +440,35 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
     fn check_stmt(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::VarDecl {
-                name, initializer, ..
+                name,
+                initializer,
+                type_annotation,
+                ..
             } => {
-                // Check the initializer *before* declaring the name, so a
-                // self-reference (`x = x`) resolves against the outer scope.
-                if let Some(init) = initializer {
-                    self.check_expr(init);
-                }
-                if self.scopes.declare(name, SymbolKind::Var).is_some() {
-                    self.emit(
-                        "duplicate-declaration",
-                        None,
-                        format!(
-                            "`{name}` is already declared in this scope (use `:=` to reassign)"
-                        ),
-                    );
+                self.check_type_annotation(type_annotation.as_ref());
+                self.check_shadow(name);
+                if let Some(Expr::Function { params, body }) = initializer {
+                    // A named function definition `f(x) => …`, which the parser
+                    // lowers to a lambda-valued variable. Declare it first so a
+                    // call to it inside its body reads as recursion, and record
+                    // it as a function so calls resolve and are arity-checked.
+                    self.declare(name, SymbolKind::Function);
+                    self.analyze_function(name, params, body);
+                } else {
+                    // Check the initializer *before* declaring the name, so a
+                    // self-reference (`x = x`) resolves against the outer scope.
+                    if let Some(init) = initializer {
+                        self.check_expr(init);
+                    }
+                    if self.scopes.declare(name, SymbolKind::Var).is_some() {
+                        self.emit(
+                            "duplicate-declaration",
+                            None,
+                            format!(
+                                "`{name}` is already declared in this scope (use `:=` to reassign)"
+                            ),
+                        );
+                    }
                 }
             }
             Stmt::Assignment { target, value } => {
@@ -289,6 +478,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             Stmt::TupleAssignment { names, value } => {
                 self.check_expr(value);
                 for name in names {
+                    self.check_shadow(name);
                     if self.scopes.declare(name, SymbolKind::Var).is_some() {
                         self.emit(
                             "duplicate-declaration",
@@ -324,6 +514,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.check_expr(from);
                 self.check_expr(to);
                 self.scopes.push();
+                self.check_shadow(var_name);
                 self.scopes.declare(var_name, SymbolKind::Var);
                 self.loop_body(body);
                 self.scopes.pop();
@@ -337,8 +528,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.check_expr(collection);
                 self.scopes.push();
                 if let Some(idx) = index_var {
+                    self.check_shadow(idx);
                     self.scopes.declare(idx, SymbolKind::Var);
                 }
+                self.check_shadow(item_var);
                 self.scopes.declare(item_var, SymbolKind::Var);
                 self.loop_body(body);
                 self.scopes.pop();
@@ -355,17 +548,16 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 name, params, body, ..
             } => {
                 // Declare the name first so the body may reference it.
+                self.check_shadow(name);
                 self.declare(name, SymbolKind::Function);
-                self.function_body(
-                    params
-                        .iter()
-                        .map(|p| (p.name.as_str(), p.default_value.as_ref())),
-                    body,
-                );
+                self.analyze_function(name, params, body);
             }
             Stmt::MethodDecl { params, body, .. } => {
                 // Methods may share a name (overload by receiver type), so the
                 // name is not declared/duplicate-checked; just check the body.
+                for param in params {
+                    self.check_type_annotation(param.type_annotation.as_ref());
+                }
                 self.function_body(
                     params
                         .iter()
@@ -373,7 +565,12 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     body,
                 );
             }
-            Stmt::TypeDecl { name, .. } => self.declare(name, SymbolKind::Type),
+            Stmt::TypeDecl { name, fields, .. } => {
+                self.declare(name, SymbolKind::Type);
+                for field in fields {
+                    self.check_type_annotation(Some(&field.type_annotation));
+                }
+            }
             Stmt::EnumDecl { name, .. } => self.declare(name, SymbolKind::Enum),
             Stmt::Import { alias, .. } => self.declare(alias, SymbolKind::Import),
             // `export` re-exports an already-declared item; nothing to resolve.
@@ -452,12 +649,36 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                             );
                         }
                     }
-                    if self.scopes.resolve(fname).is_none() && !self.is_builtin(fname) {
-                        self.emit(
-                            "unknown-function",
-                            pos,
-                            format!("unknown function `{fname}`"),
-                        );
+                    match self.scopes.resolve(fname) {
+                        Some(SymbolKind::Function) => {
+                            // Record the call as an edge out of the enclosing
+                            // function; cycles are found once the walk finishes.
+                            if let Some(caller) = self.fn_stack.last() {
+                                self.call_edges.push((caller.clone(), fname.clone(), pos));
+                            }
+                            if let Some(&(required, total)) = self.functions.get(fname) {
+                                self.check_call_arity(fname, args.len(), required, total, pos);
+                            }
+                        }
+                        // A value, type or enum is not callable.
+                        Some(kind @ (SymbolKind::Var | SymbolKind::Type | SymbolKind::Enum)) => {
+                            self.emit(
+                                "not-callable",
+                                pos,
+                                format!("`{fname}` is a {}, not a function", kind.noun()),
+                            );
+                        }
+                        // An import alias is called through its members, not directly.
+                        Some(SymbolKind::Import) => {}
+                        None => {
+                            if !self.is_builtin(fname) {
+                                self.emit(
+                                    "unknown-function",
+                                    pos,
+                                    format!("unknown function `{fname}`"),
+                                );
+                            }
+                        }
                     }
                 } else {
                     self.check_expr(callee);
