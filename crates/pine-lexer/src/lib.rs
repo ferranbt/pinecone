@@ -40,6 +40,13 @@ pub enum TokenType {
     Bool(bool),
     HexColor(String), // #RRGGBB or #RRGGBBAA
 
+    /// A `//` comment's text, verbatim and without the leading `//`. Emitted as
+    /// trivia for tools (the formatter); the parser filters it out.
+    Comment(String),
+    /// An empty source line, emitted as trivia so tools can preserve paragraph
+    /// breaks; the parser filters it out.
+    BlankLine,
+
     // Identifiers and keywords
     Ident(String),
     Var,
@@ -437,11 +444,17 @@ impl Lexer {
             '/' => {
                 self.advance();
                 if self.peek() == Some('/') {
-                    // Comment - skip to end of line
+                    self.advance(); // consume the second '/'
+                    let mut text = String::new();
                     while self.peek().is_some() && self.peek() != Some('\n') {
-                        self.advance();
+                        text.push(self.advance().expect("peeked Some"));
                     }
-                    return self.next_token();
+                    Token {
+                        typ: TokenType::Comment(text.clone()),
+                        lexeme: format!("//{text}"),
+                        line,
+                        column: col,
+                    }
                 } else if self.peek() == Some('=') {
                     self.advance();
                     Token {
@@ -702,18 +715,37 @@ impl Lexer {
                 // Check if this is a blank line or comment
                 if let Some(ch) = self.peek() {
                     if ch == '\n' || ch == '\r' {
-                        // Blank line - skip the newline and continue
+                        // Blank line - emit trivia and skip the newline.
+                        tokens.push(Token {
+                            typ: TokenType::BlankLine,
+                            lexeme: String::new(),
+                            line: self.line,
+                            column: self.column,
+                        });
                         self.advance();
                         at_line_start = true;
                         continue;
                     } else if ch == '/' && self.peek_ahead(1) == Some('/') {
-                        // Comment line - skip to end of line
+                        // A whole-line comment: capture it as trivia without
+                        // touching the indent stack (its indentation is layout).
+                        let comment_line = self.line;
+                        let comment_col = self.column;
+                        self.advance();
+                        self.advance();
+                        let mut text = String::new();
                         while let Some(c) = self.peek() {
                             if c == '\n' {
                                 break;
                             }
+                            text.push(c);
                             self.advance();
                         }
+                        tokens.push(Token {
+                            typ: TokenType::Comment(text.clone()),
+                            lexeme: format!("//{text}"),
+                            line: comment_line,
+                            column: comment_col,
+                        });
                         if self.peek() == Some('\n') {
                             self.advance();
                         }
@@ -1024,11 +1056,26 @@ mod tests {
 
     #[test]
     fn test_comments() -> eyre::Result<()> {
+        // A trailing comment is emitted as trivia between the code and Newline.
         let mut lexer = Lexer::new("42 // comment\n10");
         let tokens = lexer.tokenize()?;
         assert!(matches!(tokens[0].typ, TokenType::IntLiteral(n) if n == 42));
-        assert!(matches!(tokens[1].typ, TokenType::Newline));
-        assert!(matches!(tokens[2].typ, TokenType::IntLiteral(n) if n == 10));
+        assert!(matches!(&tokens[1].typ, TokenType::Comment(c) if c == " comment"));
+        assert!(matches!(tokens[2].typ, TokenType::Newline));
+        assert!(matches!(tokens[3].typ, TokenType::IntLiteral(n) if n == 10));
+        Ok(())
+    }
+
+    #[test]
+    fn test_whole_line_comment_is_trivia() -> eyre::Result<()> {
+        // A whole-line comment is captured without emitting Indent/Dedent.
+        let mut lexer = Lexer::new("// header\n42");
+        let tokens = lexer.tokenize()?;
+        assert!(matches!(&tokens[0].typ, TokenType::Comment(c) if c == " header"));
+        assert!(matches!(tokens[1].typ, TokenType::IntLiteral(n) if n == 42));
+        assert!(!tokens
+            .iter()
+            .any(|t| matches!(t.typ, TokenType::Indent | TokenType::Dedent)));
         Ok(())
     }
 

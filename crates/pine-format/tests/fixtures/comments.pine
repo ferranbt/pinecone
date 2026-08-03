@@ -1,0 +1,5 @@
+// header
+x = 1 // trailing
+----
+// header
+x = 1 // trailing

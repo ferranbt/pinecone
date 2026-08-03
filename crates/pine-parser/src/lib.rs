@@ -75,6 +75,10 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
+        let tokens = tokens
+            .into_iter()
+            .filter(|t| !matches!(t.typ, TokenType::Comment(_) | TokenType::BlankLine))
+            .collect();
         Self {
             tokens,
             current: 0,

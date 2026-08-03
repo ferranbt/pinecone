@@ -1,0 +1,7 @@
+x=close+1
+y  :=  a*b
+z = a and b or c
+----
+x = close + 1
+y := a * b
+z = a and b or c

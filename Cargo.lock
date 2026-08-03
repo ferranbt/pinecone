@@ -1481,6 +1481,17 @@ name = "pine-diagnostics"
 version = "0.1.0"
 
 [[package]]
+name = "pine-format"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "pine-ast",
+ "pine-core",
+ "pine-lexer",
+ "pine-parser",
+]
+
+[[package]]
 name = "pine-integration-tests"
 version = "0.1.0"
 dependencies = [

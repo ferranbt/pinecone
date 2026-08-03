@@ -14,6 +14,7 @@ members = [
     "crates/pine-lexer",
     "crates/pine-ast",
     "crates/pine-diagnostics",
+    "crates/pine-format",
     "crates/pine-parser",
     "crates/pine-interpreter",
     "crates/pine-builtin-macro",
@@ -35,6 +36,7 @@ pine-lexer = { path = "crates/pine-lexer", version = "0.1.0" }
 pine-parser = { path = "crates/pine-parser", version = "0.1.0" }
 pine-ast = { path = "crates/pine-ast", version = "0.1.0" }
 pine-diagnostics = { path = "crates/pine-diagnostics", version = "0.1.0" }
+pine-format = { path = "crates/pine-format", version = "0.1.0" }
 pine-interpreter = { path = "crates/pine-interpreter", version = "0.1.0" }
 pine-builtin-macro = { path = "crates/pine-builtin-macro", version = "0.1.0" }
 pine-builtins = { path = "crates/pine-builtins", version = "0.1.0" }
