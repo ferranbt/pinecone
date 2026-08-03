@@ -1,0 +1,9 @@
+//@version=5
+indicator("arguments/error_too_few_arguments")
+// Fewer arguments than the builtin's required parameters is rejected before the
+// script runs. `ta.sma` needs both `source` and `length`.
+
+n = ta.sma(close)
+
+// Expected error:
+// error [too-few-arguments] 6:11: `ta.sma` requires at least 2 arguments, found 1
