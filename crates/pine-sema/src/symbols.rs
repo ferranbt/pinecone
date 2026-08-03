@@ -378,6 +378,25 @@ mod tests {
     }
 
     #[test]
+    fn imports_record_the_alias_but_not_its_members() {
+        // `import foo/bar/1 as lib` then `x = lib.calc(1)`.
+        let table = table(
+            "//@version=5\nindicator(\"t\")\nimport foo/bar/1 as lib\nx = lib.calc(1)\n",
+        );
+
+        // The alias is a symbol, so go-to-definition / find-references on `lib`
+        // work: it is declared on line 3 and used once (line 4, `lib.calc`).
+        let lib = table.resolve(SymbolTable::GLOBAL, "lib").unwrap();
+        assert_eq!(lib.kind, SymbolKind::Import);
+        let lib_id = table.symbols().iter().position(|s| s.name == "lib").unwrap();
+        assert_eq!(table.references(lib_id).collect::<Vec<_>>(), vec![(4, 5)]);
+
+        // The member `calc` is a library export — it lives in another file that
+        // sema does not load, so it does not resolve. No occurrence, no guess.
+        assert_eq!(table.symbol_at(4, 9), None);
+    }
+
+    #[test]
     fn a_use_binds_to_the_innermost_shadowing_declaration() {
         // A global `x` (line 3) and a parameter `x` (line 4) that shadows it. The
         // use of `x` inside the function body must bind to the parameter, not the
