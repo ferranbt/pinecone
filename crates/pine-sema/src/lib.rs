@@ -27,10 +27,12 @@
 
 mod analyzer;
 mod scope;
+mod symbols;
 
 pub use analyzer::Analyzer;
 pub use pine_diagnostics::{Diagnostic, Severity};
 pub use scope::SymbolKind;
+pub use symbols::{ScopeId, ScopeKind, Symbol, SymbolId, SymbolTable};
 
 use pine_ast::Program;
 use pine_core::PineOutput;
@@ -49,4 +51,13 @@ pub fn analyze<O: PineOutput>(
     builtins: &HashMap<String, Value<O>>,
 ) -> Vec<Diagnostic> {
     Analyzer::new(builtins).analyze(program)
+}
+
+/// Analyze a program and also return the [`SymbolTable`] reconstructed from the
+/// same walk — the durable declarations a tool (language server) queries.
+pub fn analyze_with_symbols<O: PineOutput>(
+    program: &Program,
+    builtins: &HashMap<String, Value<O>>,
+) -> (Vec<Diagnostic>, SymbolTable) {
+    Analyzer::new(builtins).into_analysis(program)
 }

@@ -23,11 +23,15 @@
               "Expression": {
                 "Binary": {
                   "left": {
-                    "Variable": "a"
+                    "Variable": {
+                      "name": "a"
+                    }
                   },
                   "op": "Add",
                   "right": {
-                    "Variable": "b"
+                    "Variable": {
+                      "name": "b"
+                    }
                   }
                 }
               }
@@ -73,7 +77,9 @@
                       "left": {
                         "Binary": {
                           "left": {
-                            "Variable": "greeting"
+                            "Variable": {
+                              "name": "greeting"
+                            }
                           },
                           "op": "Add",
                           "right": {
@@ -85,13 +91,17 @@
                       },
                       "op": "Add",
                       "right": {
-                        "Variable": "name"
+                        "Variable": {
+                          "name": "name"
+                        }
                       }
                     }
                   },
                   "op": "Add",
                   "right": {
-                    "Variable": "punctuation"
+                    "Variable": {
+                      "name": "punctuation"
+                    }
                   }
                 }
               }
@@ -108,7 +118,9 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "add"
+            "Variable": {
+              "name": "add"
+            }
           },
           "args": [
             {
@@ -131,7 +143,9 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "greet"
+            "Variable": {
+              "name": "greet"
+            }
           },
           "args": [
             {

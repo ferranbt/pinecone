@@ -13,12 +13,16 @@
   {
     "Assignment": {
       "target": {
-        "Variable": "x"
+        "Variable": {
+          "name": "x"
+        }
       },
       "value": {
         "Binary": {
           "left": {
-            "Variable": "x"
+            "Variable": {
+              "name": "x"
+            }
           },
           "op": "Add",
           "right": {
@@ -33,12 +37,16 @@
   {
     "Assignment": {
       "target": {
-        "Variable": "x"
+        "Variable": {
+          "name": "x"
+        }
       },
       "value": {
         "Binary": {
           "left": {
-            "Variable": "x"
+            "Variable": {
+              "name": "x"
+            }
           },
           "op": "Sub",
           "right": {
@@ -53,12 +61,16 @@
   {
     "Assignment": {
       "target": {
-        "Variable": "x"
+        "Variable": {
+          "name": "x"
+        }
       },
       "value": {
         "Binary": {
           "left": {
-            "Variable": "x"
+            "Variable": {
+              "name": "x"
+            }
           },
           "op": "Mul",
           "right": {
@@ -73,12 +85,16 @@
   {
     "Assignment": {
       "target": {
-        "Variable": "x"
+        "Variable": {
+          "name": "x"
+        }
       },
       "value": {
         "Binary": {
           "left": {
-            "Variable": "x"
+            "Variable": {
+              "name": "x"
+            }
           },
           "op": "Div",
           "right": {
@@ -104,12 +120,16 @@
   {
     "Assignment": {
       "target": {
-        "Variable": "count"
+        "Variable": {
+          "name": "count"
+        }
       },
       "value": {
         "Binary": {
           "left": {
-            "Variable": "count"
+            "Variable": {
+              "name": "count"
+            }
           },
           "op": "Add",
           "right": {
@@ -135,12 +155,16 @@
   {
     "Assignment": {
       "target": {
-        "Variable": "total"
+        "Variable": {
+          "name": "total"
+        }
       },
       "value": {
         "Binary": {
           "left": {
-            "Variable": "total"
+            "Variable": {
+              "name": "total"
+            }
           },
           "op": "Sub",
           "right": {

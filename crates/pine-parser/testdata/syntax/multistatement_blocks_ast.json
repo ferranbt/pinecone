@@ -4,11 +4,15 @@
       "condition": {
         "Binary": {
           "left": {
-            "Variable": "close"
+            "Variable": {
+              "name": "close"
+            }
           },
           "op": "Greater",
           "right": {
-            "Variable": "open"
+            "Variable": {
+              "name": "open"
+            }
           }
         }
       },
@@ -56,11 +60,15 @@
       "condition": {
         "Binary": {
           "left": {
-            "Variable": "close"
+            "Variable": {
+              "name": "close"
+            }
           },
           "op": "Greater",
           "right": {
-            "Variable": "open"
+            "Variable": {
+              "name": "open"
+            }
           }
         }
       },
@@ -142,16 +150,22 @@
         {
           "Assignment": {
             "target": {
-              "Variable": "sum"
+              "Variable": {
+                "name": "sum"
+              }
             },
             "value": {
               "Binary": {
                 "left": {
-                  "Variable": "sum"
+                  "Variable": {
+                    "name": "sum"
+                  }
                 },
                 "op": "Add",
                 "right": {
-                  "Variable": "i"
+                  "Variable": {
+                    "name": "i"
+                  }
                 }
               }
             }
@@ -160,12 +174,16 @@
         {
           "Assignment": {
             "target": {
-              "Variable": "count"
+              "Variable": {
+                "name": "count"
+              }
             },
             "value": {
               "Binary": {
                 "left": {
-                  "Variable": "count"
+                  "Variable": {
+                    "name": "count"
+                  }
                 },
                 "op": "Add",
                 "right": {

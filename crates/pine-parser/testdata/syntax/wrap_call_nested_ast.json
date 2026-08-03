@@ -6,14 +6,18 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "f"
+            "Variable": {
+              "name": "f"
+            }
           },
           "args": [
             {
               "Positional": {
                 "Call": {
                   "callee": {
-                    "Variable": "g"
+                    "Variable": {
+                      "name": "g"
+                    }
                   },
                   "args": [
                     {

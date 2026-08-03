@@ -14,12 +14,16 @@
   {
     "Assignment": {
       "target": {
-        "Variable": "counter"
+        "Variable": {
+          "name": "counter"
+        }
       },
       "value": {
         "Binary": {
           "left": {
-            "Variable": "counter"
+            "Variable": {
+              "name": "counter"
+            }
           },
           "op": "Add",
           "right": {

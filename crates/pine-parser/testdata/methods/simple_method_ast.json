@@ -54,7 +54,9 @@
                     "args": [
                       {
                         "Positional": {
-                          "Variable": "x"
+                          "Variable": {
+                            "name": "x"
+                          }
                         }
                       }
                     ],
@@ -69,13 +71,17 @@
                   "target": {
                     "MemberAccess": {
                       "object": {
-                        "Variable": "this"
+                        "Variable": {
+                          "name": "this"
+                        }
                       },
                       "member": "x"
                     }
                   },
                   "value": {
-                    "Variable": "x"
+                    "Variable": {
+                      "name": "x"
+                    }
                   }
                 }
               }
@@ -97,7 +103,9 @@
                     "args": [
                       {
                         "Positional": {
-                          "Variable": "y"
+                          "Variable": {
+                            "name": "y"
+                          }
                         }
                       }
                     ],
@@ -112,13 +120,17 @@
                   "target": {
                     "MemberAccess": {
                       "object": {
-                        "Variable": "this"
+                        "Variable": {
+                          "name": "this"
+                        }
                       },
                       "member": "y"
                     }
                   },
                   "value": {
-                    "Variable": "y"
+                    "Variable": {
+                      "name": "y"
+                    }
                   }
                 }
               }

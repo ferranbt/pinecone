@@ -15,7 +15,9 @@
               "Expression": {
                 "Binary": {
                   "left": {
-                    "Variable": "x"
+                    "Variable": {
+                      "name": "x"
+                    }
                   },
                   "op": "Mul",
                   "right": {
@@ -50,11 +52,15 @@
               "Expression": {
                 "Binary": {
                   "left": {
-                    "Variable": "a"
+                    "Variable": {
+                      "name": "a"
+                    }
                   },
                   "op": "Add",
                   "right": {
-                    "Variable": "b"
+                    "Variable": {
+                      "name": "b"
+                    }
                   }
                 }
               }
@@ -71,7 +77,9 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "double"
+            "Variable": {
+              "name": "double"
+            }
           },
           "args": [
             {
@@ -94,7 +102,9 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "add"
+            "Variable": {
+              "name": "add"
+            }
           },
           "args": [
             {

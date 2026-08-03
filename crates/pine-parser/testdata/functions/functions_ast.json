@@ -6,12 +6,16 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "sma"
+            "Variable": {
+              "name": "sma"
+            }
           },
           "args": [
             {
               "Positional": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               }
             },
             {
@@ -35,17 +39,23 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "max"
+            "Variable": {
+              "name": "max"
+            }
           },
           "args": [
             {
               "Positional": {
-                "Variable": "high"
+                "Variable": {
+                  "name": "high"
+                }
               }
             },
             {
               "Positional": {
-                "Variable": "low"
+                "Variable": {
+                  "name": "low"
+                }
               }
             }
           ],
@@ -62,7 +72,9 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "foo"
+            "Variable": {
+              "name": "foo"
+            }
           },
           "args": [],
           "id": 3

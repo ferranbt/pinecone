@@ -187,6 +187,7 @@ fn secondary_series<O: PineOutput>(
         type_annotation: None,
         initializer: Some(expr.clone()),
         var_kind: VarKind::Plain,
+        loc: Default::default(),
     }]);
 
     let mut series = Vec::with_capacity(data.bars.len());

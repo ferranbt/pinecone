@@ -3,11 +3,15 @@
     "Expression": {
       "Binary": {
         "left": {
-          "Variable": "close"
+          "Variable": {
+            "name": "close"
+          }
         },
         "op": "Greater",
         "right": {
-          "Variable": "open"
+          "Variable": {
+            "name": "open"
+          }
         }
       }
     }
@@ -16,7 +20,9 @@
     "Expression": {
       "Binary": {
         "left": {
-          "Variable": "rsi"
+          "Variable": {
+            "name": "rsi"
+          }
         },
         "op": "Less",
         "right": {
@@ -31,7 +37,9 @@
     "Expression": {
       "Binary": {
         "left": {
-          "Variable": "x"
+          "Variable": {
+            "name": "x"
+          }
         },
         "op": "Eq",
         "right": {
@@ -48,7 +56,9 @@
         "left": {
           "Index": {
             "expr": {
-              "Variable": "close"
+              "Variable": {
+                "name": "close"
+              }
             },
             "index": {
               "Literal": {
@@ -61,7 +71,9 @@
         "right": {
           "Index": {
             "expr": {
-              "Variable": "close"
+              "Variable": {
+                "name": "close"
+              }
             },
             "index": {
               "Literal": {

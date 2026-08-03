@@ -26,11 +26,15 @@
       "condition": {
         "Binary": {
           "left": {
-            "Variable": "x"
+            "Variable": {
+              "name": "x"
+            }
           },
           "op": "Greater",
           "right": {
-            "Variable": "y"
+            "Variable": {
+              "name": "y"
+            }
           }
         }
       },
@@ -56,7 +60,9 @@
       "condition": {
         "Binary": {
           "left": {
-            "Variable": "x"
+            "Variable": {
+              "name": "x"
+            }
           },
           "op": "Eq",
           "right": {

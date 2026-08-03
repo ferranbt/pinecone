@@ -8,7 +8,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "input"
+                "Variable": {
+                  "name": "input"
+                }
               },
               "member": "int"
             }
@@ -37,7 +39,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "ta"
+                "Variable": {
+                  "name": "ta"
+                }
               },
               "member": "stoch"
             }
@@ -45,22 +49,30 @@
           "args": [
             {
               "Positional": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               }
             },
             {
               "Positional": {
-                "Variable": "high"
+                "Variable": {
+                  "name": "high"
+                }
               }
             },
             {
               "Positional": {
-                "Variable": "low"
+                "Variable": {
+                  "name": "low"
+                }
               }
             },
             {
               "Positional": {
-                "Variable": "lengthInput"
+                "Variable": {
+                  "name": "lengthInput"
+                }
               }
             }
           ],

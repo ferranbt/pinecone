@@ -6,7 +6,9 @@
       "initializer": {
         "Switch": {
           "value": {
-            "Variable": "mode"
+            "Variable": {
+              "name": "mode"
+            }
           },
           "cases": [
             [
@@ -57,7 +59,9 @@
       "initializer": {
         "Switch": {
           "value": {
-            "Variable": "x"
+            "Variable": {
+              "name": "x"
+            }
           },
           "cases": [
             [

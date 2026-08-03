@@ -8,7 +8,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "array"
+                "Variable": {
+                  "name": "array"
+                }
               },
               "member": "new_int"
             }
@@ -36,7 +38,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "array"
+                "Variable": {
+                  "name": "array"
+                }
               },
               "member": "new_float"
             }
@@ -64,7 +68,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "array"
+                "Variable": {
+                  "name": "array"
+                }
               },
               "member": "new_string"
             }

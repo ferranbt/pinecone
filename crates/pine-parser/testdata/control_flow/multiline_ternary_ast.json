@@ -8,11 +8,15 @@
           "condition": {
             "Binary": {
               "left": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               },
               "op": "Greater",
               "right": {
-                "Variable": "open"
+                "Variable": {
+                  "name": "open"
+                }
               }
             }
           },
@@ -39,11 +43,15 @@
           "condition": {
             "Binary": {
               "left": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               },
               "op": "Greater",
               "right": {
-                "Variable": "open"
+                "Variable": {
+                  "name": "open"
+                }
               }
             }
           },
@@ -57,11 +65,15 @@
               "condition": {
                 "Binary": {
                   "left": {
-                    "Variable": "close"
+                    "Variable": {
+                      "name": "close"
+                    }
                   },
                   "op": "Less",
                   "right": {
-                    "Variable": "open"
+                    "Variable": {
+                      "name": "open"
+                    }
                   }
                 }
               },

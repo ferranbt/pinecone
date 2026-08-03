@@ -6,17 +6,23 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "max"
+            "Variable": {
+              "name": "max"
+            }
           },
           "args": [
             {
               "Positional": {
-                "Variable": "open"
+                "Variable": {
+                  "name": "open"
+                }
               }
             },
             {
               "Positional": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               }
             }
           ],
@@ -32,17 +38,23 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "min"
+            "Variable": {
+              "name": "min"
+            }
           },
           "args": [
             {
               "Positional": {
-                "Variable": "open"
+                "Variable": {
+                  "name": "open"
+                }
               }
             },
             {
               "Positional": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               }
             }
           ],

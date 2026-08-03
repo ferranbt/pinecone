@@ -2,7 +2,9 @@
   {
     "If": {
       "condition": {
-        "Variable": "cond"
+        "Variable": {
+          "name": "cond"
+        }
       },
       "then_branch": [
         {
@@ -14,7 +16,9 @@
                 "left": {
                   "Binary": {
                     "left": {
-                      "Variable": "x"
+                      "Variable": {
+                        "name": "x"
+                      }
                     },
                     "op": "Less",
                     "right": {
@@ -26,7 +30,9 @@
                 },
                 "op": "And",
                 "right": {
-                  "Variable": "y"
+                  "Variable": {
+                    "name": "y"
+                  }
                 }
               }
             }
@@ -41,7 +47,9 @@
                 "condition": {
                   "Binary": {
                     "left": {
-                      "Variable": "a"
+                      "Variable": {
+                        "name": "a"
+                      }
                     },
                     "op": "Greater",
                     "right": {
@@ -61,7 +69,9 @@
                     "condition": {
                       "Binary": {
                         "left": {
-                          "Variable": "b"
+                          "Variable": {
+                            "name": "b"
+                          }
                         },
                         "op": "Less",
                         "right": {

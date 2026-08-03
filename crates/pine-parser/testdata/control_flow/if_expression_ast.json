@@ -20,7 +20,9 @@
           "condition": {
             "Binary": {
               "left": {
-                "Variable": "x"
+                "Variable": {
+                  "name": "x"
+                }
               },
               "op": "Less",
               "right": {
@@ -40,7 +42,9 @@
               {
                 "Binary": {
                   "left": {
-                    "Variable": "x"
+                    "Variable": {
+                      "name": "x"
+                    }
                   },
                   "op": "Eq",
                   "right": {
@@ -60,7 +64,9 @@
               {
                 "Binary": {
                   "left": {
-                    "Variable": "x"
+                    "Variable": {
+                      "name": "x"
+                    }
                   },
                   "op": "Less",
                   "right": {

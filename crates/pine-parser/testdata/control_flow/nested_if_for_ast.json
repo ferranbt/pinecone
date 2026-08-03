@@ -15,7 +15,9 @@
       "condition": {
         "Binary": {
           "left": {
-            "Variable": "x"
+            "Variable": {
+              "name": "x"
+            }
           },
           "op": "Greater",
           "right": {
@@ -58,7 +60,9 @@
                       "left": {
                         "Binary": {
                           "left": {
-                            "Variable": "i"
+                            "Variable": {
+                              "name": "i"
+                            }
                           },
                           "op": "Mod",
                           "right": {
@@ -80,16 +84,22 @@
                     {
                       "Assignment": {
                         "target": {
-                          "Variable": "total"
+                          "Variable": {
+                            "name": "total"
+                          }
                         },
                         "value": {
                           "Binary": {
                             "left": {
-                              "Variable": "total"
+                              "Variable": {
+                                "name": "total"
+                              }
                             },
                             "op": "Add",
                             "right": {
-                              "Variable": "i"
+                              "Variable": {
+                                "name": "i"
+                              }
                             }
                           }
                         }
@@ -101,16 +111,22 @@
                     {
                       "Assignment": {
                         "target": {
-                          "Variable": "total"
+                          "Variable": {
+                            "name": "total"
+                          }
                         },
                         "value": {
                           "Binary": {
                             "left": {
-                              "Variable": "total"
+                              "Variable": {
+                                "name": "total"
+                              }
                             },
                             "op": "Sub",
                             "right": {
-                              "Variable": "i"
+                              "Variable": {
+                                "name": "i"
+                              }
                             }
                           }
                         }
@@ -127,7 +143,9 @@
             "name": "result",
             "type_annotation": null,
             "initializer": {
-              "Variable": "total"
+              "Variable": {
+                "name": "total"
+              }
             }
           }
         }

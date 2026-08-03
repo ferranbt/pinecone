@@ -41,22 +41,30 @@
               {
                 "Assignment": {
                   "target": {
-                    "Variable": "sum"
+                    "Variable": {
+                      "name": "sum"
+                    }
                   },
                   "value": {
                     "Binary": {
                       "left": {
-                        "Variable": "sum"
+                        "Variable": {
+                          "name": "sum"
+                        }
                       },
                       "op": "Add",
                       "right": {
                         "Binary": {
                           "left": {
-                            "Variable": "i"
+                            "Variable": {
+                              "name": "i"
+                            }
                           },
                           "op": "Mul",
                           "right": {
-                            "Variable": "j"
+                            "Variable": {
+                              "name": "j"
+                            }
                           }
                         }
                       }

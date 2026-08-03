@@ -8,7 +8,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "label"
+                "Variable": {
+                  "name": "label"
+                }
               },
               "member": "new"
             }
@@ -18,7 +20,9 @@
               "Named": {
                 "name": "x",
                 "value": {
-                  "Variable": "bar_index"
+                  "Variable": {
+                    "name": "bar_index"
+                  }
                 }
               }
             },

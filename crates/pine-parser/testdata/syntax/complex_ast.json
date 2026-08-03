@@ -18,27 +18,37 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "stoch"
+            "Variable": {
+              "name": "stoch"
+            }
           },
           "args": [
             {
               "Positional": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               }
             },
             {
               "Positional": {
-                "Variable": "high"
+                "Variable": {
+                  "name": "high"
+                }
               }
             },
             {
               "Positional": {
-                "Variable": "low"
+                "Variable": {
+                  "name": "low"
+                }
               }
             },
             {
               "Positional": {
-                "Variable": "lengthInput"
+                "Variable": {
+                  "name": "lengthInput"
+                }
               }
             }
           ],
@@ -54,12 +64,16 @@
         "left": {
           "Call": {
             "callee": {
-              "Variable": "sma"
+              "Variable": {
+                "name": "sma"
+              }
             },
             "args": [
               {
                 "Positional": {
-                  "Variable": "close"
+                  "Variable": {
+                    "name": "close"
+                  }
                 }
               },
               {
@@ -77,12 +91,16 @@
         "right": {
           "Call": {
             "callee": {
-              "Variable": "sma"
+              "Variable": {
+                "name": "sma"
+              }
             },
             "args": [
               {
                 "Positional": {
-                  "Variable": "close"
+                  "Variable": {
+                    "name": "close"
+                  }
                 }
               },
               {

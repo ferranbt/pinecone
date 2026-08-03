@@ -8,7 +8,9 @@
           "condition": {
             "Binary": {
               "left": {
-                "Variable": "x"
+                "Variable": {
+                  "name": "x"
+                }
               },
               "op": "Greater",
               "right": {
@@ -40,13 +42,19 @@
       "initializer": {
         "Ternary": {
           "condition": {
-            "Variable": "isGreen"
+            "Variable": {
+              "name": "isGreen"
+            }
           },
           "then_expr": {
-            "Variable": "green"
+            "Variable": {
+              "name": "green"
+            }
           },
           "else_expr": {
-            "Variable": "red"
+            "Variable": {
+              "name": "red"
+            }
           }
         }
       },

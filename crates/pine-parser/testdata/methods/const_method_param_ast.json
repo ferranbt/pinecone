@@ -37,13 +37,17 @@
             "target": {
               "MemberAccess": {
                 "object": {
-                  "Variable": "this"
+                  "Variable": {
+                    "name": "this"
+                  }
                 },
                 "member": "x"
               }
             },
             "value": {
-              "Variable": "newX"
+              "Variable": {
+                "name": "newX"
+              }
             }
           }
         }

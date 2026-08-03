@@ -8,13 +8,17 @@
           "left": {
             "Binary": {
               "left": {
-                "Variable": "closeDiff"
+                "Variable": {
+                  "name": "closeDiff"
+                }
               },
               "op": "Div",
               "right": {
                 "Index": {
                   "expr": {
-                    "Variable": "close"
+                    "Variable": {
+                      "name": "close"
+                    }
                   },
                   "index": {
                     "Literal": {

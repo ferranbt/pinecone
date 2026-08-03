@@ -8,7 +8,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "array"
+                "Variable": {
+                  "name": "array"
+                }
               },
               "member": "from"
             }
@@ -59,28 +61,38 @@
       "index_var": "i",
       "item_var": "value",
       "collection": {
-        "Variable": "arr"
+        "Variable": {
+          "name": "arr"
+        }
       },
       "body": [
         {
           "Assignment": {
             "target": {
-              "Variable": "sum"
+              "Variable": {
+                "name": "sum"
+              }
             },
             "value": {
               "Binary": {
                 "left": {
-                  "Variable": "sum"
+                  "Variable": {
+                    "name": "sum"
+                  }
                 },
                 "op": "Add",
                 "right": {
                   "Binary": {
                     "left": {
-                      "Variable": "i"
+                      "Variable": {
+                        "name": "i"
+                      }
                     },
                     "op": "Mul",
                     "right": {
-                      "Variable": "value"
+                      "Variable": {
+                        "name": "value"
+                      }
                     }
                   }
                 }
