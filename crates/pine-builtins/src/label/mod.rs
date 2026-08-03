@@ -1,5 +1,6 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Color, Interpreter, Label, LabelOutput, PineOutput, RuntimeError, Value};
+use pine_core::{Color, Label, LabelOutput, PineOutput};
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;

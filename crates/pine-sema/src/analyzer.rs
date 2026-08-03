@@ -10,7 +10,8 @@
 use std::collections::HashMap;
 
 use pine_ast::{Argument, Expr, Literal, Program, Stmt};
-use pine_interpreter::{BuiltinSignature, PineOutput, Value};
+use pine_core::PineOutput;
+use pine_interpreter::{BuiltinSignature, Value};
 
 use crate::scope::{is_global_only, ScopeStack, SymbolKind};
 use pine_diagnostics::Diagnostic;

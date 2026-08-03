@@ -481,6 +481,7 @@ dependencies = [
  "pine-ast",
  "pine-broker",
  "pine-core",
+ "pine-parser",
  "thiserror",
 ]
 
@@ -528,6 +529,7 @@ name = "pine-sema"
 version = "0.1.0"
 dependencies = [
  "pine-ast",
+ "pine-core",
  "pine-diagnostics",
  "pine-interpreter",
 ]
@@ -802,6 +804,7 @@ dependencies = [
 name = "use-kraken-data-source"
 version = "0.1.0"
 dependencies = [
+ "pine-core",
  "pine-data",
  "pine-interpreter",
  "pine-lang",

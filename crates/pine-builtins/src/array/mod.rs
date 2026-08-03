@@ -1,5 +1,6 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
+use pine_core::PineOutput;
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 

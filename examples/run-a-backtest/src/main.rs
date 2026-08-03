@@ -3,7 +3,7 @@
 /// Declares a `strategy`, replays it over synthetic bars, and reads the
 /// equity curve and trade log back from the `RunResult`.
 use pine_lang::ScriptBuilder;
-use pine_interpreter::DefaultPineOutput;
+use pine_core::DefaultPineOutput;
 
 fn main() {
     let script_source = r#"

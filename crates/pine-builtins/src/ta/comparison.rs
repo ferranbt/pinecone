@@ -1,6 +1,7 @@
 use super::moving_averages::checked_length;
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, PineOutput, RuntimeError, SeriesBuffer, Value};
+use pine_core::{PineOutput, SeriesBuffer};
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// ta.change(source, length) - Difference between current and N bars ago
 #[derive(BuiltinFunction)]

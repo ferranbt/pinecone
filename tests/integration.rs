@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
+    use pine_core::{AlertConditionOutput, DefaultPineOutput, LibraryLoader, LogOutput};
     use pine_core::{SymInfo, Timeframe, TimeframeUnit};
     use pine_data::StaticProvider;
-    use pine_interpreter::{AlertConditionOutput, DefaultPineOutput, LibraryLoader, LogOutput};
     use pine_lang::ScriptBuilder;
     use std::fs;
     use std::path::{Path, PathBuf};

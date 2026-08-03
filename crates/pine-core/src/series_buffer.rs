@@ -1,10 +1,7 @@
 //! A rolling window of a series' past values, for stateful builtins.
 //!
 //! A builtin declares one as a `#[state]` field, so the buffer is owned by the
-//! call site and survives across bars. It records one value per bar (the macro's
-//! once-per-bar guard makes sure of that) and keeps only as many as the caller
-//! asks for, so a `ta.sma(close, 20)` call site holds 20 values rather than the
-//! whole chart.
+//! call site and survives across bars.
 
 use std::collections::VecDeque;
 

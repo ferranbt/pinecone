@@ -4,7 +4,7 @@
 /// crossover over them.
 use pine_lang::ScriptBuilder;
 use pine_data::KrakenSource;
-use pine_interpreter::DefaultPineOutput;
+use pine_core::DefaultPineOutput;
 
 const SCRIPT: &str = r#"
 //@version=5

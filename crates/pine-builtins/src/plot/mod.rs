@@ -1,9 +1,10 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{
-    Color, Interpreter, PineOutput, Plot as PlotStruct, PlotOutput, Plotarrow as PlotarrowStruct,
+use pine_core::{
+    Color, PineOutput, Plot as PlotStruct, PlotOutput, Plotarrow as PlotarrowStruct,
     Plotbar as PlotbarStruct, Plotcandle as PlotcandleStruct, Plotchar as PlotcharStruct,
-    Plotshape as PlotshapeStruct, RuntimeError, Value,
+    Plotshape as PlotshapeStruct,
 };
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
 
 /// plot() - Plots a series of data on the chart

@@ -13,7 +13,8 @@
 //! let program = Program::new(Parser::new(tokens).parse().unwrap());
 //!
 //! use std::collections::HashMap;
-//! use pine_interpreter::{DefaultPineOutput, Value};
+//! use pine_core::DefaultPineOutput;
+//! use pine_interpreter::Value;
 //!
 //! // The built-ins the runtime registers; here just `close`.
 //! let mut builtins: HashMap<String, Value<DefaultPineOutput>> = HashMap::new();
@@ -32,7 +33,8 @@ pub use pine_diagnostics::{Diagnostic, Severity};
 pub use scope::SymbolKind;
 
 use pine_ast::Program;
-use pine_interpreter::{PineOutput, Value};
+use pine_core::PineOutput;
+use pine_interpreter::Value;
 use std::collections::HashMap;
 
 /// Run semantic analysis over a parsed program and return every error found.

@@ -6,7 +6,8 @@
 
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::PineVersion;
-use pine_interpreter::{Indicator, IndicatorOutput, Interpreter, PineOutput, RuntimeError, Value};
+use pine_core::{Indicator, IndicatorOutput, PineOutput};
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// indicator(title, shorttitle, overlay, format, precision, ...)
 #[derive(BuiltinFunction)]

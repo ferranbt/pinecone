@@ -4,10 +4,8 @@
 /// 1. A custom output type that stores additional data (alerts)
 /// 2. A custom builtin function that works with the custom output
 use pine_lang::ScriptBuilder;
-use pine_interpreter::{
-    impl_output_traits_delegate, Builtin, DefaultPineOutput, EvaluatedArg, FunctionCallArgs,
-    Interpreter, PineOutput, RuntimeError, Value,
-};
+use pine_core::{impl_output_traits_delegate, DefaultPineOutput, PineOutput};
+use pine_interpreter::{Builtin, EvaluatedArg, FunctionCallArgs, Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
 use std::rc::Rc;
 

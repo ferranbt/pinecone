@@ -1,5 +1,6 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, PineOutput, RuntimeError, SeriesBuffer, Value};
+use pine_core::{PineOutput, SeriesBuffer};
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// ta.stdev(source, length) - Standard Deviation
 #[derive(BuiltinFunction)]

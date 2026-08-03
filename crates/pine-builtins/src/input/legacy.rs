@@ -10,9 +10,8 @@
 //! `input(...)` simply returns its default and records the declaration.
 
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{
-    BuiltinFn, Input, InputOutput, InputValue, Interpreter, PineOutput, RuntimeError, Value,
-};
+use pine_core::{Input, InputOutput, InputValue, PineOutput};
+use pine_interpreter::{BuiltinFn, Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
