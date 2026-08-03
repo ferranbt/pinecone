@@ -25,7 +25,9 @@
               "left": {
                 "Index": {
                   "expr": {
-                    "Variable": "open"
+                    "Variable": {
+                      "name": "open"
+                    }
                   },
                   "index": {
                     "Literal": {
@@ -36,7 +38,9 @@
               },
               "op": "Eq",
               "right": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               }
             }
           },
@@ -46,7 +50,9 @@
               "left": {
                 "Index": {
                   "expr": {
-                    "Variable": "close"
+                    "Variable": {
+                      "name": "close"
+                    }
                   },
                   "index": {
                     "Literal": {
@@ -57,7 +63,9 @@
               },
               "op": "Eq",
               "right": {
-                "Variable": "open"
+                "Variable": {
+                  "name": "open"
+                }
               }
             }
           }
@@ -67,12 +75,16 @@
         {
           "Assignment": {
             "target": {
-              "Variable": "ocCount"
+              "Variable": {
+                "name": "ocCount"
+              }
             },
             "value": {
               "Binary": {
                 "left": {
-                  "Variable": "ocCount"
+                  "Variable": {
+                    "name": "ocCount"
+                  }
                 },
                 "op": "Add",
                 "right": {
@@ -113,11 +125,15 @@
           "left": {
             "Binary": {
               "left": {
-                "Variable": "open"
+                "Variable": {
+                  "name": "open"
+                }
               },
               "op": "Eq",
               "right": {
-                "Variable": "high"
+                "Variable": {
+                  "name": "high"
+                }
               }
             }
           },
@@ -125,11 +141,15 @@
           "right": {
             "Binary": {
               "left": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               },
               "op": "Eq",
               "right": {
-                "Variable": "high"
+                "Variable": {
+                  "name": "high"
+                }
               }
             }
           }
@@ -139,12 +159,16 @@
         {
           "Assignment": {
             "target": {
-              "Variable": "hCount"
+              "Variable": {
+                "name": "hCount"
+              }
             },
             "value": {
               "Binary": {
                 "left": {
-                  "Variable": "hCount"
+                  "Variable": {
+                    "name": "hCount"
+                  }
                 },
                 "op": "Add",
                 "right": {
@@ -179,7 +203,9 @@
         "Unary": {
           "op": "Not",
           "expr": {
-            "Variable": "flag"
+            "Variable": {
+              "name": "flag"
+            }
           }
         }
       },

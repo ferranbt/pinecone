@@ -9,7 +9,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "array"
+                "Variable": {
+                  "name": "array"
+                }
               },
               "member": "from"
             }
@@ -52,7 +54,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "array"
+                "Variable": {
+                  "name": "array"
+                }
               },
               "member": "from"
             }

@@ -28,7 +28,9 @@
       "condition": {
         "Binary": {
           "left": {
-            "Variable": "i"
+            "Variable": {
+              "name": "i"
+            }
           },
           "op": "Less",
           "right": {
@@ -56,7 +58,9 @@
             "condition": {
               "Binary": {
                 "left": {
-                  "Variable": "j"
+                  "Variable": {
+                    "name": "j"
+                  }
                 },
                 "op": "Less",
                 "right": {
@@ -70,22 +74,30 @@
               {
                 "Assignment": {
                   "target": {
-                    "Variable": "sum"
+                    "Variable": {
+                      "name": "sum"
+                    }
                   },
                   "value": {
                     "Binary": {
                       "left": {
-                        "Variable": "sum"
+                        "Variable": {
+                          "name": "sum"
+                        }
                       },
                       "op": "Add",
                       "right": {
                         "Binary": {
                           "left": {
-                            "Variable": "i"
+                            "Variable": {
+                              "name": "i"
+                            }
                           },
                           "op": "Mul",
                           "right": {
-                            "Variable": "j"
+                            "Variable": {
+                              "name": "j"
+                            }
                           }
                         }
                       }
@@ -96,12 +108,16 @@
               {
                 "Assignment": {
                   "target": {
-                    "Variable": "j"
+                    "Variable": {
+                      "name": "j"
+                    }
                   },
                   "value": {
                     "Binary": {
                       "left": {
-                        "Variable": "j"
+                        "Variable": {
+                          "name": "j"
+                        }
                       },
                       "op": "Add",
                       "right": {
@@ -119,12 +135,16 @@
         {
           "Assignment": {
             "target": {
-              "Variable": "i"
+              "Variable": {
+                "name": "i"
+              }
             },
             "value": {
               "Binary": {
                 "left": {
-                  "Variable": "i"
+                  "Variable": {
+                    "name": "i"
+                  }
                 },
                 "op": "Add",
                 "right": {

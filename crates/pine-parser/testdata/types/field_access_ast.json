@@ -25,7 +25,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "pivotPoint"
+                "Variable": {
+                  "name": "pivotPoint"
+                }
               },
               "member": "new"
             }
@@ -58,7 +60,9 @@
       "initializer": {
         "MemberAccess": {
           "object": {
-            "Variable": "foundPoint"
+            "Variable": {
+              "name": "foundPoint"
+            }
           },
           "member": "x"
         }
@@ -72,7 +76,9 @@
       "initializer": {
         "MemberAccess": {
           "object": {
-            "Variable": "foundPoint"
+            "Variable": {
+              "name": "foundPoint"
+            }
           },
           "member": "y"
         }

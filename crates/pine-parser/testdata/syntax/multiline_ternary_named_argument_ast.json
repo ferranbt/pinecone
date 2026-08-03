@@ -6,7 +6,9 @@
       "initializer": {
         "Call": {
           "callee": {
-            "Variable": "f"
+            "Variable": {
+              "name": "f"
+            }
           },
           "args": [
             {
@@ -25,7 +27,9 @@
                 "value": {
                   "Ternary": {
                     "condition": {
-                      "Variable": "cond"
+                      "Variable": {
+                        "name": "cond"
+                      }
                     },
                     "then_expr": {
                       "Literal": {

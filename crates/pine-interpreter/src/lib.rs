@@ -475,7 +475,7 @@ fn collect_assigned_names(body: &[Stmt], out: &mut std::collections::HashSet<Str
                 out.insert(name.clone());
             }
             Stmt::Assignment {
-                target: Expr::Variable(n),
+                target: Expr::Variable { name: n, .. },
                 ..
             } => {
                 out.insert(n.clone());
@@ -699,6 +699,7 @@ impl<O: PineOutput> Interpreter<O> {
                 // varip's intrabar-update behavior is not yet implemented; it
                 // persists across bars exactly like var (is_persistent()).
                 var_kind,
+                ..
             } => {
                 let is_var_persistent = var_kind.is_persistent();
                 // Pine `var`/`varip` semantics: the initializer runs only the
@@ -748,7 +749,7 @@ impl<O: PineOutput> Interpreter<O> {
                 // Nothing is pushed on the bar the `var` initialized: there is no
                 // previous bar yet, and inventing one would make `acc[1]` read the
                 // initializer instead of na.
-                if let Expr::Variable(name) = target {
+                if let Expr::Variable { name, .. } = target {
                     if let Some(var) = self.variables.get(name) {
                         let born_this_bar = self
                             .var_decls_initialized
@@ -762,7 +763,7 @@ impl<O: PineOutput> Interpreter<O> {
 
                 let val = self.eval_expr(value)?;
                 match target {
-                    Expr::Variable(name) => {
+                    Expr::Variable { name, .. } => {
                         // Preserve the existing variable's flags (const, persistent).
                         let (is_const, is_var_persistent) =
                             if let Some(var) = self.variables.get(name) {
@@ -793,9 +794,9 @@ impl<O: PineOutput> Interpreter<O> {
                         );
                         Ok(None)
                     }
-                    Expr::MemberAccess { object, member } => {
+                    Expr::MemberAccess { object, member, .. } => {
                         // Check if we're trying to modify a member of a const variable
-                        if let Expr::Variable(var_name) = object.as_ref() {
+                        if let Expr::Variable { name: var_name, .. } = object.as_ref() {
                             if let Some(var) = self.variables.get(var_name) {
                                 if var.is_const {
                                     return Err(RuntimeError::ConstReassignment(format!(
@@ -825,7 +826,7 @@ impl<O: PineOutput> Interpreter<O> {
                 }
             }
 
-            Stmt::TupleAssignment { names, value } => {
+            Stmt::TupleAssignment { names, value, .. } => {
                 let val = self.eval_expr(value)?;
                 if let Value::Array(arr_ref) = val {
                     let arr = arr_ref.borrow();
@@ -899,6 +900,7 @@ impl<O: PineOutput> Interpreter<O> {
                 from,
                 to,
                 body,
+                ..
             } => {
                 let from_val = self.eval_expr(from)?.as_number()?;
                 let to_val = self.eval_expr(to)?.as_number()?;
@@ -936,6 +938,7 @@ impl<O: PineOutput> Interpreter<O> {
                 item_var,
                 collection,
                 body,
+                ..
             } => {
                 let collection_value = self.eval_expr(collection)?;
                 let arr = collection_value.as_array()?;
@@ -995,6 +998,7 @@ impl<O: PineOutput> Interpreter<O> {
                 name,
                 fields,
                 export,
+                ..
             } => {
                 // Create a Type value and store it as a variable
                 let type_value = Value::Type {
@@ -1021,6 +1025,7 @@ impl<O: PineOutput> Interpreter<O> {
                 name,
                 fields,
                 export,
+                ..
             } => {
                 // Create an Object that contains all enum members as fields
                 let mut enum_fields = HashMap::new();
@@ -1075,7 +1080,7 @@ impl<O: PineOutput> Interpreter<O> {
                 Ok(None)
             }
 
-            Stmt::Import { path, alias } => {
+            Stmt::Import { path, alias, .. } => {
                 let source = match &self.library_loader {
                     Some(loader) => loader.load_library(path),
                     None => {
@@ -1126,6 +1131,7 @@ impl<O: PineOutput> Interpreter<O> {
                 params,
                 body,
                 export,
+                ..
             } => {
                 // Extract the type name from the first parameter's type annotation
                 let type_name = if let Some(first_param) = params.first() {
@@ -1167,6 +1173,7 @@ impl<O: PineOutput> Interpreter<O> {
                 params,
                 body,
                 export,
+                ..
             } => {
                 // Create a function value
                 let func_value = Value::Function {
@@ -1248,7 +1255,7 @@ impl<O: PineOutput> Interpreter<O> {
         match expr {
             Expr::Literal(lit) => Ok(self.eval_literal(lit)),
 
-            Expr::Variable(name) => self
+            Expr::Variable { name, .. } => self
                 .variables
                 .get(name)
                 .map(|var| var.value.clone())
@@ -1335,7 +1342,7 @@ impl<O: PineOutput> Interpreter<O> {
                 // history (e.g. builtin Series like `close` fed by the host)
                 // fall through to the Series/Array indexing below.
                 if index_val > 0 {
-                    if let Expr::Variable(var_name) = expr.as_ref() {
+                    if let Expr::Variable { name: var_name, .. } = expr.as_ref() {
                         if let Some(h) = self.user_series_history.get(var_name) {
                             return Ok(if h.len() >= index_val {
                                 h[h.len() - index_val].clone()
@@ -1413,7 +1420,7 @@ impl<O: PineOutput> Interpreter<O> {
                 ..
             } => {
                 // Check if this is a method call (object.method())
-                if let Expr::MemberAccess { object, member } = callee.as_ref() {
+                if let Expr::MemberAccess { object, member, .. } = callee.as_ref() {
                     // Try to find a method with this name
                     if let Some(method_defs) = self.methods.get(member).cloned() {
                         // Evaluate the object (this will be the first parameter)
@@ -1491,7 +1498,7 @@ impl<O: PineOutput> Interpreter<O> {
                 }
             }
 
-            Expr::MemberAccess { object, member } => {
+            Expr::MemberAccess { object, member, .. } => {
                 let obj_value = self.eval_expr(object)?;
                 match obj_value {
                     Value::Object { fields, .. } => {
@@ -1709,7 +1716,7 @@ impl<O: PineOutput> Interpreter<O> {
             // Literals are always const
             Expr::Literal(_) => true,
             // Variable is const if it's stored as const
-            Expr::Variable(name) => self
+            Expr::Variable { name, .. } => self
                 .variables
                 .get(name)
                 .map(|var| var.is_const)

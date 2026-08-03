@@ -8,7 +8,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "input"
+                "Variable": {
+                  "name": "input"
+                }
               },
               "member": "int"
             }

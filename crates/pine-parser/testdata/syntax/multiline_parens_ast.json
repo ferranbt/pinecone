@@ -59,7 +59,9 @@
                       },
                       "op": "Mul",
                       "right": {
-                        "Variable": "x"
+                        "Variable": {
+                          "name": "x"
+                        }
                       }
                     }
                   },
@@ -73,7 +75,9 @@
                       },
                       "op": "Mul",
                       "right": {
-                        "Variable": "y"
+                        "Variable": {
+                          "name": "y"
+                        }
                       }
                     }
                   }
@@ -89,7 +93,9 @@
                   },
                   "op": "Mul",
                   "right": {
-                    "Variable": "z"
+                    "Variable": {
+                      "name": "z"
+                    }
                   }
                 }
               }
@@ -97,7 +103,9 @@
           },
           "op": "Div",
           "right": {
-            "Variable": "sum"
+            "Variable": {
+              "name": "sum"
+            }
           }
         }
       }

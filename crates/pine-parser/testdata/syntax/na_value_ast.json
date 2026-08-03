@@ -16,7 +16,9 @@
       "initializer": {
         "Ternary": {
           "condition": {
-            "Variable": "someCondition"
+            "Variable": {
+              "name": "someCondition"
+            }
           },
           "then_expr": {
             "Literal": "Na"

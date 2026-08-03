@@ -25,7 +25,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "pivotPoint"
+                "Variable": {
+                  "name": "pivotPoint"
+                }
               },
               "member": "new"
             }
@@ -60,7 +62,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "pivotPoint"
+                "Variable": {
+                  "name": "pivotPoint"
+                }
               },
               "member": "new"
             }

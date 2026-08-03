@@ -10,7 +10,9 @@
               "left": {
                 "Binary": {
                   "left": {
-                    "Variable": "x"
+                    "Variable": {
+                      "name": "x"
+                    }
                   },
                   "op": "Less",
                   "right": {
@@ -22,13 +24,17 @@
               },
               "op": "And",
               "right": {
-                "Variable": "y"
+                "Variable": {
+                  "name": "y"
+                }
               }
             }
           },
           "op": "And",
           "right": {
-            "Variable": "z"
+            "Variable": {
+              "name": "z"
+            }
           }
         }
       }

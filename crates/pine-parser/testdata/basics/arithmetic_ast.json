@@ -8,11 +8,15 @@
           "left": {
             "Binary": {
               "left": {
-                "Variable": "high"
+                "Variable": {
+                  "name": "high"
+                }
               },
               "op": "Add",
               "right": {
-                "Variable": "low"
+                "Variable": {
+                  "name": "low"
+                }
               }
             }
           },
@@ -34,11 +38,15 @@
       "initializer": {
         "Binary": {
           "left": {
-            "Variable": "close"
+            "Variable": {
+              "name": "close"
+            }
           },
           "op": "Sub",
           "right": {
-            "Variable": "open"
+            "Variable": {
+              "name": "open"
+            }
           }
         }
       },
@@ -52,7 +60,9 @@
       "initializer": {
         "Binary": {
           "left": {
-            "Variable": "close"
+            "Variable": {
+              "name": "close"
+            }
           },
           "op": "Mul",
           "right": {

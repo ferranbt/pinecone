@@ -3,12 +3,16 @@
     "Expression": {
       "Call": {
         "callee": {
-          "Variable": "plot"
+          "Variable": {
+            "name": "plot"
+          }
         },
         "args": [
           {
             "Positional": {
-              "Variable": "percentChange"
+              "Variable": {
+                "name": "percentChange"
+              }
             }
           },
           {
@@ -29,7 +33,9 @@
                   "condition": {
                     "Binary": {
                       "left": {
-                        "Variable": "percentChange"
+                        "Variable": {
+                          "name": "percentChange"
+                        }
                       },
                       "op": "GreaterEq",
                       "right": {
@@ -42,7 +48,9 @@
                   "then_expr": {
                     "MemberAccess": {
                       "object": {
-                        "Variable": "color"
+                        "Variable": {
+                          "name": "color"
+                        }
                       },
                       "member": "green"
                     }
@@ -50,7 +58,9 @@
                   "else_expr": {
                     "MemberAccess": {
                       "object": {
-                        "Variable": "color"
+                        "Variable": {
+                          "name": "color"
+                        }
                       },
                       "member": "red"
                     }
@@ -75,7 +85,9 @@
               "value": {
                 "MemberAccess": {
                   "object": {
-                    "Variable": "plot"
+                    "Variable": {
+                      "name": "plot"
+                    }
                   },
                   "member": "style_histogram"
                 }
@@ -88,7 +100,9 @@
               "value": {
                 "MemberAccess": {
                   "object": {
-                    "Variable": "format"
+                    "Variable": {
+                      "name": "format"
+                    }
                   },
                   "member": "percent"
                 }

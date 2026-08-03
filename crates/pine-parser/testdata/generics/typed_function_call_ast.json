@@ -8,7 +8,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "matrix"
+                "Variable": {
+                  "name": "matrix"
+                }
               },
               "member": "new"
             }
@@ -54,7 +56,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "array"
+                "Variable": {
+                  "name": "array"
+                }
               },
               "member": "new"
             }
@@ -93,7 +97,9 @@
           "callee": {
             "MemberAccess": {
               "object": {
-                "Variable": "map"
+                "Variable": {
+                  "name": "map"
+                }
               },
               "member": "new"
             }

@@ -16,7 +16,9 @@
               "object": {
                 "MemberAccess": {
                   "object": {
-                    "Variable": "pt"
+                    "Variable": {
+                      "name": "pt"
+                    }
                   },
                   "member": "point"
                 }

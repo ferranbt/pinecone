@@ -422,6 +422,18 @@ impl Parser {
     }
 
     // Declarations (var declarations, assignments, etc.)
+    /// The position of the current token, for attaching to a declaration node.
+    fn cur_loc(&self) -> Loc {
+        let token = self.peek();
+        Loc::new(token.line as u32, token.column as u32)
+    }
+
+    /// The position of the most recently consumed token.
+    fn prev_loc(&self) -> Loc {
+        let token = &self.tokens[self.current.saturating_sub(1)];
+        Loc::new(token.line as u32, token.column as u32)
+    }
+
     fn declaration(&mut self) -> Result<Stmt, ParserError> {
         // Check for type qualifier first (const, input, simple, series)
         let type_qualifier = self.parse_optional_type_qualifier();
@@ -479,6 +491,7 @@ impl Parser {
 
     fn type_declaration(&mut self, export: bool) -> Result<Stmt, ParserError> {
         // Parse type name
+        let loc = self.cur_loc();
         let type_name = self.expect_identifier()?;
 
         // Expect newline before fields
@@ -508,6 +521,7 @@ impl Parser {
             };
 
             // Parse field name
+            let field_loc = p.cur_loc();
             let field_name = p.expect_identifier()?;
 
             // Parse optional default value
@@ -522,6 +536,7 @@ impl Parser {
                 type_qualifier,
                 type_annotation: field_type,
                 default_value,
+                loc: field_loc,
             })
         })?;
 
@@ -529,11 +544,13 @@ impl Parser {
             name: type_name,
             fields,
             export,
+            loc,
         })
     }
 
     fn enum_declaration(&mut self, export: bool) -> Result<Stmt, ParserError> {
         // Parse enum name
+        let loc = self.cur_loc();
         let enum_name = self.expect_identifier()?;
 
         // Expect newline before fields
@@ -545,6 +562,7 @@ impl Parser {
         // Parse fields using generic helper
         let fields = self.parse_indented_fields(|p| {
             // Parse field: field_name [= "title"]
+            let field_loc = p.cur_loc();
             let field_name = p.expect_identifier()?;
 
             // Parse optional title
@@ -567,6 +585,7 @@ impl Parser {
             Ok(pine_ast::EnumField {
                 name: field_name,
                 title,
+                loc: field_loc,
             })
         })?;
 
@@ -574,6 +593,7 @@ impl Parser {
             name: enum_name,
             fields,
             export,
+            loc,
         })
     }
 
@@ -597,6 +617,7 @@ impl Parser {
         }
 
         // Parse function name
+        let loc = self.cur_loc();
         let func_name = self.expect_identifier()?;
 
         // Check if this is a function declaration (followed by '(')
@@ -619,6 +640,7 @@ impl Parser {
                 params,
                 body,
                 export: true,
+                loc,
             })
         } else {
             // Just export functionname (old style - keeping for backward compatibility)
@@ -673,13 +695,15 @@ impl Parser {
         }
 
         // Parse alias
+        let loc = self.cur_loc();
         let alias = self.expect_identifier()?;
 
-        Ok(Stmt::Import { path, alias })
+        Ok(Stmt::Import { path, alias, loc })
     }
 
     fn method_declaration(&mut self, export: bool) -> Result<Stmt, ParserError> {
         // Parse method name
+        let loc = self.cur_loc();
         let method_name = self.expect_identifier()?;
 
         // Expect '('
@@ -697,6 +721,7 @@ impl Parser {
                 let type_annotation = self.parse_optional_type_annotation();
 
                 // Parse parameter name
+                let param_loc = self.cur_loc();
                 let param_name = self.expect_identifier()?;
 
                 // Parse optional default value
@@ -711,6 +736,7 @@ impl Parser {
                     type_annotation,
                     name: param_name,
                     default_value,
+                    loc: param_loc,
                 });
 
                 if !self.match_token(&[TokenType::Comma]) {
@@ -735,6 +761,7 @@ impl Parser {
             params,
             body,
             export,
+            loc,
         })
     }
 
@@ -752,6 +779,7 @@ impl Parser {
         type_annotation: Option<String>,
         var_kind: VarKind,
     ) -> Result<Stmt, ParserError> {
+        let loc = self.cur_loc();
         let name = self.expect_identifier()?;
 
         let initializer = if self.match_token(&[TokenType::Assign]) {
@@ -766,6 +794,7 @@ impl Parser {
             type_annotation,
             initializer,
             var_kind,
+            loc,
         })
     }
 
@@ -808,6 +837,7 @@ impl Parser {
         // Check for tuple destructuring: [a, b, c] = func()
         // But only if followed by = (otherwise it's an array literal)
         if self.check(&TokenType::LBracket) {
+            let tuple_loc = self.cur_loc();
             if let Some((names, value)) = self.try_parse(|p| {
                 p.advance(); // consume [
 
@@ -840,7 +870,11 @@ impl Parser {
 
                 Ok((names, value))
             }) {
-                return Ok(Stmt::TupleAssignment { names, value });
+                return Ok(Stmt::TupleAssignment {
+                    names,
+                    value,
+                    loc: tuple_loc,
+                });
             }
         }
 
@@ -850,6 +884,7 @@ impl Parser {
         // name(params) => body (function definition)
         if let TokenType::Ident(name) = &self.peek().typ {
             let name = name.clone();
+            let name_loc = self.cur_loc();
 
             // Check for function definition: name(params) =>
             if let Some((param_structs, body)) = self.try_parse(|p| {
@@ -879,6 +914,7 @@ impl Parser {
                     type_annotation: None,
                     initializer,
                     var_kind: VarKind::Plain,
+                    loc: name_loc,
                 });
             }
 
@@ -896,13 +932,17 @@ impl Parser {
                         type_annotation: None,
                         initializer,
                         var_kind: VarKind::Plain,
+                        loc: name_loc,
                     })
                 } else if p.match_token(&[TokenType::ColonAssign]) {
                     // This is a reassignment with :=
                     let value = p.parse_indented_expression()?;
 
                     Ok(Stmt::Assignment {
-                        target: Expr::Variable(name.clone()),
+                        target: Expr::Variable {
+                            name: name.clone(),
+                            loc: name_loc,
+                        },
                         value,
                     })
                 } else if p.match_token(&[
@@ -922,13 +962,19 @@ impl Parser {
                     let right = p.parse_indented_expression()?;
 
                     let value = Expr::Binary {
-                        left: Box::new(Expr::Variable(name.clone())),
+                        left: Box::new(Expr::Variable {
+                            name: name.clone(),
+                            loc: name_loc,
+                        }),
                         op,
                         right: Box::new(right),
                         loc: op_loc,
                     };
                     Ok(Stmt::Assignment {
-                        target: Expr::Variable(name.clone()),
+                        target: Expr::Variable {
+                            name: name.clone(),
+                            loc: name_loc,
+                        },
                         value,
                     })
                 } else {
@@ -954,6 +1000,7 @@ impl Parser {
             // Parse optional type annotation
             let type_annotation = p.parse_optional_type_annotation();
 
+            let param_loc = p.cur_loc();
             let name = p.expect_identifier()?;
 
             // Check for default value: param = value
@@ -968,6 +1015,7 @@ impl Parser {
                 type_annotation,
                 name,
                 default_value,
+                loc: param_loc,
             })
         })
     }
@@ -977,6 +1025,7 @@ impl Parser {
         if self.check(&TokenType::LBracket) {
             self.advance(); // consume [
 
+            let loc = self.cur_loc();
             let index_var = self.expect_identifier()?;
 
             self.consume(TokenType::Comma, "Expected ',' in for...in tuple")?;
@@ -998,10 +1047,12 @@ impl Parser {
                 item_var,
                 collection,
                 body,
+                loc,
             });
         }
 
         // Parse variable name
+        let loc = self.cur_loc();
         let var_name = self.expect_identifier()?;
 
         // Check if it's for...in (simple form) or for...to
@@ -1020,6 +1071,7 @@ impl Parser {
                 item_var: var_name,
                 collection,
                 body,
+                loc,
             })
         } else {
             // Traditional for...to loop
@@ -1039,6 +1091,7 @@ impl Parser {
                 from,
                 to,
                 body,
+                loc,
             })
         }
     }
@@ -1475,9 +1528,11 @@ impl Parser {
                         }
                     }
                 };
+                let member_loc = self.prev_loc();
                 expr = Expr::MemberAccess {
                     object: Box::new(expr),
                     member,
+                    member_loc,
                 };
             } else if self.match_token(&[TokenType::LBracket]) {
                 // Historical reference: expr[index]
@@ -1619,13 +1674,17 @@ impl Parser {
         // These can be function names (e.g., int(), float())
         if self.match_token(&[TokenType::Int, TokenType::Float]) {
             let name = self.tokens[self.current - 1].lexeme.clone();
-            return Ok(Expr::Variable(name));
+            return Ok(Expr::Variable {
+                name,
+                loc: self.prev_loc(),
+            });
         }
 
         if let TokenType::Ident(ref name) = self.peek().typ {
             let name = name.clone();
+            let loc = self.cur_loc();
             self.advance();
-            return Ok(Expr::Variable(name));
+            return Ok(Expr::Variable { name, loc });
         }
 
         if self.match_token(&[TokenType::LParen]) {
@@ -1775,10 +1834,10 @@ mod tests {
     #[test]
     fn test_variables() {
         let expr = parse_expr("close").unwrap();
-        assert_eq!(expr, Expr::Variable("close".to_string()));
+        assert_eq!(expr, Expr::var("close"));
 
         let expr = parse_expr("my_var").unwrap();
-        assert_eq!(expr, Expr::Variable("my_var".to_string()));
+        assert_eq!(expr, Expr::var("my_var"));
     }
 
     #[test]
@@ -1787,14 +1846,14 @@ mod tests {
         let expr = parse_expr("close[1]").unwrap();
         assert!(matches!(expr, Expr::Index { .. }));
         if let Expr::Index { expr: base, index } = expr {
-            assert_eq!(*base, Expr::Variable("close".to_string()));
+            assert_eq!(*base, Expr::var("close"));
             assert_eq!(*index, Expr::Literal(Literal::Int(1)));
         }
 
         // high[5] - 5 bars ago
         let expr = parse_expr("high[5]").unwrap();
         if let Expr::Index { expr: base, index } = expr {
-            assert_eq!(*base, Expr::Variable("high".to_string()));
+            assert_eq!(*base, Expr::var("high"));
             assert_eq!(*index, Expr::Literal(Literal::Int(5)));
         }
     }
@@ -1810,13 +1869,10 @@ mod tests {
             ..
         } = expr
         {
-            assert_eq!(*callee, Expr::Variable("sma".to_string()));
+            assert_eq!(*callee, Expr::var("sma"));
             assert_eq!(type_args.len(), 0);
             assert_eq!(args.len(), 2);
-            assert_eq!(
-                args[0],
-                Argument::Positional(Expr::Variable("close".to_string()))
-            );
+            assert_eq!(args[0], Argument::Positional(Expr::var("close")));
             assert_eq!(
                 args[1],
                 Argument::Positional(Expr::Literal(Literal::Int(14)))
@@ -1834,7 +1890,7 @@ mod tests {
             ..
         } = expr
         {
-            assert_eq!(*callee, Expr::Variable("foo".to_string()));
+            assert_eq!(*callee, Expr::var("foo"));
             assert_eq!(type_args.len(), 0);
             assert_eq!(args.len(), 0);
         }
@@ -1908,9 +1964,9 @@ mod tests {
             left, op, right, ..
         } = expr
         {
-            assert_eq!(*left, Expr::Variable("close".to_string()));
+            assert_eq!(*left, Expr::var("close"));
             assert_eq!(op, BinOp::Greater);
-            assert_eq!(*right, Expr::Variable("open".to_string()));
+            assert_eq!(*right, Expr::var("open"));
         }
 
         // Less than
@@ -1919,7 +1975,7 @@ mod tests {
             left, op, right, ..
         } = expr
         {
-            assert_eq!(*left, Expr::Variable("rsi".to_string()));
+            assert_eq!(*left, Expr::var("rsi"));
             assert_eq!(op, BinOp::Less);
             assert_eq!(*right, Expr::Literal(Literal::Int(30)));
         }
@@ -1930,7 +1986,7 @@ mod tests {
             left, op, right, ..
         } = expr
         {
-            assert_eq!(*left, Expr::Variable("x".to_string()));
+            assert_eq!(*left, Expr::var("x"));
             assert_eq!(op, BinOp::Eq);
             assert_eq!(*right, Expr::Literal(Literal::Int(5)));
         }
@@ -1970,6 +2026,7 @@ mod tests {
             type_annotation,
             initializer,
             var_kind,
+            ..
         } = &stmts[0]
         {
             assert_eq!(name, "x");

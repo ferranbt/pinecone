@@ -13,7 +13,9 @@
               "Positional": {
                 "Index": {
                   "expr": {
-                    "Variable": "close"
+                    "Variable": {
+                      "name": "close"
+                    }
                   },
                   "index": {
                     "Literal": {

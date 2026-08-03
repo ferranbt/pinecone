@@ -99,7 +99,11 @@ pub enum Argument {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Expr {
     Literal(Literal),
-    Variable(String),
+    Variable {
+        name: String,
+        #[serde(skip)]
+        loc: Loc,
+    },
     Binary {
         left: Box<Expr>,
         op: BinOp,
@@ -128,6 +132,8 @@ pub enum Expr {
     MemberAccess {
         object: Box<Expr>,
         member: String,
+        #[serde(skip)]
+        member_loc: Loc,
     },
     Ternary {
         condition: Box<Expr>,
@@ -149,6 +155,17 @@ pub enum Expr {
         else_if_branches: Vec<(Expr, Expr)>, // Vec of (condition, expression) for else if
         else_expr: Option<Box<Expr>>,        // None means return na if no branch matches
     },
+}
+
+impl Expr {
+    /// A variable reference with no recorded position — for tests and desugaring
+    /// where the use has no distinct source location.
+    pub fn var(name: impl Into<String>) -> Self {
+        Expr::Variable {
+            name: name.into(),
+            loc: Loc::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -194,6 +211,8 @@ pub enum Stmt {
         initializer: Option<Expr>,
         #[serde(default, skip_serializing_if = "VarKind::is_plain")]
         var_kind: VarKind,
+        #[serde(skip)]
+        loc: Loc,
     },
     Assignment {
         target: Expr, // Can be Variable or MemberAccess
@@ -202,6 +221,8 @@ pub enum Stmt {
     TupleAssignment {
         names: Vec<String>,
         value: Expr,
+        #[serde(skip)]
+        loc: Loc,
     },
     Expression(Expr),
     If {
@@ -215,6 +236,8 @@ pub enum Stmt {
         from: Expr,
         to: Expr,
         body: Vec<Stmt>,
+        #[serde(skip)]
+        loc: Loc,
     },
     ForIn {
         // For single item: for item in collection
@@ -223,6 +246,8 @@ pub enum Stmt {
         item_var: String,
         collection: Expr,
         body: Vec<Stmt>,
+        #[serde(skip)]
+        loc: Loc,
     },
     While {
         condition: Expr,
@@ -235,6 +260,8 @@ pub enum Stmt {
         fields: Vec<TypeField>,
         #[serde(default, skip_serializing_if = "is_false")]
         export: bool,
+        #[serde(skip)]
+        loc: Loc,
     },
     MethodDecl {
         name: String,
@@ -242,12 +269,16 @@ pub enum Stmt {
         body: Vec<Stmt>,
         #[serde(default, skip_serializing_if = "is_false")]
         export: bool,
+        #[serde(skip)]
+        loc: Loc,
     },
     EnumDecl {
         name: String,
         fields: Vec<EnumField>,
         #[serde(default, skip_serializing_if = "is_false")]
         export: bool,
+        #[serde(skip)]
+        loc: Loc,
     },
     FunctionDecl {
         name: String,
@@ -255,6 +286,8 @@ pub enum Stmt {
         body: Vec<Stmt>,
         #[serde(default, skip_serializing_if = "is_false")]
         export: bool,
+        #[serde(skip)]
+        loc: Loc,
     },
     Export {
         item: ExportItem,
@@ -262,6 +295,8 @@ pub enum Stmt {
     Import {
         path: String,  // e.g., "userName/Point/1"
         alias: String, // e.g., "pt"
+        #[serde(skip)]
+        loc: Loc,
     },
 }
 
@@ -277,6 +312,8 @@ pub enum ExportItem {
 pub struct EnumField {
     pub name: String,
     pub title: Option<String>, // Optional title for the enum field
+    #[serde(skip)]
+    pub loc: Loc,
 }
 
 /// A parameter in a method declaration
@@ -287,6 +324,8 @@ pub struct MethodParam {
     pub type_annotation: Option<String>, // e.g., "InfoLabel"
     pub name: String,
     pub default_value: Option<Expr>,
+    #[serde(skip)]
+    pub loc: Loc,
 }
 
 /// A parameter in a function declaration
@@ -299,6 +338,8 @@ pub struct FunctionParam {
     pub name: String,
     #[serde(skip_serializing_if = "skip_none")]
     pub default_value: Option<Expr>,
+    #[serde(skip)]
+    pub loc: Loc,
 }
 
 /// A field in a user-defined type
@@ -309,6 +350,8 @@ pub struct TypeField {
     pub type_qualifier: Option<TypeQualifier>,
     pub type_annotation: String,
     pub default_value: Option<Expr>,
+    #[serde(skip)]
+    pub loc: Loc,
 }
 
 /// A program is a collection of statements

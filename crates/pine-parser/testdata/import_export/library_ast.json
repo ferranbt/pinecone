@@ -3,7 +3,9 @@
     "Expression": {
       "Call": {
         "callee": {
-          "Variable": "library"
+          "Variable": {
+            "name": "library"
+          }
         },
         "args": [
           {
@@ -52,7 +54,9 @@
             "target": {
               "MemberAccess": {
                 "object": {
-                  "Variable": "this"
+                  "Variable": {
+                    "name": "this"
+                  }
                 },
                 "member": "x"
               }
@@ -84,11 +88,15 @@
           "Expression": {
             "Binary": {
               "left": {
-                "Variable": "x"
+                "Variable": {
+                  "name": "x"
+                }
               },
               "op": "Add",
               "right": {
-                "Variable": "y"
+                "Variable": {
+                  "name": "y"
+                }
               }
             }
           }

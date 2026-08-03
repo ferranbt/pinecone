@@ -26,7 +26,9 @@
       "condition": {
         "Binary": {
           "left": {
-            "Variable": "x"
+            "Variable": {
+              "name": "x"
+            }
           },
           "op": "Less",
           "right": {
@@ -40,7 +42,9 @@
         {
           "Assignment": {
             "target": {
-              "Variable": "result"
+              "Variable": {
+                "name": "result"
+              }
             },
             "value": {
               "Unary": {
@@ -60,7 +64,9 @@
           {
             "Binary": {
               "left": {
-                "Variable": "x"
+                "Variable": {
+                  "name": "x"
+                }
               },
               "op": "Eq",
               "right": {
@@ -74,7 +80,9 @@
             {
               "Assignment": {
                 "target": {
-                  "Variable": "result"
+                  "Variable": {
+                    "name": "result"
+                  }
                 },
                 "value": {
                   "Literal": {
@@ -89,7 +97,9 @@
           {
             "Binary": {
               "left": {
-                "Variable": "x"
+                "Variable": {
+                  "name": "x"
+                }
               },
               "op": "Less",
               "right": {
@@ -103,7 +113,9 @@
             {
               "Assignment": {
                 "target": {
-                  "Variable": "result"
+                  "Variable": {
+                    "name": "result"
+                  }
                 },
                 "value": {
                   "Literal": {
@@ -119,7 +131,9 @@
         {
           "Assignment": {
             "target": {
-              "Variable": "result"
+              "Variable": {
+                "name": "result"
+              }
             },
             "value": {
               "Literal": {

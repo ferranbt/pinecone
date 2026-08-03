@@ -15,7 +15,9 @@
               "Expression": {
                 "Binary": {
                   "left": {
-                    "Variable": "_val"
+                    "Variable": {
+                      "name": "_val"
+                    }
                   },
                   "op": "Mul",
                   "right": {

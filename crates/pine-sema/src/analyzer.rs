@@ -9,15 +9,15 @@
 
 use std::collections::{HashMap, HashSet};
 
-use pine_ast::{Argument, Expr, FunctionParam, Literal, Program, Stmt};
+use pine_ast::{Argument, Expr, FunctionParam, Literal, Loc, Program, Stmt};
 use pine_core::PineOutput;
 use pine_interpreter::{BuiltinSignature, Value};
 
-use crate::scope::{is_global_only, ScopeStack, SymbolKind};
+use crate::scope::{is_global_only, SymbolKind};
+use crate::symbols::{ScopeId, ScopeKind, Symbol, SymbolId, SymbolTable};
 use pine_diagnostics::Diagnostic;
 
 pub struct Analyzer<'a, O: PineOutput> {
-    scopes: ScopeStack,
     diagnostics: Vec<Diagnostic>,
     /// Number of enclosing loops in the *current function*. Reset across
     /// function boundaries — a loop never spans a function.
@@ -45,6 +45,11 @@ pub struct Analyzer<'a, O: PineOutput> {
     /// during the walk and scanned afterwards — a callee that reaches back to its
     /// caller closes a cycle, which is recursion (Pine forbids it).
     call_edges: Vec<CallEdge>,
+    /// The durable symbol table — the analyzer resolves names against it and
+    /// records declarations into it as it walks. `scope_ids` tracks the current
+    /// scope (its last element is the innermost).
+    symbols: SymbolTable,
+    scope_ids: Vec<ScopeId>,
 }
 
 /// One call-graph edge: `(caller, callee, call-site position)`.
@@ -65,9 +70,11 @@ const BUILTIN_TYPES: &[&str] = &[
 /// The called name as written, for diagnostics: `plot` or `ta.sma`.
 fn callee_name(callee: &Expr) -> String {
     match callee {
-        Expr::Variable(name) => name.clone(),
-        Expr::MemberAccess { object, member } => match object.as_ref() {
-            Expr::Variable(namespace) => format!("{namespace}.{member}"),
+        Expr::Variable { name, .. } => name.clone(),
+        Expr::MemberAccess { object, member, .. } => match object.as_ref() {
+            Expr::Variable {
+                name: namespace, ..
+            } => format!("{namespace}.{member}"),
             _ => member.clone(),
         },
         _ => String::new(),
@@ -112,7 +119,6 @@ fn describe_literal(literal: &Literal) -> &'static str {
 impl<'a, O: PineOutput> Analyzer<'a, O> {
     pub fn new(builtins: &'a HashMap<String, Value<O>>) -> Self {
         Self {
-            scopes: ScopeStack::new(),
             diagnostics: Vec::new(),
             loop_depth: 0,
             builtins,
@@ -121,6 +127,103 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             user_types: HashSet::new(),
             fn_stack: Vec::new(),
             call_edges: Vec::new(),
+            symbols: SymbolTable::new(),
+            scope_ids: vec![SymbolTable::GLOBAL],
+        }
+    }
+
+    /// The innermost open scope — where names resolve from and declarations are
+    /// recorded into.
+    fn current_scope(&self) -> ScopeId {
+        *self.scope_ids.last().expect("scope stack is never empty")
+    }
+
+    /// Open a nested scope in the symbol tree and make it current.
+    fn enter_scope(&mut self, kind: ScopeKind) {
+        let child = self.symbols.open_scope(self.current_scope(), kind);
+        self.scope_ids.push(child);
+    }
+
+    /// Close the scope opened by [`enter_scope`](Self::enter_scope). Its symbols
+    /// stay in the table (as a child scope) but are no longer on the resolution
+    /// path, since resolution walks parents.
+    fn exit_scope(&mut self) {
+        self.scope_ids.pop();
+    }
+
+    /// Record a bare-name declaration in the symbol table at the current scope.
+    fn record(&mut self, symbol: Symbol) -> SymbolId {
+        self.symbols.declare(symbol)
+    }
+
+    /// Resolve `name` from the current scope outward — the analyzer's single
+    /// name lookup, against the symbol table.
+    fn resolve(&self, name: &str) -> Option<SymbolKind> {
+        self.symbols
+            .resolve(self.current_scope(), name)
+            .map(|symbol| symbol.kind)
+    }
+
+    /// Record a use of `name` at `loc` in the occurrence index, if it resolves
+    /// to a user symbol (builtins and unresolved names have no symbol to point
+    /// at). This is what makes find-references and rename possible.
+    fn record_use(&mut self, name: &str, loc: Loc) {
+        let scope = self.current_scope();
+        if let Some(id) = self.symbols.resolve_id(scope, name) {
+            self.symbols.record_use(loc.position(), id);
+        }
+    }
+
+    /// The user type a declaration has, when it can be known without inference:
+    /// an explicit annotation naming a type/enum, or a `Type.new()` initializer.
+    /// Drives member resolution (`v.field`).
+    fn infer_var_type(
+        &self,
+        type_annotation: Option<&String>,
+        initializer: Option<&Expr>,
+    ) -> Option<SymbolId> {
+        let scope = self.current_scope();
+        if let Some(annotation) = type_annotation {
+            let base = annotation.trim_end_matches("[]");
+            if let Some(id) = self.symbols.resolve_id(scope, base) {
+                if matches!(
+                    self.symbols.symbol(id).kind,
+                    SymbolKind::Type | SymbolKind::Enum
+                ) {
+                    return Some(id);
+                }
+            }
+        }
+        if let Some(Expr::Call { callee, .. }) = initializer {
+            if let Expr::MemberAccess { object, member, .. } = callee.as_ref() {
+                if member == "new" {
+                    if let Expr::Variable { name, .. } = object.as_ref() {
+                        if let Some(id) = self.symbols.resolve_id(scope, name) {
+                            if self.symbols.symbol(id).kind == SymbolKind::Type {
+                                return Some(id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// The type/enum symbol a member access reads a member from: an enum/type
+    /// named directly (`Enum.Case`), or a variable of a known user type
+    /// (`v.field`). `None` when the type is unknown — no member is resolved, so
+    /// this never guesses.
+    fn expr_type(&self, expr: &Expr) -> Option<SymbolId> {
+        let Expr::Variable { name, .. } = expr else {
+            return None;
+        };
+        let id = self.symbols.resolve_id(self.current_scope(), name)?;
+        let symbol = self.symbols.symbol(id);
+        match symbol.kind {
+            SymbolKind::Type | SymbolKind::Enum => Some(id),
+            SymbolKind::Var => symbol.type_ref,
+            _ => None,
         }
     }
 
@@ -136,17 +239,20 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
     /// parameters — both yield `None`, so nothing is checked.
     fn builtin_signature(&self, callee: &Expr) -> Option<BuiltinSignature> {
         let value = match callee {
-            Expr::Variable(name) => {
-                if self.scopes.resolve(name).is_some() {
+            Expr::Variable { name, .. } => {
+                if self.resolve(name).is_some() {
                     return None;
                 }
                 self.builtins.get(name)?.clone()
             }
-            Expr::MemberAccess { object, member } => {
-                let Expr::Variable(namespace) = object.as_ref() else {
+            Expr::MemberAccess { object, member, .. } => {
+                let Expr::Variable {
+                    name: namespace, ..
+                } = object.as_ref()
+                else {
                     return None;
                 };
-                if self.scopes.resolve(namespace).is_some() {
+                if self.resolve(namespace).is_some() {
                     return None;
                 }
                 match self.builtins.get(namespace)? {
@@ -250,8 +356,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
-    /// Analyze a whole program, returning the errors found.
-    pub fn analyze(mut self, program: &Program) -> Vec<Diagnostic> {
+    /// Walk the program once: emit diagnostics and fill the symbol table.
+    fn run(&mut self, program: &Program) {
         // Types are global and may be referenced by an annotation before their
         // declaration, so collect their names before the ordered walk.
         for stmt in &program.statements {
@@ -266,7 +372,19 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             self.check_stmt(stmt);
         }
         self.detect_recursion();
+    }
+
+    /// Analyze a whole program, returning the errors found.
+    pub fn analyze(mut self, program: &Program) -> Vec<Diagnostic> {
+        self.run(program);
         self.diagnostics
+    }
+
+    /// Analyze a whole program, returning both the errors and the symbol table
+    /// reconstructed from the same walk.
+    pub fn into_analysis(mut self, program: &Program) -> (Vec<Diagnostic>, SymbolTable) {
+        self.run(program);
+        (self.diagnostics, self.symbols)
     }
 
     /// Scan the call graph for cycles. An edge whose callee can reach its caller
@@ -354,10 +472,23 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
-    /// Record a user function's arity, check its parameter annotations, and walk
-    /// its body with the name on the recursion stack. The name must already be
-    /// declared so a call to it inside the body reads as recursion.
-    fn analyze_function(&mut self, name: &str, params: &[FunctionParam], body: &[Stmt]) {
+    /// Record a user function, check its parameter annotations, and walk its body
+    /// with the name on the recursion stack. The name is declared *before* the
+    /// body so a call to it inside reads as recursion.
+    fn analyze_function(&mut self, name: &str, loc: Loc, params: &[FunctionParam], body: &[Stmt]) {
+        // Declare the function symbol in the enclosing scope before its body.
+        let scope = self.current_scope();
+        if self.symbols.declared_locally(scope, name) {
+            self.emit(
+                "duplicate-declaration",
+                None,
+                format!("`{name}` is already declared in this scope"),
+            );
+        }
+        self.record(
+            Symbol::new(name, SymbolKind::Function, loc.position(), scope)
+                .with_params(params.iter().map(|p| p.name.clone()).collect()),
+        );
         // A parameter with a default may be omitted, so it is not required.
         let required = params.iter().filter(|p| p.default_value.is_none()).count();
         self.functions
@@ -367,9 +498,14 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
         self.fn_stack.push(name.to_string());
         self.function_body(
-            params
-                .iter()
-                .map(|p| (p.name.as_str(), p.default_value.as_ref())),
+            params.iter().map(|p| {
+                (
+                    p.name.as_str(),
+                    p.default_value.as_ref(),
+                    p.loc,
+                    p.type_annotation.as_ref(),
+                )
+            }),
             body,
         );
         self.fn_stack.pop();
@@ -378,23 +514,25 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
     /// Declare `name` in the current scope, reporting a duplicate if it already
     /// exists there. Pine has no hoisting — names become visible in source
     /// order — so this is called at each declaration's position.
-    fn declare(&mut self, name: &str, kind: SymbolKind) {
-        if self.scopes.declare(name, kind).is_some() {
+    fn declare(&mut self, name: &str, kind: SymbolKind, loc: Loc) -> SymbolId {
+        let scope = self.current_scope();
+        if self.symbols.declared_locally(scope, name) {
             self.emit(
                 "duplicate-declaration",
                 None,
                 format!("`{name}` is already declared in this scope"),
             );
         }
+        self.record(Symbol::new(name, kind, loc.position(), scope))
     }
 
     /// Visit a non-loop nested block (an `if`/`else` branch) in its own scope.
     fn block(&mut self, body: &[Stmt]) {
-        self.scopes.push();
+        self.enter_scope(ScopeKind::Block);
         for stmt in body {
             self.check_stmt(stmt);
         }
-        self.scopes.pop();
+        self.exit_scope();
     }
 
     /// Visit a loop body: its own scope, with `loop_depth` raised so
@@ -411,30 +549,35 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
     /// bound. Loop context does not cross into a function.
     fn function_body<'p>(
         &mut self,
-        params: impl Iterator<Item = (&'p str, Option<&'p Expr>)>,
+        params: impl Iterator<Item = (&'p str, Option<&'p Expr>, Loc, Option<&'p String>)>,
         body: &[Stmt],
     ) {
-        self.scopes.push();
+        self.enter_scope(ScopeKind::Function);
         let saved_loop_depth = self.loop_depth;
         self.loop_depth = 0;
-        for (name, default) in params {
+        let scope = self.current_scope();
+        for (name, default, loc, type_annotation) in params {
             if let Some(default) = default {
                 self.check_expr(default);
             }
             self.check_shadow(name);
-            if self.scopes.declare(name, SymbolKind::Var).is_some() {
+            if self.symbols.declared_locally(scope, name) {
                 self.emit(
                     "duplicate-parameter",
                     None,
                     format!("parameter `{name}` is declared more than once"),
                 );
             }
+            self.record(
+                Symbol::new(name, SymbolKind::Var, loc.position(), scope)
+                    .with_type(type_annotation.cloned()),
+            );
         }
         for stmt in body {
             self.check_stmt(stmt);
         }
         self.loop_depth = saved_loop_depth;
-        self.scopes.pop();
+        self.exit_scope();
     }
 
     fn check_stmt(&mut self, stmt: &Stmt) {
@@ -443,24 +586,25 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 name,
                 initializer,
                 type_annotation,
+                loc,
                 ..
             } => {
                 self.check_type_annotation(type_annotation.as_ref());
                 self.check_shadow(name);
                 if let Some(Expr::Function { params, body }) = initializer {
                     // A named function definition `f(x) => …`, which the parser
-                    // lowers to a lambda-valued variable. Declare it first so a
-                    // call to it inside its body reads as recursion, and record
-                    // it as a function so calls resolve and are arity-checked.
-                    self.declare(name, SymbolKind::Function);
-                    self.analyze_function(name, params, body);
+                    // lowers to a lambda-valued variable. `analyze_function`
+                    // records it before its body, so a call to it inside the body
+                    // reads as recursion and calls resolve and are arity-checked.
+                    self.analyze_function(name, *loc, params, body);
                 } else {
                     // Check the initializer *before* declaring the name, so a
                     // self-reference (`x = x`) resolves against the outer scope.
                     if let Some(init) = initializer {
                         self.check_expr(init);
                     }
-                    if self.scopes.declare(name, SymbolKind::Var).is_some() {
+                    let scope = self.current_scope();
+                    if self.symbols.declared_locally(scope, name) {
                         self.emit(
                             "duplicate-declaration",
                             None,
@@ -469,23 +613,34 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                             ),
                         );
                     }
+                    let type_ref =
+                        self.infer_var_type(type_annotation.as_ref(), initializer.as_ref());
+                    self.record(
+                        Symbol::new(name, SymbolKind::Var, loc.position(), scope)
+                            .with_type(type_annotation.clone())
+                            .with_type_ref(type_ref),
+                    );
                 }
             }
             Stmt::Assignment { target, value } => {
                 self.check_expr(value);
                 self.check_assign_target(target);
             }
-            Stmt::TupleAssignment { names, value } => {
+            Stmt::TupleAssignment {
+                names, value, loc, ..
+            } => {
                 self.check_expr(value);
+                let scope = self.current_scope();
                 for name in names {
                     self.check_shadow(name);
-                    if self.scopes.declare(name, SymbolKind::Var).is_some() {
+                    if self.symbols.declared_locally(scope, name) {
                         self.emit(
                             "duplicate-declaration",
                             None,
                             format!("`{name}` is already declared in this scope"),
                         );
                     }
+                    self.record(Symbol::new(name, SymbolKind::Var, loc.position(), scope));
                 }
             }
             Stmt::Expression(expr) => self.check_expr(expr),
@@ -510,69 +665,119 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 from,
                 to,
                 body,
+                loc,
             } => {
                 self.check_expr(from);
                 self.check_expr(to);
-                self.scopes.push();
+                self.enter_scope(ScopeKind::Block);
                 self.check_shadow(var_name);
-                self.scopes.declare(var_name, SymbolKind::Var);
+                let scope = self.current_scope();
+                self.record(Symbol::new(
+                    var_name,
+                    SymbolKind::Var,
+                    loc.position(),
+                    scope,
+                ));
                 self.loop_body(body);
-                self.scopes.pop();
+                self.exit_scope();
             }
             Stmt::ForIn {
                 index_var,
                 item_var,
                 collection,
                 body,
+                loc,
             } => {
                 self.check_expr(collection);
-                self.scopes.push();
+                self.enter_scope(ScopeKind::Block);
+                let scope = self.current_scope();
                 if let Some(idx) = index_var {
                     self.check_shadow(idx);
-                    self.scopes.declare(idx, SymbolKind::Var);
+                    self.record(Symbol::new(idx, SymbolKind::Var, loc.position(), scope));
                 }
                 self.check_shadow(item_var);
-                self.scopes.declare(item_var, SymbolKind::Var);
+                self.record(Symbol::new(
+                    item_var,
+                    SymbolKind::Var,
+                    loc.position(),
+                    scope,
+                ));
                 self.loop_body(body);
-                self.scopes.pop();
+                self.exit_scope();
             }
             Stmt::While { condition, body } => {
                 self.check_expr(condition);
-                self.scopes.push();
+                self.enter_scope(ScopeKind::Block);
                 self.loop_body(body);
-                self.scopes.pop();
+                self.exit_scope();
             }
             Stmt::Break => self.check_loop_keyword("break"),
             Stmt::Continue => self.check_loop_keyword("continue"),
             Stmt::FunctionDecl {
-                name, params, body, ..
+                name,
+                params,
+                body,
+                loc,
+                ..
             } => {
-                // Declare the name first so the body may reference it.
                 self.check_shadow(name);
-                self.declare(name, SymbolKind::Function);
-                self.analyze_function(name, params, body);
+                self.analyze_function(name, *loc, params, body);
             }
-            Stmt::MethodDecl { params, body, .. } => {
+            Stmt::MethodDecl {
+                name,
+                params,
+                body,
+                loc,
+                ..
+            } => {
                 // Methods may share a name (overload by receiver type), so the
                 // name is not declared/duplicate-checked; just check the body.
+                let scope = self.current_scope();
+                self.record(
+                    Symbol::new(name, SymbolKind::Function, loc.position(), scope)
+                        .with_params(params.iter().map(|p| p.name.clone()).collect()),
+                );
                 for param in params {
                     self.check_type_annotation(param.type_annotation.as_ref());
                 }
                 self.function_body(
-                    params
-                        .iter()
-                        .map(|p| (p.name.as_str(), p.default_value.as_ref())),
+                    params.iter().map(|p| {
+                        (
+                            p.name.as_str(),
+                            p.default_value.as_ref(),
+                            p.loc,
+                            p.type_annotation.as_ref(),
+                        )
+                    }),
                     body,
                 );
             }
-            Stmt::TypeDecl { name, fields, .. } => {
-                self.declare(name, SymbolKind::Type);
+            Stmt::TypeDecl {
+                name, fields, loc, ..
+            } => {
+                let owner = self.declare(name, SymbolKind::Type, *loc);
                 for field in fields {
                     self.check_type_annotation(Some(&field.type_annotation));
+                    self.symbols.declare_member(
+                        owner,
+                        &field.name,
+                        field.loc.position(),
+                        Some(field.type_annotation.clone()),
+                    );
                 }
             }
-            Stmt::EnumDecl { name, .. } => self.declare(name, SymbolKind::Enum),
-            Stmt::Import { alias, .. } => self.declare(alias, SymbolKind::Import),
+            Stmt::EnumDecl {
+                name, fields, loc, ..
+            } => {
+                let owner = self.declare(name, SymbolKind::Enum, *loc);
+                for field in fields {
+                    self.symbols
+                        .declare_member(owner, &field.name, field.loc.position(), None);
+                }
+            }
+            Stmt::Import { alias, loc, .. } => {
+                self.declare(alias, SymbolKind::Import, *loc);
+            }
             // `export` re-exports an already-declared item; nothing to resolve.
             Stmt::Export { .. } => {}
         }
@@ -591,8 +796,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
     /// Validate the left-hand side of a `:=` reassignment.
     fn check_assign_target(&mut self, target: &Expr) {
         match target {
-            Expr::Variable(name) => match self.scopes.resolve(name) {
-                Some(SymbolKind::Var) => {}
+            Expr::Variable { name, loc } => match self.resolve(name) {
+                Some(SymbolKind::Var) => self.record_use(name, *loc),
                 Some(other) => self.emit(
                     "invalid-assignment",
                     None,
@@ -618,21 +823,28 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
 
     fn check_expr(&mut self, expr: &Expr) {
         match expr {
-            Expr::Variable(name) => {
-                if self.scopes.resolve(name).is_none() && !self.is_builtin(name) {
+            Expr::Variable { name, loc } => {
+                if self.resolve(name).is_none() && !self.is_builtin(name) {
                     self.emit(
                         "undeclared-variable",
                         None,
                         format!("undeclared variable `{name}`"),
                     );
+                } else {
+                    self.record_use(name, *loc);
                 }
             }
             Expr::Call {
                 callee, args, loc, ..
             } => {
-                if let Expr::Variable(fname) = callee.as_ref() {
+                if let Expr::Variable {
+                    name: fname,
+                    loc: fname_loc,
+                } = callee.as_ref()
+                {
                     let pos = loc.position();
-                    if is_global_only(fname) && !self.scopes.at_global() {
+                    self.record_use(fname, *fname_loc);
+                    if is_global_only(fname) && self.current_scope() != SymbolTable::GLOBAL {
                         self.emit(
                             "global-scope-required",
                             pos,
@@ -649,7 +861,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                             );
                         }
                     }
-                    match self.scopes.resolve(fname) {
+                    match self.resolve(fname) {
                         Some(SymbolKind::Function) => {
                             // Record the call as an edge out of the enclosing
                             // function; cycles are found once the walk finishes.
@@ -703,9 +915,21 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.check_expr(expr);
                 self.check_expr(index);
             }
-            // Members are not validated (that is Tier 3 signature checking);
-            // only the base object must resolve.
-            Expr::MemberAccess { object, .. } => self.check_expr(object),
+            // The member itself is not validated (that is Tier 3 signature
+            // checking), but when the object's type is known its member resolves
+            // to a declaration, so record the use.
+            Expr::MemberAccess {
+                object,
+                member,
+                member_loc,
+            } => {
+                self.check_expr(object);
+                if let Some(type_id) = self.expr_type(object) {
+                    if let Some(member_id) = self.symbols.member_id(type_id, member) {
+                        self.symbols.record_use(member_loc.position(), member_id);
+                    }
+                }
+            }
             Expr::Ternary {
                 condition,
                 then_expr,
@@ -746,9 +970,14 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             // A lambda: its own scope with parameters bound.
             Expr::Function { params, body } => {
                 self.function_body(
-                    params
-                        .iter()
-                        .map(|p| (p.name.as_str(), p.default_value.as_ref())),
+                    params.iter().map(|p| {
+                        (
+                            p.name.as_str(),
+                            p.default_value.as_ref(),
+                            p.loc,
+                            p.type_annotation.as_ref(),
+                        )
+                    }),
                     body,
                 );
             }

@@ -19,11 +19,15 @@
           "Expression": {
             "Binary": {
               "left": {
-                "Variable": "x"
+                "Variable": {
+                  "name": "x"
+                }
               },
               "op": "Add",
               "right": {
-                "Variable": "y"
+                "Variable": {
+                  "name": "y"
+                }
               }
             }
           }

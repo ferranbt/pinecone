@@ -8,12 +8,16 @@
       "value": {
         "Call": {
           "callee": {
-            "Variable": "macd"
+            "Variable": {
+              "name": "macd"
+            }
           },
           "args": [
             {
               "Positional": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               }
             },
             {
@@ -53,7 +57,9 @@
       "value": {
         "Call": {
           "callee": {
-            "Variable": "func"
+            "Variable": {
+              "name": "func"
+            }
           },
           "args": [
             {
@@ -100,7 +106,9 @@
                 "value": {
                   "Call": {
                     "callee": {
-                      "Variable": "calculate"
+                      "Variable": {
+                        "name": "calculate"
+                      }
                     },
                     "args": [],
                     "id": 3
@@ -112,11 +120,15 @@
               "Expression": {
                 "Binary": {
                   "left": {
-                    "Variable": "first"
+                    "Variable": {
+                      "name": "first"
+                    }
                   },
                   "op": "Add",
                   "right": {
-                    "Variable": "second"
+                    "Variable": {
+                      "name": "second"
+                    }
                   }
                 }
               }

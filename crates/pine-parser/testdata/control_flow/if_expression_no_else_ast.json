@@ -32,16 +32,22 @@
           "condition": {
             "Binary": {
               "left": {
-                "Variable": "close"
+                "Variable": {
+                  "name": "close"
+                }
               },
               "op": "Greater",
               "right": {
-                "Variable": "open"
+                "Variable": {
+                  "name": "open"
+                }
               }
             }
           },
           "then_expr": {
-            "Variable": "close"
+            "Variable": {
+              "name": "close"
+            }
           },
           "else_if_branches": [],
           "else_expr": null

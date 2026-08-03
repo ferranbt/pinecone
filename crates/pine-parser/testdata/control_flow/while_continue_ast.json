@@ -28,7 +28,9 @@
       "condition": {
         "Binary": {
           "left": {
-            "Variable": "i"
+            "Variable": {
+              "name": "i"
+            }
           },
           "op": "Less",
           "right": {
@@ -42,12 +44,16 @@
         {
           "Assignment": {
             "target": {
-              "Variable": "i"
+              "Variable": {
+                "name": "i"
+              }
             },
             "value": {
               "Binary": {
                 "left": {
-                  "Variable": "i"
+                  "Variable": {
+                    "name": "i"
+                  }
                 },
                 "op": "Add",
                 "right": {
@@ -66,7 +72,9 @@
                 "left": {
                   "Binary": {
                     "left": {
-                      "Variable": "i"
+                      "Variable": {
+                        "name": "i"
+                      }
                     },
                     "op": "Mod",
                     "right": {
@@ -94,16 +102,22 @@
         {
           "Assignment": {
             "target": {
-              "Variable": "sum"
+              "Variable": {
+                "name": "sum"
+              }
             },
             "value": {
               "Binary": {
                 "left": {
-                  "Variable": "sum"
+                  "Variable": {
+                    "name": "sum"
+                  }
                 },
                 "op": "Add",
                 "right": {
-                  "Variable": "i"
+                  "Variable": {
+                    "name": "i"
+                  }
                 }
               }
             }

@@ -172,6 +172,6 @@ pub fn walk_expr<V: Visitor + ?Sized>(v: &mut V, expr: &Expr) {
             }
         }
         // Leaf expressions.
-        Expr::Literal(_) | Expr::Variable(_) => {}
+        Expr::Literal(_) | Expr::Variable { .. } => {}
     }
 }
