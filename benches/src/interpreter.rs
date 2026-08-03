@@ -1,7 +1,7 @@
 mod test_data;
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use pine_lang::interpreter::DefaultPineOutput;
+use pine_lang::core::DefaultPineOutput;
 use pine_lang::{execute, ScriptBuilder};
 use test_data::generate_bars;
 

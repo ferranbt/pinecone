@@ -73,12 +73,12 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
         // `#[builtin(output = LabelOutput)]` adds the capability the builtin needs
         // from the output type; without it `PineOutput` alone is enough.
         let capability = output_bound
-            .map(|bound| quote! { + ::pine_interpreter::#bound })
+            .map(|bound| quote! { + ::pine_core::#bound })
             .unwrap_or_default();
         (
             quote! {},
             quote! {},
-            quote! { <O: ::pine_interpreter::PineOutput #capability> },
+            quote! { <O: ::pine_core::PineOutput #capability> },
         )
     } else {
         (
@@ -131,7 +131,7 @@ pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
             /// the state twice.
             #[derive(Default)]
             #[doc(hidden)]
-            pub struct #slot_name<O: ::pine_interpreter::PineOutput> {
+            pub struct #slot_name<O: ::pine_core::PineOutput> {
                 #(#state_decls,)*
                 bar_seq: u64,
                 memo: Option<::pine_interpreter::Value<O>>,

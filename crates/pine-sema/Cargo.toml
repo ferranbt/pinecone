@@ -9,6 +9,7 @@ homepage.workspace = true
 
 [dependencies]
 pine-ast = { workspace = true }
+pine-core = { workspace = true }
 pine-diagnostics = { workspace = true }
 pine-interpreter = { workspace = true }
 

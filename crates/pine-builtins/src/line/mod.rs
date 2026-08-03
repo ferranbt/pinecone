@@ -5,9 +5,8 @@
 
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::PineVersion;
-use pine_interpreter::{
-    BuiltinFn, Color, Interpreter, LineObject, LineOutput, PineOutput, RuntimeError, Value,
-};
+use pine_core::{Color, LineObject, LineOutput, PineOutput};
+use pine_interpreter::{BuiltinFn, Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;

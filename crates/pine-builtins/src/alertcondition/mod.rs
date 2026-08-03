@@ -5,9 +5,8 @@
 //! declaration (title + message) is simply recorded via [`AlertConditionOutput`].
 
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{
-    AlertCondition, AlertConditionOutput, Interpreter, PineOutput, RuntimeError, Value,
-};
+use pine_core::{AlertCondition, AlertConditionOutput, PineOutput};
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// alertcondition(condition, title, message)
 #[derive(BuiltinFunction)]

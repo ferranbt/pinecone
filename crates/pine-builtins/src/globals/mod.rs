@@ -5,7 +5,8 @@
 //! display arguments that are accepted and ignored in a headless run.
 
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Color, GlobalOutput, Interpreter, PineOutput, RuntimeError, Value};
+use pine_core::{Color, GlobalOutput, PineOutput};
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
 
 /// bgcolor(color, offset, editable, show_last, title, transp, ...)

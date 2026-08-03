@@ -1575,6 +1575,7 @@ name = "pine-sema"
 version = "0.1.0"
 dependencies = [
  "pine-ast",
+ "pine-core",
  "pine-diagnostics",
  "pine-interpreter",
  "pine-lexer",

@@ -1,5 +1,6 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, PineOutput, RuntimeError, SeriesBuffer, Value};
+use pine_core::{PineOutput, SeriesBuffer};
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// One step of an exponentially smoothed average: `alpha * source + (1 - alpha)
 /// * previous`. Pine seeds the recursion with the simple average of the first

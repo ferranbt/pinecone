@@ -3,8 +3,8 @@
 //!
 //! The corpus is cloned on demand (it is gitignored).
 
+use pine_core::DefaultPineOutput;
 use pine_core::{Data, PineVersion};
-use pine_interpreter::DefaultPineOutput;
 use pine_lang::ScriptBuilder;
 use std::fs;
 use std::path::Path;

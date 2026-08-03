@@ -1,22 +1,10 @@
 mod num;
-mod output;
-mod series_buffer;
 mod signature;
 
 pub use num::Num;
-pub use series_buffer::{SeriesBuffer, MAX_LOOKBACK};
 pub use signature::{BuiltinSignature, Param, ParamType};
 
-// Re-export output types and traits
-pub use output::{
-    AlertCondition, AlertConditionOutput, BoxOutput, Color, DefaultPineOutput, FillObject,
-    FillOutput, GlobalContext, GlobalOutput, Indicator, IndicatorOutput, Input, InputOutput,
-    InputValue, Label, LabelOutput, LineObject, LineOutput, LogEntry, LogLevel, LogOutput, PineBox,
-    PineOutput, Plot, PlotOutput, Plotarrow, Plotbar, Plotcandle, Plotchar, Plotshape, Table,
-    TableCell, TableOutput,
-};
-
-// Note: impl_output_traits_delegate! macro is automatically exported at crate root by #[macro_export]
+use pine_core::{Color, DefaultPineOutput, PineOutput, MAX_LOOKBACK};
 
 use pine_ast::{Argument, BinOp, Expr, Literal, MethodParam, Program, Stmt, TypeField, UnOp};
 use std::cell::RefCell;

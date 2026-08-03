@@ -4,9 +4,8 @@
 //! (which may be `na`); the fill is recorded via [`FillOutput`].
 
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{
-    Color, FillObject, FillOutput, Interpreter, PineOutput, RuntimeError, Value,
-};
+use pine_core::{Color, FillObject, FillOutput, PineOutput};
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// fill(id1, id2, color, title, transp, ...)
 #[derive(BuiltinFunction)]

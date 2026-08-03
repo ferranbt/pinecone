@@ -1,5 +1,6 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_interpreter::{Interpreter, PineOutput, RuntimeError, Value};
+use pine_core::PineOutput;
+use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// color.new(color, transp) - Applies transparency to a color
 #[derive(BuiltinFunction)]
@@ -34,7 +35,7 @@ impl ColorRgb {
         let g = self.green.clamp(0.0, 255.0) as u8;
         let b = self.blue.clamp(0.0, 255.0) as u8;
         let t = self.transp.clamp(0.0, 100.0) as u8;
-        Ok(Value::Color(pine_interpreter::Color::new(r, g, b, t)))
+        Ok(Value::Color(pine_core::Color::new(r, g, b, t)))
     }
 }
 
@@ -125,7 +126,7 @@ impl<O: PineOutput> ColorFromGradient<O> {
         let b = (c1.b as f64 + (c2.b as f64 - c1.b as f64) * ratio) as u8;
         let t = (c1.t as f64 + (c2.t as f64 - c1.t as f64) * ratio) as u8;
 
-        Ok(Value::Color(pine_interpreter::Color::new(r, g, b, t)))
+        Ok(Value::Color(pine_core::Color::new(r, g, b, t)))
     }
 }
 

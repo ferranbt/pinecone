@@ -9,5 +9,6 @@ edition = "2021"
 [dependencies]
 # Import the local pine crates
 pine-lang = { path = "../../crates/pine" }
+pine-core = { path = "../../crates/pine-core" }
 pine-data = { path = "../../crates/pine-data" }
 pine-interpreter = { path = "../../crates/pine-interpreter" }
