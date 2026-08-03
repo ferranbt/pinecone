@@ -4,9 +4,7 @@ use pine_core::{PineOutput, SeriesBuffer};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// The current-bar value of a built-in price series (`high`, `low`, …). Used as
-/// the default `source` for the one-argument overloads of `ta.highest` and its
-/// siblings, where `ta.highest(length)` reads `high` and `ta.lowest(length)`
-/// reads `low`.
+/// the default `source` for the one-argument overloads.
 fn bar_source<O: PineOutput>(ctx: &Interpreter<O>, name: &str) -> f64 {
     ctx.get_variable(name)
         .and_then(|value| value.as_number().ok())

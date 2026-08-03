@@ -443,8 +443,6 @@ fn generate_field_parsing(
     let mut field_decls = Vec::new();
     let mut positional_matches = Vec::new();
     let mut named_matches = Vec::new();
-    // Each positional parameter as (assignment, has_default), in order, for the
-    // arity-aware binding built after the loop.
     let mut positional_params: Vec<(proc_macro2::TokenStream, bool)> = Vec::new();
     let mut variadic_field: Option<&syn::Ident> = None;
     let mut non_variadic_count = 0;
