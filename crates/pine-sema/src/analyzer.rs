@@ -299,7 +299,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
     }
 
     fn warn(&mut self, rule: &'static str, pos: Option<(u32, u32)>, message: impl Into<String>) {
-        self.diagnostics.push(Diagnostic::warning(rule, pos, message));
+        self.diagnostics
+            .push(Diagnostic::warning(rule, pos, message));
     }
 
     /// Declaring a name that a built-in already owns hides the built-in. Pine
