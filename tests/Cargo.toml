@@ -15,9 +15,6 @@ path = "corpus.rs"
 [dependencies]
 pine-lang.workspace = true
 pine-interpreter.workspace = true
-pine-lexer.workspace = true
-pine-parser.workspace = true
-pine-ast.workspace = true
 pine-core.workspace = true
 pine-data.workspace = true
 eyre.workspace = true

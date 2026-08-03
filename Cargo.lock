@@ -1485,13 +1485,10 @@ name = "pine-integration-tests"
 version = "0.1.0"
 dependencies = [
  "eyre",
- "pine-ast",
  "pine-core",
  "pine-data",
  "pine-interpreter",
  "pine-lang",
- "pine-lexer",
- "pine-parser",
  "walkdir",
 ]
 
@@ -1503,7 +1500,6 @@ dependencies = [
  "pine-ast",
  "pine-broker",
  "pine-core",
- "pine-lexer",
  "pine-parser",
  "thiserror",
 ]

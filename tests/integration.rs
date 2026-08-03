@@ -1,12 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use pine_ast::Program;
     use pine_core::{SymInfo, Timeframe, TimeframeUnit};
     use pine_data::StaticProvider;
     use pine_interpreter::{AlertConditionOutput, DefaultPineOutput, LibraryLoader, LogOutput};
     use pine_lang::ScriptBuilder;
-    use pine_lexer::Lexer;
-    use pine_parser::Parser;
     use std::fs;
     use std::path::{Path, PathBuf};
 
@@ -91,22 +88,10 @@ mod tests {
     }
 
     impl LibraryLoader for TestLibraryLoader {
-        fn load_library(&self, path: &str) -> Result<pine_ast::Program, String> {
+        fn load_library(&self, path: &str) -> Result<String, String> {
             let file_path = self.base_path.join(format!("{}.pine", path));
-
-            let source = fs::read_to_string(&file_path)
-                .map_err(|e| format!("Failed to load library {}: {}", path, e))?;
-
-            let mut lexer = Lexer::new(&source);
-            let tokens = lexer
-                .tokenize()
-                .map_err(|e| format!("Lexer error: {:?}", e))?;
-            let mut parser = Parser::new(tokens);
-            let statements = parser
-                .parse()
-                .map_err(|e| format!("Parser error: {:?}", e))?;
-
-            Ok(Program::new(statements))
+            fs::read_to_string(&file_path)
+                .map_err(|e| format!("Failed to load library {}: {}", path, e))
         }
     }
 
