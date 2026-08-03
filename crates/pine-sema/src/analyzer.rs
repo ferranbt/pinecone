@@ -111,8 +111,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
     }
 
     /// Check a call's arguments against the builtin's parameters: too many
-    /// arguments, an unknown named argument, and an argument whose literal type
-    /// the parameter cannot accept.
+    /// arguments, too few, an unknown named argument, and an argument whose
+    /// literal type the parameter cannot accept.
     fn check_builtin_args(
         &mut self,
         name: &str,
@@ -171,6 +171,23 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     format!("`{name}` expects {expected} for `{label}`, found {found}"),
                 );
             }
+        }
+
+        // A valid call supplies at least one argument per required parameter, so
+        // fewer arguments than required parameters is a guaranteed missing one.
+        // Counting arguments rather than matching them to positions keeps this
+        // sound for overloads with an optional leading parameter, such as
+        // `ta.highest(length)`, where `source` may be dropped.
+        let required = signature.params.iter().filter(|param| param.required).count();
+        if args.len() < required {
+            self.emit(
+                "too-few-arguments",
+                pos,
+                format!(
+                    "`{name}` requires at least {required} arguments, found {}",
+                    args.len()
+                ),
+            );
         }
     }
 

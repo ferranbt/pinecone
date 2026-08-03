@@ -1,11 +1,12 @@
 //@version=5
 indicator("ta/highest_missing_length")
 // `length` is required in both overloads, so calling ta.highest with no
-// arguments is an error even though `source` may be omitted.
+// arguments is an error even though `source` may be omitted. Sema catches it
+// before the script runs.
 
 // Bars: 3
 
 log.info(str.tostring(ta.highest()))
 
 // Expected error:
-// Missing required parameter: length
+// error [too-few-arguments] 9:33: `ta.highest` requires at least 1 arguments, found 0
