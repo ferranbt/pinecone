@@ -72,7 +72,9 @@ fn callee_name(callee: &Expr) -> String {
     match callee {
         Expr::Variable { name, .. } => name.clone(),
         Expr::MemberAccess { object, member, .. } => match object.as_ref() {
-            Expr::Variable { name: namespace, .. } => format!("{namespace}.{member}"),
+            Expr::Variable {
+                name: namespace, ..
+            } => format!("{namespace}.{member}"),
             _ => member.clone(),
         },
         _ => String::new(),
@@ -244,7 +246,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.builtins.get(name)?.clone()
             }
             Expr::MemberAccess { object, member, .. } => {
-                let Expr::Variable { name: namespace, .. } = object.as_ref() else {
+                let Expr::Variable {
+                    name: namespace, ..
+                } = object.as_ref()
+                else {
                     return None;
                 };
                 if self.resolve(namespace).is_some() {
@@ -608,7 +613,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                             ),
                         );
                     }
-                    let type_ref = self.infer_var_type(type_annotation.as_ref(), initializer.as_ref());
+                    let type_ref =
+                        self.infer_var_type(type_annotation.as_ref(), initializer.as_ref());
                     self.record(
                         Symbol::new(name, SymbolKind::Var, loc.position(), scope)
                             .with_type(type_annotation.clone())
@@ -666,7 +672,12 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.enter_scope(ScopeKind::Block);
                 self.check_shadow(var_name);
                 let scope = self.current_scope();
-                self.record(Symbol::new(var_name, SymbolKind::Var, loc.position(), scope));
+                self.record(Symbol::new(
+                    var_name,
+                    SymbolKind::Var,
+                    loc.position(),
+                    scope,
+                ));
                 self.loop_body(body);
                 self.exit_scope();
             }
@@ -685,7 +696,12 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     self.record(Symbol::new(idx, SymbolKind::Var, loc.position(), scope));
                 }
                 self.check_shadow(item_var);
-                self.record(Symbol::new(item_var, SymbolKind::Var, loc.position(), scope));
+                self.record(Symbol::new(
+                    item_var,
+                    SymbolKind::Var,
+                    loc.position(),
+                    scope,
+                ));
                 self.loop_body(body);
                 self.exit_scope();
             }

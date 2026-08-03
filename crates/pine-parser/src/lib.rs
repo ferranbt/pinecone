@@ -939,7 +939,10 @@ impl Parser {
                     let value = p.parse_indented_expression()?;
 
                     Ok(Stmt::Assignment {
-                        target: Expr::Variable { name: name.clone(), loc: name_loc },
+                        target: Expr::Variable {
+                            name: name.clone(),
+                            loc: name_loc,
+                        },
                         value,
                     })
                 } else if p.match_token(&[
@@ -959,13 +962,19 @@ impl Parser {
                     let right = p.parse_indented_expression()?;
 
                     let value = Expr::Binary {
-                        left: Box::new(Expr::Variable { name: name.clone(), loc: name_loc }),
+                        left: Box::new(Expr::Variable {
+                            name: name.clone(),
+                            loc: name_loc,
+                        }),
                         op,
                         right: Box::new(right),
                         loc: op_loc,
                     };
                     Ok(Stmt::Assignment {
-                        target: Expr::Variable { name: name.clone(), loc: name_loc },
+                        target: Expr::Variable {
+                            name: name.clone(),
+                            loc: name_loc,
+                        },
                         value,
                     })
                 } else {
@@ -1863,10 +1872,7 @@ mod tests {
             assert_eq!(*callee, Expr::var("sma"));
             assert_eq!(type_args.len(), 0);
             assert_eq!(args.len(), 2);
-            assert_eq!(
-                args[0],
-                Argument::Positional(Expr::var("close"))
-            );
+            assert_eq!(args[0], Argument::Positional(Expr::var("close")));
             assert_eq!(
                 args[1],
                 Argument::Positional(Expr::Literal(Literal::Int(14)))
