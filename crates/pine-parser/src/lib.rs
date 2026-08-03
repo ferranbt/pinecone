@@ -1825,10 +1825,10 @@ mod tests {
     #[test]
     fn test_variables() {
         let expr = parse_expr("close").unwrap();
-        assert_eq!(expr, Expr::var("close".to_string()));
+        assert_eq!(expr, Expr::var("close"));
 
         let expr = parse_expr("my_var").unwrap();
-        assert_eq!(expr, Expr::var("my_var".to_string()));
+        assert_eq!(expr, Expr::var("my_var"));
     }
 
     #[test]
@@ -1837,14 +1837,14 @@ mod tests {
         let expr = parse_expr("close[1]").unwrap();
         assert!(matches!(expr, Expr::Index { .. }));
         if let Expr::Index { expr: base, index } = expr {
-            assert_eq!(*base, Expr::var("close".to_string()));
+            assert_eq!(*base, Expr::var("close"));
             assert_eq!(*index, Expr::Literal(Literal::Int(1)));
         }
 
         // high[5] - 5 bars ago
         let expr = parse_expr("high[5]").unwrap();
         if let Expr::Index { expr: base, index } = expr {
-            assert_eq!(*base, Expr::var("high".to_string()));
+            assert_eq!(*base, Expr::var("high"));
             assert_eq!(*index, Expr::Literal(Literal::Int(5)));
         }
     }
@@ -1860,12 +1860,12 @@ mod tests {
             ..
         } = expr
         {
-            assert_eq!(*callee, Expr::var("sma".to_string()));
+            assert_eq!(*callee, Expr::var("sma"));
             assert_eq!(type_args.len(), 0);
             assert_eq!(args.len(), 2);
             assert_eq!(
                 args[0],
-                Argument::Positional(Expr::var("close".to_string()))
+                Argument::Positional(Expr::var("close"))
             );
             assert_eq!(
                 args[1],
@@ -1884,7 +1884,7 @@ mod tests {
             ..
         } = expr
         {
-            assert_eq!(*callee, Expr::var("foo".to_string()));
+            assert_eq!(*callee, Expr::var("foo"));
             assert_eq!(type_args.len(), 0);
             assert_eq!(args.len(), 0);
         }
@@ -1958,9 +1958,9 @@ mod tests {
             left, op, right, ..
         } = expr
         {
-            assert_eq!(*left, Expr::var("close".to_string()));
+            assert_eq!(*left, Expr::var("close"));
             assert_eq!(op, BinOp::Greater);
-            assert_eq!(*right, Expr::var("open".to_string()));
+            assert_eq!(*right, Expr::var("open"));
         }
 
         // Less than
@@ -1969,7 +1969,7 @@ mod tests {
             left, op, right, ..
         } = expr
         {
-            assert_eq!(*left, Expr::var("rsi".to_string()));
+            assert_eq!(*left, Expr::var("rsi"));
             assert_eq!(op, BinOp::Less);
             assert_eq!(*right, Expr::Literal(Literal::Int(30)));
         }
@@ -1980,7 +1980,7 @@ mod tests {
             left, op, right, ..
         } = expr
         {
-            assert_eq!(*left, Expr::var("x".to_string()));
+            assert_eq!(*left, Expr::var("x"));
             assert_eq!(op, BinOp::Eq);
             assert_eq!(*right, Expr::Literal(Literal::Int(5)));
         }

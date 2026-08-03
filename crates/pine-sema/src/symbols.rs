@@ -1,20 +1,4 @@
 //! A durable symbol table.
-//!
-//! Every declaration a script makes — its kind, where it is written, its
-//! parameters or type — arranged in the scope tree they belong to. That is what
-//! a tool queries: go-to-definition (a symbol's `decl`), hover (its kind +
-//! signature), completion (the symbols visible in a scope, or the members of a
-//! type).
-//!
-//! This is the analyzer's *only* scope structure: [`Analyzer`](crate::Analyzer)
-//! both resolves names against it and records declarations into it as it walks,
-//! so name resolution and the durable table are one and the same. The AST is
-//! visited once.
-//!
-//! It records **declarations** only. Mapping a *use* back to its declaration
-//! (find-references, rename) additionally needs a span on every identifier
-//! occurrence — a later layer on top of this one, not a change to it.
-
 pub use crate::scope::SymbolKind;
 
 /// A scope's index within a [`SymbolTable`]. `0` is always the global scope.
@@ -53,11 +37,19 @@ pub struct Symbol {
     /// name (it is accessed as `owner.member`), so it never enters a scope's
     /// resolution list — `container` is how it is found instead.
     pub container: Option<SymbolId>,
+    /// For a variable of a user-defined type, that type's symbol — so a member
+    /// access `v.field` can resolve to the type's member. Set when the type is
+    /// known (an annotation, or a `Type.new()` initializer).
+    pub type_ref: Option<SymbolId>,
 }
 
 impl Symbol {
-    /// A plain declaration reachable by bare name in `scope`.
-    pub(crate) fn new(name: &str, kind: SymbolKind, decl: Option<(u32, u32)>, scope: ScopeId) -> Self {
+    pub(crate) fn new(
+        name: &str,
+        kind: SymbolKind,
+        decl: Option<(u32, u32)>,
+        scope: ScopeId,
+    ) -> Self {
         Symbol {
             name: name.to_string(),
             kind,
@@ -66,6 +58,7 @@ impl Symbol {
             params: Vec::new(),
             type_annotation: None,
             container: None,
+            type_ref: None,
         }
     }
 
@@ -78,18 +71,20 @@ impl Symbol {
         self.type_annotation = type_annotation;
         self
     }
+
+    pub(crate) fn with_type_ref(mut self, type_ref: Option<SymbolId>) -> Self {
+        self.type_ref = type_ref;
+        self
+    }
 }
 
 #[derive(Debug, Clone)]
 struct ScopeData {
     parent: Option<ScopeId>,
     kind: ScopeKind,
-    /// Symbols reachable by bare name in this scope, in source order.
     symbols: Vec<SymbolId>,
 }
 
-/// A *use* of a symbol: where a name resolves to a declaration. This is what
-/// turns the table from declaration-only into find-references / rename capable.
 #[derive(Debug, Clone)]
 struct Occurrence {
     line: u32,
@@ -97,8 +92,6 @@ struct Occurrence {
     symbol: SymbolId,
 }
 
-/// The scope tree of a program, the symbols each scope declares, and every use
-/// of those symbols.
 #[derive(Debug, Clone)]
 pub struct SymbolTable {
     symbols: Vec<Symbol>,
@@ -107,10 +100,7 @@ pub struct SymbolTable {
 }
 
 impl SymbolTable {
-    /// The global scope, always present.
     pub const GLOBAL: ScopeId = 0;
-
-    // --- Building (driven by the analyzer's walk) ---
 
     pub(crate) fn new() -> Self {
         SymbolTable {
@@ -124,7 +114,6 @@ impl SymbolTable {
         }
     }
 
-    /// Open a child scope of `parent` and return its id.
     pub(crate) fn open_scope(&mut self, parent: ScopeId, kind: ScopeKind) -> ScopeId {
         let id = self.scopes.len();
         self.scopes.push(ScopeData {
@@ -135,7 +124,6 @@ impl SymbolTable {
         id
     }
 
-    /// Record a symbol reachable by bare name in its scope.
     pub(crate) fn declare(&mut self, symbol: Symbol) -> SymbolId {
         let scope = symbol.scope;
         let id = self.symbols.len();
@@ -144,9 +132,6 @@ impl SymbolTable {
         id
     }
 
-    /// Whether `name` is already declared directly in `scope` (ignoring parents)
-    /// — a redeclaration in the same scope. Drives the duplicate-declaration
-    /// diagnostic now that the analyzer resolves against this table.
     pub(crate) fn declared_locally(&self, scope: ScopeId, name: &str) -> bool {
         self.scopes[scope]
             .symbols
@@ -154,8 +139,6 @@ impl SymbolTable {
             .any(|&id| self.symbols[id].name == name)
     }
 
-    /// Record that the name at `pos` refers to `symbol` — one entry in the
-    /// occurrence index. `None` positions (unknown) are dropped.
     pub(crate) fn record_use(&mut self, pos: Option<(u32, u32)>, symbol: SymbolId) {
         if let Some((line, column)) = pos {
             self.occurrences.push(Occurrence {
@@ -166,8 +149,6 @@ impl SymbolTable {
         }
     }
 
-    /// Record a member (field or enum case) of `owner`. Not reachable by bare
-    /// name, so not added to any scope's resolution list.
     pub(crate) fn declare_member(
         &mut self,
         owner: SymbolId,
@@ -184,48 +165,45 @@ impl SymbolTable {
             params: Vec::new(),
             type_annotation,
             container: Some(owner),
+            type_ref: None,
         });
     }
 
-    // --- Queries ---
-
-    /// Every symbol declared anywhere in the program, in declaration order.
     pub fn symbols(&self) -> &[Symbol] {
         &self.symbols
     }
 
-    /// The kind of a scope.
     pub fn scope_kind(&self, scope: ScopeId) -> ScopeKind {
         self.scopes[scope].kind
     }
 
-    /// The symbols reachable by bare name directly in `scope`.
     pub fn symbols_in(&self, scope: ScopeId) -> impl Iterator<Item = &Symbol> {
-        self.scopes[scope].symbols.iter().map(|&id| &self.symbols[id])
+        self.scopes[scope]
+            .symbols
+            .iter()
+            .map(|&id| &self.symbols[id])
     }
 
-    /// The members (fields, enum cases) of a type or enum symbol — the
-    /// candidates for completion after `owner.`.
     pub fn members_of(&self, owner: SymbolId) -> impl Iterator<Item = &Symbol> {
         self.symbols
             .iter()
             .filter(move |s| s.container == Some(owner))
     }
 
-    /// The symbol at index `id`.
+    pub fn member_id(&self, owner: SymbolId, name: &str) -> Option<SymbolId> {
+        self.symbols
+            .iter()
+            .position(|s| s.container == Some(owner) && s.name == name)
+    }
+
     pub fn symbol(&self, id: SymbolId) -> &Symbol {
         &self.symbols[id]
     }
 
-    /// Resolve `name` from `scope` outward, innermost first — Pine's own lookup
-    /// order. This powers hover / go-to-definition once a cursor has been mapped
-    /// to its scope.
     pub fn resolve(&self, scope: ScopeId, name: &str) -> Option<&Symbol> {
         self.resolve_id(scope, name).map(|id| &self.symbols[id])
     }
 
-    /// Like [`resolve`](Self::resolve) but returns the symbol's id, so a use can
-    /// be recorded against it.
     pub fn resolve_id(&self, scope: ScopeId, name: &str) -> Option<SymbolId> {
         let mut current = Some(scope);
         while let Some(id) = current {
@@ -243,9 +221,6 @@ impl SymbolTable {
         None
     }
 
-    /// Every position where `symbol` is *used* (its declaration is not included
-    /// — that is [`Symbol::decl`]). This is find-references, and the set rename
-    /// would rewrite.
     pub fn references(&self, symbol: SymbolId) -> impl Iterator<Item = (u32, u32)> + '_ {
         self.occurrences
             .iter()
@@ -272,9 +247,7 @@ impl SymbolTable {
     /// go-to-definition when the cursor sits on the declaration itself; resolving
     /// a cursor on a *use* needs the occurrence layer.
     pub fn find_declaration_at(&self, line: u32, column: u32) -> Option<&Symbol> {
-        self.symbols
-            .iter()
-            .find(|s| s.decl == Some((line, column)))
+        self.symbols.iter().find(|s| s.decl == Some((line, column)))
     }
 }
 
@@ -288,7 +261,6 @@ mod tests {
     use pine_parser::Parser;
     use std::collections::HashMap;
 
-    /// Build the symbol table via the analyzer's single walk.
     fn table(source: &str) -> SymbolTable {
         let tokens = Lexer::new(source).tokenize().unwrap();
         let program = Program::new(Parser::new(tokens).parse().unwrap());
@@ -300,7 +272,8 @@ mod tests {
     fn records_kinds_locations_and_params() {
         // `sum` is a function (line 3), its parameters live in a child scope,
         // and `total` is a global variable (line 4).
-        let table = table("//@version=5\nindicator(\"t\")\nsum(a, b) => a + b\ntotal = sum(1, 2)\n");
+        let table =
+            table("//@version=5\nindicator(\"t\")\nsum(a, b) => a + b\ntotal = sum(1, 2)\n");
 
         let sum = table.resolve(SymbolTable::GLOBAL, "sum").unwrap();
         assert_eq!(sum.kind, SymbolKind::Function);
@@ -327,8 +300,15 @@ mod tests {
 
         // Members are reached through the owner, not by bare name.
         assert!(table.resolve(SymbolTable::GLOBAL, "x").is_none());
-        let point_id = table.symbols().iter().position(|s| s.name == "Point").unwrap();
-        let members: Vec<_> = table.members_of(point_id).map(|m| m.name.as_str()).collect();
+        let point_id = table
+            .symbols()
+            .iter()
+            .position(|s| s.name == "Point")
+            .unwrap();
+        let members: Vec<_> = table
+            .members_of(point_id)
+            .map(|m| m.name.as_str())
+            .collect();
         assert_eq!(members, vec!["x", "y"]);
 
         // `find_declaration_at` maps a declaration position back to its symbol.
@@ -356,5 +336,73 @@ mod tests {
 
         // A builtin use (`indicator`) is not a user symbol, so no occurrence.
         assert!(table.symbol_at(2, 1).is_none());
+    }
+
+    #[test]
+    fn resolves_members_of_a_typed_variable() {
+        // `p` is a Point (via the `.new()` constructor); `p.x` on line 6 refers
+        // to the field `x` declared on line 4.
+        let table = table(
+            "//@version=5\nindicator(\"t\")\ntype Point\n    float x\n    float y\np = Point.new()\nv = p.x\n",
+        );
+
+        let point_id = table
+            .symbols()
+            .iter()
+            .position(|s| s.name == "Point")
+            .unwrap();
+        let x_id = table.member_id(point_id, "x").unwrap();
+
+        // The `x` in `p.x` (line 7) resolves to the field, not a bare name.
+        assert!(table.resolve(SymbolTable::GLOBAL, "x").is_none());
+        let refs: Vec<_> = table.references(x_id).collect();
+        assert_eq!(refs, vec![(7, 7)]);
+        assert_eq!(table.symbol_at(7, 7), Some(x_id));
+    }
+
+    #[test]
+    fn resolves_enum_cases() {
+        // `Signal.buy` refers to the enum case declared on line 4.
+        let table = table(
+            "//@version=5\nindicator(\"t\")\nenum Signal\n    buy\n    sell\ns = Signal.buy\n",
+        );
+
+        let signal_id = table
+            .symbols()
+            .iter()
+            .position(|s| s.name == "Signal")
+            .unwrap();
+        let buy_id = table.member_id(signal_id, "buy").unwrap();
+
+        assert_eq!(table.symbol_at(6, 12), Some(buy_id));
+    }
+
+    #[test]
+    fn a_use_binds_to_the_innermost_shadowing_declaration() {
+        // A global `x` (line 3) and a parameter `x` (line 4) that shadows it. The
+        // use of `x` inside the function body must bind to the parameter, not the
+        // global.
+        let table = table("//@version=5\nindicator(\"t\")\nx = 1\nf(x) => x + 1\ny = x + 1\n");
+
+        let symbols = table.symbols();
+        // Two distinct `x` symbols: the global var and the parameter.
+        let global_x = symbols
+            .iter()
+            .position(|s| s.name == "x" && s.scope == SymbolTable::GLOBAL)
+            .unwrap();
+        let param_x = symbols
+            .iter()
+            .position(|s| s.name == "x" && s.scope != SymbolTable::GLOBAL)
+            .unwrap();
+        assert_ne!(global_x, param_x);
+
+        // The `x` in the body (line 4, `f(x) => x + 1`) binds to the parameter;
+        // the `x` in `y = x + 1` (line 5) binds to the global.
+        assert_eq!(table.symbol_at(4, 9), Some(param_x));
+        assert_eq!(table.symbol_at(5, 5), Some(global_x));
+
+        // Find-references keeps them apart.
+        assert_eq!(table.references(param_x).collect::<Vec<_>>(), vec![(4, 9)]);
+        assert_eq!(table.references(global_x).collect::<Vec<_>>(), vec![(5, 5)]);
     }
 }

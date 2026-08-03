@@ -130,8 +130,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
-    /// The scope symbols are currently recorded into (mirrors the top of the
-    /// `ScopeStack`).
+    /// The innermost open scope — where names resolve from and declarations are
+    /// recorded into.
     fn current_scope(&self) -> ScopeId {
         *self.scope_ids.last().expect("scope stack is never empty")
     }
@@ -169,6 +169,59 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         let scope = self.current_scope();
         if let Some(id) = self.symbols.resolve_id(scope, name) {
             self.symbols.record_use(loc.position(), id);
+        }
+    }
+
+    /// The user type a declaration has, when it can be known without inference:
+    /// an explicit annotation naming a type/enum, or a `Type.new()` initializer.
+    /// Drives member resolution (`v.field`).
+    fn infer_var_type(
+        &self,
+        type_annotation: Option<&String>,
+        initializer: Option<&Expr>,
+    ) -> Option<SymbolId> {
+        let scope = self.current_scope();
+        if let Some(annotation) = type_annotation {
+            let base = annotation.trim_end_matches("[]");
+            if let Some(id) = self.symbols.resolve_id(scope, base) {
+                if matches!(
+                    self.symbols.symbol(id).kind,
+                    SymbolKind::Type | SymbolKind::Enum
+                ) {
+                    return Some(id);
+                }
+            }
+        }
+        if let Some(Expr::Call { callee, .. }) = initializer {
+            if let Expr::MemberAccess { object, member, .. } = callee.as_ref() {
+                if member == "new" {
+                    if let Expr::Variable { name, .. } = object.as_ref() {
+                        if let Some(id) = self.symbols.resolve_id(scope, name) {
+                            if self.symbols.symbol(id).kind == SymbolKind::Type {
+                                return Some(id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// The type/enum symbol a member access reads a member from: an enum/type
+    /// named directly (`Enum.Case`), or a variable of a known user type
+    /// (`v.field`). `None` when the type is unknown — no member is resolved, so
+    /// this never guesses.
+    fn expr_type(&self, expr: &Expr) -> Option<SymbolId> {
+        let Expr::Variable { name, .. } = expr else {
+            return None;
+        };
+        let id = self.symbols.resolve_id(self.current_scope(), name)?;
+        let symbol = self.symbols.symbol(id);
+        match symbol.kind {
+            SymbolKind::Type | SymbolKind::Enum => Some(id),
+            SymbolKind::Var => symbol.type_ref,
+            _ => None,
         }
     }
 
@@ -555,9 +608,11 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                             ),
                         );
                     }
+                    let type_ref = self.infer_var_type(type_annotation.as_ref(), initializer.as_ref());
                     self.record(
                         Symbol::new(name, SymbolKind::Var, loc.position(), scope)
-                            .with_type(type_annotation.clone()),
+                            .with_type(type_annotation.clone())
+                            .with_type_ref(type_ref),
                     );
                 }
             }
@@ -844,9 +899,21 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.check_expr(expr);
                 self.check_expr(index);
             }
-            // Members are not validated (that is Tier 3 signature checking);
-            // only the base object must resolve.
-            Expr::MemberAccess { object, .. } => self.check_expr(object),
+            // The member itself is not validated (that is Tier 3 signature
+            // checking), but when the object's type is known its member resolves
+            // to a declaration, so record the use.
+            Expr::MemberAccess {
+                object,
+                member,
+                member_loc,
+            } => {
+                self.check_expr(object);
+                if let Some(type_id) = self.expr_type(object) {
+                    if let Some(member_id) = self.symbols.member_id(type_id, member) {
+                        self.symbols.record_use(member_loc.position(), member_id);
+                    }
+                }
+            }
             Expr::Ternary {
                 condition,
                 then_expr,
