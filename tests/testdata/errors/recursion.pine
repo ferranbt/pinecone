@@ -1,0 +1,8 @@
+//@version=5
+indicator("errors/recursion")
+// Pine does not allow a function to call itself.
+
+f(x) => f(x - 1)
+
+// Expected error:
+// error [recursion] 5:10: `f` calls itself; Pine does not allow recursion

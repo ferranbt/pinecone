@@ -1,0 +1,9 @@
+//@version=5
+indicator("errors/user_function_too_few_args")
+// A user function requires all of its non-defaulted parameters.
+
+f(a, b) => a + b
+x = f(1)
+
+// Expected error:
+// error [too-few-arguments] 6:6: `f` requires at least 2 arguments, found 1

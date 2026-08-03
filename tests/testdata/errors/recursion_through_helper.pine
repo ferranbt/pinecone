@@ -1,0 +1,10 @@
+//@version=5
+indicator("errors/recursion_through_helper")
+// Recursion is found even when the self-call is nested inside another call; the
+// non-recursive helper is not flagged.
+
+double(x) => x * 2
+f(x) => double(f(x))
+
+// Expected error:
+// error [recursion] 7:17: `f` calls itself; Pine does not allow recursion
