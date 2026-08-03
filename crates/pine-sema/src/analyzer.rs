@@ -178,7 +178,11 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         // Counting arguments rather than matching them to positions keeps this
         // sound for overloads with an optional leading parameter, such as
         // `ta.highest(length)`, where `source` may be dropped.
-        let required = signature.params.iter().filter(|param| param.required).count();
+        let required = signature
+            .params
+            .iter()
+            .filter(|param| param.required)
+            .count();
         if args.len() < required {
             self.emit(
                 "too-few-arguments",
