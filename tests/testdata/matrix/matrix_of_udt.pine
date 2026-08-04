@@ -1,0 +1,19 @@
+//@version=6
+indicator("matrix/matrix_of_udt")
+// matrix.new<UserType>() creates a matrix whose elements are a user-defined type.
+
+type cell
+    int v = 0
+m = matrix.new<cell>(2, 2)
+matrix.set(m, 0, 0, cell.new(5))
+matrix.set(m, 1, 1, cell.new(9))
+a = matrix.get(m, 0, 0)
+b = matrix.get(m, 1, 1)
+log.info(str.tostring(a.v))
+log.info(str.tostring(b.v))
+log.info(str.tostring(matrix.rows(m)))
+
+// Expected output:
+// 5
+// 9
+// 2

@@ -10,20 +10,22 @@ use std::rc::Rc;
 struct ArrayNew<O: PineOutput> {
     #[type_param]
     element_type: String,
+    #[arg(default = 0.0)]
     size: f64,
     #[arg(default = Value::Na)]
     initial_value: Value<O>,
 }
 
 impl<O: PineOutput> ArrayNew<O> {
-    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        // Validate element type
-        if !matches!(
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        // A built-in element type, or any declared user-defined type.
+        let is_builtin = matches!(
             self.element_type.as_str(),
             "int" | "float" | "string" | "bool" | "color"
-        ) {
+        );
+        if !is_builtin && !ctx.is_user_type(&self.element_type) {
             return Err(RuntimeError::TypeError(format!(
-                "Invalid array element type '{}'. Must be int, float, string, bool, or color",
+                "Invalid array element type '{}'. Must be a built-in type or a user-defined type",
                 self.element_type
             )));
         }
@@ -79,6 +81,22 @@ impl<O: PineOutput> ArrayPush<O> {
     }
 }
 
+/// array.unshift() - Inserts a value at the front of the array.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.unshift")]
+struct ArrayUnshift<O: PineOutput> {
+    array: Value<O>,
+    value: Value<O>,
+}
+
+impl<O: PineOutput> ArrayUnshift<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let arr = self.array.as_array()?;
+        arr.borrow_mut().insert(0, self.value.clone());
+        Ok(Value::Na)
+    }
+}
+
 #[derive(BuiltinFunction)]
 #[builtin(name = "array.get")]
 struct ArrayGet<O: PineOutput> {
@@ -122,6 +140,7 @@ pub fn register<O: PineOutput>() -> Value<O> {
     array_ns.insert("new_float".to_string(), ArrayNewFloat::<O>::builtin_value());
     array_ns.insert("clear".to_string(), ArrayClear::<O>::builtin_value());
     array_ns.insert("push".to_string(), ArrayPush::<O>::builtin_value());
+    array_ns.insert("unshift".to_string(), ArrayUnshift::<O>::builtin_value());
     array_ns.insert("get".to_string(), ArrayGet::<O>::builtin_value());
     array_ns.insert("size".to_string(), ArraySize::<O>::builtin_value());
 

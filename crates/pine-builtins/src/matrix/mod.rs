@@ -20,17 +20,18 @@ struct MatrixNew<O: PineOutput> {
 }
 
 impl<O: PineOutput> MatrixNew<O> {
-    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let rows = self.rows as usize;
         let columns = self.columns as usize;
 
-        // Validate element type
-        if !matches!(
+        // A built-in element type, or any declared user-defined type.
+        let is_builtin = matches!(
             self.element_type.as_str(),
             "int" | "float" | "string" | "bool"
-        ) {
+        );
+        if !is_builtin && !ctx.is_user_type(&self.element_type) {
             return Err(RuntimeError::TypeError(format!(
-                "Invalid matrix element type '{}'. Must be int, float, string, or bool",
+                "Invalid matrix element type '{}'. Must be a built-in type or a user-defined type",
                 self.element_type
             )));
         }
