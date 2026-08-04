@@ -194,14 +194,42 @@ impl Parser {
         while self.match_token(&[TokenType::Newline, TokenType::Indent, TokenType::Dedent]) {}
     }
 
-    /// Parse optional array suffix [] and append to type name if present
-    fn parse_array_suffix(&mut self, type_name: String) -> Result<String, ParserError> {
+    /// Parse an optional type suffix: an array `[]`, or — for a collection type
+    /// (`array`/`matrix`/`map`) — a generic `<...>` argument list. Returns the
+    /// type's textual form (e.g. `float[]`, `array<Point>`, `map<string, int>`).
+    /// The generic form is limited to collection bases so a bare `x < y > z`
+    /// comparison is never mistaken for a type.
+    fn parse_type_suffix(&mut self, type_name: String) -> Result<String, ParserError> {
         if self.match_token(&[TokenType::LBracket]) {
             self.consume(TokenType::RBracket, "Expected ']' after '[' in array type")?;
-            Ok(format!("{}[]", type_name))
+            Ok(format!("{type_name}[]"))
+        } else if matches!(type_name.as_str(), "array" | "matrix" | "map")
+            && self.match_token(&[TokenType::Less])
+        {
+            let mut args = Vec::new();
+            loop {
+                args.push(self.parse_type()?);
+                if !self.match_token(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+            self.consume(TokenType::Greater, "Expected '>' after generic type arguments")?;
+            Ok(format!("{type_name}<{}>", args.join(", ")))
         } else {
             Ok(type_name)
         }
+    }
+
+    /// Parse a type name (`int`/`float`/identifier) with its optional suffix.
+    fn parse_type(&mut self) -> Result<String, ParserError> {
+        let base = match &self.peek().typ {
+            TokenType::Int => "int".to_string(),
+            TokenType::Float => "float".to_string(),
+            TokenType::Ident(name) => name.clone(),
+            other => return Err(ParserError::UnexpectedToken(other.clone(), self.peek().line)),
+        };
+        self.advance();
+        self.parse_type_suffix(base)
     }
 
     /// Parse an expression that may be on an indented continuation line.
@@ -354,14 +382,14 @@ impl Parser {
         if self.match_token(&[TokenType::Int, TokenType::Float]) {
             let type_name = self.tokens[self.current - 1].lexeme.clone();
             // Check for array type: int[] or float[]
-            self.parse_array_suffix(type_name).ok()
+            self.parse_type_suffix(type_name).ok()
         } else if let TokenType::Ident(type_name) = &self.peek().typ {
             let type_name = type_name.clone();
             self.try_parse(|p| {
                 p.advance(); // consume potential type name
 
-                // Check for array type: TypeName[]
-                let final_type = p.parse_array_suffix(type_name.clone())?;
+                // Check for an array `[]` or generic `<...>` suffix.
+                let final_type = p.parse_type_suffix(type_name.clone())?;
 
                 // Must be followed by identifier to be a type annotation
                 if !matches!(p.peek().typ, TokenType::Ident(_)) {
@@ -481,7 +509,7 @@ impl Parser {
         if self.match_token(&[TokenType::Int, TokenType::Float]) {
             let type_name = self.tokens[self.current - 1].lexeme.clone();
             // Check for array type: int[] or float[]
-            let type_name = self.parse_array_suffix(type_name)?;
+            let type_name = self.parse_type_suffix(type_name)?;
             return self.typed_var_declaration(Some(type_name), VarKind::Plain);
         }
 

@@ -1,0 +1,22 @@
+//@version=6
+indicator("types/generic_type_annotation")
+// `array<T>` / `matrix<T>` / `map<K, V>` are valid variable type annotations,
+// not just call-site type arguments.
+
+type Point
+    float x = 0.0
+var array<Point> pts = array.new<Point>()
+array.push(pts, Point.new(3.0))
+var matrix<float> m = matrix.new<float>(1, 1, 4.0)
+// A `map<K, V>` annotation parses and type-checks (map construction is a
+// separate, not-yet-implemented builtin).
+var map<string, int> counts = na
+p0 = array.get(pts, 0)
+log.info(str.tostring(p0.x))
+log.info(str.tostring(matrix.get(m, 0, 0)))
+log.info(str.tostring(na(counts) ? 1 : 0))
+
+// Expected output:
+// 3
+// 4
+// 1

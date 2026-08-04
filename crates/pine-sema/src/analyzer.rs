@@ -101,6 +101,14 @@ fn reaches(start: &str, target: &str, adjacency: &HashMap<&str, Vec<&str>>) -> b
     false
 }
 
+/// The type names within an annotation: the base and every generic argument,
+/// with `[]`/`<>`/`,` stripped (`map<string, Point>` -> `map`, `string`, `Point`).
+fn type_names(annotation: &str) -> impl Iterator<Item = &str> {
+    annotation
+        .split(['<', '>', ',', '[', ']', ' '])
+        .filter(|name| !name.is_empty())
+}
+
 /// How to name a literal's type in a diagnostic.
 fn describe_literal(literal: &Literal) -> &'static str {
     match literal {
@@ -509,16 +517,18 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
-    /// Reject a type annotation that is neither a built-in nor a declared type.
+    /// Reject a type annotation naming a type that is neither a built-in nor a
+    /// declared type — including every name inside a generic like `array<Foo>`.
     fn check_type_annotation(&mut self, annotation: Option<&String>) {
         let Some(annotation) = annotation else {
             return;
         };
-        let base = annotation.trim_end_matches("[]");
-        if BUILTIN_TYPES.contains(&base) || self.user_types.contains(base) {
-            return;
+        for name in type_names(annotation) {
+            if !BUILTIN_TYPES.contains(&name) && !self.user_types.contains(name) {
+                self.emit("unknown-type", None, format!("unknown type `{name}`"));
+                return;
+            }
         }
-        self.emit("unknown-type", None, format!("unknown type `{base}`"));
     }
 
     /// Check a user-function call's argument count against its parameters.
