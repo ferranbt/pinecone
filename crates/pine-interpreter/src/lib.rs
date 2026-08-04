@@ -1490,8 +1490,7 @@ impl<O: PineOutput> Interpreter<O> {
                             if let Some(Value::BuiltinFunction(builtin_fn)) =
                                 self.namespace_member(namespace, member)
                             {
-                                let mut evaluated_args =
-                                    vec![EvaluatedArg::Positional(receiver)];
+                                let mut evaluated_args = vec![EvaluatedArg::Positional(receiver)];
                                 evaluated_args.extend(self.evaluate_arguments(args, None)?);
                                 let call_args =
                                     FunctionCallArgs::new(type_args.clone(), evaluated_args)
