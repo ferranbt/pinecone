@@ -213,7 +213,10 @@ impl Parser {
                     break;
                 }
             }
-            self.consume(TokenType::Greater, "Expected '>' after generic type arguments")?;
+            self.consume(
+                TokenType::Greater,
+                "Expected '>' after generic type arguments",
+            )?;
             Ok(format!("{type_name}<{}>", args.join(", ")))
         } else {
             Ok(type_name)
@@ -226,7 +229,12 @@ impl Parser {
             TokenType::Int => "int".to_string(),
             TokenType::Float => "float".to_string(),
             TokenType::Ident(name) => name.clone(),
-            other => return Err(ParserError::UnexpectedToken(other.clone(), self.peek().line)),
+            other => {
+                return Err(ParserError::UnexpectedToken(
+                    other.clone(),
+                    self.peek().line,
+                ))
+            }
         };
         self.advance();
         self.parse_type_suffix(base)
