@@ -12,8 +12,8 @@
 //! [`FileId`] and their own global (root) scope, so `alias.export` resolves
 //! cross-file while names never leak between files.
 
-pub use crate::scope::SymbolKind;
 use crate::scope::Namespace;
+pub use crate::scope::SymbolKind;
 
 /// A scope's index within a [`SymbolTable`]. `0` is always the main file's
 /// global scope.

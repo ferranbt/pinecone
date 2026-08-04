@@ -555,7 +555,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         body: &[Stmt],
     ) -> SymbolId {
         let scope = self.current_scope();
-        if self.symbols.declared_locally_in(scope, name, Namespace::Value) {
+        if self
+            .symbols
+            .declared_locally_in(scope, name, Namespace::Value)
+        {
             self.emit(
                 "duplicate-declaration",
                 None,
@@ -592,7 +595,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
     /// Declare `name` in the current scope, reporting a same-scope duplicate.
     fn declare(&mut self, name: &str, kind: SymbolKind, loc: Loc) -> SymbolId {
         let scope = self.current_scope();
-        if self.symbols.declared_locally_in(scope, name, kind.namespace()) {
+        if self
+            .symbols
+            .declared_locally_in(scope, name, kind.namespace())
+        {
             self.emit(
                 "duplicate-declaration",
                 None,
@@ -675,7 +681,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                         self.check_expr(init);
                     }
                     let scope = self.current_scope();
-                    if self.symbols.declared_locally_in(scope, name, Namespace::Value) {
+                    if self
+                        .symbols
+                        .declared_locally_in(scope, name, Namespace::Value)
+                    {
                         self.emit(
                             "duplicate-declaration",
                             None,
@@ -709,7 +718,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                         continue;
                     }
                     self.check_shadow(name);
-                    if self.symbols.declared_locally_in(scope, name, Namespace::Value) {
+                    if self
+                        .symbols
+                        .declared_locally_in(scope, name, Namespace::Value)
+                    {
                         self.emit(
                             "duplicate-declaration",
                             None,
