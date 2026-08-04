@@ -1,5 +1,6 @@
 //@version=5
 indicator("ta/tr")
+// Skip PineTS: PineTS ignores handle_na on the first bar; the docs side with us
 // Test ta.tr (True Range)
 // max(high-low, abs(high-close[1]), abs(low-close[1])). Every fixture bar
 // spans 10 and steps up by 1, so the bar's own range always wins.

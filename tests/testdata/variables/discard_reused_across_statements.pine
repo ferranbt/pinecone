@@ -1,0 +1,14 @@
+//@version=6
+indicator("variables/discard_reused_across_statements")
+// Skip PineTS: PineTS #250 rejects `_` reused across separate destructuring statements
+// `_` is the discard binding; reusing it in two separate destructuring
+// statements in the same scope is idiomatic and legal.
+
+f() =>
+    [1, 2, 3]
+[_, a, b] = f()
+[_, c, d] = f()
+log.info(str.tostring(a + b + c + d))
+
+// Expected output:
+// 10

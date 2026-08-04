@@ -38,43 +38,12 @@ const CHECK = [
 ];
 
 // Divergences we are not treating as our bugs. Pass --all to check them anyway.
-const SKIP = {
-    'ta/tr.pine': 'PineTS ignores handle_na on the first bar; the docs side with us',
-    // PineTS 0.9.29 implements the one-argument overload of ta.highest/ta.lowest
-    // (our value fixtures agree) but returns na for the one-argument ta.highestbars
-    // /ta.lowestbars. The spec defines that form (source defaults to high/low), so
-    // the docs side with us.
-    'ta/highestbars_lowestbars_default_source.pine':
-        'PineTS lacks the one-argument ta.highestbars/ta.lowestbars overload; the docs side with us',
-    'basics/alertcondition.pine': 'our harness reports alerts as a synthetic log line',
-    'basics/barstate.pine': 'barstate flags come from our full series, not the sliced run',
-    'basics/timeframe.pine': 'the harness timeframe is not the one PineTS is told',
-    'control_flow/member_access.pine': 'PineTS color components differ',
-    // PineTS is order-dependent here: `false or na` is na but `na or false` is
-    // false. `or` is commutative, so ours (na for both) is the consistent one.
-    'basics/lazy_and_or.pine': 'PineTS is asymmetric on na in `or`',
-    // Unresolved: we yield na for x/0, PineTS yields Infinity. The spec says
-    // nothing either way.
-    'basics/division_by_zero.pine': 'unresolved: na vs Infinity for a zero divisor',
-    // PineTS assumes a different exchange timezone for its synthetic ticker, so
-    // the two cannot be compared. Ours also ignores syminfo.timezone entirely.
-    'basics/timestamp.pine': 'timezone assumptions differ; we ignore syminfo.timezone',
-    // PineTS books an open trade's commission into netprofit; the spec says
-    // netprofit is "completed trades" only, so it belongs to openprofit (ours).
-    'strategy/commission.pine': 'PineTS puts open-trade commission in netprofit; the spec sides with us',
-    // The reference says OCA cancels the unfilled order when another in the
-    // group executes, so only one fills (ours). PineTS fills both same-bar.
-    'strategy/oca.pine': 'reference cancels the sibling on execution; PineTS fills both',
-};
-
 const args = process.argv.slice(2);
 const checkAll = args.includes('--all');
 const filter = args.find((a) => !a.startsWith('--')) ?? '';
 
-const inScope = (name) => {
-    if (!checkAll && name in SKIP) return false;
-    return filter ? name.includes(filter) : CHECK.some((d) => name.startsWith(d));
-};
+const inScope = (name) =>
+    filter ? name.includes(filter) : CHECK.some((d) => name.startsWith(d));
 
 /** Every `.pine` file under testdata, excluding imported libraries. */
 function fixtures(dir) {
@@ -205,9 +174,18 @@ const all = fixtures(testdata)
 let checked = 0;
 const diverged = [];
 const errored = [];
+const skipped = [];
 
 for (const name of all) {
     const source = readFileSync(join(testdata, name), 'utf8');
+
+    // A fixture opts out of the cross-check with `// Skip PineTS: <reason>`.
+    const reason = directive(source, '// Skip PineTS:');
+    if (reason !== null && !checkAll) {
+        skipped.push([name, reason]);
+        continue;
+    }
+
     const expected = expectedOutput(source);
     if (expected === null) continue; // error fixture or nothing to print
 
@@ -248,16 +226,17 @@ if (errored.length) {
     for (const e of errored) console.log(`  - ${e.name}: ${e.error.split('\n')[0]}`);
 }
 
-const skipped = Object.entries(SKIP);
-if (!checkAll && skipped.length) {
-    console.log('\nSkipped:');
-    for (const [name, reason] of skipped) console.log(`  - ${name}: ${reason}`);
+if (skipped.length) {
+    console.log('\nSkipped (// Skip PineTS):');
+    for (const [name, reason] of skipped) {
+        console.log(`  - ${name}: ${reason || '(no reason given)'}`);
+    }
 }
 
 console.log(
     `\n${checked} checked · ${checked - diverged.length} agree · ` +
     `${diverged.length} diverge · ${errored.length} PineTS errors · ` +
-    `${checkAll ? 0 : skipped.length} skipped`
+    `${skipped.length} skipped`
 );
 
 // A divergence fails the run. A fixture PineTS cannot run is its limitation,

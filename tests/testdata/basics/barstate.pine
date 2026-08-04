@@ -1,5 +1,6 @@
 //@version=5
 indicator("basics/barstate")
+// Skip PineTS: barstate flags come from our full series, not the sliced run
 // barstate.* are per-bar booleans, and the flags behind them follow from where
 // a bar sits in the series rather than being set by hand.
 //

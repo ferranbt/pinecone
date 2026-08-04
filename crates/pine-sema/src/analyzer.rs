@@ -14,7 +14,7 @@ use pine_core::{LibraryLoader, PineOutput};
 use pine_interpreter::{BuiltinSignature, Value};
 use pine_parser::Parser;
 
-use crate::scope::{is_global_only, SymbolKind};
+use crate::scope::{is_global_only, Namespace, SymbolKind};
 use crate::symbols::{FileId, ScopeId, ScopeKind, Symbol, SymbolId, SymbolTable};
 use pine_diagnostics::Diagnostic;
 
@@ -555,7 +555,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         body: &[Stmt],
     ) -> SymbolId {
         let scope = self.current_scope();
-        if self.symbols.declared_locally(scope, name) {
+        if self
+            .symbols
+            .declared_locally_in(scope, name, Namespace::Value)
+        {
             self.emit(
                 "duplicate-declaration",
                 None,
@@ -592,7 +595,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
     /// Declare `name` in the current scope, reporting a same-scope duplicate.
     fn declare(&mut self, name: &str, kind: SymbolKind, loc: Loc) -> SymbolId {
         let scope = self.current_scope();
-        if self.symbols.declared_locally(scope, name) {
+        if self
+            .symbols
+            .declared_locally_in(scope, name, kind.namespace())
+        {
             self.emit(
                 "duplicate-declaration",
                 None,
@@ -675,7 +681,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                         self.check_expr(init);
                     }
                     let scope = self.current_scope();
-                    if self.symbols.declared_locally(scope, name) {
+                    if self
+                        .symbols
+                        .declared_locally_in(scope, name, Namespace::Value)
+                    {
                         self.emit(
                             "duplicate-declaration",
                             None,
@@ -703,8 +712,16 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.check_expr(value);
                 let scope = self.current_scope();
                 for name in names {
+                    // `_` is a discard, not a binding: it never collides and is
+                    // not recorded.
+                    if name == "_" {
+                        continue;
+                    }
                     self.check_shadow(name);
-                    if self.symbols.declared_locally(scope, name) {
+                    if self
+                        .symbols
+                        .declared_locally_in(scope, name, Namespace::Value)
+                    {
                         self.emit(
                             "duplicate-declaration",
                             None,

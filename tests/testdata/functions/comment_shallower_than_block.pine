@@ -1,0 +1,15 @@
+//@version=6
+indicator("functions/comment_shallower_than_block")
+// Skip PineTS: PineTS #253 emits a false DEDENT for a comment shallower than its block
+// A comment line may sit at any indentation inside a block; it carries no code
+// and must not affect block structure (no false DEDENT).
+
+f() =>
+    a = 1
+// col-0 comment inside an indented block
+    b = 2
+    a + b
+log.info(str.tostring(f()))
+
+// Expected output:
+// 3

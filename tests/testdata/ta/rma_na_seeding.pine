@@ -1,0 +1,25 @@
+//@version=5
+indicator("ta/rma_na_seeding")
+// Skip PineTS: PineTS #246 counts leading na into ta.rma's seed window; the v6 reference sides with us
+// v6 reference, ta.rma remarks: "na values in the source series are ignored;
+// the function calculates on the length quantity of non-na values." `v` is na
+// on the first two bars, so the 3-sample seed completes on the fifth bar (the
+// third non-na value), not the third.
+
+// Bars: 8
+
+var int n = 0
+n := n + 1
+v = n <= 2 ? na : 6.0
+rma = ta.rma(v, 3)
+log.info(str.tostring(rma))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 6
+// 6
+// 6
+// 6

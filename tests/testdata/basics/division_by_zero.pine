@@ -1,5 +1,6 @@
 //@version=5
 indicator("basics/division_by_zero")
+// Skip PineTS: unresolved: we yield na for x/0, PineTS yields Infinity; the spec says nothing either way
 // Pine semantics: division or modulo by zero yields `na`, not an error.
 // Arithmetic never aborts; the script continues with an `na` result.
 

@@ -1,5 +1,6 @@
 //@version=5
 strategy("strategy/commission", overlay = true, commission_type = strategy.commission.cash_per_contract, commission_value = 10)
+// Skip PineTS: PineTS puts open-trade commission in netprofit; the spec sides with us (netprofit is completed trades only)
 // Commission is charged on entry and exit and shows up in equity and netprofit.
 // Over the last 4 bars opens are 296..299 and closes 298..301, one contract:
 //   bar 1: entry submitted; broker set up, equity = initial_capital 1000000

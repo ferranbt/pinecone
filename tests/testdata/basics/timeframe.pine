@@ -1,5 +1,6 @@
 //@version=5
 indicator("basics/timeframe")
+// Skip PineTS: the harness timeframe is not the one PineTS is told
 // timeframe.* comes from the `// Timeframe:` directive: this asserts the period
 // passthrough and the derived classification (multiplier / is* flags) for "3D".
 

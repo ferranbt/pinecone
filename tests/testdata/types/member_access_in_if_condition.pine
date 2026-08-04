@@ -1,0 +1,16 @@
+//@version=6
+indicator("types/member_access_in_if_condition")
+// A field of a call result (`call().field`) must resolve inside an `if`
+// condition, the same as anywhere else.
+
+type store
+    float src
+mk() =>
+    store.new(4.0)
+out = 0.0
+if mk().src > 0
+    out := mk().src + 1
+log.info(str.tostring(out))
+
+// Expected output:
+// 5

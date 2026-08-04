@@ -27,6 +27,23 @@ impl SymbolKind {
             SymbolKind::Import => "import",
         }
     }
+
+    /// Pine keeps type declarations in a namespace separate from values, so a
+    /// UDT and a function/variable may share a name without colliding.
+    pub fn namespace(self) -> Namespace {
+        match self {
+            SymbolKind::Type | SymbolKind::Enum => Namespace::Type,
+            SymbolKind::Var | SymbolKind::Function | SymbolKind::Import => Namespace::Value,
+        }
+    }
+}
+
+/// The two namespaces a name can occupy; a redeclaration only collides within
+/// the same one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Namespace {
+    Type,
+    Value,
 }
 
 /// Functions Pine only permits at **global** scope (never inside `if`, loops, or

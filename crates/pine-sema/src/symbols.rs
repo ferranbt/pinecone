@@ -12,6 +12,7 @@
 //! [`FileId`] and their own global (root) scope, so `alias.export` resolves
 //! cross-file while names never leak between files.
 
+use crate::scope::Namespace;
 pub use crate::scope::SymbolKind;
 
 /// A scope's index within a [`SymbolTable`]. `0` is always the main file's
@@ -217,6 +218,20 @@ impl SymbolTable {
             .symbols
             .iter()
             .any(|&id| self.symbols[id].name == name)
+    }
+
+    /// Like [`Self::declared_locally`], but only counts a symbol in the same
+    /// namespace — so a type and a value may share a name.
+    pub(crate) fn declared_locally_in(
+        &self,
+        scope: ScopeId,
+        name: &str,
+        namespace: Namespace,
+    ) -> bool {
+        self.scopes[scope].symbols.iter().any(|&id| {
+            let symbol = &self.symbols[id];
+            symbol.name == name && symbol.kind.namespace() == namespace
+        })
     }
 
     /// Record that the name at `(file, pos)` refers to `symbol` — one entry in

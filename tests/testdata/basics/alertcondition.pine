@@ -1,5 +1,6 @@
 //@version=5
 indicator("basics/alertcondition")
+// Skip PineTS: our harness reports alerts as a synthetic log line
 // alertcondition fires only on bars where the condition is true. On the final
 // test bar close > open, so only the Bull alert fires. The harness surfaces each
 // fired alert as `(alert): <message>` after the logs.
