@@ -1,0 +1,19 @@
+//@version=6
+indicator("types/array_of_udt")
+// array.new<UserType>() creates an array whose elements are a user-defined type.
+
+type store
+    float src = 0.0
+arr = array.new<store>()
+array.push(arr, store.new(4.0))
+array.push(arr, store.new(7.0))
+e0 = array.get(arr, 0)
+e1 = array.get(arr, 1)
+log.info(str.tostring(e0.src))
+log.info(str.tostring(e1.src))
+log.info(str.tostring(array.size(arr)))
+
+// Expected output:
+// 4
+// 7
+// 2

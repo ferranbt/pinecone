@@ -1,15 +1,16 @@
 //@version=6
 indicator("types/member_access_in_if_condition")
-// A field of a call result (`call().field`) must resolve inside an `if`
-// condition, the same as anywhere else.
+// `arr.get(0).src` (a field of a call result) must resolve inside an `if`
+// condition, the same as anywhere else. This is the faithful PineTS #254 repro,
+// now that method syntax and arrays of user-defined types are supported.
 
 type store
-    float src
-mk() =>
-    store.new(4.0)
+    float src = 0.0
+var store[] upbin = array.new<store>()
+upbin.unshift(store.new(4.0))
 out = 0.0
-if mk().src > 0
-    out := mk().src + 1
+if upbin.get(0).src > 0
+    out := upbin.get(0).src + 1
 log.info(str.tostring(out))
 
 // Expected output:

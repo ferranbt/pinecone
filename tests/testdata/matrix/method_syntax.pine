@@ -1,0 +1,15 @@
+//@version=6
+indicator("matrix/method_syntax")
+// Method-call syntax on a matrix: `m.set(...)` is `matrix.set(m, ...)`.
+
+m = matrix.new<int>(2, 2, 0)
+m.set(0, 0, 5)
+m.set(1, 1, 9)
+log.info(str.tostring(m.get(0, 0)))
+log.info(str.tostring(m.get(1, 1)))
+log.info(str.tostring(m.rows()))
+
+// Expected output:
+// 5
+// 9
+// 2

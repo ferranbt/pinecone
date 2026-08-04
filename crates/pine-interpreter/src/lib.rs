@@ -515,6 +515,16 @@ fn collect_assigned_names(body: &[Stmt], out: &mut std::collections::HashSet<Str
     }
 }
 
+/// The builtin namespace whose functions back a value's method syntax, e.g.
+/// `arr.push(v)` dispatches to `array.push(arr, v)`.
+fn builtin_namespace<O: PineOutput>(value: &Value<O>) -> Option<&'static str> {
+    match value {
+        Value::Array(_) => Some("array"),
+        Value::Matrix { .. } => Some("matrix"),
+        _ => None,
+    }
+}
+
 /// Pine `na` is float NaN. NaN can also reach `==`/`!=` wrapped as a
 /// `Value::Number(NaN)` (ta.* functions return `Number(NaN)` for all-NaN
 /// windows) rather than `Value::Na` — both forms make the comparison yield na.
@@ -586,6 +596,19 @@ impl<O: PineOutput> Interpreter<O> {
     /// Get a variable value
     pub fn get_variable(&self, name: &str) -> Option<&Value<O>> {
         self.variables.get(name).map(|var| &var.value)
+    }
+
+    /// Whether `name` is a declared user-defined type.
+    pub fn is_user_type(&self, name: &str) -> bool {
+        self.user_types.contains_key(name)
+    }
+
+    /// The `member` field of a builtin namespace object (e.g. `array`'s `push`).
+    fn namespace_member(&self, namespace: &str, member: &str) -> Option<Value<O>> {
+        match self.variables.get(namespace).map(|var| &var.value) {
+            Some(Value::Object { fields, .. }) => fields.borrow().get(member).cloned(),
+            _ => None,
+        }
     }
 
     /// Set a variable value (useful for loading objects and test setup)
@@ -1452,6 +1475,28 @@ impl<O: PineOutput> Interpreter<O> {
                                 evaluated_args,
                                 *id,
                             );
+                        }
+                    }
+                }
+
+                // Builtin method syntax: a collection receiver `x.m(args)` is
+                // sugar for `namespace.m(x, args)` — the same builtins in
+                // function form, with the receiver passed first. (Skip `Call`
+                // receivers so a side-effecting `f().m()` is not evaluated twice.)
+                if let Expr::MemberAccess { object, member, .. } = callee.as_ref() {
+                    if !matches!(object.as_ref(), Expr::Call { .. }) {
+                        let receiver = self.eval_expr(object)?;
+                        if let Some(namespace) = builtin_namespace(&receiver) {
+                            if let Some(Value::BuiltinFunction(builtin_fn)) =
+                                self.namespace_member(namespace, member)
+                            {
+                                let mut evaluated_args = vec![EvaluatedArg::Positional(receiver)];
+                                evaluated_args.extend(self.evaluate_arguments(args, None)?);
+                                let call_args =
+                                    FunctionCallArgs::new(type_args.clone(), evaluated_args)
+                                        .with_call_id(*id);
+                                return (builtin_fn.call)(self, call_args);
+                            }
                         }
                     }
                 }

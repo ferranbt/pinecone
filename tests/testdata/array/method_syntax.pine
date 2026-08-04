@@ -1,0 +1,18 @@
+//@version=6
+indicator("array/method_syntax")
+// Method-call syntax on an array: `arr.m(args)` is `array.m(arr, args)`.
+
+arr = array.new<int>()
+arr.push(10)
+arr.unshift(5)
+arr.push(20)
+log.info(str.tostring(arr.get(0)))
+log.info(str.tostring(arr.get(1)))
+log.info(str.tostring(arr.get(2)))
+log.info(str.tostring(arr.size()))
+
+// Expected output:
+// 5
+// 10
+// 20
+// 3
