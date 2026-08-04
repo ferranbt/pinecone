@@ -1,0 +1,11 @@
+//@version=5
+indicator("types/inline_comment_after_field")
+// An inline comment after a type field must not break the declaration.
+
+type T
+    int x = 7 // inline comment after a field
+t = T.new()
+log.info(str.tostring(t.x))
+
+// Expected output:
+// 7

@@ -1,0 +1,9 @@
+//@version=6
+indicator("array/typed_array_decl_no_var")
+// The `var`/`varip` prefix on an array declaration is optional.
+
+float[] values = na
+log.info(str.tostring(na(values) ? 1 : 0))
+
+// Expected output:
+// 1

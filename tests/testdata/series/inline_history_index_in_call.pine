@@ -1,0 +1,13 @@
+//@version=6
+indicator("series/inline_history_index_in_call")
+// Bars: 3
+var int n = 0
+n := n + 1
+a = n * 10
+b = 1
+log.info(str.tostring(nz(a[b], a)))
+
+// Expected output:
+// 10
+// 10
+// 20

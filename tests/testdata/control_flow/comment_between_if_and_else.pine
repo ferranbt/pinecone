@@ -1,0 +1,17 @@
+//@version=6
+indicator("control_flow/comment_between_if_and_else")
+// A comment between an if-block and its else/else-if must not break the chain.
+
+x = 1
+var float y = na
+if x == 1
+    y := 10
+// comment between if and else
+else if x == 2
+    y := 20
+else
+    y := 30
+log.info(str.tostring(y))
+
+// Expected output:
+// 10
