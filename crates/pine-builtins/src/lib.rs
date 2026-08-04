@@ -130,14 +130,11 @@ struct Nz<O: PineOutput> {
 
 impl<O: PineOutput> Nz<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        // na source -> the replacement (any type; defaults to 0 when omitted).
+        // Pine `na` reaches here as `Value::Na` or a NaN number.
         match &self.source {
-            Value::Na => {
-                // If replacement is not provided (default), use type-specific defaults
-                match &self.replacement {
-                    Value::Number(_) => Ok(self.replacement.clone()),
-                    _ => Ok(Value::Number(0.0)),
-                }
-            }
+            Value::Na => Ok(self.replacement.clone()),
+            Value::Number(n) if n.is_nan() => Ok(self.replacement.clone()),
             _ => Ok(self.source.clone()),
         }
     }
