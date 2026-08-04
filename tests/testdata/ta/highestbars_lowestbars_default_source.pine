@@ -1,5 +1,6 @@
 //@version=5
 indicator("ta/highestbars_lowestbars_default_source")
+// Skip PineTS: PineTS lacks the one-argument ta.highestbars/ta.lowestbars overload; the docs side with us
 // The one-argument overloads default the source to `high` / `low`. Highs rise
 // across the window, so the highest high is the current bar (0); lows also rise,
 // so the lowest low is the oldest bar in the window (-2).

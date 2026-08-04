@@ -1,0 +1,16 @@
+//@version=6
+indicator("functions/continuation_leading_operator")
+// Skip PineTS: PineTS #252 lets a leading-operator continuation close the function body early
+// A ternary continued onto the next line with a leading `?` / `:` is one
+// expression; the continuation must not close the function body early.
+
+f(float x, float tp) =>
+    a = x > 0
+         ? tp + 1
+         : tp + 2
+    b = tp + 3
+    a + b
+log.info(str.tostring(f(1, 10)))
+
+// Expected output:
+// 24

@@ -1,5 +1,6 @@
 //@version=5
 indicator("basics/lazy_and_or")
+// Skip PineTS: PineTS is asymmetric on na in `or` (`false or na` is na but `na or false` is false); ours is consistent
 // Pine `and`/`or` are lazy: when the left operand alone decides the result
 // (false-and / true-or) the right operand is not evaluated. Here the right
 // operand is an out-of-bounds array access that errors if evaluated, so the

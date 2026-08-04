@@ -1,0 +1,19 @@
+//@version=6
+indicator("control_flow/switch_tuple_return")
+// Skip PineTS: PineTS #255 misparses a bare tuple after a switch block
+// A bare tuple statement right after a `switch` assignment block is the
+// function's return tuple, not a subscript of the switch result.
+
+f(s) =>
+    b = 3
+    a = switch s
+        "A" => 1
+        => 2
+    [a, b]
+[x, y] = f("A")
+log.info(str.tostring(x))
+log.info(str.tostring(y))
+
+// Expected output:
+// 1
+// 3

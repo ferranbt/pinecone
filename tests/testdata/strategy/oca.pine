@@ -1,5 +1,6 @@
 //@version=5
 strategy("strategy/oca", overlay = true, pyramiding = 5)
+// Skip PineTS: reference cancels the sibling order on execution so only one fills (ours); PineTS fills both same-bar
 // Two entries in one OCA group: when one fills, the other is cancelled. A buy
 // stop at 301 and a buy limit at 292 share group "G". Over the last 5 bars
 // opens are 295..299, highs 300..304, lows 290..294. (pyramiding is raised so

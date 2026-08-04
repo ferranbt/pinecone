@@ -1,0 +1,14 @@
+//@version=6
+indicator("types/type_name_reused_as_function")
+// A UDT and a function may share a name: Pine keeps types and functions in
+// separate namespaces.
+
+type dwm_hl
+    float x = 0.0
+dwm_hl(dwm_hl hl) =>
+    hl.x + 1
+v = dwm_hl.new(2.0)
+log.info(str.tostring(dwm_hl(v)))
+
+// Expected output:
+// 3

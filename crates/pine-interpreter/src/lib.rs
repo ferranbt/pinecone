@@ -417,6 +417,10 @@ struct MethodDef {
 pub struct Interpreter<O: PineOutput> {
     /// Local variables in the current scope
     variables: HashMap<String, Variable<O>>,
+    /// User-defined types, kept separate from `variables` so a UDT and a
+    /// function/variable may share a name (Pine's type and value namespaces are
+    /// distinct). `Type.new` / `Type.copy` resolve here.
+    user_types: HashMap<String, Value<O>>,
     /// Method registry (method_name -> Vec<MethodDef>) - can have multiple methods with same name for different types
     methods: HashMap<String, Vec<MethodDef>>,
     /// Library loader for importing external libraries
@@ -522,6 +526,7 @@ impl<O: PineOutput> Interpreter<O> {
     pub fn new() -> Self {
         Self {
             variables: HashMap::new(),
+            user_types: HashMap::new(),
             methods: HashMap::new(),
             library_loader: None,
             exports: HashMap::new(),
@@ -1005,6 +1010,7 @@ impl<O: PineOutput> Interpreter<O> {
                     name: name.clone(),
                     fields: fields.clone(),
                 };
+                self.user_types.insert(name.clone(), type_value.clone());
                 self.variables.insert(
                     name.clone(),
                     Variable {
@@ -1499,7 +1505,17 @@ impl<O: PineOutput> Interpreter<O> {
             }
 
             Expr::MemberAccess { object, member, .. } => {
-                let obj_value = self.eval_expr(object)?;
+                // `Type.new` / `Type.copy` resolve via the type namespace, so a
+                // type may share its name with a shadowing function/variable.
+                let obj_value = match object.as_ref() {
+                    Expr::Variable { name, .. }
+                        if (member == "new" || member == "copy")
+                            && self.user_types.contains_key(name) =>
+                    {
+                        self.user_types[name].clone()
+                    }
+                    _ => self.eval_expr(object)?,
+                };
                 match obj_value {
                     Value::Object { fields, .. } => {
                         let obj = fields.borrow();

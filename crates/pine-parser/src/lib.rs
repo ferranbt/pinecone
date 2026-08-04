@@ -1503,6 +1503,14 @@ impl Parser {
     fn postfix(&mut self) -> Result<Expr, ParserError> {
         let mut expr = self.primary()?;
 
+        // A `switch`/`if` block expression spans lines and terminates the
+        // expression. A following `[`/`.`/`(` begins a new statement, not a
+        // postfix operator on the block's result (its trailing NEWLINE/DEDENT
+        // has already been consumed, so the loop below can't see the boundary).
+        if matches!(expr, Expr::Switch { .. } | Expr::IfExpr { .. }) {
+            return Ok(expr);
+        }
+
         loop {
             if self.match_token(&[TokenType::Dot]) {
                 // Member access: expr.member

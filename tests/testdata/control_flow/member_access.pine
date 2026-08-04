@@ -1,5 +1,6 @@
 //@version=5
 indicator("control_flow/member_access")
+// Skip PineTS: PineTS color components differ
 // Test member access on objects
 
 // Access color constants from color namespace

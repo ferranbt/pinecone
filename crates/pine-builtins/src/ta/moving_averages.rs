@@ -119,6 +119,12 @@ impl TaRma {
     ) -> Result<Value<O>, RuntimeError> {
         let length = checked_length(self.length)?;
 
+        // `na` inputs are ignored: they neither seed the window nor advance the
+        // recursion, so the average is over `length` non-`na` values (v6 spec).
+        if self.source.is_nan() {
+            return Ok(Value::Na);
+        }
+
         let Some(seed) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
         };
