@@ -1124,7 +1124,16 @@ impl Parser {
             self.consume(TokenType::To, "Expected 'to' in for loop")?;
             let to = self.expression()?;
 
-            // Skip optional newline after to
+            // Optional `by <step>`. `by` is a contextual keyword (not lexed as
+            // one), so match it as an identifier here.
+            let step = if matches!(&self.peek().typ, TokenType::Ident(name) if name == "by") {
+                self.advance(); // consume 'by'
+                Some(self.expression()?)
+            } else {
+                None
+            };
+
+            // Skip optional newline after to/step
             self.match_token(&[TokenType::Newline]);
 
             // Parse the body - multiple statements
@@ -1134,6 +1143,7 @@ impl Parser {
                 var_name,
                 from,
                 to,
+                step,
                 body,
                 loc,
             })

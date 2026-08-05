@@ -235,6 +235,8 @@ pub enum Stmt {
         var_name: String,
         from: Expr,
         to: Expr,
+        #[serde(default, skip_serializing_if = "skip_none")]
+        step: Option<Expr>,
         body: Vec<Stmt>,
         #[serde(skip)]
         loc: Loc,

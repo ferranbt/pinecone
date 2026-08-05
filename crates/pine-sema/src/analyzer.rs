@@ -762,11 +762,15 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 var_name,
                 from,
                 to,
+                step,
                 body,
                 loc,
             } => {
                 self.check_expr(from);
                 self.check_expr(to);
+                if let Some(step) = step {
+                    self.check_expr(step);
+                }
                 self.enter_scope(ScopeKind::Block);
                 self.check_shadow(var_name, *loc);
                 let scope = self.current_scope();
