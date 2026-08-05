@@ -61,3 +61,10 @@ compile-examples:
     for example in examples/*/; do
         [ -f "$example/Cargo.toml" ] && (cd "$example" && cargo build)
     done
+
+# Release all crates in lockstep with cargo-release (`cargo install cargo-release`):
+# Dry run by default — pass `--execute` to actually release:
+#   just release 0.2.0             # preview
+#   just release 0.2.0 --execute   # bump, tag, publish, push
+release version *args:
+    cargo release {{version}} {{args}}
