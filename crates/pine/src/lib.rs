@@ -338,7 +338,7 @@ pub struct Script<O: PineOutput> {
 impl<O: PineOutput> Script<O> {
     /// Run one bar. Private: bars must be replayed in order from the first, so
     /// [`Script::run`] is the only way in.
-    fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
+    pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
         // Load bar data as Series variables so TA functions can access historical data
         use interpreter::{Series, Value};
 
