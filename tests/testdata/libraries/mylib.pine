@@ -1,3 +1,5 @@
+//@version=6
+library("mylib")
 // Library with exported types and functions
 
 export type Point

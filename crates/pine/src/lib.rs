@@ -17,7 +17,7 @@ pub use run::{Run, RunResult};
 
 use pine_ast::Program;
 use pine_core::{
-    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, IndicatorOutput, InputOutput,
+    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, MetadataOutput, InputOutput,
     LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_core::{Bar, Data, PineVersion, Timeframe, VersionError};
@@ -179,7 +179,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
             + InputOutput
             + LineOutput
             + TableOutput
-            + IndicatorOutput
+            + MetadataOutput
             + GlobalOutput
             + AlertConditionOutput
             + FillOutput,

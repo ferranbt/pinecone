@@ -1,6 +1,6 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{
-    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, IndicatorOutput, InputOutput,
+    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, MetadataOutput, InputOutput,
     LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_core::{PineVersion, SymInfo, Timeframe};
@@ -25,6 +25,7 @@ mod currency;
 mod fill;
 mod globals;
 mod indicator;
+mod library;
 mod input;
 mod label;
 mod line;
@@ -179,7 +180,7 @@ pub fn register_namespace_objects<
         + InputOutput
         + LineOutput
         + TableOutput
-        + IndicatorOutput
+        + MetadataOutput
         + GlobalOutput
         + AlertConditionOutput
         + FillOutput,
@@ -215,6 +216,9 @@ pub fn register_namespace_objects<
     }
     namespaces.insert("table".to_string(), table::register());
     for (name, value) in indicator::register(version) {
+        namespaces.insert(name, value);
+    }
+    for (name, value) in library::register(version) {
         namespaces.insert(name, value);
     }
     namespaces.insert("request".to_string(), request::register());

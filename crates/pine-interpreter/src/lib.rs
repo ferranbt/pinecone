@@ -1139,7 +1139,12 @@ impl<O: PineOutput> Interpreter<O> {
                     RuntimeError::LibraryError(format!("Failed to parse library '{}': {}", path, e))
                 })?;
 
+                // Seed the library with the same built-in namespaces/globals
+                // (e.g. `library`, `math`) so its declaration and body resolve.
                 let mut library_interp = Interpreter::new();
+                for (name, value) in self.snapshot() {
+                    library_interp.set_variable(&name, value);
+                }
                 library_interp.execute(&library_program)?;
                 let library_exports = library_interp.exports();
 
