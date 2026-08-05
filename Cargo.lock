@@ -1526,8 +1526,10 @@ dependencies = [
  "pine-core",
  "pine-data",
  "pine-diagnostics",
+ "pine-format",
  "pine-interpreter",
  "pine-lexer",
+ "pine-lint",
  "pine-parser",
  "pine-sema",
 ]

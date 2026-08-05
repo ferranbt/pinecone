@@ -4,9 +4,13 @@ pub use pine_builtins as builtins;
 use pine_builtins::DefaultPineOutput;
 pub use pine_core as core;
 pub use pine_data as data;
+pub use pine_diagnostics as diagnostics;
+pub use pine_format as format;
 pub use pine_interpreter as interpreter;
 pub use pine_lexer as lexer;
+pub use pine_lint as lint;
 pub use pine_parser as parser;
+pub use pine_sema as sema;
 
 mod backtest;
 mod run;
