@@ -927,20 +927,29 @@ impl<O: PineOutput> Interpreter<O> {
                 var_name,
                 from,
                 to,
+                step,
                 body,
                 ..
             } => {
                 let from_val = self.eval_expr(from)?.as_number()?;
                 let to_val = self.eval_expr(to)?.as_number()?;
 
-                if from_val > to_val {
+                // `by <step>` is a positive magnitude (default 1); the direction
+                // comes from `from` vs `to`, so `for i = 3 to 0` counts down.
+                let step_val = match step {
+                    Some(expr) => self.eval_expr(expr)?.as_number()?.abs(),
+                    None => 1.0,
+                };
+                if step_val == 0.0 {
                     return Err(RuntimeError::InvalidForLoop(from_val, to_val));
                 }
+                let down = from_val > to_val;
 
                 let mut i = from_val as i64;
                 let end = to_val as i64;
+                let step = step_val as i64;
 
-                while i <= end {
+                while if down { i >= end } else { i <= end } {
                     self.variables.insert(
                         var_name.clone(),
                         Variable {
@@ -955,7 +964,11 @@ impl<O: PineOutput> Interpreter<O> {
                         break;
                     }
 
-                    i += 1;
+                    if down {
+                        i -= step;
+                    } else {
+                        i += step;
+                    }
                 }
 
                 Ok(None)

@@ -145,11 +145,16 @@ impl Rules {
                 var_name,
                 from,
                 to,
+                step,
                 body,
                 ..
             } => {
+                let by = match step {
+                    Some(step) => format!(" by {}", self.expr_str(step)),
+                    None => String::new(),
+                };
                 let head = format!(
-                    "for {var_name} = {} to {}",
+                    "for {var_name} = {} to {}{by}",
                     self.expr_str(from),
                     self.expr_str(to)
                 );
