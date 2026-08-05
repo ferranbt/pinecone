@@ -1,0 +1,8 @@
+//@version=5
+indicator("import/library_internal_error")
+// A library's own errors surface when imported, tagged with the library file.
+import broken_lib as b
+plot(1)
+
+// Expected error:
+// error [undeclared-variable] broken_lib:3:17: undeclared variable `undeclared_thing`

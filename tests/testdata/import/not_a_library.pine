@@ -1,0 +1,8 @@
+//@version=5
+indicator("import/not_a_library")
+// Importing a script that has no `library()` declaration is an error.
+import notlib as n
+plot(1)
+
+// Expected error:
+// error [not-a-library] 4:18: imported script `notlib` has no `library()` declaration

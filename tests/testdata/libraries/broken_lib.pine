@@ -1,0 +1,3 @@
+//@version=5
+library("broken_lib")
+export bad() => undeclared_thing
