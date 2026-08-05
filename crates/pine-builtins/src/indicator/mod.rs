@@ -2,16 +2,16 @@
 //!
 //! A global function (not a namespace) that declares the script's identity and
 //! display settings. It records the declaration into the output via
-//! [`IndicatorOutput`]; a script may have at most one (enforced by sema).
+//! [`MetadataOutput`]; a script may have at most one (enforced by sema).
 
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::PineVersion;
-use pine_core::{Indicator, IndicatorOutput, PineOutput};
+use pine_core::{Indicator, MetadataOutput, PineOutput};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 
 /// indicator(title, shorttitle, overlay, format, precision, ...)
 #[derive(BuiltinFunction)]
-#[builtin(name = "indicator", output = IndicatorOutput)]
+#[builtin(name = "indicator", output = MetadataOutput)]
 struct IndicatorFn {
     title: String,
     #[arg(default = "")]
@@ -38,7 +38,7 @@ struct IndicatorFn {
 }
 
 impl IndicatorFn {
-    fn execute<O: PineOutput + IndicatorOutput>(
+    fn execute<O: PineOutput + MetadataOutput>(
         &self,
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
@@ -61,7 +61,7 @@ impl IndicatorFn {
     }
 }
 
-pub fn register<O: PineOutput + IndicatorOutput>(version: PineVersion) -> Vec<(String, Value<O>)> {
+pub fn register<O: PineOutput + MetadataOutput>(version: PineVersion) -> Vec<(String, Value<O>)> {
     let name = if version < PineVersion::V5 {
         "study"
     } else {

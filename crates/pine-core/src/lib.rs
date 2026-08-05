@@ -10,10 +10,10 @@ pub use bar::{Bar, Data, Ohlcv};
 pub use library::{FileResolver, LibraryLoader};
 pub use output::{
     AlertCondition, AlertConditionOutput, BoxOutput, Color, DefaultPineOutput, FillObject,
-    FillOutput, GlobalContext, GlobalOutput, Indicator, IndicatorOutput, Input, InputOutput,
-    InputValue, Label, LabelOutput, LineObject, LineOutput, LogEntry, LogLevel, LogOutput, PineBox,
-    PineOutput, Plot, PlotOutput, Plotarrow, Plotbar, Plotcandle, Plotchar, Plotshape, Table,
-    TableCell, TableOutput,
+    FillOutput, GlobalContext, GlobalOutput, Indicator, Input, InputOutput, InputValue, Label,
+    LabelOutput, Library, LineObject, LineOutput, LogEntry, LogLevel, LogOutput, MetadataOutput,
+    PineBox, PineOutput, Plot, PlotOutput, Plotarrow, Plotbar, Plotcandle, Plotchar, Plotshape,
+    Table, TableCell, TableOutput,
 };
 pub use series_buffer::{SeriesBuffer, MAX_LOOKBACK};
 pub use syminfo::SymInfo;

@@ -26,6 +26,8 @@ pub struct Analyzer<'a, O: PineOutput> {
     builtins: &'a HashMap<String, Value<O>>,
     /// Script declarations seen (indicator/strategy/library); at most one allowed.
     declarations: u32,
+    /// Whether the current file declared `library(...)` — required of an import.
+    library_declared: bool,
     /// Free functions, `name -> (required, total)` param counts, for arity checks.
     functions: HashMap<String, (usize, usize)>,
     /// User type/enum names, collected up front for forward-referencing annotations.
@@ -48,6 +50,7 @@ struct FileState {
     functions: HashMap<String, (usize, usize)>,
     user_types: HashSet<String>,
     declarations: u32,
+    library_declared: bool,
     fn_stack: Vec<String>,
     call_edges: Vec<CallEdge>,
 }
@@ -130,6 +133,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             loop_depth: 0,
             builtins,
             declarations: 0,
+            library_declared: false,
             functions: HashMap::new(),
             user_types: HashSet::new(),
             fn_stack: Vec::new(),
@@ -409,6 +413,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             functions: std::mem::take(&mut self.functions),
             user_types: std::mem::take(&mut self.user_types),
             declarations: std::mem::take(&mut self.declarations),
+            library_declared: std::mem::take(&mut self.library_declared),
             fn_stack: std::mem::take(&mut self.fn_stack),
             call_edges: std::mem::take(&mut self.call_edges),
         }
@@ -420,6 +425,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         self.functions = saved.functions;
         self.user_types = saved.user_types;
         self.declarations = saved.declarations;
+        self.library_declared = saved.library_declared;
         self.fn_stack = saved.fn_stack;
         self.call_edges = saved.call_edges;
     }
@@ -456,7 +462,16 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         let (file, root) = self.symbols.add_file(path);
         let saved = self.enter_file(root);
         self.run_file(&program);
+        let is_library = self.library_declared;
         self.exit_file(saved);
+        // Reported back in the importing file, at the `import` statement.
+        if !is_library {
+            self.emit(
+                "not-a-library",
+                loc,
+                format!("imported script `{path}` has no `library()` declaration"),
+            );
+        }
         Some((file, root))
     }
 
@@ -981,6 +996,9 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     }
                     if SCRIPT_DECLARATIONS.contains(&fname.as_str()) {
                         self.declarations += 1;
+                        if fname == "library" {
+                            self.library_declared = true;
+                        }
                         if self.declarations > 1 {
                             self.emit(
                                 "duplicate-declaration",

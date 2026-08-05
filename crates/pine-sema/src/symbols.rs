@@ -678,6 +678,28 @@ mod tests {
     }
 
     #[test]
+    fn an_import_of_a_non_library_is_flagged() {
+        // A file with no `library()` declaration is not a library.
+        let plain = libs(&[("plain", "//@version=5\nexport add(a, b) => a + b\n")]);
+        let (diags, _) = analyze(
+            "//@version=5\nindicator(\"t\")\nimport plain as p\n",
+            Some(&plain),
+        );
+        assert!(diags.iter().any(|d| d.rule == "not-a-library"));
+
+        // A proper library (declares `library(...)`) is not flagged.
+        let lib = libs(&[(
+            "lib",
+            "//@version=5\nlibrary(\"lib\")\nexport add(a, b) => a + b\n",
+        )]);
+        let (diags, _) = analyze(
+            "//@version=5\nindicator(\"t\")\nimport lib as l\n",
+            Some(&lib),
+        );
+        assert!(diags.iter().all(|d| d.rule != "not-a-library"));
+    }
+
+    #[test]
     fn library_diagnostics_are_tagged_with_the_file() {
         let loader = libs(&[("broken", "//@version=5\nexport bad() => undeclared_thing\n")]);
         let (diags, _table) = analyze(

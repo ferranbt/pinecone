@@ -73,6 +73,14 @@ pub struct Indicator {
     pub timeframe: String,
 }
 
+/// The `library(...)` declaration — marks a script as a reusable library.
+#[derive(Clone, Debug, Default)]
+pub struct Library {
+    pub title: String,
+    pub overlay: bool,
+    pub dynamic_requests: Option<bool>,
+}
+
 /// A trend line drawn between two points, `(x1, y1)`–`(x2, y2)`.
 #[derive(Clone, Debug)]
 pub struct LineObject {
@@ -401,12 +409,18 @@ macro_rules! impl_output_traits_delegate {
             }
         }
 
-        impl $crate::IndicatorOutput for $type {
+        impl $crate::MetadataOutput for $type {
             fn set_indicator(&mut self, indicator: $crate::Indicator) {
                 self.$field.set_indicator(indicator)
             }
             fn indicator(&self) -> Option<&$crate::Indicator> {
                 self.$field.indicator()
+            }
+            fn set_library(&mut self, library: $crate::Library) {
+                self.$field.set_library(library)
+            }
+            fn library(&self) -> Option<&$crate::Library> {
+                self.$field.library()
             }
         }
 
@@ -575,12 +589,17 @@ pub trait AlertConditionOutput: PineOutput {
     fn alertconditions(&self) -> &[AlertCondition];
 }
 
-/// Extension trait for the script's `indicator(...)` declaration.
-pub trait IndicatorOutput: PineOutput {
-    /// Record the indicator declaration (a script has at most one).
+/// Extension trait for a script's declaration statement — `indicator(...)` or
+/// `library(...)` (a script has at most one).
+pub trait MetadataOutput: PineOutput {
+    /// Record the indicator declaration.
     fn set_indicator(&mut self, indicator: Indicator);
-    /// The declaration, if the script declared one.
+    /// The indicator declaration, if the script declared one.
     fn indicator(&self) -> Option<&Indicator>;
+    /// Record the library declaration.
+    fn set_library(&mut self, library: Library);
+    /// The library declaration, if the script declared one.
+    fn library(&self) -> Option<&Library>;
 }
 
 /// Extension trait for recording declared inputs
@@ -628,6 +647,8 @@ pub struct DefaultPineOutput {
     inputs: Vec<Input>,
     /// The `indicator(...)` declaration, if any.
     indicator: Option<Indicator>,
+    /// The `library(...)` declaration, if any.
+    library: Option<Library>,
     /// Chart-wide settings (`bgcolor`, `barcolor`).
     globals: GlobalContext,
     /// Declared alert conditions.
@@ -816,13 +837,21 @@ impl InputOutput for DefaultPineOutput {
     }
 }
 
-impl IndicatorOutput for DefaultPineOutput {
+impl MetadataOutput for DefaultPineOutput {
     fn set_indicator(&mut self, indicator: Indicator) {
         self.indicator = Some(indicator);
     }
 
     fn indicator(&self) -> Option<&Indicator> {
         self.indicator.as_ref()
+    }
+
+    fn set_library(&mut self, library: Library) {
+        self.library = Some(library);
+    }
+
+    fn library(&self) -> Option<&Library> {
+        self.library.as_ref()
     }
 }
 

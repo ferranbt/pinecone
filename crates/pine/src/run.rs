@@ -2,8 +2,8 @@
 
 use crate::Backtest;
 use pine_core::{
-    AlertCondition, AlertConditionOutput, Indicator, IndicatorOutput, Input, InputOutput, LogEntry,
-    LogOutput, PineOutput, Plot, PlotOutput,
+    AlertCondition, AlertConditionOutput, Indicator, Input, InputOutput, LogEntry, LogOutput,
+    MetadataOutput, PineOutput, Plot, PlotOutput,
 };
 use std::collections::BTreeMap;
 
@@ -35,7 +35,7 @@ impl RunResult {
     /// Transpose the per-bar outputs [`crate::Script::run`] returns.
     pub fn collect<O>(outputs: &[O]) -> Self
     where
-        O: PlotOutput + LogOutput + AlertConditionOutput + IndicatorOutput + InputOutput,
+        O: PlotOutput + LogOutput + AlertConditionOutput + MetadataOutput + InputOutput,
     {
         let mut result = Self::default();
 
