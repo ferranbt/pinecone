@@ -1,5 +1,6 @@
 // Re-export all public types from sub-crates
 pub use pine_ast as ast;
+pub use pine_broker as broker;
 pub use pine_builtins as builtins;
 use pine_builtins::DefaultPineOutput;
 pub use pine_core as core;
@@ -106,6 +107,7 @@ pub struct ScriptBuilder<O: PineOutput> {
     timeframe: Timeframe,
     data: Option<Data>,
     bar_count: Option<usize>,
+    broker_factory: Option<Box<dyn pine_broker::BrokerFactory>>,
 }
 
 impl<O: PineOutput> ScriptBuilder<O> {
@@ -119,6 +121,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
             timeframe: Timeframe::default(),
             data: None,
             bar_count: None,
+            broker_factory: None,
         }
     }
 
@@ -139,6 +142,13 @@ impl<O: PineOutput> ScriptBuilder<O> {
     /// returns na.
     pub fn with_request_provider(mut self, provider: Box<dyn DataProvider>) -> Self {
         self.request_provider = Some(provider);
+        self
+    }
+
+    /// Swaps the broker a `strategy` trades against. Without one, the built-in
+    /// [`DefaultBrokerFactory`](pine_broker::DefaultBrokerFactory) is used.
+    pub fn with_broker(mut self, factory: Box<dyn pine_broker::BrokerFactory>) -> Self {
+        self.broker_factory = Some(factory);
         self
     }
 
@@ -276,6 +286,10 @@ impl<O: PineOutput> ScriptBuilder<O> {
         // The feed `request.security` draws from, reached through `ctx`.
         interpreter.request_provider = self.request_provider.map(Rc::from);
         interpreter.chart_period = chart_period;
+        // Swap the broker engine if the host supplied one; else the default stands.
+        if let Some(broker_factory) = self.broker_factory {
+            interpreter.broker_factory = broker_factory;
+        }
 
         // Register namespace objects as const variables
         for (name, value) in namespaces {

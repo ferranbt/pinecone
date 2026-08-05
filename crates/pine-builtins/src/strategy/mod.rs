@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use pine_broker::{
-    BarBroker, Commission, Direction, Exit, OcaType, Order, OrderKind, PineFills, Sizing,
+    BrokerConfig, Commission, Direction, Exit, OcaType, Order, OrderKind, Sizing,
 };
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, PineVersion};
@@ -75,27 +75,27 @@ impl StrategyFn {
         // Runs every bar; build the broker only once so trades accumulate.
         if ctx.broker.is_none() {
             let initial_capital = self.initial_capital.unwrap_or(DEFAULT_INITIAL_CAPITAL);
-            let mintick = mintick_of(ctx);
-            let fills = PineFills {
-                slippage: self.slippage,
-                mintick,
-            };
-            let mut broker = BarBroker::new(fills, initial_capital)
-                .with_mintick(mintick)
-                .with_sizing(self.sizing())
-                .with_pyramiding(self.pyramiding.unwrap_or(0.0) as usize);
-
-            if self.commission_value != 0.0 {
-                let commission = match self.commission_type.as_str() {
+            let commission = (self.commission_value != 0.0).then_some(
+                match self.commission_type.as_str() {
                     "cash_per_contract" => Commission::CashPerContract(self.commission_value),
                     "cash_per_order" => Commission::CashPerOrder(self.commission_value),
                     // "percent" and anything unrecognised.
                     _ => Commission::Percent(self.commission_value),
-                };
-                broker = broker.with_commission(commission);
-            }
+                },
+            );
+            let config = BrokerConfig {
+                initial_capital,
+                mintick: mintick_of(ctx),
+                sizing: self.sizing(),
+                pyramiding: self.pyramiding.unwrap_or(0.0) as usize,
+                commission,
+                slippage: self.slippage,
+            };
 
-            ctx.broker = Some(Box::new(broker));
+            // Delegate to the host's factory (the built-in one by default) so the
+            // broker implementation is swappable while honouring the script's
+            // configuration.
+            ctx.broker = Some(ctx.broker_factory.build(&config));
             ctx.set_object_field(
                 "strategy",
                 "initial_capital",
