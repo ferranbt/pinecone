@@ -286,6 +286,41 @@ pub fn register_per_bar<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
     ]
 }
 
+/// Every built-in variable a [`Bar`] sets: the price series (OHLCV and its
+/// standard derivations) as history-carrying [`Value::Series`], `bar_index` as a
+/// plain number, then the per-bar namespaces from [`register_per_bar`].
+///
+/// The single source of truth for these names and formulas, shared by execution
+/// and the sema symbol table. The value's kind says how to store it: a
+/// `Value::Series` is one the interpreter should advance to accumulate lookback
+/// (`close[1]`); everything else is a plain assignment. Sema, needing only the
+/// names to resolve, registers them as-is.
+pub fn per_bar_variables<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
+    let series = |id: &str, value: f64| {
+        (
+            id.to_string(),
+            Value::Series(pine_interpreter::Series {
+                id: id.to_string(),
+                current: Box::new(Value::Number(value)),
+            }),
+        )
+    };
+    let mut vars = vec![
+        series("open", bar.open),
+        series("high", bar.high),
+        series("low", bar.low),
+        series("close", bar.close),
+        series("volume", bar.volume),
+        series("hl2", (bar.high + bar.low) / 2.0),
+        series("hlc3", (bar.high + bar.low + bar.close) / 3.0),
+        series("hlcc4", (bar.high + bar.low + bar.close * 2.0) / 4.0),
+        series("ohlc4", (bar.open + bar.high + bar.low + bar.close) / 4.0),
+        ("bar_index".to_string(), Value::Number(bar.index as f64)),
+    ];
+    vars.extend(register_per_bar(bar));
+    vars
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
