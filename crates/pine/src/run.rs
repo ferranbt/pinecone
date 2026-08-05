@@ -132,4 +132,42 @@ mod tests {
         let run = RunResult::default();
         assert!(run.plot("nope").is_none());
     }
+
+    #[test]
+    fn with_broker_swaps_the_broker_factory() {
+        use crate::broker::{Broker, BrokerConfig, BrokerFactory, DefaultBrokerFactory};
+        use crate::core::DefaultPineOutput;
+        use crate::ScriptBuilder;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        // A factory that records how often it is asked to build, then defers to
+        // the built-in one so the strategy still runs.
+        struct CountingFactory(Arc<AtomicUsize>);
+        impl BrokerFactory for CountingFactory {
+            fn build(&self, config: &BrokerConfig) -> Box<dyn Broker> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                DefaultBrokerFactory.build(config)
+            }
+        }
+
+        let source = r#"
+//@version=5
+strategy("t", initial_capital = 10000)
+if bar_index == 1
+    strategy.entry("Long", strategy.long)
+"#;
+        let calls = Arc::new(AtomicUsize::new(0));
+        let run = ScriptBuilder::<DefaultPineOutput>::with_code(source)
+            .with_data(crate::data::synthetic(5))
+            .with_broker(Box::new(CountingFactory(Arc::clone(&calls))))
+            .compile()
+            .expect("compile")
+            .run()
+            .expect("run");
+
+        // The strategy traded against our broker, built once and lazily.
+        assert!(run.backtest.is_some());
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
 }

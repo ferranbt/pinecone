@@ -318,3 +318,51 @@ pub trait Broker {
     /// Trades already closed, in the order they closed.
     fn closed_trades(&self) -> &[Trade];
 }
+
+/// The account settings a `strategy()` declaration configures its broker with,
+/// so a custom [`BrokerFactory`] can honour the script's parameters rather than
+/// inventing its own.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BrokerConfig {
+    /// Starting capital (`strategy.initial_capital`).
+    pub initial_capital: f64,
+    /// The symbol's tick size, or 0 when unknown.
+    pub mintick: f64,
+    /// How an order's absent `qty` is sized.
+    pub sizing: Sizing,
+    /// How many entries in the same direction may stack (`pyramiding`).
+    pub pyramiding: usize,
+    /// Per-trade commission, or `None` when the script sets none.
+    pub commission: Option<Commission>,
+    /// Slippage applied to fills, in ticks.
+    pub slippage: f64,
+}
+
+/// Builds the [`Broker`] a `strategy` trades against. The default,
+/// [`DefaultBrokerFactory`], produces the built-in bar-fill broker; a host can
+/// supply its own to simulate against a different engine while still honouring
+/// the script's [`BrokerConfig`].
+pub trait BrokerFactory {
+    fn build(&self, config: &BrokerConfig) -> Box<dyn Broker>;
+}
+
+/// The built-in factory: a [`BarBroker`] with [`PineFills`], reproducing Pine's
+/// default fill model.
+pub struct DefaultBrokerFactory;
+
+impl BrokerFactory for DefaultBrokerFactory {
+    fn build(&self, config: &BrokerConfig) -> Box<dyn Broker> {
+        let fills = PineFills {
+            slippage: config.slippage,
+            mintick: config.mintick,
+        };
+        let mut broker = BarBroker::new(fills, config.initial_capital)
+            .with_mintick(config.mintick)
+            .with_sizing(config.sizing)
+            .with_pyramiding(config.pyramiding);
+        if let Some(commission) = config.commission {
+            broker = broker.with_commission(commission);
+        }
+        Box::new(broker)
+    }
+}

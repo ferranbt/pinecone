@@ -460,10 +460,9 @@ pub struct Interpreter<O: PineOutput> {
     /// The simulated broker a `strategy` script trades against. `None` for an
     /// `indicator`. The `strategy.*` order builtins reach it through `ctx`.
     pub broker: Option<Box<dyn pine_broker::Broker>>,
-    /// The feed `request.security` draws other symbols/timeframes from, and the
-    /// chart's bar spacing in ms (for `request.security_lower_tf`). `None` when
-    /// no host provider is set. The `request.*` builtins reach these through
-    /// `ctx`, the same way `strategy.*` reaches the broker.
+    /// Builds [`broker`](Self::broker) the first bar a `strategy` runs.
+    pub broker_factory: Box<dyn pine_broker::BrokerFactory>,
+    /// The feed `request.security` draws other symbols/timeframes from.
     pub request_provider: Option<Rc<dyn pine_core::DataProvider>>,
     pub chart_period: Option<i64>,
 }
@@ -547,6 +546,7 @@ impl<O: PineOutput> Interpreter<O> {
             current_call_id: 0,
             bar_seq: 0,
             broker: None,
+            broker_factory: Box::new(pine_broker::DefaultBrokerFactory),
             request_provider: None,
             chart_period: None,
         }
