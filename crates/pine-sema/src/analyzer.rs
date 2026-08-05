@@ -255,6 +255,28 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         self.symbols.member_id(owner, member)
     }
 
+    /// `object.member` where the object's full member set is known — a builtin
+    /// namespace or a resolved import — yet `member` is not among them. False
+    /// whenever the members can't be enumerated (a user variable, an unloaded
+    /// import), so no diagnostic is invented on incomplete information.
+    fn unknown_member(&self, object: &Expr, member: &str) -> bool {
+        // A resolved import alias: its export set is fully known.
+        if let Some(module) = self.alias_module(object) {
+            return self.symbols.exported_id(module, member).is_none();
+        }
+        // A builtin namespace object, not shadowed by a user declaration. Sema
+        // reads the same registry the interpreter calls into, so an absent
+        // field is exactly one a run would reject.
+        if let Expr::Variable { name, .. } = object {
+            if self.resolve(name).is_none() {
+                if let Some(Value::Object { fields, .. }) = self.builtins.get(name) {
+                    return !fields.borrow().contains_key(member);
+                }
+            }
+        }
+        false
+    }
+
     /// The imported library's global scope, if `object` is an import alias.
     fn alias_module(&self, object: &Expr) -> Option<ScopeId> {
         let Expr::Variable { name, .. } = object else {
@@ -1071,6 +1093,14 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 if let Some(id) = self.resolve_member(object, member) {
                     let file = self.current_file();
                     self.symbols.record_use(file, member_loc.position(), id);
+                } else if self.unknown_member(object, member) {
+                    if let Expr::Variable { name, .. } = object.as_ref() {
+                        self.emit(
+                            "unknown-member",
+                            *member_loc,
+                            format!("`{name}` has no member `{member}`"),
+                        );
+                    }
                 }
             }
             Expr::Ternary {

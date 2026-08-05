@@ -666,18 +666,6 @@ mod tests {
     }
 
     #[test]
-    fn an_unknown_library_member_resolves_to_nothing() {
-        let loader = libs(&[("lib", "//@version=5\nexport add(a, b) => a + b\n")]);
-        let (diags, table) = analyze(
-            "//@version=5\nindicator(\"t\")\nimport lib as l\nx = l.nope\n",
-            Some(&loader),
-        );
-        // `nope` is not an export: no occurrence, and no invented diagnostic.
-        assert_eq!(table.symbol_at(MAIN, 4, 7), None);
-        assert!(diags.iter().all(|d| d.rule != "unknown-member"));
-    }
-
-    #[test]
     fn import_cycles_terminate() {
         // Mutual: a imports b, b imports a. Terminates via the cache; a's export
         // still resolves from the main file.
