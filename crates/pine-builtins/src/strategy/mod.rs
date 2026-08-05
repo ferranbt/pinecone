@@ -12,9 +12,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use pine_broker::{
-    BrokerConfig, Commission, Direction, Exit, OcaType, Order, OrderKind, Sizing,
-};
+use pine_broker::{BrokerConfig, Commission, Direction, Exit, OcaType, Order, OrderKind, Sizing};
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, PineVersion};
 use pine_interpreter::{BuiltinFn, Interpreter, RuntimeError, Value};
@@ -75,14 +73,13 @@ impl StrategyFn {
         // Runs every bar; build the broker only once so trades accumulate.
         if ctx.broker.is_none() {
             let initial_capital = self.initial_capital.unwrap_or(DEFAULT_INITIAL_CAPITAL);
-            let commission = (self.commission_value != 0.0).then_some(
-                match self.commission_type.as_str() {
+            let commission =
+                (self.commission_value != 0.0).then_some(match self.commission_type.as_str() {
                     "cash_per_contract" => Commission::CashPerContract(self.commission_value),
                     "cash_per_order" => Commission::CashPerOrder(self.commission_value),
                     // "percent" and anything unrecognised.
                     _ => Commission::Percent(self.commission_value),
-                },
-            );
+                });
             let config = BrokerConfig {
                 initial_capital,
                 mintick: mintick_of(ctx),
