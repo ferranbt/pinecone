@@ -328,7 +328,7 @@ pub struct Script<O: PineOutput> {
 impl<O: PineOutput> Script<O> {
     /// Run one bar. Private: bars must be replayed in order from the first, so
     /// [`Script::run`] is the only way in.
-    fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
+    pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
         use interpreter::Value;
 
         for (name, value) in pine_builtins::per_bar_variables(bar) {
