@@ -18,4 +18,6 @@ pine-builtins = { workspace = true }
 pine-broker = { workspace = true }
 pine-sema = { workspace = true }
 pine-diagnostics = { workspace = true }
+pine-format = { workspace = true }
+pine-lint = { workspace = true }
 eyre = { workspace = true }
