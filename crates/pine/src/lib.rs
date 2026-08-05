@@ -329,7 +329,7 @@ impl<O: PineOutput> Script<O> {
     /// Run one bar. Private: bars must be replayed in order from the first, so
     /// [`Script::run`] is the only way in.
     pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
-        use interpreter::{Series, Value};
+        use interpreter::Value;
 
         for (name, value) in pine_builtins::per_bar_variables(bar) {
             if matches!(value, Value::Series(_)) {
