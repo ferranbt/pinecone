@@ -173,8 +173,8 @@ impl Rules {
                 let head = format!("while {}", self.expr_str(condition));
                 concat(vec![text(head), trailing, self.block(body)])
             }
-            Stmt::Break => concat(vec![text("break"), trailing]),
-            Stmt::Continue => concat(vec![text("continue"), trailing]),
+            Stmt::Break { .. } => concat(vec![text("break"), trailing]),
+            Stmt::Continue { .. } => concat(vec![text("continue"), trailing]),
             Stmt::TypeDecl {
                 name,
                 fields,
@@ -701,7 +701,7 @@ fn stmt_line(stmt: &Stmt) -> Option<u32> {
         Stmt::Assignment { target, value } => expr_line(target).or_else(|| expr_line(value)),
         Stmt::Expression(expr) => expr_line(expr),
         Stmt::If { condition, .. } | Stmt::While { condition, .. } => expr_line(condition),
-        Stmt::Break | Stmt::Continue | Stmt::Export { .. } => None,
+        Stmt::Break { .. } | Stmt::Continue { .. } | Stmt::Export { .. } => None,
     }
 }
 

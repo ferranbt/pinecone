@@ -253,8 +253,14 @@ pub enum Stmt {
         condition: Expr,
         body: Vec<Stmt>,
     },
-    Break,
-    Continue,
+    Break {
+        #[serde(skip)]
+        loc: Loc,
+    },
+    Continue {
+        #[serde(skip)]
+        loc: Loc,
+    },
     TypeDecl {
         name: String,
         fields: Vec<TypeField>,

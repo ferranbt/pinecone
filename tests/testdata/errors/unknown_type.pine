@@ -5,4 +5,4 @@ indicator("errors/unknown_type")
 UnknownType x = na
 
 // Expected error:
-// error [unknown-type]: unknown type `UnknownType`
+// error [unknown-type] 5:13: unknown type `UnknownType`

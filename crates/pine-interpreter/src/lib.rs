@@ -1019,8 +1019,8 @@ impl<O: PineOutput> Interpreter<O> {
                 Ok(None)
             }
 
-            Stmt::Break => Err(RuntimeError::BreakOutsideLoop),
-            Stmt::Continue => Err(RuntimeError::ContinueOutsideLoop),
+            Stmt::Break { .. } => Err(RuntimeError::BreakOutsideLoop),
+            Stmt::Continue { .. } => Err(RuntimeError::ContinueOutsideLoop),
 
             Stmt::TypeDecl {
                 name,
@@ -1232,8 +1232,8 @@ impl<O: PineOutput> Interpreter<O> {
     fn execute_loop_body(&mut self, body: &[Stmt]) -> Result<LoopControl, RuntimeError> {
         for stmt in body {
             match stmt {
-                Stmt::Break => return Ok(LoopControl::Break),
-                Stmt::Continue => return Ok(LoopControl::Continue),
+                Stmt::Break { .. } => return Ok(LoopControl::Break),
+                Stmt::Continue { .. } => return Ok(LoopControl::Continue),
                 Stmt::If {
                     condition,
                     then_branch,

@@ -5,4 +5,4 @@ if close > open
 x = t
 
 // Expected error:
-// error [undeclared-variable]: undeclared variable `t`
+// error [undeclared-variable] 5:5: undeclared variable `t`

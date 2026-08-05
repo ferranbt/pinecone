@@ -691,7 +691,7 @@ mod tests {
         assert_eq!(lib_err.file.as_deref(), Some("broken"));
         assert!(format!("{lib_err}").contains("broken"));
 
-        // The same error in the main script stays untagged and byte-identical.
+        // The same error in the main script stays untagged
         let (main_diags, _) = analyze(
             "//@version=5\nindicator(\"t\")\ny = undeclared_thing\n",
             None,
@@ -703,7 +703,7 @@ mod tests {
         assert_eq!(main_err.file, None);
         assert_eq!(
             format!("{main_err}"),
-            "error [undeclared-variable]: undeclared variable `undeclared_thing`"
+            "error [undeclared-variable] 3:5: undeclared variable `undeclared_thing`"
         );
     }
 
