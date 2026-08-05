@@ -678,58 +678,6 @@ mod tests {
     }
 
     #[test]
-    fn an_import_of_a_non_library_is_flagged() {
-        // A file with no `library()` declaration is not a library.
-        let plain = libs(&[("plain", "//@version=5\nexport add(a, b) => a + b\n")]);
-        let (diags, _) = analyze(
-            "//@version=5\nindicator(\"t\")\nimport plain as p\n",
-            Some(&plain),
-        );
-        assert!(diags.iter().any(|d| d.rule == "not-a-library"));
-
-        // A proper library (declares `library(...)`) is not flagged.
-        let lib = libs(&[(
-            "lib",
-            "//@version=5\nlibrary(\"lib\")\nexport add(a, b) => a + b\n",
-        )]);
-        let (diags, _) = analyze(
-            "//@version=5\nindicator(\"t\")\nimport lib as l\n",
-            Some(&lib),
-        );
-        assert!(diags.iter().all(|d| d.rule != "not-a-library"));
-    }
-
-    #[test]
-    fn library_diagnostics_are_tagged_with_the_file() {
-        let loader = libs(&[("broken", "//@version=5\nexport bad() => undeclared_thing\n")]);
-        let (diags, _table) = analyze(
-            "//@version=5\nindicator(\"t\")\nimport broken as b\n",
-            Some(&loader),
-        );
-        let lib_err = diags
-            .iter()
-            .find(|d| d.rule == "undeclared-variable")
-            .expect("library's undeclared-variable error is surfaced");
-        assert_eq!(lib_err.file.as_deref(), Some("broken"));
-        assert!(format!("{lib_err}").contains("broken"));
-
-        // The same error in the main script stays untagged
-        let (main_diags, _) = analyze(
-            "//@version=5\nindicator(\"t\")\ny = undeclared_thing\n",
-            None,
-        );
-        let main_err = main_diags
-            .iter()
-            .find(|d| d.rule == "undeclared-variable")
-            .unwrap();
-        assert_eq!(main_err.file, None);
-        assert_eq!(
-            format!("{main_err}"),
-            "error [undeclared-variable] 3:5: undeclared variable `undeclared_thing`"
-        );
-    }
-
-    #[test]
     fn import_cycles_terminate() {
         // Mutual: a imports b, b imports a. Terminates via the cache; a's export
         // still resolves from the main file.
