@@ -34,8 +34,6 @@ impl LibraryFn {
     }
 }
 
-pub fn register<O: PineOutput + MetadataOutput>(
-    _version: PineVersion,
-) -> Vec<(String, Value<O>)> {
+pub fn register<O: PineOutput + MetadataOutput>(_version: PineVersion) -> Vec<(String, Value<O>)> {
     vec![("library".to_string(), LibraryFn::builtin_value::<O>())]
 }

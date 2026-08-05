@@ -2,8 +2,8 @@
 
 use crate::Backtest;
 use pine_core::{
-    AlertCondition, AlertConditionOutput, Indicator, MetadataOutput, Input, InputOutput, LogEntry,
-    LogOutput, PineOutput, Plot, PlotOutput,
+    AlertCondition, AlertConditionOutput, Indicator, Input, InputOutput, LogEntry, LogOutput,
+    MetadataOutput, PineOutput, Plot, PlotOutput,
 };
 use std::collections::BTreeMap;
 

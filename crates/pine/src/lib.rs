@@ -17,8 +17,8 @@ pub use run::{Run, RunResult};
 
 use pine_ast::Program;
 use pine_core::{
-    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, MetadataOutput, InputOutput,
-    LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
+    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, InputOutput, LabelOutput,
+    LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_core::{Bar, Data, PineVersion, Timeframe, VersionError};
 use pine_diagnostics::Diagnostic;

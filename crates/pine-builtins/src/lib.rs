@@ -1,7 +1,7 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{
-    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, MetadataOutput, InputOutput,
-    LabelOutput, LineOutput, LogOutput, PineOutput, PlotOutput, TableOutput,
+    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, InputOutput, LabelOutput,
+    LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_core::{PineVersion, SymInfo, Timeframe};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
@@ -25,9 +25,9 @@ mod currency;
 mod fill;
 mod globals;
 mod indicator;
-mod library;
 mod input;
 mod label;
+mod library;
 mod line;
 mod log;
 mod math;
