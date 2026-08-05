@@ -5,4 +5,4 @@ indicator("errors/duplicate_parameter")
 f(x, x) => x
 
 // Expected error:
-// error [duplicate-parameter]: parameter `x` is declared more than once
+// error [duplicate-parameter] 5:6: parameter `x` is declared more than once

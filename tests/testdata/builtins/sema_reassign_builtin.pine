@@ -3,4 +3,4 @@ indicator("builtins/sema_reassign_builtin")
 close := 5
 
 // Expected error:
-// error [reassign-builtin]: cannot reassign built-in `close`
+// error [reassign-builtin] 3:1: cannot reassign built-in `close`

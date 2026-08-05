@@ -6,4 +6,4 @@ var x = 10
 break
 
 // Expected error:
-// error [break-outside-loop]: `break` is only valid inside a loop
+// error [break-outside-loop] 6:1: `break` is only valid inside a loop

@@ -97,8 +97,8 @@ pub fn walk_stmt<V: Visitor + ?Sized>(v: &mut V, stmt: &Stmt) {
             walk_block(v, body);
         }
         // Leaf / declaration statements with no child expressions to walk.
-        Stmt::Break
-        | Stmt::Continue
+        Stmt::Break { .. }
+        | Stmt::Continue { .. }
         | Stmt::TypeDecl { .. }
         | Stmt::EnumDecl { .. }
         | Stmt::Export { .. }

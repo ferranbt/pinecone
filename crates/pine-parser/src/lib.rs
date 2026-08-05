@@ -866,12 +866,16 @@ impl Parser {
 
         // Check for break
         if self.match_token(&[TokenType::Break]) {
-            return Ok(Stmt::Break);
+            return Ok(Stmt::Break {
+                loc: self.prev_loc(),
+            });
         }
 
         // Check for continue
         if self.match_token(&[TokenType::Continue]) {
-            return Ok(Stmt::Continue);
+            return Ok(Stmt::Continue {
+                loc: self.prev_loc(),
+            });
         }
 
         // Check for tuple destructuring: [a, b, c] = func()

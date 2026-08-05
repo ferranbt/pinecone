@@ -52,8 +52,8 @@ struct FileState {
     call_edges: Vec<CallEdge>,
 }
 
-/// One call-graph edge: `(caller, callee, call-site position)`.
-type CallEdge = (String, String, Option<(u32, u32)>);
+/// One call-graph edge: `(caller, callee, call-site location)`.
+type CallEdge = (String, String, Loc);
 
 /// The script-declaration functions — a script must have exactly one.
 const SCRIPT_DECLARATIONS: &[&str] = &["study", "indicator", "strategy", "library"];
@@ -310,7 +310,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         name: &str,
         signature: &BuiltinSignature,
         args: &[Argument],
-        pos: Option<(u32, u32)>,
+        loc: Loc,
     ) {
         let positional = args
             .iter()
@@ -321,7 +321,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             if positional > max {
                 self.emit(
                     "too-many-arguments",
-                    pos,
+                    loc,
                     format!("`{name}` takes at most {max} arguments, found {positional}"),
                 );
             }
@@ -340,7 +340,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     None => {
                         self.emit(
                             "unknown-argument",
-                            pos,
+                            loc,
                             format!("`{name}` has no argument named `{label}`"),
                         );
                         continue;
@@ -359,7 +359,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 let label = param.name.clone();
                 self.emit(
                     "argument-type",
-                    pos,
+                    loc,
                     format!("`{name}` expects {expected} for `{label}`, found {found}"),
                 );
             }
@@ -375,7 +375,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         if args.len() < required {
             self.emit(
                 "too-few-arguments",
-                pos,
+                loc,
                 format!(
                     "`{name}` requires at least {required} arguments, found {}",
                     args.len()
@@ -426,7 +426,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
 
     /// Analyze the library at `path` once. Registering it before the walk lets a
     /// re-entrant import find it, which breaks cycles.
-    fn resolve_import(&mut self, path: &str) -> Option<(FileId, ScopeId)> {
+    fn resolve_import(&mut self, path: &str, loc: Loc) -> Option<(FileId, ScopeId)> {
         if let Some(file) = self.symbols.file_by_path(path) {
             return Some((file, self.symbols.file_root(file)));
         }
@@ -436,7 +436,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             Err(err) => {
                 self.emit(
                     "import-error",
-                    None,
+                    loc,
                     format!("cannot load library `{path}`: {err}"),
                 );
                 return None;
@@ -447,7 +447,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             Err(err) => {
                 self.emit(
                     "import-parse-error",
-                    None,
+                    loc,
                     format!("cannot parse library `{path}`: {err}"),
                 );
                 return None;
@@ -496,22 +496,22 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
-    fn emit(&mut self, rule: &'static str, pos: Option<(u32, u32)>, message: impl Into<String>) {
+    fn emit(&mut self, rule: &'static str, loc: Loc, message: impl Into<String>) {
         self.diagnostics
-            .push(Diagnostic::error(rule, pos, message).in_file(self.current_lib()));
+            .push(Diagnostic::error(rule, loc.position(), message).in_file(self.current_lib()));
     }
 
-    fn warn(&mut self, rule: &'static str, pos: Option<(u32, u32)>, message: impl Into<String>) {
+    fn warn(&mut self, rule: &'static str, loc: Loc, message: impl Into<String>) {
         self.diagnostics
-            .push(Diagnostic::warning(rule, pos, message).in_file(self.current_lib()));
+            .push(Diagnostic::warning(rule, loc.position(), message).in_file(self.current_lib()));
     }
 
     /// Warn that a declaration shadows a built-in (Pine allows it, but warns).
-    fn check_shadow(&mut self, name: &str) {
+    fn check_shadow(&mut self, name: &str, loc: Loc) {
         if self.is_builtin(name) {
             self.warn(
                 "shadows-builtin",
-                None,
+                loc,
                 format!("declaration of `{name}` shadows a built-in"),
             );
         }
@@ -519,13 +519,13 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
 
     /// Reject a type annotation naming a type that is neither a built-in nor a
     /// declared type — including every name inside a generic like `array<Foo>`.
-    fn check_type_annotation(&mut self, annotation: Option<&String>) {
+    fn check_type_annotation(&mut self, annotation: Option<&String>, loc: Loc) {
         let Some(annotation) = annotation else {
             return;
         };
         for name in type_names(annotation) {
             if !BUILTIN_TYPES.contains(&name) && !self.user_types.contains(name) {
-                self.emit("unknown-type", None, format!("unknown type `{name}`"));
+                self.emit("unknown-type", loc, format!("unknown type `{name}`"));
                 return;
             }
         }
@@ -538,18 +538,18 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         supplied: usize,
         required: usize,
         total: usize,
-        pos: Option<(u32, u32)>,
+        loc: Loc,
     ) {
         if supplied < required {
             self.emit(
                 "too-few-arguments",
-                pos,
+                loc,
                 format!("`{name}` requires at least {required} arguments, found {supplied}"),
             );
         } else if supplied > total {
             self.emit(
                 "too-many-arguments",
-                pos,
+                loc,
                 format!("`{name}` takes at most {total} arguments, found {supplied}"),
             );
         }
@@ -571,7 +571,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         {
             self.emit(
                 "duplicate-declaration",
-                None,
+                loc,
                 format!("`{name}` is already declared in this scope"),
             );
         }
@@ -584,7 +584,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         self.functions
             .insert(name.to_string(), (required, params.len()));
         for param in params {
-            self.check_type_annotation(param.type_annotation.as_ref());
+            self.check_type_annotation(param.type_annotation.as_ref(), param.loc);
         }
         self.fn_stack.push(name.to_string());
         self.function_body(
@@ -611,7 +611,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         {
             self.emit(
                 "duplicate-declaration",
-                None,
+                loc,
                 format!("`{name}` is already declared in this scope"),
             );
         }
@@ -650,11 +650,11 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             if let Some(default) = default {
                 self.check_expr(default);
             }
-            self.check_shadow(name);
+            self.check_shadow(name, loc);
             if self.symbols.declared_locally(scope, name) {
                 self.emit(
                     "duplicate-parameter",
-                    None,
+                    loc,
                     format!("parameter `{name}` is declared more than once"),
                 );
             }
@@ -679,8 +679,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 loc,
                 ..
             } => {
-                self.check_type_annotation(type_annotation.as_ref());
-                self.check_shadow(name);
+                self.check_type_annotation(type_annotation.as_ref(), *loc);
+                self.check_shadow(name, *loc);
                 if let Some(Expr::Function { params, body }) = initializer {
                     // A named function `f(x) => …`, lowered to a lambda-valued var.
                     self.analyze_function(name, *loc, params, body);
@@ -697,7 +697,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     {
                         self.emit(
                             "duplicate-declaration",
-                            None,
+                            *loc,
                             format!(
                                 "`{name}` is already declared in this scope (use `:=` to reassign)"
                             ),
@@ -727,14 +727,14 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     if name == "_" {
                         continue;
                     }
-                    self.check_shadow(name);
+                    self.check_shadow(name, *loc);
                     if self
                         .symbols
                         .declared_locally_in(scope, name, Namespace::Value)
                     {
                         self.emit(
                             "duplicate-declaration",
-                            None,
+                            *loc,
                             format!("`{name}` is already declared in this scope"),
                         );
                     }
@@ -768,7 +768,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.check_expr(from);
                 self.check_expr(to);
                 self.enter_scope(ScopeKind::Block);
-                self.check_shadow(var_name);
+                self.check_shadow(var_name, *loc);
                 let scope = self.current_scope();
                 self.record(Symbol::new(
                     var_name,
@@ -790,10 +790,10 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.enter_scope(ScopeKind::Block);
                 let scope = self.current_scope();
                 if let Some(idx) = index_var {
-                    self.check_shadow(idx);
+                    self.check_shadow(idx, *loc);
                     self.record(Symbol::new(idx, SymbolKind::Var, loc.position(), scope));
                 }
-                self.check_shadow(item_var);
+                self.check_shadow(item_var, *loc);
                 self.record(Symbol::new(
                     item_var,
                     SymbolKind::Var,
@@ -809,8 +809,8 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.loop_body(body);
                 self.exit_scope();
             }
-            Stmt::Break => self.check_loop_keyword("break"),
-            Stmt::Continue => self.check_loop_keyword("continue"),
+            Stmt::Break { loc } => self.check_loop_keyword("break", *loc),
+            Stmt::Continue { loc } => self.check_loop_keyword("continue", *loc),
             Stmt::FunctionDecl {
                 name,
                 params,
@@ -818,7 +818,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 export,
                 loc,
             } => {
-                self.check_shadow(name);
+                self.check_shadow(name, *loc);
                 let id = self.analyze_function(name, *loc, params, body);
                 if *export {
                     self.symbols.mark_exported(id);
@@ -841,7 +841,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     self.symbols.mark_exported(id);
                 }
                 for param in params {
-                    self.check_type_annotation(param.type_annotation.as_ref());
+                    self.check_type_annotation(param.type_annotation.as_ref(), param.loc);
                 }
                 self.function_body(
                     params.iter().map(|p| {
@@ -866,7 +866,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     self.symbols.mark_exported(owner);
                 }
                 for field in fields {
-                    self.check_type_annotation(Some(&field.type_annotation));
+                    self.check_type_annotation(Some(&field.type_annotation), field.loc);
                     self.symbols.declare_member(
                         owner,
                         &field.name,
@@ -892,7 +892,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             }
             Stmt::Import { path, alias, loc } => {
                 let id = self.declare(alias, SymbolKind::Import, *loc);
-                if let Some((_, root)) = self.resolve_import(path) {
+                if let Some((_, root)) = self.resolve_import(path, *loc) {
                     self.symbols.set_module(id, root);
                 }
             }
@@ -908,11 +908,11 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
         }
     }
 
-    fn check_loop_keyword(&mut self, keyword: &str) {
+    fn check_loop_keyword(&mut self, keyword: &str, loc: Loc) {
         if self.loop_depth == 0 {
             self.emit(
                 "break-outside-loop",
-                None,
+                loc,
                 format!("`{keyword}` is only valid inside a loop"),
             );
         }
@@ -925,17 +925,17 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 Some(SymbolKind::Var) => self.record_use(name, *loc),
                 Some(other) => self.emit(
                     "invalid-assignment",
-                    None,
+                    *loc,
                     format!("cannot assign to `{name}`, it is a {}", other.noun()),
                 ),
                 None if self.is_builtin(name) => self.emit(
                     "reassign-builtin",
-                    None,
+                    *loc,
                     format!("cannot reassign built-in `{name}`"),
                 ),
                 None => self.emit(
                     "invalid-assignment",
-                    None,
+                    *loc,
                     format!(
                         "cannot assign to undeclared variable `{name}` (declare it with `=` first)"
                     ),
@@ -952,7 +952,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 if self.resolve(name).is_none() && !self.is_builtin(name) {
                     self.emit(
                         "undeclared-variable",
-                        None,
+                        *loc,
                         format!("undeclared variable `{name}`"),
                     );
                 } else {
@@ -967,12 +967,11 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                     loc: fname_loc,
                 } = callee.as_ref()
                 {
-                    let pos = loc.position();
                     self.record_use(fname, *fname_loc);
                     if is_global_only(fname) && self.current_scope() != SymbolTable::GLOBAL {
                         self.emit(
                             "global-scope-required",
-                            pos,
+                            *loc,
                             format!("`{fname}` may only be called in the global scope"),
                         );
                     }
@@ -981,7 +980,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                         if self.declarations > 1 {
                             self.emit(
                                 "duplicate-declaration",
-                                pos,
+                                *loc,
                                 "a script may only have one indicator/strategy/library declaration",
                             );
                         }
@@ -991,17 +990,17 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                             // Record the call as an edge out of the enclosing
                             // function; cycles are found once the walk finishes.
                             if let Some(caller) = self.fn_stack.last() {
-                                self.call_edges.push((caller.clone(), fname.clone(), pos));
+                                self.call_edges.push((caller.clone(), fname.clone(), *loc));
                             }
                             if let Some(&(required, total)) = self.functions.get(fname) {
-                                self.check_call_arity(fname, args.len(), required, total, pos);
+                                self.check_call_arity(fname, args.len(), required, total, *loc);
                             }
                         }
                         // A value, type or enum is not callable.
                         Some(kind @ (SymbolKind::Var | SymbolKind::Type | SymbolKind::Enum)) => {
                             self.emit(
                                 "not-callable",
-                                pos,
+                                *loc,
                                 format!("`{fname}` is a {}, not a function", kind.noun()),
                             );
                         }
@@ -1011,7 +1010,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                             if !self.is_builtin(fname) {
                                 self.emit(
                                     "unknown-function",
-                                    pos,
+                                    *loc,
                                     format!("unknown function `{fname}`"),
                                 );
                             }
@@ -1022,7 +1021,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 }
                 if let Some(signature) = self.builtin_signature(callee) {
                     let name = callee_name(callee);
-                    self.check_builtin_args(&name, &signature, args, loc.position());
+                    self.check_builtin_args(&name, &signature, args, *loc);
                 }
                 for arg in args {
                     match arg {

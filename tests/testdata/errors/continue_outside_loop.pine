@@ -6,4 +6,4 @@ var x = 10
 continue
 
 // Expected error:
-// error [break-outside-loop]: `continue` is only valid inside a loop
+// error [break-outside-loop] 6:1: `continue` is only valid inside a loop

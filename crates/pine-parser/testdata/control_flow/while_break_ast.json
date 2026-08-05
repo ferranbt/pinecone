@@ -47,7 +47,9 @@
               }
             },
             "then_branch": [
-              "Break"
+              {
+                "Break": {}
+              }
             ],
             "else_if_branches": [],
             "else_branch": null

@@ -83,7 +83,9 @@
               }
             },
             "then_branch": [
-              "Break"
+              {
+                "Break": {}
+              }
             ],
             "else_if_branches": [],
             "else_branch": null
@@ -117,7 +119,9 @@
               }
             },
             "then_branch": [
-              "Continue"
+              {
+                "Continue": {}
+              }
             ],
             "else_if_branches": [],
             "else_branch": null
