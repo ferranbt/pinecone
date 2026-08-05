@@ -89,7 +89,10 @@ impl StrategyFn {
                 slippage: self.slippage,
             };
 
-            ctx.broker = Some(ctx.broker_factory.build(&config));
+            let factory = ctx.broker_factory.as_ref().ok_or_else(|| {
+                RuntimeError::TypeError("strategy() has no broker configured".to_string())
+            })?;
+            ctx.broker = Some(factory.build(&config));
             ctx.set_object_field(
                 "strategy",
                 "initial_capital",

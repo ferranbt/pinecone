@@ -424,7 +424,7 @@ pub struct Interpreter<O: PineOutput> {
     /// Method registry (method_name -> Vec<MethodDef>) - can have multiple methods with same name for different types
     methods: HashMap<String, Vec<MethodDef>>,
     /// Library loader for importing external libraries
-    library_loader: Option<Box<dyn LibraryLoader>>,
+    pub library_loader: Option<Box<dyn LibraryLoader>>,
     /// Exported items from this module (for library mode)
     exports: HashMap<String, Value<O>>,
     /// Output storage for plots, labels, logs, etc.
@@ -461,7 +461,7 @@ pub struct Interpreter<O: PineOutput> {
     /// `indicator`. The `strategy.*` order builtins reach it through `ctx`.
     pub broker: Option<Box<dyn pine_broker::Broker>>,
     /// Builds [`broker`](Self::broker) the first bar a `strategy` runs.
-    pub broker_factory: Box<dyn pine_broker::BrokerFactory>,
+    pub broker_factory: Option<Box<dyn pine_broker::BrokerFactory>>,
     /// The feed `request.security` draws other symbols/timeframes from.
     pub request_provider: Option<Rc<dyn pine_core::DataProvider>>,
     pub chart_period: Option<i64>,
@@ -546,7 +546,7 @@ impl<O: PineOutput> Interpreter<O> {
             current_call_id: 0,
             bar_seq: 0,
             broker: None,
-            broker_factory: Box::new(pine_broker::DefaultBrokerFactory),
+            broker_factory: Some(Box::new(pine_broker::DefaultBrokerFactory)),
             request_provider: None,
             chart_period: None,
         }
@@ -665,6 +665,14 @@ impl<O: PineOutput> Interpreter<O> {
                 is_var_persistent: false,
             },
         );
+    }
+
+    /// Register every entry as a const variable — used to load the builtin
+    /// namespaces and any host-supplied globals before a run.
+    pub fn set_const_variables(&mut self, variables: HashMap<String, Value<O>>) {
+        for (name, value) in variables {
+            self.set_const_variable(&name, value);
+        }
     }
 
     /// Helper to evaluate arguments and validate positional-before-named rule

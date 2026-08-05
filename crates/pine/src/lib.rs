@@ -98,6 +98,22 @@ impl From<VersionError> for Error {
     }
 }
 
+/// Parse and semantically analyze `source` without bars or execution, returning
+/// every diagnostic.
+pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Diagnostic>, Error> {
+    let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+    let tokens = Lexer::with_version(source, version).tokenize()?;
+    let program = Program::new(Parser::new(tokens).parse()?);
+
+    let mut env: HashMap<String, Value<DefaultPineOutput>> =
+        pine_builtins::register_namespace_objects(version, None, None);
+    for (name, value) in pine_builtins::per_bar_variables(&Bar::default()) {
+        env.insert(name, value);
+    }
+
+    Ok(pine_sema::analyze(&program, &env, loader))
+}
+
 pub struct ScriptBuilder<O: PineOutput> {
     source: String,
     custom_variables: HashMap<String, Value<O>>,
@@ -240,32 +256,17 @@ impl<O: PineOutput> ScriptBuilder<O> {
         let statements = parser.parse()?;
         let program = Program::new(statements);
 
-        let namespaces =
+        // The interpreter's const environment: the registered namespaces plus any
+        // host-supplied globals. Built once and handed over as-is.
+        let mut consts =
             pine_builtins::register_namespace_objects(version, Some(syminfo), Some(timeframe));
+        for (name, value) in self.custom_variables {
+            consts.insert(name, value);
+        }
 
-        // The names sema accepts without a user declaration: the registered
-        // namespaces, the per-bar variables `execute` sets (barstate + OHLCV),
-        // and any host-supplied custom variables.
-        let mut builtins = namespaces.clone();
-        for (name, value) in pine_builtins::register_per_bar(&Bar::default()) {
+        let mut builtins = consts.clone();
+        for (name, value) in pine_builtins::per_bar_variables(&Bar::default()) {
             builtins.insert(name, value);
-        }
-        for name in [
-            "open",
-            "high",
-            "low",
-            "close",
-            "volume",
-            "hl2",
-            "hlc3",
-            "hlcc4",
-            "ohlc4",
-            "bar_index",
-        ] {
-            builtins.insert(name.to_string(), Value::Na);
-        }
-        for (name, value) in &self.custom_variables {
-            builtins.insert(name.clone(), value.clone());
         }
 
         // Semantic pre-check: reject if sema produces errors.
@@ -280,24 +281,13 @@ impl<O: PineOutput> ScriptBuilder<O> {
 
         // Create interpreter and load builtin namespace objects
         let mut interpreter = Interpreter::new();
-        if let Some(library_loader) = self.library_loader {
-            interpreter.set_library_loader(library_loader);
-        }
-        // The feed `request.security` draws from, reached through `ctx`.
+        interpreter.library_loader = self.library_loader;
         interpreter.request_provider = self.request_provider.map(Rc::from);
         interpreter.chart_period = chart_period;
         if let Some(broker_factory) = self.broker_factory {
-            interpreter.broker_factory = broker_factory;
+            interpreter.broker_factory = Some(broker_factory);
         }
-
-        // Register namespace objects as const variables
-        for (name, value) in namespaces {
-            interpreter.set_const_variable(&name, value);
-        }
-
-        for (name, value) in self.custom_variables {
-            interpreter.set_const_variable(&name, value);
-        }
+        interpreter.set_const_variables(consts);
 
         Ok(Script {
             program,
@@ -338,37 +328,21 @@ pub struct Script<O: PineOutput> {
 impl<O: PineOutput> Script<O> {
     /// Run one bar. Private: bars must be replayed in order from the first, so
     /// [`Script::run`] is the only way in.
+<<<<<<< HEAD
     pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
         // Load bar data as Series variables so TA functions can access historical data
         use interpreter::{Series, Value};
+=======
+    fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
+        use interpreter::Value;
+>>>>>>> main
 
-        // The series id is also the key the historical provider is queried with.
-        for (id, value) in [
-            ("open", bar.open),
-            ("high", bar.high),
-            ("low", bar.low),
-            ("close", bar.close),
-            ("volume", bar.volume),
-            ("hl2", (bar.high + bar.low) / 2.0),
-            ("hlc3", (bar.high + bar.low + bar.close) / 3.0),
-            ("hlcc4", (bar.high + bar.low + bar.close * 2.0) / 4.0),
-            ("ohlc4", (bar.open + bar.high + bar.low + bar.close) / 4.0),
-        ] {
-            self.interpreter.advance_series(
-                id,
-                Value::Series(Series {
-                    id: id.to_string(),
-                    current: Box::new(Value::Number(value)),
-                }),
-            );
-        }
-
-        self.interpreter
-            .set_variable("bar_index", Value::Number(bar.index as f64));
-
-        // Per-bar namespaces (barstate) are rebuilt from this bar's flags.
-        for (name, value) in pine_builtins::register_per_bar(bar) {
-            self.interpreter.set_variable(&name, value);
+        for (name, value) in pine_builtins::per_bar_variables(bar) {
+            if matches!(value, Value::Series(_)) {
+                self.interpreter.advance_series(&name, value);
+            } else {
+                self.interpreter.set_variable(&name, value);
+            }
         }
 
         // Fill orders left pending by the previous bar before the body runs, so
