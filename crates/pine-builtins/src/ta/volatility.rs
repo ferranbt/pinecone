@@ -141,3 +141,134 @@ impl TaBb {
 fn bands<O: PineOutput>(middle: Value<O>, upper: Value<O>, lower: Value<O>) -> Value<O> {
     Value::Array(Rc::new(RefCell::new(vec![middle, upper, lower])))
 }
+
+/// ta.sar(start, inc, max) - Parabolic SAR.
+///
+/// A direct port of TradingView's reference implementation: the first bar has no
+/// prior close to set a direction, the second seeds the trend from `close` vs
+/// `close[1]`, and each bar after advances the stop, flipping when price crosses
+/// it and clamping the stop to the last two highs/lows.
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.sar", stateful)]
+pub struct TaSar {
+    #[arg(default = 0.02)]
+    start: f64,
+    #[arg(default = 0.02)]
+    inc: f64,
+    #[arg(default = 0.2)]
+    max: f64,
+    #[state]
+    initialized: bool,
+    #[state]
+    result: f64,
+    #[state]
+    max_min: f64,
+    #[state]
+    acceleration: f64,
+    /// True while price is above the stop (an up-trend).
+    #[state]
+    is_below: bool,
+    #[state]
+    prev_close: Option<f64>,
+    /// Previous two bars' highs/lows (`high[1]`/`high[2]`), shifted each bar.
+    #[state]
+    high1: Option<f64>,
+    #[state]
+    high2: Option<f64>,
+    #[state]
+    low1: Option<f64>,
+    #[state]
+    low2: Option<f64>,
+}
+
+impl TaSar {
+    fn execute<O: PineOutput>(
+        &mut self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let (high, low, close) = hlc(ctx)?;
+
+        let out = if let Some(prev_close) = self.prev_close {
+            if !self.initialized {
+                // Second bar: seed the trend from this close vs the last.
+                self.initialized = true;
+                if close > prev_close {
+                    self.is_below = true;
+                    self.max_min = high;
+                    self.result = self.low1.unwrap_or(low);
+                } else {
+                    self.is_below = false;
+                    self.max_min = low;
+                    self.result = self.high1.unwrap_or(high);
+                }
+                self.acceleration = self.start;
+                self.result
+            } else {
+                // Subsequent bars: advance the stop and flip on a cross.
+                self.result += self.acceleration * (self.max_min - self.result);
+                let mut flipped = false;
+                if self.is_below {
+                    if self.result > low {
+                        flipped = true;
+                        self.is_below = false;
+                        self.result = self.max_min;
+                        self.max_min = low;
+                        self.acceleration = self.start;
+                    }
+                } else if self.result < high {
+                    flipped = true;
+                    self.is_below = true;
+                    self.result = self.max_min;
+                    self.max_min = high;
+                    self.acceleration = self.start;
+                }
+
+                if !flipped {
+                    if self.is_below {
+                        if high > self.max_min {
+                            self.max_min = high;
+                            self.acceleration = (self.acceleration + self.inc).min(self.max);
+                        }
+                    } else if low < self.max_min {
+                        self.max_min = low;
+                        self.acceleration = (self.acceleration + self.inc).min(self.max);
+                    }
+                }
+
+                // The stop can't enter the last two bars' range.
+                if self.is_below {
+                    if let Some(l1) = self.low1 {
+                        self.result = self.result.min(l1);
+                    }
+                    if let Some(l2) = self.low2 {
+                        self.result = self.result.min(l2);
+                    }
+                } else {
+                    if let Some(h1) = self.high1 {
+                        self.result = self.result.max(h1);
+                    }
+                    if let Some(h2) = self.high2 {
+                        self.result = self.result.max(h2);
+                    }
+                }
+                self.result
+            }
+        } else {
+            // First bar: no prior close, so no direction yet.
+            f64::NAN
+        };
+
+        // Shift the high/low history and record this close for the next bar.
+        self.low2 = self.low1;
+        self.low1 = Some(low);
+        self.high2 = self.high1;
+        self.high1 = Some(high);
+        self.prev_close = Some(close);
+
+        if out.is_nan() {
+            Ok(Value::Na)
+        } else {
+            Ok(Value::Number(out))
+        }
+    }
+}

@@ -4,4 +4,5 @@ study("str/error_tostring_namespaced_v4")
 // `tostring`, so reaching for it here must fail rather than silently resolve.
 text = str.tostring(42)
 
-// Expected error: Object has no member 'tostring'
+// Expected error:
+// error [unknown-member] 5:12: `str` has no member `tostring`

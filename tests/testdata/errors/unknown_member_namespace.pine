@@ -1,0 +1,9 @@
+//@version=5
+indicator("errors/unknown_member_namespace")
+// Calling a member that a builtin namespace does not have is a compile-time
+// error: sema reads the same namespace map the interpreter calls into.
+
+x = ta.bogus(close)
+
+// Expected error:
+// error [unknown-member] 6:8: `ta` has no member `bogus`

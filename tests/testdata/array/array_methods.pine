@@ -1,0 +1,44 @@
+//@version=5
+indicator("array/array_methods")
+// Exercises the array namespace functions end-to-end, proving sema accepts them
+// and the interpreter runs them consistently.
+
+nums = array.from(3, 1, 2)
+log.info(array.join(nums, ","))
+
+array.sort(nums)
+log.info(array.join(nums, ","))
+
+array.sort(nums, order.descending)
+log.info(array.join(nums, ","))
+
+array.set(nums, 0, 9)
+log.info(str.tostring(array.get(nums, 0)))
+
+log.info(str.tostring(array.indexof(nums, 2)))
+log.info(str.tostring(array.includes(nums, 1)))
+log.info(str.tostring(array.includes(nums, 42)))
+
+c = array.copy(nums)
+array.set(c, 0, 0)
+log.info(str.tostring(array.get(nums, 0)))
+
+a = array.from(1, 2)
+b = array.from(3, 4)
+array.concat(a, b)
+log.info(array.join(a, ","))
+
+strs = array.new_string(2, "x")
+log.info(array.join(strs, "-"))
+
+// Expected output:
+// 3,1,2
+// 1,2,3
+// 3,2,1
+// 9
+// 1
+// true
+// false
+// 9
+// 1,2,3,4
+// x-x

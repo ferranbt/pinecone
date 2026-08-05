@@ -48,6 +48,7 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     ta_ns.insert("tr".to_string(), TaTr::builtin_value::<O>());
     ta_ns.insert("atr".to_string(), TaAtr::builtin_value::<O>());
     ta_ns.insert("bb".to_string(), TaBb::builtin_value::<O>());
+    ta_ns.insert("sar".to_string(), TaSar::builtin_value::<O>());
 
     // Comparison & Signals
     ta_ns.insert("change".to_string(), TaChange::builtin_value::<O>());

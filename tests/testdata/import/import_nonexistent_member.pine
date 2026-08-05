@@ -1,10 +1,12 @@
 //@version=5
 indicator("import/import_nonexistent_member")
-// Test accessing non-existent member from import - should fail
+// Accessing a member the imported library does not export is a compile-time
+// error: sema knows the library's full export set.
 
 import mylib as lib
 
 // Try to access something not exported
 x = lib.nonExistentFunction()
 
-// Expected error: Type error: Object has no member 'nonExistentFunction'
+// Expected error:
+// error [unknown-member] 9:9: `lib` has no member `nonExistentFunction`
