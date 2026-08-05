@@ -286,7 +286,6 @@ impl<O: PineOutput> ScriptBuilder<O> {
         // The feed `request.security` draws from, reached through `ctx`.
         interpreter.request_provider = self.request_provider.map(Rc::from);
         interpreter.chart_period = chart_period;
-        // Swap the broker engine if the host supplied one; else the default stands.
         if let Some(broker_factory) = self.broker_factory {
             interpreter.broker_factory = broker_factory;
         }

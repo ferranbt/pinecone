@@ -89,9 +89,6 @@ impl StrategyFn {
                 slippage: self.slippage,
             };
 
-            // Delegate to the host's factory (the built-in one by default) so the
-            // broker implementation is swappable while honouring the script's
-            // configuration.
             ctx.broker = Some(ctx.broker_factory.build(&config));
             ctx.set_object_field(
                 "strategy",
