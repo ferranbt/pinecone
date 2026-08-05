@@ -677,7 +677,6 @@ mod tests {
         assert!(diags.iter().all(|d| d.rule != "unknown-member"));
     }
 
-
     #[test]
     fn import_cycles_terminate() {
         // Mutual: a imports b, b imports a. Terminates via the cache; a's export
