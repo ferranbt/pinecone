@@ -353,7 +353,10 @@ pub fn register<O: PineOutput>() -> Value<O> {
     // Backward compatible typed constructors.
     array_ns.insert("new_float".to_string(), ArrayNewFloat::<O>::builtin_value());
     array_ns.insert("new_int".to_string(), ArrayNewInt::<O>::builtin_value());
-    array_ns.insert("new_string".to_string(), ArrayNewString::<O>::builtin_value());
+    array_ns.insert(
+        "new_string".to_string(),
+        ArrayNewString::<O>::builtin_value(),
+    );
     array_ns.insert("from".to_string(), ArrayFrom::<O>::builtin_value());
     array_ns.insert("clear".to_string(), ArrayClear::<O>::builtin_value());
     array_ns.insert("push".to_string(), ArrayPush::<O>::builtin_value());
