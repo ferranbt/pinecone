@@ -17,7 +17,7 @@ mod backtest;
 mod run;
 
 pub use backtest::Backtest;
-pub use pine_core::{DataProvider, FileResolver, LibraryLoader};
+pub use pine_core::{DataProvider, DirLoader, FileResolver, LibraryLoader};
 pub use run::{Run, RunResult};
 
 use pine_ast::Program;
