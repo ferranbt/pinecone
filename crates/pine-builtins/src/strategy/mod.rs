@@ -440,7 +440,10 @@ impl RiskMaxIntradayLoss {
     fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let _ = &self.alert_message;
         if let Some(broker) = ctx.broker.as_mut() {
-            broker.set_risk(RiskRule::MaxIntradayLoss(risk_type(self.value, &self.r#type)));
+            broker.set_risk(RiskRule::MaxIntradayLoss(risk_type(
+                self.value,
+                &self.r#type,
+            )));
         }
         Ok(Value::Na)
     }
