@@ -170,4 +170,42 @@ if bar_index == 1
         assert!(run.backtest.is_some());
         assert_eq!(calls.load(Ordering::SeqCst), 1);
     }
+
+    #[test]
+    fn backtest_reports_the_halt_bar() {
+        use crate::core::DefaultPineOutput;
+        use crate::ScriptBuilder;
+
+        // A short into a rising market draws down fast; a tight max_drawdown
+        // halts the run, and the Backtest records the bar it died on.
+        let halting = r#"
+//@version=5
+strategy("t", initial_capital = 10000)
+strategy.risk.max_drawdown(50, strategy.cash)
+if bar_index == 1
+    strategy.entry("S", strategy.short, qty = 100)
+"#;
+        let run = ScriptBuilder::<DefaultPineOutput>::with_code(halting)
+            .with_data(crate::data::synthetic(10))
+            .compile()
+            .expect("compile")
+            .run()
+            .expect("run");
+        assert!(run.backtest.expect("strategy").halted.is_some());
+
+        // A strategy that simply stops trading is not halted.
+        let quiet = r#"
+//@version=5
+strategy("t", initial_capital = 10000)
+if bar_index == 1
+    strategy.entry("L", strategy.long, qty = 1)
+"#;
+        let run = ScriptBuilder::<DefaultPineOutput>::with_code(quiet)
+            .with_data(crate::data::synthetic(10))
+            .compile()
+            .expect("compile")
+            .run()
+            .expect("run");
+        assert_eq!(run.backtest.expect("strategy").halted, None);
+    }
 }

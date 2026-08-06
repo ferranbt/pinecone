@@ -498,6 +498,7 @@ impl<O: PineOutput> Script<O> {
             mark_price: close,
             equity,
             trades,
+            halted: broker.halted_bar(),
         })
     }
 }
