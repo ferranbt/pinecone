@@ -1,0 +1,40 @@
+//@version=5
+indicator("series/index_call_history")
+// Regression: history-indexing a call result must equal assigning it first then
+// indexing. Each line is `direct | via-variable`; the two sides match every bar
+// (both na during warm-up, then equal). Directly indexing the warm-up na must
+// not error.
+// Bars: 25
+
+direct = ta.highest(high, 20)[1]
+h = ta.highest(high, 20)
+viavar = h[1]
+
+log.info(str.tostring(direct) + " | " + str.tostring(viavar))
+
+// Expected output:
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// NaN | NaN
+// 299 | 299
+// 300 | 300
+// 301 | 301
+// 302 | 302
+// 303 | 303

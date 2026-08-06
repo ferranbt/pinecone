@@ -413,6 +413,28 @@ struct MethodDef {
     body: Vec<Stmt>,
 }
 
+/// One history-carrying subscript site — `expr[n]` where `expr` is not a plain
+/// variable (a call, arithmetic, …). Mirrors `user_series_history`, keyed by the
+/// `Expr::Index` node's stable id, so `(expr)[n]` matches `v = expr; v[n]`.
+struct SeriesSite<O: PineOutput> {
+    /// Past bars, oldest first; the last entry is the previous bar.
+    history: Vec<Value<O>>,
+    /// This bar's value, once the site has been evaluated on it.
+    current: Option<Value<O>>,
+    /// `bar_seq` when `current` was recorded, so history rolls once per bar.
+    bar: u64,
+}
+
+impl<O: PineOutput> SeriesSite<O> {
+    fn new() -> Self {
+        Self {
+            history: Vec::new(),
+            current: None,
+            bar: 0,
+        }
+    }
+}
+
 /// The interpreter executes a program with a given bar
 pub struct Interpreter<O: PineOutput> {
     /// Local variables in the current scope
@@ -433,6 +455,10 @@ pub struct Interpreter<O: PineOutput> {
     /// history[len-1] = previous bar, history[len-2] = two bars ago, etc.
     /// Populated on each `Stmt::Assignment`; supports Pine's `name[n]` lookback.
     pub user_series_history: HashMap<String, Vec<Value<O>>>,
+    /// History for subscripted non-variable series expressions (`ta.sma(..)[1]`,
+    /// `(high+low)[1]`), keyed by the `Expr::Index` node's id — the same
+    /// site-keyed pattern as `function_local_state`.
+    expr_history: HashMap<u32, SeriesSite<O>>,
     /// Persistent local state for user-defined functions, keyed by the call
     /// site's stable lexical id (`Expr::Call::id`). Keying by call site — not
     /// by function name — means two calls to the same function keep independent
@@ -541,6 +567,7 @@ impl<O: PineOutput> Interpreter<O> {
             exports: HashMap::new(),
             output: O::default(),
             user_series_history: HashMap::new(),
+            expr_history: HashMap::new(),
             function_local_state: HashMap::new(),
             var_decls_initialized: HashMap::new(),
             current_call_id: 0,
@@ -1387,15 +1414,14 @@ impl<O: PineOutput> Interpreter<O> {
                 Ok(Value::Array(Rc::new(RefCell::new(values?))))
             }
 
-            Expr::Index { expr, index } => {
+            Expr::Index { expr, index, id } => {
                 let index_val = self.eval_expr(index)?.as_number()? as usize;
 
-                // For user-computed variables with tracked history, look up
+                // A named variable with tracked history looks up
                 // user_series_history: history[len-1] = previous bar. A tracked
-                // variable with insufficient depth yields na (warm-up), never a
-                // fall-through to Number indexing. Variables WITHOUT tracked
-                // history (e.g. builtin Series like `close` fed by the host)
-                // fall through to the Series/Array indexing below.
+                // variable with insufficient depth yields na (warm-up). Variables
+                // WITHOUT tracked history (e.g. builtin Series like `close` fed by
+                // the host) fall through to the shared path below.
                 if index_val > 0 {
                     if let Expr::Variable { name: var_name, .. } = expr.as_ref() {
                         if let Some(h) = self.user_series_history.get(var_name) {
@@ -1405,9 +1431,8 @@ impl<O: PineOutput> Interpreter<O> {
                                 Value::Na
                             });
                         }
-                        // Non-Series plain values with no history (a user var
-                        // assigned only this bar) still index as na rather
-                        // than erroring below.
+                        // A plain non-series value with no history (a user var
+                        // assigned only this bar) indexes as na, not an error.
                         if let Some(var) = self.variables.get(var_name) {
                             if !matches!(var.value, Value::Series(_) | Value::Array(_)) {
                                 return Ok(Value::Na);
@@ -1418,29 +1443,47 @@ impl<O: PineOutput> Interpreter<O> {
 
                 let val = self.eval_expr(expr)?;
 
-                match val {
-                    Value::Array(arr_ref) => {
-                        let arr = arr_ref.borrow();
-                        arr.get(index_val)
-                            .cloned()
-                            .ok_or(RuntimeError::IndexOutOfBounds(index_val))
-                    }
-                    Value::Series(series) => {
-                        // Index 0 is this bar. Anything further back lives in
-                        // `user_series_history`, which the branch above already
-                        // consulted for a named variable — reaching here means
-                        // the series has no recorded history, which is na.
-                        if index_val == 0 {
-                            Ok((*series.current).clone())
-                        } else {
-                            Ok(Value::Na)
+                // Array element access — decided by the value, not the id.
+                if let Value::Array(arr_ref) = &val {
+                    let arr = arr_ref.borrow();
+                    return arr
+                        .get(index_val)
+                        .cloned()
+                        .ok_or(RuntimeError::IndexOutOfBounds(index_val));
+                }
+
+                // Series subscript on a non-variable expression (a call,
+                // arithmetic, a fell-through Series). A per-site history buffer
+                // keyed by the node's id makes `(expr)[n]` match `v = expr; v[n]`,
+                // and a warm-up `na` yields `na` instead of erroring.
+                let current = match val {
+                    Value::Series(series) => (*series.current).clone(),
+                    other => other,
+                };
+                if index_val == 0 {
+                    return Ok(current);
+                }
+                let seq = self.bar_seq;
+                let site = self.expr_history.entry(*id).or_insert_with(SeriesSite::new);
+                if site.bar != seq {
+                    // A new bar: last bar's value rolls into history. Bounded to
+                    // MAX_LOOKBACK, exactly like user_series_history, so memory
+                    // stays flat over a long run.
+                    if let Some(previous) = site.current.take() {
+                        site.history.push(previous);
+                        if site.history.len() > MAX_LOOKBACK {
+                            let drop = site.history.len() - MAX_LOOKBACK;
+                            site.history.drain(..drop);
                         }
                     }
-                    ref v => Err(RuntimeError::TypeError(format!(
-                        "Cannot index non-array/non-series value: {:?}",
-                        v
-                    ))),
+                    site.bar = seq;
                 }
+                site.current = Some(current);
+                Ok(if site.history.len() >= index_val {
+                    site.history[site.history.len() - index_val].clone()
+                } else {
+                    Value::Na
+                })
             }
 
             Expr::Switch { value, cases } => {

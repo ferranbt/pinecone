@@ -124,7 +124,7 @@ pub fn walk_expr<V: Visitor + ?Sized>(v: &mut V, expr: &Expr) {
                 }
             }
         }
-        Expr::Index { expr, index } => {
+        Expr::Index { expr, index, .. } => {
             v.visit_expr(expr);
             v.visit_expr(index);
         }

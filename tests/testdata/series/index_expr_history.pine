@@ -1,0 +1,18 @@
+//@version=5
+indicator("series/index_expr_history")
+// Any series expression carries history: `(high + low)[1]` equals
+// `s = high + low; s[1]`. Each line is `direct | via-variable`.
+// Bars: 4
+// Skip PineTS: PineTS's direct arithmetic subscript is off by one (returns the current bar); the assign-then-index form is correct and we match it.
+
+direct = (high + low)[1]
+s = high + low
+viavar = s[1]
+
+log.info(str.tostring(direct) + " | " + str.tostring(viavar))
+
+// Expected output:
+// NaN | NaN
+// 592 | 592
+// 594 | 594
+// 596 | 596

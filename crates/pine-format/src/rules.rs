@@ -382,7 +382,7 @@ impl Rules {
                     text(")"),
                 ]))
             }
-            Expr::Index { expr, index } => concat(vec![
+            Expr::Index { expr, index, .. } => concat(vec![
                 self.postfix_operand(expr),
                 text("["),
                 self.expr(index),

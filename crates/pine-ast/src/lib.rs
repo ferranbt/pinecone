@@ -128,6 +128,8 @@ pub enum Expr {
     Index {
         expr: Box<Expr>,
         index: Box<Expr>,
+        #[serde(default, skip_serializing_if = "is_zero_u32")]
+        id: u32,
     },
     MemberAccess {
         object: Box<Expr>,
