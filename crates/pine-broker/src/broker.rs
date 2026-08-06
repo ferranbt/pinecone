@@ -5,8 +5,8 @@
 //! is what `strategy.closedtrades` reports.
 
 use crate::{
-    Broker, Commission, Direction, Exit, FillModel, OcaType, Order, OrderKind, Position, Sizing,
-    Trade,
+    Broker, Commission, Direction, EntryFilter, Exit, FillModel, OcaType, Order, OrderKind,
+    Position, RiskRule, RiskType, Sizing, Trade,
 };
 use pine_core::Bar;
 use std::collections::HashMap;
@@ -39,6 +39,31 @@ pub struct BarBroker<F: FillModel> {
     closed: Vec<Trade>,
 
     bar_index: u64,
+
+    // Risk rules (`strategy.risk.*`), and the running state that enforces them.
+    entry_filter: EntryFilter,
+    max_position_size: Option<f64>,
+    max_drawdown: Option<RiskType>,
+    max_intraday_loss: Option<RiskType>,
+    max_cons_loss_days: Option<u32>,
+    max_intraday_filled_orders: Option<u32>,
+    /// Highest equity seen over the whole run (for `max_drawdown`).
+    peak_equity: f64,
+    /// The current trading day, as a UTC day bucket of `bar.time`.
+    day: Option<i64>,
+    /// Equity entering the current day (for the daily loss/win verdict).
+    day_start_equity: f64,
+    /// Highest equity seen so far today (for `max_intraday_loss`).
+    intraday_peak: f64,
+    /// The previous bar's close equity — the day's final value at a rollover.
+    last_equity: f64,
+    /// Orders filled so far today (for `max_intraday_filled_orders`).
+    filled_today: u32,
+    consecutive_loss_days: u32,
+    /// Halted for the rest of the run (`max_drawdown`, `max_cons_loss_days`).
+    halted: bool,
+    /// Halted for the rest of the day (`max_intraday_loss`).
+    halted_today: bool,
 }
 
 impl<F: FillModel> BarBroker<F> {
@@ -58,6 +83,21 @@ impl<F: FillModel> BarBroker<F> {
             open: Vec::new(),
             closed: Vec::new(),
             bar_index: 0,
+            entry_filter: EntryFilter::All,
+            max_position_size: None,
+            max_drawdown: None,
+            max_intraday_loss: None,
+            max_cons_loss_days: None,
+            max_intraday_filled_orders: None,
+            peak_equity: initial_capital,
+            day: None,
+            day_start_equity: initial_capital,
+            intraday_peak: initial_capital,
+            last_equity: initial_capital,
+            filled_today: 0,
+            consecutive_loss_days: 0,
+            halted: false,
+            halted_today: false,
         }
     }
 
@@ -378,14 +418,145 @@ impl<F: FillModel> BarBroker<F> {
             }
         }
     }
+
+    /// Whether a risk rule rejects `order` outright at submission. Exits and
+    /// reduce-only orders always pass — a rule may stop new exposure but never
+    /// traps an open position.
+    fn risk_rejects(&self, order: &Order) -> bool {
+        if order.reduce_only {
+            return false;
+        }
+        if self.halted || self.halted_today {
+            return true;
+        }
+        if !self.entry_filter.allows(order.direction) {
+            return true;
+        }
+        // Once the day's fill cap is reached, no new orders are placed.
+        matches!(self.max_intraday_filled_orders, Some(cap) if self.filled_today >= cap)
+    }
+
+    /// Roll intraday state when `time` lands on a new UTC day, and settle the day
+    /// that just ended for `max_cons_loss_days`.
+    fn roll_day(&mut self, time: i64) {
+        // TODO: this buckets by the UTC calendar day. TradingView rolls the
+        // trading day at the exchange session start in `syminfo.timezone`, so the
+        // intraday rules (max_intraday_loss / max_intraday_filled_orders and the
+        // per-day P&L behind max_cons_loss_days) diverge for sub-daily
+        // equity/futures. Correct once the broker is given the symbol's timezone
+        // and session; UTC is exact for 24/7 (crypto) symbols.
+        let bucket = time.div_euclid(86_400_000);
+        match self.day {
+            Some(current) if current == bucket => return,
+            Some(_) => {
+                // The day just ended: a losing day advances the streak, a
+                // non-losing one resets it.
+                if let Some(limit) = self.max_cons_loss_days {
+                    if self.last_equity < self.day_start_equity {
+                        self.consecutive_loss_days += 1;
+                        if self.consecutive_loss_days >= limit {
+                            self.halted = true;
+                        }
+                    } else {
+                        self.consecutive_loss_days = 0;
+                    }
+                }
+            }
+            None => {}
+        }
+        // Start the new day from the equity carried across the boundary.
+        self.day = Some(bucket);
+        self.day_start_equity = self.last_equity;
+        self.intraday_peak = self.last_equity;
+        self.filled_today = 0;
+        self.halted_today = false;
+    }
+
+    /// Reduce an entry `qty` so the resulting position stays within
+    /// `max_position_size`; returns 0 when even the smallest step would exceed it
+    /// (Pine then places nothing).
+    fn clamp_to_max_position(&self, order: &Order, qty: f64) -> f64 {
+        let Some(max) = self.max_position_size else {
+            return qty;
+        };
+        if order.reduce_only {
+            return qty;
+        }
+        let after = self.position().size + qty;
+        if after.abs() <= max {
+            return qty;
+        }
+        // Allow only up to `max` in the resulting direction; if that flips the
+        // order's sign, the position is already at the cap — place nothing.
+        let clamped = max * after.signum() - self.position().size;
+        if clamped == 0.0 || clamped.signum() != qty.signum() {
+            0.0
+        } else {
+            clamped
+        }
+    }
+
+    /// Close the whole position at `price` — the forced exit a breached drawdown
+    /// or intraday-loss rule performs.
+    fn flatten(&mut self, price: f64) {
+        let size = self.position().size;
+        if size != 0.0 {
+            self.apply_fill(-size, price, "risk_flatten", None);
+        }
+    }
+
+    /// Mark equity at the bar's close, update the peaks, and enforce the
+    /// equity-drop rules — cancelling and flattening on a breach.
+    fn mark_and_check_risk(&mut self, bar: &Bar) {
+        let equity = self.equity(bar.close);
+        self.peak_equity = self.peak_equity.max(equity);
+        self.intraday_peak = self.intraday_peak.max(equity);
+
+        if let Some(rule) = self.max_drawdown {
+            if !self.halted && self.peak_equity - equity >= rule.threshold(self.peak_equity) {
+                self.cancel_all();
+                self.flatten(bar.close);
+                self.halted = true;
+            }
+        }
+        if let Some(rule) = self.max_intraday_loss {
+            if !self.halted_today
+                && self.intraday_peak - equity >= rule.threshold(self.intraday_peak)
+            {
+                self.cancel_all();
+                self.flatten(bar.close);
+                self.halted_today = true;
+            }
+        }
+
+        // Recompute after a possible flatten, so the day P&L and next mark start
+        // from the settled equity.
+        self.last_equity = self.equity(bar.close);
+    }
 }
 
 impl<F: FillModel> Broker for BarBroker<F> {
     fn submit(&mut self, order: Order) {
+        if self.risk_rejects(&order) {
+            return;
+        }
         if !self.pending.contains_key(&order.id) {
             self.order.push(order.id.clone());
         }
         self.pending.insert(order.id.clone(), order);
+    }
+
+    fn set_risk(&mut self, rule: RiskRule) {
+        match rule {
+            RiskRule::AllowEntryIn(filter) => self.entry_filter = filter,
+            RiskRule::MaxPositionSize(size) => self.max_position_size = Some(size.abs()),
+            RiskRule::MaxDrawdown(threshold) => self.max_drawdown = Some(threshold),
+            RiskRule::MaxIntradayLoss(threshold) => self.max_intraday_loss = Some(threshold),
+            RiskRule::MaxConsLossDays(days) => self.max_cons_loss_days = Some(days),
+            RiskRule::MaxIntradayFilledOrders(count) => {
+                self.max_intraday_filled_orders = Some(count)
+            }
+        }
     }
 
     fn submit_exit(&mut self, mut exit: Exit) {
@@ -415,6 +586,7 @@ impl<F: FillModel> Broker for BarBroker<F> {
 
     fn advance(&mut self, bar: &Bar) {
         self.bar_index = bar.index;
+        self.roll_day(bar.time);
 
         // Fill in submission order; a filled order leaves the book.
         let ids: Vec<String> = self.order.clone();
@@ -422,6 +594,13 @@ impl<F: FillModel> Broker for BarBroker<F> {
             let Some(order) = self.pending.get(&id).cloned() else {
                 continue;
             };
+            // While halted (for the run or the day), drop new entries; a
+            // reduce-only exit still fills so an open position can be closed.
+            if (self.halted || self.halted_today) && !order.reduce_only {
+                self.pending.remove(&id);
+                self.order.retain(|o| o != &id);
+                continue;
+            }
             if self.pyramiding_blocks(&order) {
                 // The stack is full: drop the entry, as Pine rejects it.
                 self.pending.remove(&id);
@@ -429,10 +608,11 @@ impl<F: FillModel> Broker for BarBroker<F> {
                 continue;
             }
             if let Some(price) = self.fills.fill(&order, bar) {
-                let qty = self.resolve_qty(&order, price);
+                let qty = self.clamp_to_max_position(&order, self.resolve_qty(&order, price));
                 if qty != 0.0 {
                     self.apply_fill(qty, price, &order.id, order.close_target.as_deref());
                     self.apply_oca(&order, qty);
+                    self.filled_today += 1;
                 }
                 self.pending.remove(&id);
                 self.order.retain(|o| o != &id);
@@ -441,6 +621,9 @@ impl<F: FillModel> Broker for BarBroker<F> {
 
         // Then the protective exits, against the position those fills produced.
         self.evaluate_exits(bar);
+
+        // Finally settle equity for the bar and enforce the equity-drop rules.
+        self.mark_and_check_risk(bar);
     }
 
     fn position(&self) -> Position {
@@ -503,6 +686,86 @@ mod tests {
 
     fn broker() -> BarBroker<PineFills> {
         BarBroker::new(PineFills::default(), 10_000.0)
+    }
+
+    /// A bar carrying a `time`, so day-boundary rules can be exercised.
+    fn bar_at(index: u64, time: i64, open: f64, high: f64, low: f64, close: f64) -> Bar {
+        Bar {
+            time,
+            ..bar(index, open, high, low, close)
+        }
+    }
+
+    const DAY: i64 = 86_400_000;
+
+    #[test]
+    fn allow_entry_in_blocks_the_disallowed_direction() {
+        let mut b = broker();
+        b.set_risk(RiskRule::AllowEntryIn(EntryFilter::LongOnly));
+        b.submit(Order::market("s", Direction::Short, Some(1.0))); // rejected
+        b.submit(Order::market("l", Direction::Long, Some(1.0))); // allowed
+        b.advance(&bar(0, 100.0, 100.0, 100.0, 100.0));
+        assert_eq!(b.position().size, 1.0);
+    }
+
+    #[test]
+    fn max_position_size_caps_the_entry() {
+        let mut b = broker();
+        b.set_risk(RiskRule::MaxPositionSize(3.0));
+        b.submit(Order::market("l", Direction::Long, Some(10.0)));
+        b.advance(&bar(0, 100.0, 100.0, 100.0, 100.0));
+        assert_eq!(b.position().size, 3.0);
+    }
+
+    #[test]
+    fn max_drawdown_flattens_and_halts() {
+        let mut b = broker();
+        b.set_risk(RiskRule::MaxDrawdown(RiskType::Cash(500.0)));
+        b.submit(Order::market("l", Direction::Long, Some(100.0)));
+        b.advance(&bar(0, 100.0, 100.0, 100.0, 100.0)); // equity 10_000 (peak)
+        b.advance(&bar(1, 100.0, 100.0, 90.0, 90.0)); // −1_000 > 500 → flatten + halt
+        assert!(b.position().is_flat());
+
+        // A new entry after the halt is rejected for the rest of the run.
+        b.submit(Order::market("l2", Direction::Long, Some(1.0)));
+        b.advance(&bar(2, 90.0, 90.0, 90.0, 90.0));
+        assert!(b.position().is_flat());
+    }
+
+    #[test]
+    fn max_intraday_filled_orders_resets_next_day() {
+        let mut b = broker();
+        b.set_risk(RiskRule::MaxIntradayFilledOrders(1));
+
+        b.submit(Order::market("a", Direction::Long, Some(1.0)));
+        b.advance(&bar_at(0, 0, 100.0, 100.0, 100.0, 100.0)); // fills → 1/1
+        b.submit(Order::market("b", Direction::Long, Some(1.0))); // cap reached → rejected
+        b.advance(&bar_at(1, 1_000, 100.0, 100.0, 100.0, 100.0));
+        assert_eq!(b.position().size, 1.0);
+
+        // A new day rolls first (in advance), so the next order is allowed
+        // again — a reversal, to sidestep the default pyramiding of 1.
+        b.advance(&bar_at(2, DAY, 100.0, 100.0, 100.0, 100.0));
+        b.submit(Order::market("c", Direction::Short, Some(1.0)));
+        b.advance(&bar_at(3, DAY + 1_000, 100.0, 100.0, 100.0, 100.0));
+        assert_eq!(b.position().size, -1.0);
+    }
+
+    #[test]
+    fn max_cons_loss_days_halts_after_two_losing_days() {
+        let mut b = broker();
+        b.set_risk(RiskRule::MaxConsLossDays(2));
+
+        // A long carried across three down-closing days.
+        b.submit(Order::market("l", Direction::Long, Some(10.0)));
+        b.advance(&bar_at(0, 0, 100.0, 100.0, 100.0, 99.0)); // day 0 ends at a loss
+        b.advance(&bar_at(1, DAY, 99.0, 99.0, 98.0, 98.0)); // rolls day 0 → streak 1
+        b.advance(&bar_at(2, 2 * DAY, 98.0, 98.0, 97.0, 97.0)); // rolls day 1 → streak 2 → halt
+
+        // Halted: a reversing entry is rejected, so the position is unchanged.
+        b.submit(Order::market("rev", Direction::Short, Some(20.0)));
+        b.advance(&bar_at(3, 2 * DAY + 1_000, 97.0, 97.0, 97.0, 97.0));
+        assert_eq!(b.position().size, 10.0);
     }
 
     #[test]

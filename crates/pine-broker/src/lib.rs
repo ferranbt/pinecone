@@ -97,6 +97,65 @@ pub enum Sizing {
     PercentOfEquity(f64),
 }
 
+/// How a risk threshold's value is measured (`strategy.risk.max_drawdown` and
+/// `strategy.risk.max_intraday_loss`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RiskType {
+    /// A percentage of the reference (peak) equity.
+    Percent(f64),
+    /// A fixed cash amount.
+    Cash(f64),
+}
+
+impl RiskType {
+    /// The loss threshold in cash, given the `reference` equity a percentage is
+    /// taken against.
+    fn threshold(self, reference: f64) -> f64 {
+        match self {
+            RiskType::Percent(pct) => reference.abs() * pct / 100.0,
+            RiskType::Cash(cash) => cash,
+        }
+    }
+}
+
+/// Which entry directions `strategy.risk.allow_entry_in` permits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum EntryFilter {
+    #[default]
+    All,
+    LongOnly,
+    ShortOnly,
+}
+
+impl EntryFilter {
+    /// Whether an entry in `direction` is allowed.
+    fn allows(self, direction: Direction) -> bool {
+        match self {
+            EntryFilter::All => true,
+            EntryFilter::LongOnly => direction == Direction::Long,
+            EntryFilter::ShortOnly => direction == Direction::Short,
+        }
+    }
+}
+
+/// A risk-management rule set by a `strategy.risk.*` call, applied to the broker.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RiskRule {
+    /// Restrict entries to one direction (`allow_entry_in`).
+    AllowEntryIn(EntryFilter),
+    /// Cap the absolute position size in contracts (`max_position_size`).
+    MaxPositionSize(f64),
+    /// Halt the strategy once equity falls this far from its peak (`max_drawdown`).
+    MaxDrawdown(RiskType),
+    /// Halt for the rest of the day once equity falls this far from the day's
+    /// peak (`max_intraday_loss`).
+    MaxIntradayLoss(RiskType),
+    /// Halt after this many consecutive losing days (`max_cons_loss_days`).
+    MaxConsLossDays(u32),
+    /// Block new orders after this many fills in a day (`max_intraday_filled_orders`).
+    MaxIntradayFilledOrders(u32),
+}
+
 impl Sizing {
     /// The contract count this sizing buys at `price`, given current `equity`.
     fn contracts(self, price: f64, equity: f64) -> f64 {
@@ -298,6 +357,9 @@ pub trait Broker {
 
     /// Cancel every pending order.
     fn cancel_all(&mut self);
+
+    /// Apply a risk-management rule (from a `strategy.risk.*` call).
+    fn set_risk(&mut self, rule: RiskRule);
 
     /// Fill whatever `bar` allows, updating the position and trade log.
     fn advance(&mut self, bar: &Bar);

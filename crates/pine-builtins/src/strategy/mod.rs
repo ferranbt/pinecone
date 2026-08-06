@@ -12,7 +12,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use pine_broker::{BrokerConfig, Commission, Direction, Exit, OcaType, Order, OrderKind, Sizing};
+use pine_broker::{
+    BrokerConfig, Commission, Direction, EntryFilter, Exit, OcaType, Order, OrderKind, RiskRule,
+    RiskType, Sizing,
+};
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, PineVersion};
 use pine_interpreter::{BuiltinFn, Interpreter, RuntimeError, Value};
@@ -355,6 +358,133 @@ impl StrategyCancelAll {
     }
 }
 
+/// A `strategy.risk.*` threshold's measure, from a `strategy.cash` /
+/// `strategy.percent_of_equity` argument (percent for anything else).
+fn risk_type(value: f64, kind: &str) -> RiskType {
+    match kind {
+        "cash" => RiskType::Cash(value),
+        _ => RiskType::Percent(value),
+    }
+}
+
+/// strategy.risk.allow_entry_in(value) — restrict entries to one direction.
+#[derive(BuiltinFunction)]
+#[builtin(name = "strategy.risk.allow_entry_in")]
+struct RiskAllowEntryIn {
+    value: String,
+}
+
+impl RiskAllowEntryIn {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let filter = match self.value.as_str() {
+            "long" => EntryFilter::LongOnly,
+            "short" => EntryFilter::ShortOnly,
+            _ => EntryFilter::All,
+        };
+        if let Some(broker) = ctx.broker.as_mut() {
+            broker.set_risk(RiskRule::AllowEntryIn(filter));
+        }
+        Ok(Value::Na)
+    }
+}
+
+/// strategy.risk.max_position_size(contracts) — cap the absolute position size.
+#[derive(BuiltinFunction)]
+#[builtin(name = "strategy.risk.max_position_size")]
+struct RiskMaxPositionSize {
+    contracts: f64,
+}
+
+impl RiskMaxPositionSize {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        if let Some(broker) = ctx.broker.as_mut() {
+            broker.set_risk(RiskRule::MaxPositionSize(self.contracts));
+        }
+        Ok(Value::Na)
+    }
+}
+
+/// strategy.risk.max_drawdown(value, type) — halt the strategy on this drawdown.
+#[derive(BuiltinFunction)]
+#[builtin(name = "strategy.risk.max_drawdown")]
+struct RiskMaxDrawdown {
+    value: f64,
+    #[arg(default = "percent_of_equity")]
+    r#type: String,
+    #[arg(default = "")]
+    alert_message: String,
+}
+
+impl RiskMaxDrawdown {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.alert_message;
+        if let Some(broker) = ctx.broker.as_mut() {
+            broker.set_risk(RiskRule::MaxDrawdown(risk_type(self.value, &self.r#type)));
+        }
+        Ok(Value::Na)
+    }
+}
+
+/// strategy.risk.max_intraday_loss(value, type) — halt for the day on this loss.
+#[derive(BuiltinFunction)]
+#[builtin(name = "strategy.risk.max_intraday_loss")]
+struct RiskMaxIntradayLoss {
+    value: f64,
+    #[arg(default = "percent_of_equity")]
+    r#type: String,
+    #[arg(default = "")]
+    alert_message: String,
+}
+
+impl RiskMaxIntradayLoss {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.alert_message;
+        if let Some(broker) = ctx.broker.as_mut() {
+            broker.set_risk(RiskRule::MaxIntradayLoss(risk_type(self.value, &self.r#type)));
+        }
+        Ok(Value::Na)
+    }
+}
+
+/// strategy.risk.max_cons_loss_days(count) — halt after N consecutive losing days.
+#[derive(BuiltinFunction)]
+#[builtin(name = "strategy.risk.max_cons_loss_days")]
+struct RiskMaxConsLossDays {
+    count: f64,
+    #[arg(default = "")]
+    alert_message: String,
+}
+
+impl RiskMaxConsLossDays {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.alert_message;
+        if let Some(broker) = ctx.broker.as_mut() {
+            broker.set_risk(RiskRule::MaxConsLossDays(self.count.max(0.0) as u32));
+        }
+        Ok(Value::Na)
+    }
+}
+
+/// strategy.risk.max_intraday_filled_orders(count) — block new orders past a
+/// daily fill count.
+#[derive(BuiltinFunction)]
+#[builtin(name = "strategy.risk.max_intraday_filled_orders")]
+struct RiskMaxIntradayFilledOrders {
+    count: f64,
+    #[arg(default = "")]
+    alert_message: String,
+}
+
+impl RiskMaxIntradayFilledOrders {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.alert_message;
+        if let Some(broker) = ctx.broker.as_mut() {
+            broker.set_risk(RiskRule::MaxIntradayFilledOrders(self.count.max(0.0) as u32));
+        }
+        Ok(Value::Na)
+    }
+}
+
 /// strategy.exit(id, from_entry, qty, qty_percent, profit, limit, loss, stop, ...)
 ///
 /// Attaches a stop-loss / take-profit bracket to a position. Take-profit is a
@@ -462,6 +592,55 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
         Value::Object {
             type_name: "strategy.commission".to_string(),
             fields: Rc::new(RefCell::new(commission)),
+            call: None,
+        },
+    );
+
+    // Entry-direction constants for `strategy.risk.allow_entry_in`.
+    let mut direction: HashMap<String, Value<O>> = HashMap::new();
+    direction.insert("long".to_string(), Value::String("long".to_string()));
+    direction.insert("short".to_string(), Value::String("short".to_string()));
+    direction.insert("all".to_string(), Value::String("all".to_string()));
+    fields.insert(
+        "direction".to_string(),
+        Value::Object {
+            type_name: "strategy.direction".to_string(),
+            fields: Rc::new(RefCell::new(direction)),
+            call: None,
+        },
+    );
+
+    // Risk-management rules (`strategy.risk.*`).
+    let mut risk: HashMap<String, Value<O>> = HashMap::new();
+    risk.insert(
+        "allow_entry_in".to_string(),
+        RiskAllowEntryIn::builtin_value::<O>(),
+    );
+    risk.insert(
+        "max_position_size".to_string(),
+        RiskMaxPositionSize::builtin_value::<O>(),
+    );
+    risk.insert(
+        "max_drawdown".to_string(),
+        RiskMaxDrawdown::builtin_value::<O>(),
+    );
+    risk.insert(
+        "max_intraday_loss".to_string(),
+        RiskMaxIntradayLoss::builtin_value::<O>(),
+    );
+    risk.insert(
+        "max_cons_loss_days".to_string(),
+        RiskMaxConsLossDays::builtin_value::<O>(),
+    );
+    risk.insert(
+        "max_intraday_filled_orders".to_string(),
+        RiskMaxIntradayFilledOrders::builtin_value::<O>(),
+    );
+    fields.insert(
+        "risk".to_string(),
+        Value::Object {
+            type_name: "strategy.risk".to_string(),
+            fields: Rc::new(RefCell::new(risk)),
             call: None,
         },
     );

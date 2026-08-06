@@ -1,0 +1,13 @@
+# Multi-day bars for the day-based strategy.risk.* fixtures. Three UTC days of
+# three bars each; the price falls by 1 every bar so a held long loses daily.
+# time is in ms: days start at 0, 86_400_000, 172_800_000.
+time,open,high,low,close,volume
+0,100,100,100,100,1000
+1000,99,99,99,99,1000
+2000,98,98,98,98,1000
+86400000,97,97,97,97,1000
+86401000,96,96,96,96,1000
+86402000,95,95,95,95,1000
+172800000,94,94,94,94,1000
+172801000,93,93,93,93,1000
+172802000,92,92,92,92,1000
