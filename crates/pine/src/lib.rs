@@ -16,7 +16,7 @@ pub use pine_sema as sema;
 mod backtest;
 mod run;
 
-pub use backtest::Backtest;
+pub use backtest::{Backtest, Metrics};
 pub use pine_core::{DataProvider, DirLoader, FileResolver, LibraryLoader};
 pub use run::{Run, RunResult};
 
@@ -258,8 +258,11 @@ impl<O: PineOutput> ScriptBuilder<O> {
 
         // The interpreter's const environment: the registered namespaces plus any
         // host-supplied globals. Built once and handed over as-is.
-        let mut consts =
-            pine_builtins::register_namespace_objects(version, Some(syminfo), Some(timeframe));
+        let mut consts = pine_builtins::register_namespace_objects(
+            version,
+            Some(syminfo),
+            Some(timeframe.clone()),
+        );
         for (name, value) in self.custom_variables {
             consts.insert(name, value);
         }
@@ -292,6 +295,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
         Ok(Script {
             program,
             interpreter,
+            timeframe,
             bars,
             equity_curve: Vec::new(),
             last_close: 0.0,
@@ -312,6 +316,9 @@ impl<O: PineOutput> ScriptBuilder<O> {
 pub struct Script<O: PineOutput> {
     program: Program,
     interpreter: Interpreter<O>,
+    /// The chart timeframe, carried onto the `Backtest` so its metrics can
+    /// annualise per-bar figures.
+    timeframe: Timeframe,
     /// Bars from the builder's source; empty when none was given.
     bars: Vec<Bar>,
     /// Account value at each bar's close, accumulated while a `strategy` runs.
@@ -499,6 +506,7 @@ impl<O: PineOutput> Script<O> {
             equity,
             trades,
             halted: broker.halted_bar(),
+            timeframe: self.timeframe.clone(),
         })
     }
 }
