@@ -1,0 +1,21 @@
+//@version=5
+strategy("strategy/risk_max_drawdown")
+// A short into a rising market draws down; a 300-cash cap trips the halt, which
+// cancels and flattens the position.
+// Bars: 4
+// Skip PineTS: PineTS does not enforce the max_drawdown halt; we do, per the reference.
+
+strategy.risk.max_drawdown(300, strategy.cash)
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("S", strategy.short, qty = 100)
+
+log.info(str.tostring(strategy.position_size))
+
+// Expected output:
+// 0
+// -100
+// 0
+// 0

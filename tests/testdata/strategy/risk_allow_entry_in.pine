@@ -1,0 +1,19 @@
+//@version=5
+strategy("strategy/risk_allow_entry_in")
+// allow_entry_in(long) blocks short entries, so the position never goes short.
+// Bars: 4
+
+strategy.risk.allow_entry_in(strategy.direction.long)
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("S", strategy.short)
+
+log.info(str.tostring(strategy.position_size))
+
+// Expected output:
+// 0
+// 0
+// 0
+// 0

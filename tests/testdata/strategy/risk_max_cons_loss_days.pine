@@ -1,0 +1,29 @@
+//@version=5
+strategy("strategy/risk_max_cons_loss_days")
+// max_cons_loss_days(2): the held long loses on day 0 and day 1 (price falls),
+// so by day 2 the strategy is halted — the reversal attempted from day 2 on is
+// rejected and the position stays long.
+// Data: risk_days.csv
+// Bars: 9
+// Skip PineTS: PineTS does not enforce max_cons_loss_days; day boundaries are UTC-bucketed here.
+
+strategy.risk.max_cons_loss_days(2)
+
+if barstate.isfirst
+    strategy.entry("L", strategy.long)
+// From day 2 (bar_index >= 6) try to flip short; the halt should block it.
+if bar_index >= 6
+    strategy.entry("S", strategy.short)
+
+log.info(str.tostring(strategy.position_size))
+
+// Expected output:
+// 0
+// 1
+// 1
+// 1
+// 1
+// 1
+// 1
+// 1
+// 1

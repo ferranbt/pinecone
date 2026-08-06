@@ -1,0 +1,20 @@
+//@version=5
+strategy("strategy/risk_max_position_size")
+// max_position_size(3) caps a 10-contract entry down to 3.
+// Bars: 4
+// Skip PineTS: PineTS rejects an over-cap entry outright; the reference reduces the quantity to fit, which we follow.
+
+strategy.risk.max_position_size(3)
+
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long, qty = 10)
+
+log.info(str.tostring(strategy.position_size))
+
+// Expected output:
+// 0
+// 3
+// 3
+// 3

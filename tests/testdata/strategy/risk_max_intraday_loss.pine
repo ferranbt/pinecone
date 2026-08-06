@@ -1,0 +1,26 @@
+//@version=5
+strategy("strategy/risk_max_intraday_loss")
+// max_intraday_loss(50, cash): a 100-lot long loses 100 as price falls 1 within
+// a day, tripping the 50-cash cap — the position is flattened for that day and
+// re-entered the next, showing the daily reset.
+// Data: risk_days.csv
+// Bars: 9
+// Skip PineTS: PineTS does not enforce max_intraday_loss; day boundaries are UTC-bucketed here.
+
+strategy.risk.max_intraday_loss(50, strategy.cash)
+
+if strategy.position_size == 0
+    strategy.entry("L", strategy.long, qty = 100)
+
+log.info(str.tostring(strategy.position_size))
+
+// Expected output:
+// 0
+// 100
+// 0
+// 0
+// 100
+// 0
+// 0
+// 100
+// 0
