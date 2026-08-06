@@ -429,11 +429,10 @@ impl<F: FillModel> BarBroker<F> {
         if self.halted || self.halted_today {
             return true;
         }
-        if !self.entry_filter.allows(order.direction) {
-            return true;
-        }
-        // Once the day's fill cap is reached, no new orders are placed.
-        matches!(self.max_intraday_filled_orders, Some(cap) if self.filled_today >= cap)
+        !self.entry_filter.allows(order.direction)
+        // The daily fill cap is enforced per fill in `advance`, not here — an
+        // order under the cap at submission may still be over it by the time it
+        // fills.
     }
 
     /// Roll intraday state when `time` lands on a new UTC day, and settle the day
@@ -613,6 +612,18 @@ impl<F: FillModel> Broker for BarBroker<F> {
                 self.order.retain(|o| o != &id);
                 continue;
             }
+            // Once the day's fill cap is reached, no more orders fill — except a
+            // reduce-only exit of the current position. Enforced here, per fill,
+            // so orders already pending when the bar opens are capped too.
+            if !order.reduce_only {
+                if let Some(cap) = self.max_intraday_filled_orders {
+                    if self.filled_today >= cap {
+                        self.pending.remove(&id);
+                        self.order.retain(|o| o != &id);
+                        continue;
+                    }
+                }
+            }
             if let Some(price) = self.fills.fill(&order, bar) {
                 let qty = self.clamp_to_max_position(&order, self.resolve_qty(&order, price));
                 if qty != 0.0 {
@@ -758,16 +769,32 @@ mod tests {
 
         b.submit(Order::market("a", Direction::Long, Some(1.0)));
         b.advance(&bar_at(0, 0, 100.0, 100.0, 100.0, 100.0)); // fills → 1/1
-        b.submit(Order::market("b", Direction::Long, Some(1.0))); // cap reached → rejected
+                                                              // A second order the same day is blocked by the cap (a reversal, so
+                                                              // pyramiding is not what stops it).
+        b.submit(Order::market("b", Direction::Short, Some(2.0)));
         b.advance(&bar_at(1, 1_000, 100.0, 100.0, 100.0, 100.0));
         assert_eq!(b.position().size, 1.0);
 
-        // A new day rolls first (in advance), so the next order is allowed
-        // again — a reversal, to sidestep the default pyramiding of 1.
+        // The next day resets the count, so a fresh order fills.
         b.advance(&bar_at(2, DAY, 100.0, 100.0, 100.0, 100.0));
         b.submit(Order::market("c", Direction::Short, Some(1.0)));
         b.advance(&bar_at(3, DAY + 1_000, 100.0, 100.0, 100.0, 100.0));
         assert_eq!(b.position().size, -1.0);
+    }
+
+    #[test]
+    fn max_intraday_filled_orders_caps_already_pending_orders() {
+        let mut b = broker();
+        b.set_risk(RiskRule::MaxIntradayFilledOrders(1));
+
+        // Both are under the cap at submission and both are pending when the bar
+        // opens; only one may fill, since the cap is enforced per fill.
+        b.submit(Order::market("a", Direction::Long, Some(1.0)));
+        b.submit(Order::market("b", Direction::Short, Some(3.0)));
+        b.advance(&bar(0, 100.0, 100.0, 100.0, 100.0));
+
+        // "a" filled (long 1); "b" was blocked, not reversing the position.
+        assert_eq!(b.position().size, 1.0);
     }
 
     #[test]

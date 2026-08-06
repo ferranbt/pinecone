@@ -1,8 +1,9 @@
 //@version=5
 strategy("strategy/risk_max_intraday_filled_orders")
-// max_intraday_filled_orders(1): only the first order each day fills; the daily
-// count resets at the UTC boundary. Reversing every bar keeps every attempt a
-// fresh fillable order (no pyramiding block).
+// max_intraday_filled_orders(1): exactly one order fills per day. The cap is
+// enforced per fill, so an order pending from the previous day's last bar fills
+// at the new day's open (once the count resets) and the rest are blocked.
+// Reversing every bar keeps every attempt a fresh fillable order.
 // Data: risk_days.csv
 // Bars: 9
 // Skip PineTS: PineTS does not enforce the intraday order cap; day boundaries are UTC-bucketed here.
@@ -20,9 +21,9 @@ log.info(str.tostring(strategy.position_size))
 // 0
 // 1
 // 1
+// -1
+// -1
+// -1
 // 1
-// -1
-// -1
-// -1
 // 1
 // 1
