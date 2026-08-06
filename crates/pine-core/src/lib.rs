@@ -7,7 +7,7 @@ mod timeframe;
 mod version;
 
 pub use bar::{Bar, Data, Ohlcv};
-pub use library::{FileResolver, LibraryLoader};
+pub use library::{DirLoader, FileResolver, LibraryLoader};
 pub use output::{
     AlertCondition, AlertConditionOutput, BoxOutput, Color, DefaultPineOutput, FillObject,
     FillOutput, GlobalContext, GlobalOutput, Indicator, Input, InputOutput, InputValue, Label,
