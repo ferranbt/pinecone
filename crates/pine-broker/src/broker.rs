@@ -512,8 +512,14 @@ impl<F: FillModel> BarBroker<F> {
         self.peak_equity = self.peak_equity.max(equity);
         self.intraday_peak = self.intraday_peak.max(equity);
 
+        // Drawdown is measured to the bar's adverse intrabar extreme (equity
+        // marked at the high and the low), so the rule agrees with the reported
+        // `strategy.max_drawdown`. The peak still tracks close equity, so an
+        // intrabar swing does not move the mark.
+        let intrabar_low = self.equity(bar.high).min(self.equity(bar.low));
+
         if let Some(rule) = self.max_drawdown {
-            if !self.halted && self.peak_equity - equity >= rule.threshold(self.peak_equity) {
+            if !self.halted && self.peak_equity - intrabar_low >= rule.threshold(self.peak_equity) {
                 self.cancel_all();
                 self.flatten(bar.close);
                 self.halted = true;
@@ -521,7 +527,7 @@ impl<F: FillModel> BarBroker<F> {
         }
         if let Some(rule) = self.max_intraday_loss {
             if !self.halted_today
-                && self.intraday_peak - equity >= rule.threshold(self.intraday_peak)
+                && self.intraday_peak - intrabar_low >= rule.threshold(self.intraday_peak)
             {
                 self.cancel_all();
                 self.flatten(bar.close);
@@ -729,6 +735,19 @@ mod tests {
         // A new entry after the halt is rejected for the rest of the run.
         b.submit(Order::market("l2", Direction::Long, Some(1.0)));
         b.advance(&bar(2, 90.0, 90.0, 90.0, 90.0));
+        assert!(b.position().is_flat());
+    }
+
+    #[test]
+    fn max_drawdown_measures_the_intrabar_low() {
+        let mut b = broker();
+        b.set_risk(RiskRule::MaxDrawdown(RiskType::Cash(500.0)));
+        b.submit(Order::market("l", Direction::Long, Some(100.0)));
+        b.advance(&bar(0, 100.0, 100.0, 100.0, 100.0)); // long 100 @ 100, peak 10_000
+
+        // The close recovers to 96 (−400, within the cap) but the low hit 90
+        // (−1_000): the intrabar drawdown trips the rule the close alone would not.
+        b.advance(&bar(1, 100.0, 100.0, 90.0, 96.0));
         assert!(b.position().is_flat());
     }
 
