@@ -26,6 +26,9 @@ pub struct Backtest {
     pub position_size: f64,
     /// The last bar's close, at which open trades are valued.
     pub mark_price: f64,
+    /// The bar the run halted on if a rest-of-run risk rule fired
+    /// (`strategy.risk.max_drawdown` / `max_cons_loss_days`)
+    pub halted: Option<u64>,
 }
 
 impl Backtest {

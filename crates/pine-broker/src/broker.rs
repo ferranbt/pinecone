@@ -62,6 +62,8 @@ pub struct BarBroker<F: FillModel> {
     consecutive_loss_days: u32,
     /// Halted for the rest of the run (`max_drawdown`, `max_cons_loss_days`).
     halted: bool,
+    /// The bar the run halted on, once a rest-of-run rule fired.
+    halted_bar: Option<u64>,
     /// Halted for the rest of the day (`max_intraday_loss`).
     halted_today: bool,
 }
@@ -97,6 +99,7 @@ impl<F: FillModel> BarBroker<F> {
             filled_today: 0,
             consecutive_loss_days: 0,
             halted: false,
+            halted_bar: None,
             halted_today: false,
         }
     }
@@ -435,6 +438,13 @@ impl<F: FillModel> BarBroker<F> {
         // fills.
     }
 
+    /// Halt the strategy for the rest of the run, recording the bar it happened
+    /// on (a rest-of-run risk rule fired).
+    fn halt(&mut self) {
+        self.halted = true;
+        self.halted_bar = Some(self.bar_index);
+    }
+
     /// Roll intraday state when `time` lands on a new UTC day, and settle the day
     /// that just ended for `max_cons_loss_days`.
     fn roll_day(&mut self, time: i64) {
@@ -454,7 +464,7 @@ impl<F: FillModel> BarBroker<F> {
                     if self.last_equity < self.day_start_equity {
                         self.consecutive_loss_days += 1;
                         if self.consecutive_loss_days >= limit {
-                            self.halted = true;
+                            self.halt();
                         }
                     } else {
                         self.consecutive_loss_days = 0;
@@ -521,7 +531,7 @@ impl<F: FillModel> BarBroker<F> {
             if !self.halted && self.peak_equity - intrabar_low >= rule.threshold(self.peak_equity) {
                 self.cancel_all();
                 self.flatten(bar.close);
-                self.halted = true;
+                self.halt();
             }
         }
         if let Some(rule) = self.max_intraday_loss {
@@ -682,6 +692,10 @@ impl<F: FillModel> Broker for BarBroker<F> {
     fn closed_trades(&self) -> &[Trade] {
         &self.closed
     }
+
+    fn halted_bar(&self) -> Option<u64> {
+        self.halted_bar
+    }
 }
 
 #[cfg(test)]
@@ -742,6 +756,7 @@ mod tests {
         b.advance(&bar(0, 100.0, 100.0, 100.0, 100.0)); // equity 10_000 (peak)
         b.advance(&bar(1, 100.0, 100.0, 90.0, 90.0)); // −1_000 > 500 → flatten + halt
         assert!(b.position().is_flat());
+        assert_eq!(b.halted_bar(), Some(1));
 
         // A new entry after the halt is rejected for the rest of the run.
         b.submit(Order::market("l2", Direction::Long, Some(1.0)));

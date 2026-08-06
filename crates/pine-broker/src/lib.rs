@@ -379,6 +379,10 @@ pub trait Broker {
 
     /// Trades already closed, in the order they closed.
     fn closed_trades(&self) -> &[Trade];
+
+    /// The bar the run halted on if a rest-of-run risk rule fired
+    /// (`max_drawdown`, `max_cons_loss_days`), else `None`.
+    fn halted_bar(&self) -> Option<u64>;
 }
 
 /// The account settings a `strategy()` declaration configures its broker with,
