@@ -1,21 +1,24 @@
 //@version=5
 strategy("strategy/risk_max_drawdown")
-// A short into a rising market draws down; a 300-cash cap trips the halt, which
-// cancels and flattens the position.
+// A long in a market whose CLOSES only rise — a close-based drawdown check could
+// never halt it. But each bar's low draws equity down intrabar, and a 600-cash
+// cap trips on the entry bar, flattening the position (1 closed trade) even
+// though close equity is a gain. This is what the intrabar-measurement fix does:
+// the rule now agrees with the reported strategy.max_drawdown.
 // Bars: 4
-// Skip PineTS: PineTS does not enforce the max_drawdown halt; we do, per the reference.
+// Skip PineTS: PineTS does not enforce the max_drawdown halt.
 
-strategy.risk.max_drawdown(300, strategy.cash)
+strategy.risk.max_drawdown(600, strategy.cash)
 
 var int step = 0
 step := step + 1
 if step == 1
-    strategy.entry("S", strategy.short, qty = 100)
+    strategy.entry("L", strategy.long, qty = 100)
 
-log.info(str.tostring(strategy.position_size))
+log.info(str.tostring(strategy.position_size) + " " + str.tostring(strategy.closedtrades))
 
 // Expected output:
-// 0
-// -100
-// 0
-// 0
+// 0 0
+// 0 1
+// 0 1
+// 0 1
