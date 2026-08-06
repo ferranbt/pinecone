@@ -181,12 +181,18 @@ fn bars_per_year(tf: &Timeframe) -> f64 {
     }
 }
 
-/// Simple return from each bar's close to the next.
+/// Log return from each bar's close to the next.
+///
+/// Log, not simple, returns: their mean is the geometric growth rate, so Sharpe
+/// and Sortino agree in sign with the geometric `annual_return`. With simple
+/// returns a volatile-but-losing asset scores a positive Sharpe — the arithmetic
+/// mean overstates compound growth by roughly half the variance (volatility
+/// drag), which at high volatility flips the sign.
 fn bar_returns(equity: &[f64]) -> Vec<f64> {
     equity
         .windows(2)
-        .filter(|pair| pair[0] > 0.0)
-        .map(|pair| pair[1] / pair[0] - 1.0)
+        .filter(|pair| pair[0] > 0.0 && pair[1] > 0.0)
+        .map(|pair| (pair[1] / pair[0]).ln())
         .collect()
 }
 
@@ -271,5 +277,27 @@ mod tests {
 
         assert!((m.annual_return - 1.0).abs() < 1e-9);
         assert!(m.sharpe.is_finite() && m.sharpe > 0.0);
+    }
+
+    #[test]
+    fn a_volatile_losing_asset_scores_a_negative_sharpe() {
+        // Alternating +50% / -40% compounds to a loss (1.5 * 0.6 = 0.9 a pair),
+        // yet its arithmetic mean return is +5%. Log returns keep Sharpe negative,
+        // agreeing with the geometric annual_return, where simple returns would
+        // report a positive Sharpe on a money-losing curve.
+        let mut equity = vec![1000.0];
+        for i in 0..10 {
+            let factor = if i % 2 == 0 { 1.5 } else { 0.6 };
+            equity.push(equity.last().unwrap() * factor);
+        }
+        let m = Backtest {
+            initial_capital: 1000.0,
+            equity,
+            ..Default::default()
+        }
+        .generate_metrics();
+
+        assert!(m.annual_return < 0.0);
+        assert!(m.sharpe < 0.0, "sharpe was {}", m.sharpe);
     }
 }
