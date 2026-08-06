@@ -1603,6 +1603,7 @@ impl Parser {
                 expr = Expr::Index {
                     expr: Box::new(expr),
                     index: Box::new(index),
+                    id: self.next_call_id(),
                 };
             } else if self.check(&TokenType::Less) {
                 // Try to parse type arguments: <type>
@@ -1907,14 +1908,20 @@ mod tests {
         // close[1] - previous close
         let expr = parse_expr("close[1]").unwrap();
         assert!(matches!(expr, Expr::Index { .. }));
-        if let Expr::Index { expr: base, index } = expr {
+        if let Expr::Index {
+            expr: base, index, ..
+        } = expr
+        {
             assert_eq!(*base, Expr::var("close"));
             assert_eq!(*index, Expr::Literal(Literal::Int(1)));
         }
 
         // high[5] - 5 bars ago
         let expr = parse_expr("high[5]").unwrap();
-        if let Expr::Index { expr: base, index } = expr {
+        if let Expr::Index {
+            expr: base, index, ..
+        } = expr
+        {
             assert_eq!(*base, Expr::var("high"));
             assert_eq!(*index, Expr::Literal(Literal::Int(5)));
         }

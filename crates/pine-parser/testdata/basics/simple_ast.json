@@ -26,7 +26,8 @@
             "Literal": {
               "Int": 1
             }
-          }
+          },
+          "id": 1
         }
       },
       "var_kind": "Var"

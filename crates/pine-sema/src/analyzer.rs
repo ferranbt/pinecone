@@ -1079,7 +1079,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 self.check_expr(right);
             }
             Expr::Unary { expr, .. } => self.check_expr(expr),
-            Expr::Index { expr, index } => {
+            Expr::Index { expr, index, .. } => {
                 self.check_expr(expr);
                 self.check_expr(index);
             }
