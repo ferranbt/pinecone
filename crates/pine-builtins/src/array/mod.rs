@@ -356,7 +356,12 @@ fn numeric<O: PineOutput>(v: &Value<O>) -> Option<f64> {
 
 /// The finite numbers of an array, in order.
 fn numbers<O: PineOutput>(array: &Value<O>) -> Result<Vec<f64>, RuntimeError> {
-    Ok(array.as_array()?.borrow().iter().filter_map(numeric).collect())
+    Ok(array
+        .as_array()?
+        .borrow()
+        .iter()
+        .filter_map(numeric)
+        .collect())
 }
 
 /// array.first(id) - The first element (errors when empty).
@@ -499,7 +504,10 @@ impl<O: PineOutput> ArrayFill<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let mut arr = self.array.as_array()?.borrow_mut();
         let from = self.index_from as usize;
-        let to = self.index_to.map_or(arr.len(), |n| n as usize).min(arr.len());
+        let to = self
+            .index_to
+            .map_or(arr.len(), |n| n as usize)
+            .min(arr.len());
         for slot in arr.iter_mut().take(to).skip(from) {
             *slot = self.value.clone();
         }
@@ -547,7 +555,9 @@ impl<O: PineOutput> ArrayMin<O> {
         Ok(ns
             .iter()
             .copied()
-            .fold(None, |acc: Option<f64>, x| Some(acc.map_or(x, |a| a.min(x))))
+            .fold(None, |acc: Option<f64>, x| {
+                Some(acc.map_or(x, |a| a.min(x)))
+            })
             .map_or(Value::Na, Value::Number))
     }
 }
@@ -565,7 +575,9 @@ impl<O: PineOutput> ArrayMax<O> {
         Ok(ns
             .iter()
             .copied()
-            .fold(None, |acc: Option<f64>, x| Some(acc.map_or(x, |a| a.max(x))))
+            .fold(None, |acc: Option<f64>, x| {
+                Some(acc.map_or(x, |a| a.max(x)))
+            })
             .map_or(Value::Na, Value::Number))
     }
 }
@@ -681,7 +693,11 @@ fn mean(ns: &[f64]) -> Option<f64> {
 /// Variance of `ns` (population when `biased`), or `None` when too few elements.
 fn variance(ns: &[f64], biased: bool) -> Option<f64> {
     let mean = mean(ns)?;
-    let denominator = if biased { ns.len() } else { ns.len().checked_sub(1)? };
+    let denominator = if biased {
+        ns.len()
+    } else {
+        ns.len().checked_sub(1)?
+    };
     if denominator == 0 {
         return None;
     }
@@ -755,7 +771,9 @@ struct ArrayEvery<O: PineOutput> {
 
 impl<O: PineOutput> ArrayEvery<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        Ok(Value::Bool(self.array.as_array()?.borrow().iter().all(truthy)))
+        Ok(Value::Bool(
+            self.array.as_array()?.borrow().iter().all(truthy),
+        ))
     }
 }
 
@@ -768,7 +786,9 @@ struct ArraySome<O: PineOutput> {
 
 impl<O: PineOutput> ArraySome<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        Ok(Value::Bool(self.array.as_array()?.borrow().iter().any(truthy)))
+        Ok(Value::Bool(
+            self.array.as_array()?.borrow().iter().any(truthy),
+        ))
     }
 }
 
@@ -912,7 +932,11 @@ impl<O: PineOutput> ArrayBinarySearchLeftmost<O> {
         let ns = numbers(&self.array)?;
         let lower = ns.partition_point(|x| *x < self.val);
         let found = ns.get(lower) == Some(&self.val);
-        Ok(Value::Int(if found { lower as i64 } else { lower as i64 - 1 }))
+        Ok(Value::Int(if found {
+            lower as i64
+        } else {
+            lower as i64 - 1
+        }))
     }
 }
 
@@ -930,7 +954,11 @@ impl<O: PineOutput> ArrayBinarySearchRightmost<O> {
         let ns = numbers(&self.array)?;
         let upper = ns.partition_point(|x| *x <= self.val);
         let found = upper > 0 && ns[upper - 1] == self.val;
-        Ok(Value::Int(if found { upper as i64 - 1 } else { upper as i64 }))
+        Ok(Value::Int(if found {
+            upper as i64 - 1
+        } else {
+            upper as i64
+        }))
     }
 }
 
@@ -953,7 +981,11 @@ impl<O: PineOutput> ArrayPercentRank<O> {
         if arr.len() < 2 {
             return Ok(Value::Number(0.0));
         }
-        let below = arr.iter().filter_map(numeric).filter(|&x| x < target).count();
+        let below = arr
+            .iter()
+            .filter_map(numeric)
+            .filter(|&x| x < target)
+            .count();
         Ok(Value::Number(below as f64 / (arr.len() - 1) as f64 * 100.0))
     }
 }

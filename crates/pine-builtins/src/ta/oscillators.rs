@@ -1,4 +1,4 @@
-use super::moving_averages::{checked_length, smooth_step};
+use super::moving_averages::{checked_length, ema_step, smooth_step};
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, SeriesBuffer};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
@@ -362,5 +362,64 @@ impl TaLinreg {
         let intercept = mean_y - slope * mean_x;
 
         Ok(Value::Number(intercept + slope * self.offset))
+    }
+}
+
+/// ta.tsi(source, short_length, long_length) - True Strength Index.
+///
+/// The double-smoothed momentum `ema(ema(change, long), short)` over its
+/// double-smoothed magnitude, in `-1 … 1`. Each EMA seeds from the simple
+/// average of its first values, exactly like [`super::TaEma`].
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.tsi", stateful)]
+pub struct TaTsi {
+    source: f64,
+    short_length: f64,
+    long_length: f64,
+    #[state]
+    previous_source: Option<f64>,
+    #[state]
+    pc1_win: SeriesBuffer<f64>,
+    #[state]
+    pc1_prev: Option<f64>,
+    #[state]
+    pc2_win: SeriesBuffer<f64>,
+    #[state]
+    pc2_prev: Option<f64>,
+    #[state]
+    abs1_win: SeriesBuffer<f64>,
+    #[state]
+    abs1_prev: Option<f64>,
+    #[state]
+    abs2_win: SeriesBuffer<f64>,
+    #[state]
+    abs2_prev: Option<f64>,
+}
+
+impl TaTsi {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let (short, long) = (
+            checked_length(self.short_length)?,
+            checked_length(self.long_length)?,
+        );
+        let Some(previous) = self.previous_source.replace(self.source) else {
+            return Ok(Value::Na);
+        };
+        let change = self.source - previous;
+        // Smooth the momentum and its magnitude by `long`, then by `short`.
+        let pc1 = ema_step(&mut self.pc1_win, &mut self.pc1_prev, change, long);
+        let abs1 = ema_step(&mut self.abs1_win, &mut self.abs1_prev, change.abs(), long);
+        let (Some(pc1), Some(abs1)) = (pc1, abs1) else {
+            return Ok(Value::Na);
+        };
+        let pc2 = ema_step(&mut self.pc2_win, &mut self.pc2_prev, pc1, short);
+        let abs2 = ema_step(&mut self.abs2_win, &mut self.abs2_prev, abs1, short);
+        let (Some(pc2), Some(abs2)) = (pc2, abs2) else {
+            return Ok(Value::Na);
+        };
+        Ok(Value::Number(if abs2 == 0.0 { 0.0 } else { pc2 / abs2 }))
     }
 }

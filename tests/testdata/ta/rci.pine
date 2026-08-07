@@ -1,0 +1,14 @@
+//@version=5
+indicator("ta/rci")
+// Bars: 8
+// Skip PineTS: PineTS does not implement ta.rci.
+log.info(str.tostring(math.round(ta.rci(close, 5), 5)))
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 100
+// 100
+// 100
+// 100

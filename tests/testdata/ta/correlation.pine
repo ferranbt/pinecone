@@ -1,0 +1,13 @@
+//@version=5
+indicator("ta/correlation")
+// Bars: 8
+log.info(str.tostring(math.round(ta.correlation(close, open, 5), 5)))
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 1
+// 1
+// 1
+// 1

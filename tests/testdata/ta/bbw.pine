@@ -1,0 +1,16 @@
+//@version=5
+indicator("ta/bbw")
+// Bars: 8
+// Skip PineTS: PineTS multiplies bbw by 100; the reference defines it as plain
+// (upper - lower) / basis, matching ta.kcw, which is what we return.
+log.info(str.tostring(math.round(ta.bbw(close, 5, 2.0), 6)))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 0.019111
+// 0.019047
+// 0.018983
+// 0.018919

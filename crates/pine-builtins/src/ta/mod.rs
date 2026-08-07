@@ -48,6 +48,13 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     ta_ns.insert("tr".to_string(), TaTr::builtin_value::<O>());
     ta_ns.insert("atr".to_string(), TaAtr::builtin_value::<O>());
     ta_ns.insert("bb".to_string(), TaBb::builtin_value::<O>());
+    ta_ns.insert("bbw".to_string(), TaBbw::builtin_value::<O>());
+    ta_ns.insert("kc".to_string(), TaKc::builtin_value::<O>());
+    ta_ns.insert("kcw".to_string(), TaKcw::builtin_value::<O>());
+    ta_ns.insert("macd".to_string(), TaMacd::builtin_value::<O>());
+    ta_ns.insert("dmi".to_string(), TaDmi::builtin_value::<O>());
+    ta_ns.insert("supertrend".to_string(), TaSupertrend::builtin_value::<O>());
+    ta_ns.insert("alma".to_string(), TaAlma::builtin_value::<O>());
     ta_ns.insert("sar".to_string(), TaSar::builtin_value::<O>());
 
     // Comparison & Signals
@@ -64,6 +71,10 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     ta_ns.insert("cross".to_string(), TaCross::builtin_value::<O>());
     ta_ns.insert("crossover".to_string(), TaCrossover::builtin_value::<O>());
     ta_ns.insert("crossunder".to_string(), TaCrossunder::builtin_value::<O>());
+    ta_ns.insert("barssince".to_string(), TaBarssince::builtin_value::<O>());
+    ta_ns.insert("valuewhen".to_string(), TaValuewhen::builtin_value::<O>());
+    ta_ns.insert("pivothigh".to_string(), TaPivothigh::builtin_value::<O>());
+    ta_ns.insert("pivotlow".to_string(), TaPivotlow::builtin_value::<O>());
 
     // Oscillators & Indicators
     ta_ns.insert("rsi".to_string(), TaRsi::builtin_value::<O>());
@@ -74,6 +85,26 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     ta_ns.insert("linreg".to_string(), TaLinreg::builtin_value::<O>());
     ta_ns.insert("stoch".to_string(), TaStoch::builtin_value::<O>());
     ta_ns.insert("mfi".to_string(), TaMfi::builtin_value::<O>());
+    ta_ns.insert("wpr".to_string(), TaWpr::builtin_value::<O>());
+    ta_ns.insert("tsi".to_string(), TaTsi::builtin_value::<O>());
+    ta_ns.insert("cog".to_string(), TaCog::builtin_value::<O>());
+    ta_ns.insert("rci".to_string(), TaRci::builtin_value::<O>());
+    ta_ns.insert("max".to_string(), TaMax::builtin_value::<O>());
+    ta_ns.insert("min".to_string(), TaMin::builtin_value::<O>());
+    ta_ns.insert("range".to_string(), TaRange::builtin_value::<O>());
+    ta_ns.insert("mode".to_string(), TaMode::builtin_value::<O>());
+    ta_ns.insert(
+        "correlation".to_string(),
+        TaCorrelation::builtin_value::<O>(),
+    );
+    ta_ns.insert(
+        "percentrank".to_string(),
+        TaPercentrank::builtin_value::<O>(),
+    );
+    ta_ns.insert(
+        "percentile_linear_interpolation".to_string(),
+        TaPercentileLinearInterpolation::builtin_value::<O>(),
+    );
 
     if matches!(version, PineVersion::V5 | PineVersion::V6) {
         let mut obj: HashMap<String, Value<O>> = HashMap::new();

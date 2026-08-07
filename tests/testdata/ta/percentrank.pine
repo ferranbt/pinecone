@@ -1,0 +1,14 @@
+//@version=5
+indicator("ta/percentrank")
+// Bars: 8
+src = bar_index % 4
+log.info(str.tostring(ta.percentrank(src, 4)))
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 25
+// 50
+// 75
+// 100

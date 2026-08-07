@@ -1,0 +1,13 @@
+//@version=5
+indicator("ta/barssince")
+// Bars: 8
+log.info(str.tostring(ta.barssince(bar_index % 3 == 0)))
+// Expected output:
+// 0
+// 1
+// 2
+// 0
+// 1
+// 2
+// 0
+// 1

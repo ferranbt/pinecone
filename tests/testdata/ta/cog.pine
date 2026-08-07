@@ -1,0 +1,13 @@
+//@version=5
+indicator("ta/cog")
+// Bars: 8
+log.info(str.tostring(math.round(ta.cog(close, 5), 5)))
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// -2.99324
+// -2.99327
+// -2.99329
+// -2.99331

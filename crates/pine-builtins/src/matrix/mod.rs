@@ -464,8 +464,9 @@ fn is_triangular(g: &[Vec<f64>]) -> bool {
 }
 fn is_stochastic(g: &[Vec<f64>]) -> bool {
     is_square(g)
-        && g.iter()
-            .all(|row| row.iter().all(|&x| x >= 0.0) && (row.iter().sum::<f64>() - 1.0).abs() < 1e-9)
+        && g.iter().all(|row| {
+            row.iter().all(|&x| x >= 0.0) && (row.iter().sum::<f64>() - 1.0).abs() < 1e-9
+        })
 }
 
 macro_rules! matrix_reduce {
@@ -555,7 +556,10 @@ impl<O: PineOutput> MatrixRow<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let m = as_matrix(&self.id)?.borrow();
         let row = self.row as usize;
-        let out = m.get(row).cloned().ok_or(RuntimeError::IndexOutOfBounds(row))?;
+        let out = m
+            .get(row)
+            .cloned()
+            .ok_or(RuntimeError::IndexOutOfBounds(row))?;
         Ok(Value::Array(Rc::new(RefCell::new(out))))
     }
 }
@@ -574,7 +578,11 @@ impl<O: PineOutput> MatrixCol<O> {
         let col = self.column as usize;
         let out: Vec<Value<O>> = m
             .iter()
-            .map(|r| r.get(col).cloned().ok_or(RuntimeError::IndexOutOfBounds(col)))
+            .map(|r| {
+                r.get(col)
+                    .cloned()
+                    .ok_or(RuntimeError::IndexOutOfBounds(col))
+            })
             .collect::<Result<_, _>>()?;
         Ok(Value::Array(Rc::new(RefCell::new(out))))
     }
@@ -749,7 +757,9 @@ fn determinant(mut a: Vec<Vec<f64>>) -> f64 {
     let n = a.len();
     let mut det = 1.0;
     for i in 0..n {
-        let pivot = (i..n).max_by(|&x, &y| a[x][i].abs().total_cmp(&a[y][i].abs())).unwrap();
+        let pivot = (i..n)
+            .max_by(|&x, &y| a[x][i].abs().total_cmp(&a[y][i].abs()))
+            .unwrap();
         if a[pivot][i] == 0.0 {
             return 0.0;
         }
@@ -789,7 +799,9 @@ fn to_dmatrix(g: &[Vec<f64>]) -> DMatrix<f64> {
 
 /// Convert an `nalgebra` dynamic matrix back into an `f64` grid.
 fn from_dmatrix(m: &DMatrix<f64>) -> Vec<Vec<f64>> {
-    (0..m.nrows()).map(|i| (0..m.ncols()).map(|j| m[(i, j)]).collect()).collect()
+    (0..m.nrows())
+        .map(|i| (0..m.ncols()).map(|j| m[(i, j)]).collect())
+        .collect()
 }
 
 /// matrix.sum(id1, id2) - Matrix addition; `id2` may be a matrix or a scalar.
@@ -842,7 +854,11 @@ impl<O: PineOutput> MatrixMult<O> {
                     ));
                 }
                 let out = (0..m)
-                    .map(|i| (0..q).map(|j| (0..n).map(|k| a[i][k] * b[k][j]).sum()).collect())
+                    .map(|i| {
+                        (0..q)
+                            .map(|j| (0..n).map(|k| a[i][k] * b[k][j]).sum())
+                            .collect()
+                    })
                     .collect();
                 Ok(from_grid(out, "float"))
             }
@@ -861,9 +877,14 @@ impl<O: PineOutput> MatrixMult<O> {
             }
             scalar => {
                 let s = numeric(scalar).ok_or_else(|| {
-                    RuntimeError::TypeError("matrix.mult: expected a matrix, number or array".into())
+                    RuntimeError::TypeError(
+                        "matrix.mult: expected a matrix, number or array".into(),
+                    )
                 })?;
-                let out = a.iter().map(|row| row.iter().map(|x| x * s).collect()).collect();
+                let out = a
+                    .iter()
+                    .map(|row| row.iter().map(|x| x * s).collect())
+                    .collect();
                 Ok(from_grid(out, "float"))
             }
         }
@@ -911,11 +932,14 @@ impl<O: PineOutput> MatrixPow<O> {
         let a = grid(&as_matrix(&self.id)?.borrow());
         let n = a.len();
         if !is_square(&a) {
-            return Err(RuntimeError::TypeError("matrix.pow: matrix is not square".into()));
+            return Err(RuntimeError::TypeError(
+                "matrix.pow: matrix is not square".into(),
+            ));
         }
         // Start from the identity and multiply `power` times.
-        let mut result: Vec<Vec<f64>> =
-            (0..n).map(|i| (0..n).map(|j| if i == j { 1.0 } else { 0.0 }).collect()).collect();
+        let mut result: Vec<Vec<f64>> = (0..n)
+            .map(|i| (0..n).map(|j| if i == j { 1.0 } else { 0.0 }).collect())
+            .collect();
         for _ in 0..self.power.max(0.0) as usize {
             result = mat_mul(&result, &a);
         }
@@ -927,7 +951,11 @@ impl<O: PineOutput> MatrixPow<O> {
 fn mat_mul(a: &[Vec<f64>], b: &[Vec<f64>]) -> Vec<Vec<f64>> {
     let n = a.len();
     (0..n)
-        .map(|i| (0..n).map(|j| (0..n).map(|k| a[i][k] * b[k][j]).sum()).collect())
+        .map(|i| {
+            (0..n)
+                .map(|j| (0..n).map(|k| a[i][k] * b[k][j]).sum())
+                .collect()
+        })
         .collect()
 }
 
@@ -959,7 +987,9 @@ impl<O: PineOutput> MatrixInv<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let a = grid(&as_matrix(&self.id)?.borrow());
         if !is_square(&a) {
-            return Err(RuntimeError::TypeError("matrix.inv: matrix is not square".into()));
+            return Err(RuntimeError::TypeError(
+                "matrix.inv: matrix is not square".into(),
+            ));
         }
         let n = a.len();
         match inverse(&a) {
@@ -978,7 +1008,9 @@ struct MatrixRank<O: PineOutput> {
 
 impl<O: PineOutput> MatrixRank<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        Ok(Value::Int(matrix_rank(&grid(&as_matrix(&self.id)?.borrow())) as i64))
+        Ok(Value::Int(
+            matrix_rank(&grid(&as_matrix(&self.id)?.borrow())) as i64,
+        ))
     }
 }
 
@@ -993,7 +1025,13 @@ impl<O: PineOutput> MatrixEigenvalues<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let a = grid(&as_matrix(&self.id)?.borrow());
         let out = if is_square(&a) && !a.is_empty() {
-            to_dmatrix(&a).symmetric_eigen().eigenvalues.iter().copied().map(Value::Number).collect()
+            to_dmatrix(&a)
+                .symmetric_eigen()
+                .eigenvalues
+                .iter()
+                .copied()
+                .map(Value::Number)
+                .collect()
         } else {
             vec![]
         };
@@ -1188,9 +1226,15 @@ pub fn register<O: PineOutput>() -> Value<O> {
         "remove_col".to_string(),
         MatrixRemoveCol::<O>::builtin_value(),
     );
-    members.insert("is_square".to_string(), MatrixIsSquare::<O>::builtin_value());
+    members.insert(
+        "is_square".to_string(),
+        MatrixIsSquare::<O>::builtin_value(),
+    );
     members.insert("is_zero".to_string(), MatrixIsZero::<O>::builtin_value());
-    members.insert("is_binary".to_string(), MatrixIsBinary::<O>::builtin_value());
+    members.insert(
+        "is_binary".to_string(),
+        MatrixIsBinary::<O>::builtin_value(),
+    );
     members.insert(
         "is_diagonal".to_string(),
         MatrixIsDiagonal::<O>::builtin_value(),
@@ -1226,8 +1270,14 @@ pub fn register<O: PineOutput>() -> Value<O> {
     members.insert("det".to_string(), MatrixDet::<O>::builtin_value());
     members.insert("inv".to_string(), MatrixInv::<O>::builtin_value());
     members.insert("rank".to_string(), MatrixRank::<O>::builtin_value());
-    members.insert("eigenvalues".to_string(), MatrixEigenvalues::<O>::builtin_value());
-    members.insert("eigenvectors".to_string(), MatrixEigenvectors::<O>::builtin_value());
+    members.insert(
+        "eigenvalues".to_string(),
+        MatrixEigenvalues::<O>::builtin_value(),
+    );
+    members.insert(
+        "eigenvectors".to_string(),
+        MatrixEigenvectors::<O>::builtin_value(),
+    );
     members.insert("pinv".to_string(), MatrixPinv::<O>::builtin_value());
     members.insert("concat".to_string(), MatrixConcat::<O>::builtin_value());
     members.insert("reshape".to_string(), MatrixReshape::<O>::builtin_value());

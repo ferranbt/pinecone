@@ -347,7 +347,12 @@ impl<O: PineOutput> StrFormat<O> {
                 }
                 '{' => {
                     let inner: String = chars.by_ref().take_while(|&c| c != '}').collect();
-                    let index = inner.split(',').next().unwrap_or("").trim().parse::<usize>();
+                    let index = inner
+                        .split(',')
+                        .next()
+                        .unwrap_or("")
+                        .trim()
+                        .parse::<usize>();
                     match index.ok().and_then(|i| args.get(i)) {
                         Some(value) => out.push_str(&format_value(value)),
                         None => out.push_str(&format!("{{{inner}}}")),
