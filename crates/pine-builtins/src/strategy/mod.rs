@@ -745,10 +745,22 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
     ] {
         fields.insert(name.to_string(), Value::Na);
     }
-    fields.insert("account_currency".to_string(), Value::String("USD".to_string()));
-    fields.insert("convert_to_account".to_string(), StrategyConvertToAccount::builtin_value::<O>());
-    fields.insert("convert_to_symbol".to_string(), StrategyConvertToSymbol::builtin_value::<O>());
-    fields.insert("default_entry_qty".to_string(), StrategyDefaultEntryQty::builtin_value::<O>());
+    fields.insert(
+        "account_currency".to_string(),
+        Value::String("USD".to_string()),
+    );
+    fields.insert(
+        "convert_to_account".to_string(),
+        StrategyConvertToAccount::builtin_value::<O>(),
+    );
+    fields.insert(
+        "convert_to_symbol".to_string(),
+        StrategyConvertToSymbol::builtin_value::<O>(),
+    );
+    fields.insert(
+        "default_entry_qty".to_string(),
+        StrategyDefaultEntryQty::builtin_value::<O>(),
+    );
     for name in [
         "opentrades",
         "closedtrades",

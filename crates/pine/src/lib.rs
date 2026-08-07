@@ -426,7 +426,11 @@ impl<O: PineOutput> Script<O> {
         for trade in broker.closed_trades() {
             let profit = trade.profit(close);
             let basis = trade.entry_price * trade.size.abs();
-            let ret = if basis != 0.0 { profit / basis * 100.0 } else { 0.0 };
+            let ret = if basis != 0.0 {
+                profit / basis * 100.0
+            } else {
+                0.0
+            };
             trade_pcts.push(ret);
             if profit > 0.0 {
                 win_pcts.push(ret);
@@ -498,7 +502,13 @@ impl<O: PineOutput> Script<O> {
 
         // Derived statistics: percentages of the starting capital, and per-trade
         // averages. `na` when there are no trades to average, matching Pine.
-        let pct = |x: f64| if initial != 0.0 { x / initial * 100.0 } else { 0.0 };
+        let pct = |x: f64| {
+            if initial != 0.0 {
+                x / initial * 100.0
+            } else {
+                0.0
+            }
+        };
         let per_trade = |total: f64, count: i64| {
             if count > 0 {
                 Value::Number(total / count as f64)
@@ -518,11 +528,23 @@ impl<O: PineOutput> Script<O> {
             ("openprofit_percent", Value::Number(pct(open_profit))),
             ("grossprofit_percent", Value::Number(pct(gross_profit))),
             ("grossloss_percent", Value::Number(pct(gross_loss))),
-            ("max_drawdown_percent", Value::Number(self.max_drawdown_percent)),
+            (
+                "max_drawdown_percent",
+                Value::Number(self.max_drawdown_percent),
+            ),
             ("max_runup_percent", Value::Number(self.max_runup_percent)),
-            ("max_contracts_held_all", Value::Number(self.max_contracts_all)),
-            ("max_contracts_held_long", Value::Number(self.max_contracts_long)),
-            ("max_contracts_held_short", Value::Number(self.max_contracts_short)),
+            (
+                "max_contracts_held_all",
+                Value::Number(self.max_contracts_all),
+            ),
+            (
+                "max_contracts_held_long",
+                Value::Number(self.max_contracts_long),
+            ),
+            (
+                "max_contracts_held_short",
+                Value::Number(self.max_contracts_short),
+            ),
             ("avg_trade", per_trade(net_profit, closed_trades)),
             ("avg_winning_trade", per_trade(gross_profit, wins)),
             // Losing trades are reported as a negative average, so negate the
