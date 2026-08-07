@@ -23,6 +23,8 @@ mod chart;
 mod color;
 mod constants;
 mod currency;
+mod dividends;
+mod earnings;
 mod fill;
 mod globals;
 mod indicator;
@@ -36,6 +38,7 @@ mod math;
 mod matrix;
 mod plot;
 mod request;
+mod session;
 mod str;
 mod strategy;
 mod syminfo;
@@ -210,6 +213,9 @@ pub fn register_namespace_objects<
     namespaces.insert("chart".to_string(), chart::register());
     namespaces.insert("color".to_string(), color::register());
     namespaces.insert("map".to_string(), map::register());
+    namespaces.insert("session".to_string(), session::register());
+    namespaces.insert("earnings".to_string(), earnings::register());
+    namespaces.insert("dividends".to_string(), dividends::register());
     namespaces.insert("currency".to_string(), currency::register());
     for (name, value) in input::register(version) {
         namespaces.insert(name, value);

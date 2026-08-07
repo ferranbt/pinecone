@@ -1,0 +1,16 @@
+//@version=6
+indicator("basics/session_fundamentals")
+// Skip PineTS: PineTS does not model these namespaces (session state / fundamentals feed).
+log.info(session.regular + "," + session.extended)
+log.info(str.tostring(session.ismarket) + "," + str.tostring(session.ispremarket))
+log.info(earnings.actual + "," + earnings.standardized)
+log.info(str.tostring(earnings.future_eps))
+log.info(dividends.gross + "," + dividends.net)
+log.info(str.tostring(dividends.future_amount))
+// Expected output:
+// regular,extended
+// true,false
+// actual,standardized
+// NaN
+// gross,net
+// NaN
