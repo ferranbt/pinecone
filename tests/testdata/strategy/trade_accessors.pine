@@ -1,0 +1,38 @@
+//@version=5
+strategy("strategy/trade_accessors", default_qty_type = strategy.fixed, default_qty_value = 2)
+// Skip PineTS: strategy accounting runs against the host broker, which PineTS does not model.
+// Bars: 5
+// `strategy.closedtrades` / `strategy.opentrades` are both a count (bare) and a
+// namespace of per-trade accessors.
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+if step == 2
+    log.info("open=" + str.tostring(strategy.opentrades) + "|" + str.tostring(strategy.opentrades.entry_price(0)) + "|" + str.tostring(strategy.opentrades.size(0)))
+    log.info("o:" + str.tostring(strategy.opentrades.entry_bar_index(0)) + "|" + strategy.opentrades.entry_id(0) + "|" + str.tostring(strategy.opentrades.commission(0)))
+    log.info("o:" + str.tostring(strategy.opentrades.profit(0)) + "|" + str.tostring(math.round(strategy.opentrades.profit_percent(0), 4)) + "|" + str.tostring(strategy.opentrades.capital_held(0)))
+    log.info("o-na:" + str.tostring(strategy.opentrades.entry_time(0)))
+if step == 3
+    strategy.close("L")
+if step == 5
+    log.info("closed=" + str.tostring(strategy.closedtrades) + "|open=" + str.tostring(strategy.opentrades))
+    log.info(str.tostring(strategy.closedtrades.entry_price(0)) + "|" + str.tostring(strategy.closedtrades.exit_price(0)))
+    log.info(str.tostring(strategy.closedtrades.size(0)) + "|" + str.tostring(strategy.closedtrades.profit(0)))
+    log.info(strategy.closedtrades.entry_id(0) + "|" + str.tostring(strategy.closedtrades.commission(0)))
+    log.info(str.tostring(strategy.closedtrades.entry_bar_index(0)) + "|" + str.tostring(strategy.closedtrades.exit_bar_index(0)))
+    log.info("c:" + str.tostring(math.round(strategy.closedtrades.profit_percent(0), 4)) + "|" + str.tostring(strategy.closedtrades.max_drawdown(0)))
+    log.info(str.tostring(strategy.closedtrades.entry_price(5)) + "|" + str.tostring(strategy.closedtrades.first_index))
+
+// Expected output:
+// open=1|296|2
+// o:196|L|0
+// o:4|0.6757|592
+// o-na:NaN
+// closed=1|open=0
+// 296|298
+// 2|4
+// L|0
+// 196|198
+// c:0.6757|NaN
+// NaN|0
