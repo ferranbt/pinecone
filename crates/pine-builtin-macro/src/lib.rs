@@ -417,10 +417,14 @@ fn generate_signature(
         });
 
     quote! {
-        pub fn signature() -> ::pine_interpreter::BuiltinSignature {
-            ::pine_interpreter::BuiltinSignature {
+        /// The builtin's parameters, built once and shared for the process's
+        /// life — signatures are invariant, so this is never reallocated.
+        pub fn signature() -> &'static ::pine_interpreter::BuiltinSignature {
+            static SIG: ::std::sync::OnceLock<::pine_interpreter::BuiltinSignature> =
+                ::std::sync::OnceLock::new();
+            SIG.get_or_init(|| ::pine_interpreter::BuiltinSignature {
                 params: vec![#(#params),*],
-            }
+            })
         }
     }
 }

@@ -302,7 +302,9 @@ pub type BuiltinFn<O> =
 #[derive(Clone)]
 pub struct Builtin<O: PineOutput> {
     pub call: BuiltinFn<O>,
-    pub signature: BuiltinSignature,
+    // Shared for the life of the process: signatures are invariant, so they are
+    // built once (per builtin) rather than reallocated on every compile/call.
+    pub signature: &'static BuiltinSignature,
 }
 
 impl<O: PineOutput> Builtin<O> {
@@ -311,7 +313,7 @@ impl<O: PineOutput> Builtin<O> {
     pub fn untyped(call: BuiltinFn<O>) -> Self {
         Self {
             call,
-            signature: BuiltinSignature::default(),
+            signature: BuiltinSignature::empty(),
         }
     }
 }
@@ -1593,10 +1595,10 @@ impl<O: PineOutput> Interpreter<O> {
                 // capture their arguments unevaluated.
                 let callee_value = self.eval_expr(callee)?;
                 let signature = match &callee_value {
-                    Value::BuiltinFunction(builtin) => Some(builtin.signature.clone()),
+                    Value::BuiltinFunction(builtin) => Some(builtin.signature),
                     _ => None,
                 };
-                let evaluated_args = self.evaluate_arguments(args, signature.as_ref())?;
+                let evaluated_args = self.evaluate_arguments(args, signature)?;
 
                 // Call the function based on its type
                 match callee_value {

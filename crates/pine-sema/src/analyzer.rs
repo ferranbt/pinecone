@@ -295,7 +295,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
 
     /// The signature of the builtin the callee names (`plot` or `ta.sma`), or
     /// `None` — a user-shadowed name or a builtin with no declared parameters.
-    fn builtin_signature(&self, callee: &Expr) -> Option<BuiltinSignature> {
+    fn builtin_signature(&self, callee: &Expr) -> Option<&'static BuiltinSignature> {
         let value = match callee {
             Expr::Variable { name, .. } => {
                 if self.resolve(name).is_some() {
@@ -1070,7 +1070,7 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
                 }
                 if let Some(signature) = self.builtin_signature(callee) {
                     let name = callee_name(callee);
-                    self.check_builtin_args(&name, &signature, args, *loc);
+                    self.check_builtin_args(&name, signature, args, *loc);
                 }
                 for arg in args {
                     match arg {
