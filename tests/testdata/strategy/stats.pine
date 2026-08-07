@@ -1,0 +1,25 @@
+//@version=5
+strategy("strategy/stats", default_qty_type = strategy.fixed, default_qty_value = 2)
+// Skip PineTS: strategy accounting runs against the host broker, which PineTS does not model.
+// Bars: 5
+var int step = 0
+step := step + 1
+if step == 1
+    strategy.entry("L", strategy.long)
+if step == 2
+    log.info("open=" + str.tostring(strategy.position_entry_name))
+if step == 3
+    strategy.close("L")
+if step == 5
+    log.info(str.tostring(strategy.closedtrades) + "|" + str.tostring(math.round(strategy.netprofit, 2)) + "|" + str.tostring(math.round(strategy.netprofit_percent, 4)))
+    log.info(str.tostring(math.round(strategy.avg_trade, 2)) + "|" + str.tostring(math.round(strategy.avg_winning_trade, 2)))
+    log.info(str.tostring(strategy.max_contracts_held_all) + "|" + str.tostring(strategy.max_contracts_held_long) + "|" + str.tostring(strategy.max_contracts_held_short))
+    log.info(strategy.account_currency + "|" + str.tostring(strategy.convert_to_account(5.5)) + "|" + str.tostring(strategy.default_entry_qty(100)))
+    log.info("flat=" + str.tostring(strategy.position_entry_name) + "|" + str.tostring(strategy.margin_liquidation_price))
+// Expected output:
+// open=L
+// 1|4|0.0004
+// 4|4
+// 2|2|0
+// USD|5.5|NaN
+// flat=NaN|NaN
