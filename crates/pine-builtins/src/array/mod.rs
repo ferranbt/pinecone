@@ -343,6 +343,351 @@ fn join_string<O: PineOutput>(v: &Value<O>) -> String {
     }
 }
 
+/// A finite number from a value, or `None` for `na` / non-numeric — so the
+/// reductions ignore `na`, as Pine does.
+fn numeric<O: PineOutput>(v: &Value<O>) -> Option<f64> {
+    match v {
+        Value::Int(n) => Some(*n as f64),
+        Value::Number(n) if n.is_finite() => Some(*n),
+        Value::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
+        _ => None,
+    }
+}
+
+/// The finite numbers of an array, in order.
+fn numbers<O: PineOutput>(array: &Value<O>) -> Result<Vec<f64>, RuntimeError> {
+    Ok(array.as_array()?.borrow().iter().filter_map(numeric).collect())
+}
+
+/// array.first(id) - The first element (errors when empty).
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.first")]
+struct ArrayFirst<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayFirst<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        self.array
+            .as_array()?
+            .borrow()
+            .first()
+            .cloned()
+            .ok_or(RuntimeError::IndexOutOfBounds(0))
+    }
+}
+
+/// array.last(id) - The last element (errors when empty).
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.last")]
+struct ArrayLast<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayLast<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        self.array
+            .as_array()?
+            .borrow()
+            .last()
+            .cloned()
+            .ok_or(RuntimeError::IndexOutOfBounds(0))
+    }
+}
+
+/// array.pop(id) - Remove and return the last element.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.pop")]
+struct ArrayPop<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayPop<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        self.array
+            .as_array()?
+            .borrow_mut()
+            .pop()
+            .ok_or(RuntimeError::IndexOutOfBounds(0))
+    }
+}
+
+/// array.shift(id) - Remove and return the first element.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.shift")]
+struct ArrayShift<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayShift<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let mut arr = self.array.as_array()?.borrow_mut();
+        if arr.is_empty() {
+            return Err(RuntimeError::IndexOutOfBounds(0));
+        }
+        Ok(arr.remove(0))
+    }
+}
+
+/// array.reverse(id) - Reverse the array in place.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.reverse")]
+struct ArrayReverse<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayReverse<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        self.array.as_array()?.borrow_mut().reverse();
+        Ok(Value::Na)
+    }
+}
+
+/// array.insert(id, index, value) - Insert `value` before `index`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.insert")]
+struct ArrayInsert<O: PineOutput> {
+    array: Value<O>,
+    index: f64,
+    value: Value<O>,
+}
+
+impl<O: PineOutput> ArrayInsert<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let mut arr = self.array.as_array()?.borrow_mut();
+        let index = self.index as usize;
+        if index > arr.len() {
+            return Err(RuntimeError::IndexOutOfBounds(index));
+        }
+        arr.insert(index, self.value.clone());
+        Ok(Value::Na)
+    }
+}
+
+/// array.remove(id, index) - Remove and return the element at `index`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.remove")]
+struct ArrayRemove<O: PineOutput> {
+    array: Value<O>,
+    index: f64,
+}
+
+impl<O: PineOutput> ArrayRemove<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let mut arr = self.array.as_array()?.borrow_mut();
+        let index = self.index as usize;
+        if index >= arr.len() {
+            return Err(RuntimeError::IndexOutOfBounds(index));
+        }
+        Ok(arr.remove(index))
+    }
+}
+
+/// array.fill(id, value, index_from, index_to) - Set a range to `value`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.fill")]
+struct ArrayFill<O: PineOutput> {
+    array: Value<O>,
+    value: Value<O>,
+    #[arg(default = 0.0)]
+    index_from: f64,
+    #[arg(default = None)]
+    index_to: Option<f64>,
+}
+
+impl<O: PineOutput> ArrayFill<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let mut arr = self.array.as_array()?.borrow_mut();
+        let from = self.index_from as usize;
+        let to = self.index_to.map_or(arr.len(), |n| n as usize).min(arr.len());
+        for slot in arr.iter_mut().take(to).skip(from) {
+            *slot = self.value.clone();
+        }
+        Ok(Value::Na)
+    }
+}
+
+/// array.sum(id) - Sum of the finite elements.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.sum")]
+struct ArraySum<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArraySum<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        Ok(Value::Number(numbers(&self.array)?.iter().sum()))
+    }
+}
+
+/// array.avg(id) - Mean of the finite elements, na when there are none.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.avg")]
+struct ArrayAvg<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayAvg<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let ns = numbers(&self.array)?;
+        Ok(mean(&ns).map_or(Value::Na, Value::Number))
+    }
+}
+
+/// array.min(id) - Smallest finite element, na when there are none.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.min")]
+struct ArrayMin<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayMin<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let ns = numbers(&self.array)?;
+        Ok(ns
+            .iter()
+            .copied()
+            .fold(None, |acc: Option<f64>, x| Some(acc.map_or(x, |a| a.min(x))))
+            .map_or(Value::Na, Value::Number))
+    }
+}
+
+/// array.max(id) - Largest finite element, na when there are none.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.max")]
+struct ArrayMax<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayMax<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let ns = numbers(&self.array)?;
+        Ok(ns
+            .iter()
+            .copied()
+            .fold(None, |acc: Option<f64>, x| Some(acc.map_or(x, |a| a.max(x))))
+            .map_or(Value::Na, Value::Number))
+    }
+}
+
+/// array.range(id) - Largest minus smallest, na when empty.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.range")]
+struct ArrayRange<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayRange<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let ns = numbers(&self.array)?;
+        if ns.is_empty() {
+            return Ok(Value::Na);
+        }
+        let lo = ns.iter().copied().fold(f64::INFINITY, f64::min);
+        let hi = ns.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        Ok(Value::Number(hi - lo))
+    }
+}
+
+/// array.median(id) - Median of the finite elements, na when empty.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.median")]
+struct ArrayMedian<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayMedian<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let mut ns = numbers(&self.array)?;
+        if ns.is_empty() {
+            return Ok(Value::Na);
+        }
+        ns.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let mid = ns.len() / 2;
+        let median = if ns.len() % 2 == 0 {
+            (ns[mid - 1] + ns[mid]) / 2.0
+        } else {
+            ns[mid]
+        };
+        Ok(Value::Number(median))
+    }
+}
+
+/// array.variance(id, biased) - Variance of the finite elements. `biased` (the
+/// default) divides by n; otherwise by n-1.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.variance")]
+struct ArrayVariance<O: PineOutput> {
+    array: Value<O>,
+    #[arg(default = true)]
+    biased: bool,
+}
+
+impl<O: PineOutput> ArrayVariance<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        Ok(variance(&numbers(&self.array)?, self.biased).map_or(Value::Na, Value::Number))
+    }
+}
+
+/// array.stdev(id, biased) - Standard deviation of the finite elements.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.stdev")]
+struct ArrayStdev<O: PineOutput> {
+    array: Value<O>,
+    #[arg(default = true)]
+    biased: bool,
+}
+
+impl<O: PineOutput> ArrayStdev<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        Ok(variance(&numbers(&self.array)?, self.biased)
+            .map_or(Value::Na, |v| Value::Number(v.sqrt())))
+    }
+}
+
+/// array.mode(id) - Most frequent element (the smallest on a tie), na when empty.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.mode")]
+struct ArrayMode<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayMode<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let mut ns = numbers(&self.array)?;
+        if ns.is_empty() {
+            return Ok(Value::Na);
+        }
+        ns.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let (mut best, mut best_count) = (ns[0], 0usize);
+        let mut i = 0;
+        while i < ns.len() {
+            let j = ns[i..].partition_point(|&x| x == ns[i]) + i;
+            if j - i > best_count {
+                best_count = j - i;
+                best = ns[i];
+            }
+            i = j;
+        }
+        Ok(Value::Number(best))
+    }
+}
+
+/// Mean of `ns`, or `None` when empty.
+fn mean(ns: &[f64]) -> Option<f64> {
+    (!ns.is_empty()).then(|| ns.iter().sum::<f64>() / ns.len() as f64)
+}
+
+/// Variance of `ns` (population when `biased`), or `None` when too few elements.
+fn variance(ns: &[f64], biased: bool) -> Option<f64> {
+    let mean = mean(ns)?;
+    let denominator = if biased { ns.len() } else { ns.len().checked_sub(1)? };
+    if denominator == 0 {
+        return None;
+    }
+    Some(ns.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / denominator as f64)
+}
+
 /// Register all array namespace functions and return the namespace object
 pub fn register<O: PineOutput>() -> Value<O> {
     let mut array_ns: std::collections::HashMap<String, Value<O>> =
@@ -370,6 +715,23 @@ pub fn register<O: PineOutput>() -> Value<O> {
     array_ns.insert("join".to_string(), ArrayJoin::<O>::builtin_value());
     array_ns.insert("indexof".to_string(), ArrayIndexOf::<O>::builtin_value());
     array_ns.insert("includes".to_string(), ArrayIncludes::<O>::builtin_value());
+    array_ns.insert("first".to_string(), ArrayFirst::<O>::builtin_value());
+    array_ns.insert("last".to_string(), ArrayLast::<O>::builtin_value());
+    array_ns.insert("pop".to_string(), ArrayPop::<O>::builtin_value());
+    array_ns.insert("shift".to_string(), ArrayShift::<O>::builtin_value());
+    array_ns.insert("reverse".to_string(), ArrayReverse::<O>::builtin_value());
+    array_ns.insert("insert".to_string(), ArrayInsert::<O>::builtin_value());
+    array_ns.insert("remove".to_string(), ArrayRemove::<O>::builtin_value());
+    array_ns.insert("fill".to_string(), ArrayFill::<O>::builtin_value());
+    array_ns.insert("sum".to_string(), ArraySum::<O>::builtin_value());
+    array_ns.insert("avg".to_string(), ArrayAvg::<O>::builtin_value());
+    array_ns.insert("min".to_string(), ArrayMin::<O>::builtin_value());
+    array_ns.insert("max".to_string(), ArrayMax::<O>::builtin_value());
+    array_ns.insert("range".to_string(), ArrayRange::<O>::builtin_value());
+    array_ns.insert("median".to_string(), ArrayMedian::<O>::builtin_value());
+    array_ns.insert("variance".to_string(), ArrayVariance::<O>::builtin_value());
+    array_ns.insert("stdev".to_string(), ArrayStdev::<O>::builtin_value());
+    array_ns.insert("mode".to_string(), ArrayMode::<O>::builtin_value());
 
     Value::Object {
         type_name: "array".to_string(),

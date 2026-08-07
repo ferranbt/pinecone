@@ -144,6 +144,28 @@ pub enum QueryResult {
 ///   Some("Variables") -> List all items under Variables
 ///   Some("Variables.bar") -> List items starting with "bar" (bar_index, barstate.*)
 ///   Some("Variables.ask") -> Content of Variables.ask if exact match
+pub fn symbols(version: PineVersion) -> eyre::Result<Vec<String>> {
+    let spec = fs::read_to_string(get_spec_dir(version)?)?;
+    let mut names = Vec::new();
+    let mut in_symbols = false;
+    for line in spec.lines() {
+        if let Some(category) = line.strip_prefix("## ") {
+            in_symbols = matches!(category.trim(), "Variables" | "Constants" | "Functions");
+        } else if in_symbols {
+            if let Some(heading) = line.strip_prefix("### ") {
+                // Drop a function's `(...)` and a generic's `<...>` (escaped `\<`),
+                // leaving the bare name.
+                let name = heading.replace("\\_", "_");
+                let name = name.split(['(', '<']).next().unwrap_or(&name);
+                names.push(name.trim_end_matches('\\').trim().to_string());
+            }
+        }
+    }
+    names.sort();
+    names.dedup();
+    Ok(names)
+}
+
 pub fn query(version: PineVersion, path: Option<&str>) -> eyre::Result<QueryResult> {
     let spec_path = get_spec_dir(version)?;
     let spec_content = fs::read_to_string(spec_path)?;

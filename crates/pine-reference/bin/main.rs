@@ -21,6 +21,8 @@ enum Commands {
         /// Optional path (e.g., "Variables", "Variables.bar", "Variables.ask")
         path: Option<String>,
     },
+    /// List const/function/variable names for the version, sorted, one per line
+    Symbols,
 }
 
 fn main() -> eyre::Result<()> {
@@ -42,6 +44,11 @@ fn main() -> eyre::Result<()> {
                 println!("{}", content);
             }
         },
+        Commands::Symbols => {
+            for name in pine_reference::symbols(version)? {
+                println!("{}", name);
+            }
+        }
     }
 
     Ok(())
