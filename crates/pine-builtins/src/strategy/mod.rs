@@ -546,6 +546,50 @@ impl StrategyExit {
     }
 }
 
+/// strategy.convert_to_account(value) - Convert a value to the account currency.
+/// The account and symbol currency are the same here (no FX feed), so this is
+/// the identity.
+#[derive(BuiltinFunction)]
+#[builtin(name = "strategy.convert_to_account")]
+struct StrategyConvertToAccount {
+    value: f64,
+}
+
+impl StrategyConvertToAccount {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        Ok(Value::Number(self.value))
+    }
+}
+
+/// strategy.convert_to_symbol(value) - Convert a value to the symbol currency
+/// (identity without an FX feed).
+#[derive(BuiltinFunction)]
+#[builtin(name = "strategy.convert_to_symbol")]
+struct StrategyConvertToSymbol {
+    value: f64,
+}
+
+impl StrategyConvertToSymbol {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        Ok(Value::Number(self.value))
+    }
+}
+
+/// strategy.default_entry_qty(fill_price) - The quantity a default-sized entry
+/// would use. `na` here, since the default sizing model is not exposed.
+#[derive(BuiltinFunction)]
+#[builtin(name = "strategy.default_entry_qty")]
+struct StrategyDefaultEntryQty {
+    fill_price: f64,
+}
+
+impl StrategyDefaultEntryQty {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = self.fill_price;
+        Ok(Value::Na)
+    }
+}
+
 /// Build the `strategy` namespace object: the callable declaration, the order
 /// commands, the direction and sizing constants, and the read-only values the
 /// host refreshes each bar (seeded to a flat, zero-profit account).
@@ -674,11 +718,49 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
         "grossloss",
         "max_drawdown",
         "max_runup",
+        // Percentages and per-trade averages, derived from the broker each bar.
+        "netprofit_percent",
+        "openprofit_percent",
+        "grossprofit_percent",
+        "grossloss_percent",
+        "max_drawdown_percent",
+        "max_runup_percent",
+        "max_contracts_held_all",
+        "max_contracts_held_long",
+        "max_contracts_held_short",
     ] {
         fields.insert(name.to_string(), Value::Number(0.0));
     }
-    // na while flat, matching Pine.
+    // na while flat / before any trade, matching Pine.
     fields.insert("position_avg_price".to_string(), Value::Na);
+    for name in [
+        "avg_trade",
+        "avg_trade_percent",
+        "avg_winning_trade",
+        "avg_winning_trade_percent",
+        "avg_losing_trade",
+        "avg_losing_trade_percent",
+        "margin_liquidation_price",
+        "position_entry_name",
+    ] {
+        fields.insert(name.to_string(), Value::Na);
+    }
+    fields.insert(
+        "account_currency".to_string(),
+        Value::String("USD".to_string()),
+    );
+    fields.insert(
+        "convert_to_account".to_string(),
+        StrategyConvertToAccount::builtin_value::<O>(),
+    );
+    fields.insert(
+        "convert_to_symbol".to_string(),
+        StrategyConvertToSymbol::builtin_value::<O>(),
+    );
+    fields.insert(
+        "default_entry_qty".to_string(),
+        StrategyDefaultEntryQty::builtin_value::<O>(),
+    );
     for name in [
         "opentrades",
         "closedtrades",

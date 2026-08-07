@@ -304,6 +304,11 @@ impl<O: PineOutput> ScriptBuilder<O> {
             equity_trough: f64::INFINITY,
             max_drawdown: 0.0,
             max_runup: 0.0,
+            max_drawdown_percent: 0.0,
+            max_runup_percent: 0.0,
+            max_contracts_all: 0.0,
+            max_contracts_long: 0.0,
+            max_contracts_short: 0.0,
         })
     }
 }
@@ -331,6 +336,14 @@ pub struct Script<O: PineOutput> {
     equity_trough: f64,
     max_drawdown: f64,
     max_runup: f64,
+    /// Drawdown/run-up as a fraction of the peak/trough, tracked separately
+    /// because the percentage extreme need not coincide with the cash extreme.
+    max_drawdown_percent: f64,
+    max_runup_percent: f64,
+    /// Largest position (in contracts) ever held, overall and per side.
+    max_contracts_all: f64,
+    max_contracts_long: f64,
+    max_contracts_short: f64,
 }
 
 impl<O: PineOutput> Script<O> {
@@ -406,6 +419,30 @@ impl<O: PineOutput> Script<O> {
             }
         }
 
+        // Read the rest off the broker while its borrow is live: each closed
+        // trade's percent return (for the average-trade-percent figures) and the
+        // open position's entry name.
+        let (mut trade_pcts, mut win_pcts, mut loss_pcts) = (Vec::new(), Vec::new(), Vec::new());
+        for trade in broker.closed_trades() {
+            let profit = trade.profit(close);
+            let basis = trade.entry_price * trade.size.abs();
+            let ret = if basis != 0.0 {
+                profit / basis * 100.0
+            } else {
+                0.0
+            };
+            trade_pcts.push(ret);
+            if profit > 0.0 {
+                win_pcts.push(ret);
+            } else if profit < 0.0 {
+                loss_pcts.push(ret);
+            }
+        }
+        let position_entry_name = broker
+            .open_trades()
+            .last()
+            .map_or(Value::Na, |t| Value::String(t.entry_id.clone()));
+
         // Drawdown/run-up measure the intrabar extreme against a peak/trough
         // that tracks close equity — an intrabar swing does not move the mark.
         // Seed with the starting capital (the declaration bar's equity).
@@ -417,6 +454,21 @@ impl<O: PineOutput> Script<O> {
         self.equity_trough = self.equity_trough.min(equity);
         self.max_drawdown = self.max_drawdown.max(self.equity_peak - intrabar_low);
         self.max_runup = self.max_runup.max(intrabar_high - self.equity_trough);
+        if self.equity_peak > 0.0 {
+            let dd = (self.equity_peak - intrabar_low) / self.equity_peak * 100.0;
+            self.max_drawdown_percent = self.max_drawdown_percent.max(dd);
+        }
+        if self.equity_trough > 0.0 {
+            let ru = (intrabar_high - self.equity_trough) / self.equity_trough * 100.0;
+            self.max_runup_percent = self.max_runup_percent.max(ru);
+        }
+        // Largest position held, overall and per side.
+        self.max_contracts_all = self.max_contracts_all.max(position.size.abs());
+        if position.size > 0.0 {
+            self.max_contracts_long = self.max_contracts_long.max(position.size);
+        } else if position.size < 0.0 {
+            self.max_contracts_short = self.max_contracts_short.max(-position.size);
+        }
 
         // Pine's identity equity = initial + netprofit + openprofit; derive
         // netprofit from it so commission can't make the two drift.
@@ -445,6 +497,65 @@ impl<O: PineOutput> Script<O> {
             ("eventrades", Value::Int(evens)),
         ];
         for (name, value) in refreshed {
+            self.interpreter.set_object_field("strategy", name, value);
+        }
+
+        // Derived statistics: percentages of the starting capital, and per-trade
+        // averages. `na` when there are no trades to average, matching Pine.
+        let pct = |x: f64| {
+            if initial != 0.0 {
+                x / initial * 100.0
+            } else {
+                0.0
+            }
+        };
+        let per_trade = |total: f64, count: i64| {
+            if count > 0 {
+                Value::Number(total / count as f64)
+            } else {
+                Value::Na
+            }
+        };
+        let mean = |v: &[f64]| {
+            if v.is_empty() {
+                Value::Na
+            } else {
+                Value::Number(v.iter().sum::<f64>() / v.len() as f64)
+            }
+        };
+        let derived = [
+            ("netprofit_percent", Value::Number(pct(net_profit))),
+            ("openprofit_percent", Value::Number(pct(open_profit))),
+            ("grossprofit_percent", Value::Number(pct(gross_profit))),
+            ("grossloss_percent", Value::Number(pct(gross_loss))),
+            (
+                "max_drawdown_percent",
+                Value::Number(self.max_drawdown_percent),
+            ),
+            ("max_runup_percent", Value::Number(self.max_runup_percent)),
+            (
+                "max_contracts_held_all",
+                Value::Number(self.max_contracts_all),
+            ),
+            (
+                "max_contracts_held_long",
+                Value::Number(self.max_contracts_long),
+            ),
+            (
+                "max_contracts_held_short",
+                Value::Number(self.max_contracts_short),
+            ),
+            ("avg_trade", per_trade(net_profit, closed_trades)),
+            ("avg_winning_trade", per_trade(gross_profit, wins)),
+            // Losing trades are reported as a negative average, so negate the
+            // positive gross-loss magnitude.
+            ("avg_losing_trade", per_trade(-gross_loss, losses)),
+            ("avg_trade_percent", mean(&trade_pcts)),
+            ("avg_winning_trade_percent", mean(&win_pcts)),
+            ("avg_losing_trade_percent", mean(&loss_pcts)),
+            ("position_entry_name", position_entry_name),
+        ];
+        for (name, value) in derived {
             self.interpreter.set_object_field("strategy", name, value);
         }
     }
