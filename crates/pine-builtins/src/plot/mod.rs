@@ -4,8 +4,10 @@ use pine_core::{
     Plotbar as PlotbarStruct, Plotcandle as PlotcandleStruct, Plotchar as PlotcharStruct,
     Plotshape as PlotshapeStruct,
 };
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{BuiltinFn, Interpreter, RuntimeError, Value};
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 /// plot() - Plots a series of data on the chart
 #[derive(BuiltinFunction)]
@@ -350,7 +352,37 @@ impl<O: PineOutput + PlotOutput> Plotshape<O> {
 pub fn register_plot_functions<O: PineOutput + PlotOutput>() -> HashMap<String, Value<O>> {
     let mut functions: HashMap<String, Value<O>> = HashMap::new();
 
-    functions.insert("plot".to_string(), Plot::<O>::builtin_value());
+    // `plot` is both callable and a namespace of style/linestyle constants.
+    let mut plot_fields: HashMap<String, Value<O>> = HashMap::new();
+    for style in [
+        "line",
+        "linebr",
+        "stepline",
+        "stepline_diamond",
+        "steplinebr",
+        "histogram",
+        "cross",
+        "area",
+        "areabr",
+        "columns",
+        "circles",
+    ] {
+        plot_fields.insert(format!("style_{style}"), Value::String(style.to_string()));
+    }
+    for linestyle in ["solid", "dotted", "dashed"] {
+        plot_fields.insert(
+            format!("linestyle_{linestyle}"),
+            Value::String(linestyle.to_string()),
+        );
+    }
+    functions.insert(
+        "plot".to_string(),
+        Value::Object {
+            type_name: "plot".to_string(),
+            fields: Rc::new(RefCell::new(plot_fields)),
+            call: Some(Rc::new(Plot::<O>::builtin_fn) as BuiltinFn<O>),
+        },
+    );
     functions.insert("plotarrow".to_string(), Plotarrow::<O>::builtin_value());
     functions.insert("plotbar".to_string(), Plotbar::<O>::builtin_value());
     functions.insert("plotcandle".to_string(), Plotcandle::<O>::builtin_value());

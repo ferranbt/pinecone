@@ -450,7 +450,12 @@ impl TableMergeCells {
         &self,
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let _ = (self.start_column, self.start_row, self.end_column, self.end_row);
+        let _ = (
+            self.start_column,
+            self.start_row,
+            self.end_column,
+            self.end_row,
+        );
         table_mut(ctx, self.table_id)?;
         Ok(Value::Na)
     }
@@ -554,9 +559,18 @@ pub fn register<O: PineOutput + TableOutput>() -> Value<O> {
     );
     members.insert("clear".to_string(), TableClear::builtin_value::<O>());
     members.insert("delete".to_string(), TableDelete::builtin_value::<O>());
-    members.insert("cell_set_width".to_string(), TableCellSetWidth::builtin_value::<O>());
-    members.insert("cell_set_height".to_string(), TableCellSetHeight::builtin_value::<O>());
-    members.insert("cell_set_text_size".to_string(), TableCellSetTextSize::builtin_value::<O>());
+    members.insert(
+        "cell_set_width".to_string(),
+        TableCellSetWidth::builtin_value::<O>(),
+    );
+    members.insert(
+        "cell_set_height".to_string(),
+        TableCellSetHeight::builtin_value::<O>(),
+    );
+    members.insert(
+        "cell_set_text_size".to_string(),
+        TableCellSetTextSize::builtin_value::<O>(),
+    );
     members.insert(
         "cell_set_text_halign".to_string(),
         TableCellSetTextHalign::builtin_value::<O>(),
@@ -573,14 +587,38 @@ pub fn register<O: PineOutput + TableOutput>() -> Value<O> {
         "cell_set_text_formatting".to_string(),
         TableCellSetTextFormatting::builtin_value::<O>(),
     );
-    members.insert("cell_set_tooltip".to_string(), TableCellSetTooltip::builtin_value::<O>());
-    members.insert("merge_cells".to_string(), TableMergeCells::builtin_value::<O>());
-    members.insert("set_position".to_string(), TableSetPosition::builtin_value::<O>());
-    members.insert("set_border_color".to_string(), TableSetBorderColor::builtin_value::<O>());
-    members.insert("set_border_width".to_string(), TableSetBorderWidth::builtin_value::<O>());
-    members.insert("set_frame_color".to_string(), TableSetFrameColor::builtin_value::<O>());
-    members.insert("set_frame_width".to_string(), TableSetFrameWidth::builtin_value::<O>());
-    members.insert("all".to_string(), Value::Array(Rc::new(RefCell::new(Vec::new()))));
+    members.insert(
+        "cell_set_tooltip".to_string(),
+        TableCellSetTooltip::builtin_value::<O>(),
+    );
+    members.insert(
+        "merge_cells".to_string(),
+        TableMergeCells::builtin_value::<O>(),
+    );
+    members.insert(
+        "set_position".to_string(),
+        TableSetPosition::builtin_value::<O>(),
+    );
+    members.insert(
+        "set_border_color".to_string(),
+        TableSetBorderColor::builtin_value::<O>(),
+    );
+    members.insert(
+        "set_border_width".to_string(),
+        TableSetBorderWidth::builtin_value::<O>(),
+    );
+    members.insert(
+        "set_frame_color".to_string(),
+        TableSetFrameColor::builtin_value::<O>(),
+    );
+    members.insert(
+        "set_frame_width".to_string(),
+        TableSetFrameWidth::builtin_value::<O>(),
+    );
+    members.insert(
+        "all".to_string(),
+        Value::Array(Rc::new(RefCell::new(Vec::new()))),
+    );
     Value::Object {
         type_name: "table".to_string(),
         fields: Rc::new(RefCell::new(members)),

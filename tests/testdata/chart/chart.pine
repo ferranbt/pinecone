@@ -1,0 +1,19 @@
+//@version=5
+indicator("chart/chart")
+log.info(str.tostring(chart.is_standard))
+log.info(str.tostring(chart.is_renko))
+p = chart.point.from_index(5, 100.0)
+log.info(str.tostring(p.index) + "," + str.tostring(p.price))
+p2 = chart.point.new(1000, 3, 50.0)
+log.info(str.tostring(p2.time) + "," + str.tostring(p2.index) + "," + str.tostring(p2.price))
+p3 = chart.point.from_time(2000, 7.0)
+log.info(str.tostring(p3.time) + "," + str.tostring(p3.index))
+c = chart.point.copy(p)
+log.info(str.tostring(c.index) + "," + str.tostring(c.price))
+// Expected output:
+// true
+// false
+// 5,100
+// 1000,3,50
+// 2000,NaN
+// 5,100

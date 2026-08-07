@@ -1,0 +1,10 @@
+//@version=5
+indicator("plot/plot_constants")
+plot(close, "c", style=plot.style_stepline)
+log.info(plot.style_line + "," + plot.style_histogram + "," + plot.style_area)
+log.info(plot.linestyle_solid + "," + plot.linestyle_dotted + "," + plot.linestyle_dashed)
+log.info(plot.style_stepline_diamond + "," + plot.style_areabr)
+// Expected output:
+// line,histogram,area
+// solid,dotted,dashed
+// stepline_diamond,areabr
