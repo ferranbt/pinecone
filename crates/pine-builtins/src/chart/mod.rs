@@ -69,7 +69,10 @@ struct ChartPointNow {
 impl ChartPointNow {
     fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let index = ctx.get_variable("bar_index").cloned().unwrap_or(Value::Na);
-        let time = ctx.get_variable("time").cloned().unwrap_or(Value::Na);
+        let time = ctx
+            .current_time
+            .map(|ms| Value::Number(ms as f64))
+            .unwrap_or(Value::Na);
         Ok(point(time, index, coord(self.price)))
     }
 }

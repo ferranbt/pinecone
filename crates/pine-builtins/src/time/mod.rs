@@ -1,17 +1,13 @@
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, Timelike, Utc};
 use pine_builtin_macro::BuiltinFunction;
-use pine_core::Bar;
 use pine_core::PineOutput;
-use pine_interpreter::{Builtin, BuiltinFn, EvaluatedArg, Interpreter, RuntimeError, Value};
+use pine_interpreter::{
+    Builtin, BuiltinFn, BuiltinSignature, EvaluatedArg, Interpreter, RuntimeError, Value,
+};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
-
-/// The per-bar `time` variable: the bar's opening UNIX timestamp (milliseconds).
-pub fn register_bar_time<O: PineOutput>(bar: &Bar) -> Value<O> {
-    Value::Number(bar.time as f64)
-}
 
 /// The `timenow` variable: the current UTC time in milliseconds. Unlike `time`
 /// this is wall-clock rather than bar data, so it is re-read for every bar.
@@ -96,130 +92,128 @@ fn timestamp_fn<O: PineOutput>() -> BuiltinFn<O> {
     })
 }
 
-/// year(time) - Returns year for given UNIX time in milliseconds
-#[derive(BuiltinFunction)]
-#[builtin(name = "year")]
-struct Year {
-    time: f64,
+/// The UTC datetime for a UNIX-ms timestamp, or `None` if out of range.
+fn datetime_of(millis: f64) -> Option<DateTime<Utc>> {
+    DateTime::from_timestamp_millis(millis as i64)
 }
 
-impl Year {
-    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        // Convert milliseconds to seconds
-        let secs = (self.time / 1000.0) as i64;
+// The date-part extractors, shared by the `x(time)` functions and the bare-value
+// forms so the two can never disagree. `sunday = 1 … saturday = 7`, matching Pine.
+fn year_of(ms: f64) -> Option<i64> {
+    datetime_of(ms).map(|d| d.year() as i64)
+}
+fn month_of(ms: f64) -> Option<i64> {
+    datetime_of(ms).map(|d| d.month() as i64)
+}
+fn dayofmonth_of(ms: f64) -> Option<i64> {
+    datetime_of(ms).map(|d| d.day() as i64)
+}
+fn dayofweek_of(ms: f64) -> Option<i64> {
+    datetime_of(ms).map(|d| d.weekday().num_days_from_sunday() as i64 + 1)
+}
+fn hour_of(ms: f64) -> Option<i64> {
+    datetime_of(ms).map(|d| d.hour() as i64)
+}
+fn minute_of(ms: f64) -> Option<i64> {
+    datetime_of(ms).map(|d| d.minute() as i64)
+}
+fn second_of(ms: f64) -> Option<i64> {
+    datetime_of(ms).map(|d| d.second() as i64)
+}
+fn weekofyear_of(ms: f64) -> Option<i64> {
+    datetime_of(ms).map(|d| d.iso_week().week() as i64)
+}
 
-        // For now, just use UTC (proper timezone support would require chrono)
-        let year = 1970 + (secs / (365 * 24 * 60 * 60));
+/// Defines a `name(time)` date function returning an integer part (or `na`).
+macro_rules! date_fn {
+    ($ident:ident, $name:literal, $extract:ident) => {
+        #[derive(BuiltinFunction)]
+        #[builtin(name = $name)]
+        struct $ident {
+            time: f64,
+        }
 
-        Ok(Value::Number(year as f64))
+        impl $ident {
+            fn execute<O: PineOutput>(
+                &self,
+                _ctx: &mut Interpreter<O>,
+            ) -> Result<Value<O>, RuntimeError> {
+                Ok($extract(self.time).map(Value::Int).unwrap_or(Value::Na))
+            }
+        }
+    };
+}
+
+date_fn!(Year, "year", year_of);
+date_fn!(Month, "month", month_of);
+date_fn!(DayOfMonth, "dayofmonth", dayofmonth_of);
+date_fn!(DayOfWeek, "dayofweek", dayofweek_of);
+date_fn!(Hour, "hour", hour_of);
+date_fn!(Minute, "minute", minute_of);
+date_fn!(Second, "second", second_of);
+date_fn!(Weekofyear, "weekofyear", weekofyear_of);
+
+/// A date name that is both a function (`year(t)`) and a bare value (the current
+/// bar's year, from the interpreter's `current_time`).
+fn date_dual<O: PineOutput>(
+    name: &str,
+    call: BuiltinFn<O>,
+    signature: &'static BuiltinSignature,
+    extract: fn(f64) -> Option<i64>,
+) -> Value<O> {
+    Value::Object {
+        type_name: name.to_string(),
+        fields: Rc::new(RefCell::new(HashMap::new())),
+        call: Some(Builtin { call, signature }),
+        value: Some(Rc::new(move |ctx: &mut Interpreter<O>| {
+            Ok(ctx
+                .current_time
+                .and_then(|ms| extract(ms as f64))
+                .map(Value::Int)
+                .unwrap_or(Value::Na))
+        })),
     }
 }
 
-/// month(time) - Returns month (1-12) for given UNIX time
-#[derive(BuiltinFunction)]
-#[builtin(name = "month")]
-struct Month {
-    time: f64,
+/// Builds one `(name, date_dual)` entry from its function struct and extractor.
+macro_rules! dual {
+    ($name:literal, $struct:ident, $extract:ident) => {
+        (
+            $name.to_string(),
+            date_dual(
+                $name,
+                Rc::new($struct::builtin_fn::<O>) as BuiltinFn<O>,
+                $struct::signature(),
+                $extract,
+            ),
+        )
+    };
 }
 
-impl Month {
-    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        // Simplified implementation - proper implementation needs date/time library
-        let secs = (self.time / 1000.0) as i64;
-        let days_since_epoch = secs / (24 * 60 * 60);
-
-        // Rough approximation
-        let month = ((days_since_epoch % 365) / 30) + 1;
-        let month = month.min(12);
-
-        Ok(Value::Number(month as f64))
-    }
+/// `time(timeframe, session, timezone)` — the bar's time. Timeframe/session
+/// resolution is not modelled, so it returns the current bar's time regardless.
+fn time_fn<O: PineOutput>() -> BuiltinFn<O> {
+    Rc::new(|ctx: &mut Interpreter<O>, _call_args| {
+        Ok(ctx
+            .current_time
+            .map(|ms| Value::Number(ms as f64))
+            .unwrap_or(Value::Na))
+    })
 }
 
-/// dayofmonth(time) - Returns day of month (1-31)
-#[derive(BuiltinFunction)]
-#[builtin(name = "dayofmonth")]
-struct DayOfMonth {
-    time: f64,
-}
-
-impl DayOfMonth {
-    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let secs = (self.time / 1000.0) as i64;
-        let days_since_epoch = secs / (24 * 60 * 60);
-
-        // Simplified - assumes 30 day months
-        let day = (days_since_epoch % 30) + 1;
-
-        Ok(Value::Number(day as f64))
-    }
-}
-
-/// dayofweek(time) - Returns day of week (1=Sunday, 7=Saturday)
-#[derive(BuiltinFunction)]
-#[builtin(name = "dayofweek")]
-struct DayOfWeek {
-    time: f64,
-}
-
-impl DayOfWeek {
-    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let secs = (self.time / 1000.0) as i64;
-        let days_since_epoch = secs / (24 * 60 * 60);
-
-        // Jan 1, 1970 was a Thursday (5)
-        // Sunday = 1, Monday = 2, ..., Saturday = 7
-        let day = ((days_since_epoch + 4) % 7) + 1;
-
-        Ok(Value::Number(day as f64))
-    }
-}
-
-/// hour(time) - Returns hour (0-23)
-#[derive(BuiltinFunction)]
-#[builtin(name = "hour")]
-struct Hour {
-    time: f64,
-}
-
-impl Hour {
-    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let secs = (self.time / 1000.0) as i64;
-        let hour = (secs / 3600) % 24;
-
-        Ok(Value::Number(hour as f64))
-    }
-}
-
-/// minute(time) - Returns minute (0-59)
-#[derive(BuiltinFunction)]
-#[builtin(name = "minute")]
-struct Minute {
-    time: f64,
-}
-
-impl Minute {
-    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let secs = (self.time / 1000.0) as i64;
-        let minute = (secs / 60) % 60;
-
-        Ok(Value::Number(minute as f64))
-    }
-}
-
-/// second(time) - Returns second (0-59)
-#[derive(BuiltinFunction)]
-#[builtin(name = "second")]
-struct Second {
-    time: f64,
-}
-
-impl Second {
-    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let secs = (self.time / 1000.0) as i64;
-        let second = secs % 60;
-
-        Ok(Value::Number(second as f64))
+/// The `time` name: a value (the bar's opening UNIX ms) and a function
+/// (`time(timeframe, ...)`) at once.
+pub fn register_time<O: PineOutput>() -> Value<O> {
+    Value::Object {
+        type_name: "time".to_string(),
+        fields: Rc::new(RefCell::new(HashMap::new())),
+        call: Some(Builtin::untyped(time_fn::<O>())),
+        value: Some(Rc::new(|ctx: &mut Interpreter<O>| {
+            Ok(ctx
+                .current_time
+                .map(|ms| Value::Number(ms as f64))
+                .unwrap_or(Value::Na))
+        })),
     }
 }
 
@@ -229,20 +223,15 @@ pub fn register_time_functions<O: PineOutput>() -> Vec<(String, Value<O>)> {
             "timestamp".to_string(),
             Value::BuiltinFunction(Builtin::untyped(timestamp_fn::<O>())),
         ),
-        ("year".to_string(), Year::builtin_value::<O>()),
-        ("month".to_string(), Month::builtin_value::<O>()),
-        ("dayofmonth".to_string(), DayOfMonth::builtin_value::<O>()),
-        ("hour".to_string(), Hour::builtin_value::<O>()),
-        ("minute".to_string(), Minute::builtin_value::<O>()),
-        ("second".to_string(), Second::builtin_value::<O>()),
+        ("time".to_string(), register_time()),
+        dual!("year", Year, year_of),
+        dual!("month", Month, month_of),
+        dual!("dayofmonth", DayOfMonth, dayofmonth_of),
+        dual!("hour", Hour, hour_of),
+        dual!("minute", Minute, minute_of),
+        dual!("second", Second, second_of),
+        dual!("weekofyear", Weekofyear, weekofyear_of),
     ]
-}
-
-/// Day of week for a UNIX-ms timestamp: `sunday = 1 … saturday = 7`.
-fn dow_of_millis(millis: f64) -> i64 {
-    let days = (millis / 1000.0) as i64 / (24 * 60 * 60);
-    // 1970-01-01 was a Thursday (5).
-    (days + 4).rem_euclid(7) + 1
 }
 
 /// The `dayofweek` name: a value (the current bar's day), a function
@@ -268,12 +257,10 @@ pub fn register_dayofweek<O: PineOutput>() -> Value<O> {
             signature: DayOfWeek::signature(),
         }),
         value: Some(Rc::new(|ctx: &mut Interpreter<O>| {
-            let millis = match ctx.get_variable("time") {
-                Some(time) => time.to_number()?,
-                None => None,
-            };
-            Ok(millis
-                .map(|m| Value::Int(dow_of_millis(m)))
+            Ok(ctx
+                .current_time
+                .and_then(|ms| dayofweek_of(ms as f64))
+                .map(Value::Int)
                 .unwrap_or(Value::Na))
         })),
     }

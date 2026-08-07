@@ -352,6 +352,8 @@ impl<O: PineOutput> Script<O> {
     pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
         use interpreter::Value;
 
+        self.interpreter.current_time = Some(bar.time);
+
         for (name, value) in pine_builtins::per_bar_variables(bar) {
             if matches!(value, Value::Series(_)) {
                 self.interpreter.advance_series(&name, value);

@@ -1,0 +1,15 @@
+//@version=6
+indicator("basics/date_values")
+// Skip PineTS: bare date values + time() are our value+function unification.
+// Each date name is both a value (the current bar) and a function; the last bar
+// has time 199000ms → 1970-01-01 00:03:19 UTC.
+log.info(str.tostring(year) + "|" + str.tostring(month) + "|" + str.tostring(dayofmonth))
+log.info(str.tostring(hour) + "|" + str.tostring(minute) + "|" + str.tostring(second))
+log.info(str.tostring(weekofyear) + "|" + str.tostring(time))
+log.info(str.tostring(time("1D")) + "|" + str.tostring(year(0)))
+
+// Expected output:
+// 1970|1|1
+// 0|3|19
+// 1|199000
+// 199000|1970

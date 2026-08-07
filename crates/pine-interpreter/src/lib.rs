@@ -520,6 +520,9 @@ pub struct Interpreter<O: PineOutput> {
     /// The feed `request.security` draws other symbols/timeframes from.
     pub request_provider: Option<Rc<dyn pine_core::DataProvider>>,
     pub chart_period: Option<i64>,
+    /// The current bar's opening time (UNIX ms), the raw datum every date name
+    /// (`time`, `year`, …) derives its bare value from. Set by the host each bar.
+    pub current_time: Option<i64>,
 }
 
 /// Names a statement block ASSIGNS (declares or writes) directly — i.e. the true
@@ -606,6 +609,7 @@ impl<O: PineOutput> Interpreter<O> {
             broker_factory: Some(Box::new(pine_broker::DefaultBrokerFactory)),
             request_provider: None,
             chart_period: None,
+            current_time: None,
         }
     }
 

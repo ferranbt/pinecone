@@ -317,7 +317,6 @@ pub fn register_namespace_objects<
 pub fn register_per_bar<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
     vec![
         ("barstate".to_string(), barstate::register(bar)),
-        ("time".to_string(), time::register_bar_time(bar)),
         ("timenow".to_string(), time::register_timenow()),
     ]
 }

@@ -461,9 +461,5 @@ fn aligned<O: PineOutput>(series: &[(i64, Value<O>)], now: i64) -> Value<O> {
 }
 
 fn current_time<O: PineOutput>(ctx: &Interpreter<O>) -> i64 {
-    match ctx.get_variable("time") {
-        Some(Value::Number(ms)) => *ms as i64,
-        Some(Value::Int(ms)) => *ms,
-        _ => 0,
-    }
+    ctx.current_time.unwrap_or(0)
 }
