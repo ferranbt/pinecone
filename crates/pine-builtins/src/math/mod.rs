@@ -410,6 +410,28 @@ impl MathRandom {
 }
 
 /// Register all math namespace functions and return the namespace object
+/// math.round_to_mintick(number) - Round to the symbol's tick size
+/// (`syminfo.mintick`).
+#[derive(BuiltinFunction)]
+#[builtin(name = "math.round_to_mintick")]
+struct MathRoundToMintick {
+    number: f64,
+}
+
+impl MathRoundToMintick {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let mintick = if let Some(Value::Object { fields, .. }) = ctx.get_variable("syminfo") {
+            match fields.borrow().get("mintick") {
+                Some(Value::Number(m)) if *m > 0.0 => *m,
+                _ => 0.01,
+            }
+        } else {
+            0.01
+        };
+        Ok(Value::Number((self.number / mintick).round() * mintick))
+    }
+}
+
 pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>> {
     let mut math_ns: HashMap<String, Value<O>> = HashMap::new();
 
@@ -451,6 +473,7 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
 
     // Special functions
     math_ns.insert("random".to_string(), MathRandom::builtin_value::<O>());
+    math_ns.insert("round_to_mintick".to_string(), MathRoundToMintick::builtin_value::<O>());
 
     if matches!(version, PineVersion::V5 | PineVersion::V6) {
         let mut obj: HashMap<String, Value<O>> = HashMap::new();

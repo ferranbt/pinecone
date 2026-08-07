@@ -40,6 +40,7 @@ mod matrix;
 mod plot;
 mod polyline;
 mod request;
+mod runtime;
 mod session;
 mod str;
 mod strategy;
@@ -217,6 +218,7 @@ pub fn register_namespace_objects<
     namespaces.insert("color".to_string(), color::register());
     namespaces.insert("map".to_string(), map::register());
     namespaces.insert("session".to_string(), session::register());
+    namespaces.insert("runtime".to_string(), runtime::register());
     namespaces.insert("earnings".to_string(), earnings::register());
     namespaces.insert("dividends".to_string(), dividends::register());
     namespaces.insert("currency".to_string(), currency::register());

@@ -77,6 +77,9 @@ pub enum RuntimeError {
 
     #[error("Cannot reassign const variable '{0}'")]
     ConstReassignment(String),
+
+    #[error("{0}")]
+    UserError(String),
 }
 
 /// Control flow signals for loops
