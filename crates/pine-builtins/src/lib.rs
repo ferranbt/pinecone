@@ -1,7 +1,7 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{
-    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, InputOutput, LabelOutput,
-    LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
+    AlertConditionOutput, BoxOutput, DrawingOutput, FillOutput, GlobalOutput, InputOutput,
+    LabelOutput, LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_core::{PineVersion, SymInfo, Timeframe};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
@@ -32,11 +32,13 @@ mod input;
 mod label;
 mod library;
 mod line;
+mod linefill;
 mod log;
 mod map;
 mod math;
 mod matrix;
 mod plot;
+mod polyline;
 mod request;
 mod session;
 mod str;
@@ -188,7 +190,8 @@ pub fn register_namespace_objects<
         + MetadataOutput
         + GlobalOutput
         + AlertConditionOutput
-        + FillOutput,
+        + FillOutput
+        + DrawingOutput,
 >(
     version: PineVersion,
     syminfo: Option<SymInfo>,
@@ -224,6 +227,8 @@ pub fn register_namespace_objects<
     for (name, value) in line::register(version) {
         namespaces.insert(name, value);
     }
+    namespaces.insert("linefill".to_string(), linefill::register());
+    namespaces.insert("polyline".to_string(), polyline::register());
     namespaces.insert("table".to_string(), table::register());
     for (name, value) in indicator::register(version) {
         namespaces.insert(name, value);

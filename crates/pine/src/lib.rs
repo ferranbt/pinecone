@@ -22,8 +22,8 @@ pub use run::{Run, RunResult};
 
 use pine_ast::Program;
 use pine_core::{
-    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, InputOutput, LabelOutput,
-    LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
+    AlertConditionOutput, BoxOutput, DrawingOutput, FillOutput, GlobalOutput, InputOutput,
+    LabelOutput, LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_core::{Bar, Data, PineVersion, Timeframe, VersionError};
 use pine_diagnostics::Diagnostic;
@@ -212,7 +212,8 @@ impl<O: PineOutput> ScriptBuilder<O> {
             + MetadataOutput
             + GlobalOutput
             + AlertConditionOutput
-            + FillOutput,
+            + FillOutput
+            + DrawingOutput,
     {
         let data = match self.data {
             Some(data) => data,
