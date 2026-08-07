@@ -248,6 +248,14 @@ fn render_value<O: PineOutput>(value: &Value<O>) -> String {
             let cols = if rows > 0 { matrix_ref[0].len() } else { 0 };
             format!("[Matrix:{}x{}]", rows, cols)
         }
+        Value::Map { data, .. } => {
+            let parts: Vec<String> = data
+                .borrow()
+                .iter()
+                .map(|(k, v)| format!("{}={}", render_value(k), render_value(v)))
+                .collect();
+            format!("{{{}}}", parts.join(", "))
+        }
     }
 }
 

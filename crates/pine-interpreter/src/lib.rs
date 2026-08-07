@@ -195,6 +195,9 @@ impl<O: PineOutput> std::fmt::Debug for Value<O> {
             Value::Matrix { element_type, data } => {
                 write!(f, "Matrix<{}>({:?})", element_type, data)
             }
+            Value::Map { key_type, value_type, data } => {
+                write!(f, "Map<{}, {}>({:?})", key_type, value_type, data)
+            }
         }
     }
 }
@@ -238,6 +241,8 @@ impl<O: PineOutput> PartialEq for Value<O> {
             (Value::Color(c1), Value::Color(c2)) => c1 == c2,
             // Matrices compare by reference (Rc pointer equality)
             (Value::Matrix { data: a, .. }, Value::Matrix { data: b, .. }) => Rc::ptr_eq(a, b),
+            // Maps compare by reference (Rc pointer equality)
+            (Value::Map { data: a, .. }, Value::Map { data: b, .. }) => Rc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -552,6 +557,7 @@ fn builtin_namespace<O: PineOutput>(value: &Value<O>) -> Option<&'static str> {
     match value {
         Value::Array(_) => Some("array"),
         Value::Matrix { .. } => Some("matrix"),
+        Value::Map { .. } => Some("map"),
         _ => None,
     }
 }
