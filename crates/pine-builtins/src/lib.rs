@@ -1,7 +1,7 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{
-    AlertConditionOutput, BoxOutput, FillOutput, GlobalOutput, InputOutput, LabelOutput,
-    LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
+    AlertConditionOutput, BoxOutput, DrawingOutput, FillOutput, GlobalOutput, InputOutput,
+    LabelOutput, LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_core::{PineVersion, SymInfo, Timeframe};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
@@ -23,6 +23,8 @@ mod chart;
 mod color;
 mod constants;
 mod currency;
+mod dividends;
+mod earnings;
 mod fill;
 mod globals;
 mod indicator;
@@ -30,12 +32,15 @@ mod input;
 mod label;
 mod library;
 mod line;
+mod linefill;
 mod log;
 mod map;
 mod math;
 mod matrix;
 mod plot;
+mod polyline;
 mod request;
+mod session;
 mod str;
 mod strategy;
 mod syminfo;
@@ -185,7 +190,8 @@ pub fn register_namespace_objects<
         + MetadataOutput
         + GlobalOutput
         + AlertConditionOutput
-        + FillOutput,
+        + FillOutput
+        + DrawingOutput,
 >(
     version: PineVersion,
     syminfo: Option<SymInfo>,
@@ -210,6 +216,9 @@ pub fn register_namespace_objects<
     namespaces.insert("chart".to_string(), chart::register());
     namespaces.insert("color".to_string(), color::register());
     namespaces.insert("map".to_string(), map::register());
+    namespaces.insert("session".to_string(), session::register());
+    namespaces.insert("earnings".to_string(), earnings::register());
+    namespaces.insert("dividends".to_string(), dividends::register());
     namespaces.insert("currency".to_string(), currency::register());
     for (name, value) in input::register(version) {
         namespaces.insert(name, value);
@@ -218,6 +227,8 @@ pub fn register_namespace_objects<
     for (name, value) in line::register(version) {
         namespaces.insert(name, value);
     }
+    namespaces.insert("linefill".to_string(), linefill::register());
+    namespaces.insert("polyline".to_string(), polyline::register());
     namespaces.insert("table".to_string(), table::register());
     for (name, value) in indicator::register(version) {
         namespaces.insert(name, value);
@@ -245,6 +256,19 @@ pub fn register_namespace_objects<
     namespaces.insert("xloc".to_string(), constants::xloc::register());
     namespaces.insert("extend".to_string(), constants::extend::register());
     namespaces.insert("barmerge".to_string(), constants::barmerge::register());
+    namespaces.insert("yloc".to_string(), constants::yloc::register());
+    namespaces.insert("scale".to_string(), constants::scale::register());
+    namespaces.insert("font".to_string(), constants::font::register());
+    namespaces.insert("splits".to_string(), constants::splits::register());
+    namespaces.insert("adjustment".to_string(), constants::adjustment::register());
+    namespaces.insert(
+        "backadjustment".to_string(),
+        constants::backadjustment::register(),
+    );
+    namespaces.insert(
+        "settlement_as_close".to_string(),
+        constants::settlement_as_close::register(),
+    );
     namespaces.insert("log".to_string(), log::register());
     for (name, func) in math::register(version) {
         namespaces.insert(name, func);

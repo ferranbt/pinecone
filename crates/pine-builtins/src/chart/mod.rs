@@ -121,6 +121,25 @@ impl<O: PineOutput> ChartPointCopy<O> {
     }
 }
 
+/// The `(x, y)` a `chart.point` denotes for a drawing: `x` is the bar index (or
+/// the time when the index is `na`), `y` is the price. Used by the
+/// `line`/`box`/`label` point setters.
+pub fn point_coords<O: PineOutput>(point: &Value<O>) -> Result<(f64, f64), RuntimeError> {
+    let Value::Object { fields, .. } = point else {
+        return Err(RuntimeError::TypeError("expected a chart.point".into()));
+    };
+    let fields = fields.borrow();
+    let read = |name: &str| {
+        fields
+            .get(name)
+            .and_then(|v| v.as_number().ok())
+            .unwrap_or(f64::NAN)
+    };
+    let index = read("index");
+    let x = if index.is_nan() { read("time") } else { index };
+    Ok((x, read("price")))
+}
+
 /// Register the `chart.*` namespace object.
 pub fn register<O: PineOutput>() -> Value<O> {
     let mut point_ns: HashMap<String, Value<O>> = HashMap::new();

@@ -621,6 +621,74 @@ impl BoxCopy {
     }
 }
 
+/// box.set_top_left_point(id, point) - Set the top-left corner from a `chart.point`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "box.set_top_left_point")]
+struct BoxSetTopLeftPoint<O: PineOutput + BoxOutput> {
+    id: f64,
+    point: Value<O>,
+}
+
+impl<O: PineOutput + BoxOutput> BoxSetTopLeftPoint<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let (left, top) = crate::chart::point_coords(&self.point)?;
+        let id = self.id as usize;
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.left = left;
+        box_obj.top = top;
+        Ok(Value::Na)
+    }
+}
+
+/// box.set_bottom_right_point(id, point) - Set the bottom-right corner from a
+/// `chart.point`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "box.set_bottom_right_point")]
+struct BoxSetBottomRightPoint<O: PineOutput + BoxOutput> {
+    id: f64,
+    point: Value<O>,
+}
+
+impl<O: PineOutput + BoxOutput> BoxSetBottomRightPoint<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let (right, bottom) = crate::chart::point_coords(&self.point)?;
+        let id = self.id as usize;
+        let box_obj = ctx
+            .output
+            .get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        box_obj.right = right;
+        box_obj.bottom = bottom;
+        Ok(Value::Na)
+    }
+}
+
+/// box.set_text_formatting(id, text_formatting) - A rendering hint the output
+/// model does not store; validates the box exists and is otherwise a no-op.
+#[derive(BuiltinFunction)]
+#[builtin(name = "box.set_text_formatting", output = BoxOutput)]
+struct BoxSetTextFormatting {
+    id: f64,
+    text_formatting: String,
+}
+
+impl BoxSetTextFormatting {
+    fn execute<O: PineOutput + BoxOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.text_formatting;
+        let id = self.id as usize;
+        ctx.output
+            .get_box_mut(id)
+            .ok_or_else(|| RuntimeError::TypeError(format!("Box with id {} not found", id)))?;
+        Ok(Value::Na)
+    }
+}
+
 /// Register the box namespace with all functions
 pub fn register<O: PineOutput + BoxOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
@@ -687,6 +755,22 @@ pub fn register<O: PineOutput + BoxOutput>() -> Value<O> {
     members.insert("get_bottom".to_string(), BoxGetBottom::builtin_value::<O>());
     members.insert("delete".to_string(), BoxDelete::builtin_value::<O>());
     members.insert("copy".to_string(), BoxCopy::builtin_value::<O>());
+    members.insert(
+        "set_top_left_point".to_string(),
+        BoxSetTopLeftPoint::<O>::builtin_value(),
+    );
+    members.insert(
+        "set_bottom_right_point".to_string(),
+        BoxSetBottomRightPoint::<O>::builtin_value(),
+    );
+    members.insert(
+        "set_text_formatting".to_string(),
+        BoxSetTextFormatting::builtin_value::<O>(),
+    );
+    members.insert(
+        "all".to_string(),
+        Value::Array(Rc::new(RefCell::new(Vec::new()))),
+    );
 
     Value::Object {
         type_name: "box".to_string(),

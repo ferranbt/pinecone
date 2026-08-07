@@ -1,0 +1,26 @@
+//@version=6
+indicator("basics/drawing_point_setters")
+// Skip PineTS: line/box/label drawing objects are not modeled by PineTS.
+l = line.new(0, 1.0, 5, 2.0)
+line.set_xloc(l, 1, 2, xloc.bar_index)
+line.set_first_point(l, chart.point.from_index(10, 100.0))
+line.set_second_point(l, chart.point.from_index(20, 200.0))
+log.info(str.tostring(line.get_x1(l)) + "," + str.tostring(line.get_y1(l)) + "," + str.tostring(line.get_x2(l)) + "," + str.tostring(line.get_y2(l)))
+
+b = box.new(0, 5.0, 5, 1.0)
+box.set_top_left_point(b, chart.point.from_index(3, 50.0))
+box.set_bottom_right_point(b, chart.point.from_index(8, 10.0))
+box.set_text_formatting(b, text.format_bold)
+log.info(str.tostring(box.get_left(b)) + "," + str.tostring(box.get_top(b)) + "," + str.tostring(box.get_right(b)) + "," + str.tostring(box.get_bottom(b)))
+
+lb = label.new(0, 1.0, "hi")
+label.set_point(lb, chart.point.from_index(7, 99.0))
+label.set_text_formatting(lb, text.format_italic)
+log.info(str.tostring(label.get_x(lb)) + "," + str.tostring(label.get_y(lb)))
+
+log.info(str.tostring(array.size(line.all)) + "," + str.tostring(array.size(box.all)) + "," + str.tostring(array.size(label.all)))
+// Expected output:
+// 10,100,20,200
+// 3,50,8,10
+// 7,99
+// 0,0,0

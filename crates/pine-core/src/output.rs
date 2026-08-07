@@ -469,6 +469,27 @@ macro_rules! impl_output_traits_delegate {
             }
         }
 
+        impl $crate::DrawingOutput for $type {
+            fn add_linefill(&mut self, linefill: $crate::LinefillObject) -> usize {
+                self.$field.add_linefill(linefill)
+            }
+            fn get_linefill(&self, id: usize) -> Option<&$crate::LinefillObject> {
+                self.$field.get_linefill(id)
+            }
+            fn get_linefill_mut(&mut self, id: usize) -> Option<&mut $crate::LinefillObject> {
+                self.$field.get_linefill_mut(id)
+            }
+            fn delete_linefill(&mut self, id: usize) -> bool {
+                self.$field.delete_linefill(id)
+            }
+            fn add_polyline(&mut self, polyline: $crate::PolylineObject) -> usize {
+                self.$field.add_polyline(polyline)
+            }
+            fn delete_polyline(&mut self, id: usize) -> bool {
+                self.$field.delete_polyline(id)
+            }
+        }
+
         impl $crate::TableOutput for $type {
             fn add_table(&mut self, table: $crate::Table) -> usize {
                 self.$field.add_table(table)
@@ -567,6 +588,39 @@ pub trait LineOutput: PineOutput {
     fn delete_line(&mut self, id: usize) -> bool;
 }
 
+/// A fill between two lines (`linefill.new`).
+#[derive(Clone, Debug)]
+pub struct LinefillObject {
+    pub line1: usize,
+    pub line2: usize,
+    pub color: Option<Color>,
+}
+
+/// A multi-point polyline (`polyline.new`).
+#[derive(Clone, Debug, Default)]
+pub struct PolylineObject {
+    /// The `(x, y)` vertices, in order.
+    pub points: Vec<(f64, f64)>,
+    pub curved: bool,
+    pub closed: bool,
+    pub xloc: String,
+    pub line_color: Option<Color>,
+    pub fill_color: Option<Color>,
+    pub line_style: String,
+    pub line_width: f64,
+}
+
+/// One extension trait recording both `linefill` and `polyline` drawings, which
+/// share a sink since neither carries much state.
+pub trait DrawingOutput: PineOutput {
+    fn add_linefill(&mut self, linefill: LinefillObject) -> usize;
+    fn get_linefill(&self, id: usize) -> Option<&LinefillObject>;
+    fn get_linefill_mut(&mut self, id: usize) -> Option<&mut LinefillObject>;
+    fn delete_linefill(&mut self, id: usize) -> bool;
+    fn add_polyline(&mut self, polyline: PolylineObject) -> usize;
+    fn delete_polyline(&mut self, id: usize) -> bool;
+}
+
 /// Extension trait for recording `fill(...)` areas.
 pub trait FillOutput: PineOutput {
     fn add_fill(&mut self, fill: FillObject);
@@ -655,6 +709,14 @@ pub struct DefaultPineOutput {
     alertconditions: Vec<AlertCondition>,
     /// `fill(...)` areas.
     fills: Vec<FillObject>,
+    /// Linefill storage for drawable objects.
+    linefills: HashMap<usize, LinefillObject>,
+    /// Next linefill ID.
+    next_linefill_id: usize,
+    /// Polyline storage for drawable objects.
+    polylines: HashMap<usize, PolylineObject>,
+    /// Next polyline ID.
+    next_polyline_id: usize,
 }
 
 impl PineOutput for DefaultPineOutput {
@@ -803,6 +865,38 @@ impl LineOutput for DefaultPineOutput {
 
     fn delete_line(&mut self, id: usize) -> bool {
         self.lines.remove(&id).is_some()
+    }
+}
+
+impl DrawingOutput for DefaultPineOutput {
+    fn add_linefill(&mut self, linefill: LinefillObject) -> usize {
+        let id = self.next_linefill_id;
+        self.next_linefill_id += 1;
+        self.linefills.insert(id, linefill);
+        id
+    }
+
+    fn get_linefill(&self, id: usize) -> Option<&LinefillObject> {
+        self.linefills.get(&id)
+    }
+
+    fn get_linefill_mut(&mut self, id: usize) -> Option<&mut LinefillObject> {
+        self.linefills.get_mut(&id)
+    }
+
+    fn delete_linefill(&mut self, id: usize) -> bool {
+        self.linefills.remove(&id).is_some()
+    }
+
+    fn add_polyline(&mut self, polyline: PolylineObject) -> usize {
+        let id = self.next_polyline_id;
+        self.next_polyline_id += 1;
+        self.polylines.insert(id, polyline);
+        id
+    }
+
+    fn delete_polyline(&mut self, id: usize) -> bool {
+        self.polylines.remove(&id).is_some()
     }
 }
 
