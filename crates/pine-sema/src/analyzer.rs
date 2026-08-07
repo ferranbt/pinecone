@@ -325,6 +325,11 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             Value::BuiltinFunction(builtin) if !builtin.signature.params.is_empty() => {
                 Some(builtin.signature)
             }
+            // A callable namespace object like `plot(...)` carries its `Builtin`.
+            Value::Object {
+                call: Some(builtin),
+                ..
+            } if !builtin.signature.params.is_empty() => Some(builtin.signature),
             _ => None,
         }
     }

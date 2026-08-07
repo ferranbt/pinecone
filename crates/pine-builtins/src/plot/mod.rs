@@ -4,7 +4,7 @@ use pine_core::{
     Plotbar as PlotbarStruct, Plotcandle as PlotcandleStruct, Plotchar as PlotcharStruct,
     Plotshape as PlotshapeStruct,
 };
-use pine_interpreter::{BuiltinFn, Interpreter, RuntimeError, Value};
+use pine_interpreter::{Builtin, BuiltinFn, Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -380,7 +380,10 @@ pub fn register_plot_functions<O: PineOutput + PlotOutput>() -> HashMap<String, 
         Value::Object {
             type_name: "plot".to_string(),
             fields: Rc::new(RefCell::new(plot_fields)),
-            call: Some(Rc::new(Plot::<O>::builtin_fn) as BuiltinFn<O>),
+            call: Some(Builtin {
+                call: Rc::new(Plot::<O>::builtin_fn) as BuiltinFn<O>,
+                signature: Plot::<O>::signature(),
+            }),
         },
     );
     functions.insert("plotarrow".to_string(), Plotarrow::<O>::builtin_value());

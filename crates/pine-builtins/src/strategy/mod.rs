@@ -18,7 +18,7 @@ use pine_broker::{
 };
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, PineVersion};
-use pine_interpreter::{BuiltinFn, Interpreter, RuntimeError, Value};
+use pine_interpreter::{Builtin, BuiltinFn, Interpreter, RuntimeError, Value};
 
 /// TradingView's default starting capital.
 const DEFAULT_INITIAL_CAPITAL: f64 = 1_000_000.0;
@@ -692,6 +692,6 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
     Value::Object {
         type_name: "strategy".to_string(),
         fields: Rc::new(RefCell::new(fields)),
-        call: Some(Rc::new(StrategyFn::builtin_fn) as BuiltinFn<O>),
+        call: Some(Builtin::untyped(Rc::new(StrategyFn::builtin_fn) as BuiltinFn<O>)),
     }
 }

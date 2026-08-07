@@ -116,7 +116,7 @@ pub enum Value<O: PineOutput> {
     Object {
         type_name: String, // The type name of this object (e.g., "InfoLabel")
         fields: Rc<RefCell<HashMap<String, Value<O>>>>, // Dictionary/Object with string keys
-        call: Option<BuiltinFn<O>>,
+        call: Option<Builtin<O>>,
     },
     Function {
         params: Vec<pine_ast::FunctionParam>,
@@ -1597,12 +1597,12 @@ impl<O: PineOutput> Interpreter<O> {
                     // A callable namespace object, like `input(...)` alongside
                     // `input.int(...)`. Objects without a `call` are not callable.
                     Value::Object {
-                        call: Some(builtin_fn),
+                        call: Some(builtin),
                         ..
                     } => {
                         let call_args = FunctionCallArgs::new(type_args.clone(), evaluated_args)
                             .with_call_id(*id);
-                        (builtin_fn)(self, call_args)
+                        (builtin.call)(self, call_args)
                     }
                     // Pine's `na` is a keyword that doubles as a function: na(x) → is x na?
                     Value::Na => {

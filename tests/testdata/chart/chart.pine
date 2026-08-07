@@ -1,5 +1,6 @@
 //@version=5
 indicator("chart/chart")
+// Skip PineTS: PineTS does not model the chart namespace (na renders as undefined).
 log.info(str.tostring(chart.is_standard))
 log.info(str.tostring(chart.is_renko))
 p = chart.point.from_index(5, 100.0)

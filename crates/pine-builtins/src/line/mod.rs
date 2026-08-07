@@ -6,7 +6,7 @@
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::PineVersion;
 use pine_core::{Color, LineObject, LineOutput, PineOutput};
-use pine_interpreter::{BuiltinFn, Interpreter, RuntimeError, Value};
+use pine_interpreter::{Builtin, BuiltinFn, Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -401,7 +401,7 @@ fn hline_object<O: PineOutput + LineOutput>() -> Value<O> {
     Value::Object {
         type_name: "hline".to_string(),
         fields: Rc::new(RefCell::new(members)),
-        call: Some(Rc::new(Hline::<O>::builtin_fn) as BuiltinFn<O>),
+        call: Some(Builtin::untyped(Rc::new(Hline::<O>::builtin_fn) as BuiltinFn<O>)),
     }
 }
 

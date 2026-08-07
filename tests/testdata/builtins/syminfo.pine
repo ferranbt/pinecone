@@ -1,5 +1,6 @@
 //@version=5
 indicator("builtins/syminfo")
+// Skip PineTS: syminfo.* is host-supplied metadata PineTS does not provide.
 // Test the syminfo namespace exposes the host-supplied symbol information.
 // The integration harness compiles every script with a fixed SymInfo (see
 // test_syminfo in integration.rs); these are its values.

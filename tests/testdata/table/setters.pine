@@ -1,5 +1,6 @@
 //@version=5
 indicator("table/setters")
+// Skip PineTS: PineTS does not model these table drawing setters.
 // Exercises every table setter. Tables have no getters in Pine, so this only
 // asserts the calls run without error and that table.all is readable.
 t = table.new(position.top_right, 2, 2)
