@@ -1,0 +1,16 @@
+//@version=6
+indicator("basics/misc_globals")
+// Skip PineTS: bid/ask/alert/bare-input are host/UI features PineTS does not model.
+log.info(str.tostring(bid) + "," + str.tostring(ask))
+max_bars_back(close, 100)
+alert("hello", alert.freq_once_per_bar)
+log.info(alert.freq_all + "," + alert.freq_once_per_bar_close)
+x = input(42, "num")
+s = input("hi", "str")
+b = input(true, "flag")
+log.info(str.tostring(x) + "," + s + "," + str.tostring(b))
+// Expected output:
+// NaN,NaN
+// freq_all,freq_once_per_bar_close
+// 42,hi,true
+// (alert): hello

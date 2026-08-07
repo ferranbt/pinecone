@@ -23,6 +23,193 @@ use pine_interpreter::{Interpreter, RuntimeError, Series, Value};
 /// One requested series, cached per call site so the secondary run happens once.
 type SecondarySeries<O> = Rc<Vec<(i64, Value<O>)>>;
 
+/// request.financial(symbol, financial_id, period, ...) - A fundamental metric
+/// from the host feed; `na` when it has none.
+#[derive(BuiltinFunction)]
+#[builtin(name = "request.financial")]
+struct RequestFinancial<O: PineOutput> {
+    symbol: String,
+    financial_id: String,
+    period: String,
+    #[arg(variadic)]
+    options: Vec<Value<O>>,
+}
+
+impl<O: PineOutput> RequestFinancial<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.options;
+        Ok(ctx
+            .request_provider
+            .as_ref()
+            .and_then(|p| p.financial(&self.symbol, &self.financial_id, &self.period))
+            .map_or(Value::Na, Value::Number))
+    }
+}
+
+/// request.dividends(ticker, field, ...) - A dividend field; `na` without a feed.
+#[derive(BuiltinFunction)]
+#[builtin(name = "request.dividends")]
+struct RequestDividends<O: PineOutput> {
+    ticker: String,
+    #[arg(default = "gross")]
+    field: String,
+    #[arg(variadic)]
+    options: Vec<Value<O>>,
+}
+
+impl<O: PineOutput> RequestDividends<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.options;
+        Ok(ctx
+            .request_provider
+            .as_ref()
+            .and_then(|p| p.dividends(&self.ticker, &self.field))
+            .map_or(Value::Na, Value::Number))
+    }
+}
+
+/// request.earnings(ticker, field, ...) - An earnings field; `na` without a feed.
+#[derive(BuiltinFunction)]
+#[builtin(name = "request.earnings")]
+struct RequestEarnings<O: PineOutput> {
+    ticker: String,
+    #[arg(default = "actual")]
+    field: String,
+    #[arg(variadic)]
+    options: Vec<Value<O>>,
+}
+
+impl<O: PineOutput> RequestEarnings<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.options;
+        Ok(ctx
+            .request_provider
+            .as_ref()
+            .and_then(|p| p.earnings(&self.ticker, &self.field))
+            .map_or(Value::Na, Value::Number))
+    }
+}
+
+/// request.splits(ticker, field, ...) - A splits field; `na` without a feed.
+#[derive(BuiltinFunction)]
+#[builtin(name = "request.splits")]
+struct RequestSplits<O: PineOutput> {
+    ticker: String,
+    #[arg(default = "numerator")]
+    field: String,
+    #[arg(variadic)]
+    options: Vec<Value<O>>,
+}
+
+impl<O: PineOutput> RequestSplits<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.options;
+        Ok(ctx
+            .request_provider
+            .as_ref()
+            .and_then(|p| p.splits(&self.ticker, &self.field))
+            .map_or(Value::Na, Value::Number))
+    }
+}
+
+/// request.economic(country_code, field, ...) - An economic series; `na` without
+/// a feed.
+#[derive(BuiltinFunction)]
+#[builtin(name = "request.economic")]
+struct RequestEconomic<O: PineOutput> {
+    country_code: String,
+    field: String,
+    #[arg(variadic)]
+    options: Vec<Value<O>>,
+}
+
+impl<O: PineOutput> RequestEconomic<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.options;
+        Ok(ctx
+            .request_provider
+            .as_ref()
+            .and_then(|p| p.economic(&self.country_code, &self.field))
+            .map_or(Value::Na, Value::Number))
+    }
+}
+
+/// request.currency_rate(from, to, ...) - The `from`→`to` rate; `1.0` for a
+/// same-currency pair, otherwise the host feed's rate or `na`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "request.currency_rate")]
+struct RequestCurrencyRate<O: PineOutput> {
+    from: String,
+    to: String,
+    #[arg(variadic)]
+    options: Vec<Value<O>>,
+}
+
+impl<O: PineOutput> RequestCurrencyRate<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.options;
+        if self.from == self.to {
+            return Ok(Value::Number(1.0));
+        }
+        Ok(ctx
+            .request_provider
+            .as_ref()
+            .and_then(|p| p.currency_rate(&self.from, &self.to))
+            .map_or(Value::Na, Value::Number))
+    }
+}
+
+/// request.quandl(ticker, ...) - Deprecated Nasdaq Data Link feed; `na`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "request.quandl")]
+struct RequestQuandl<O: PineOutput> {
+    ticker: String,
+    #[arg(variadic)]
+    options: Vec<Value<O>>,
+}
+
+impl<O: PineOutput> RequestQuandl<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = (&self.ticker, &self.options);
+        Ok(Value::Na)
+    }
+}
+
+/// request.seed(source, symbol, expression, ...) - A community seed feed; `na`
+/// (no seed data channel), so the expression is not evaluated.
+#[derive(BuiltinFunction)]
+#[builtin(name = "request.seed")]
+struct RequestSeed<O: PineOutput> {
+    source: String,
+    symbol: String,
+    #[arg(lazy)]
+    expression: Value<O>,
+    #[arg(variadic)]
+    options: Vec<Value<O>>,
+}
+
+impl<O: PineOutput> RequestSeed<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = (&self.source, &self.symbol, &self.expression, &self.options);
+        Ok(Value::Na)
+    }
+}
+
+/// request.footprint(...) - Footprint/volume-profile rows; `na` (not modeled).
+#[derive(BuiltinFunction)]
+#[builtin(name = "request.footprint")]
+struct RequestFootprint<O: PineOutput> {
+    #[arg(variadic)]
+    options: Vec<Value<O>>,
+}
+
+impl<O: PineOutput> RequestFootprint<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.options;
+        Ok(Value::Na)
+    }
+}
+
 pub fn register<O: PineOutput>() -> Value<O> {
     let mut fields: HashMap<String, Value<O>> = HashMap::new();
     fields.insert(
@@ -32,6 +219,33 @@ pub fn register<O: PineOutput>() -> Value<O> {
     fields.insert(
         "security_lower_tf".to_string(),
         RequestSecurityLowerTf::<O>::builtin_value(),
+    );
+    fields.insert(
+        "financial".to_string(),
+        RequestFinancial::<O>::builtin_value(),
+    );
+    fields.insert(
+        "dividends".to_string(),
+        RequestDividends::<O>::builtin_value(),
+    );
+    fields.insert(
+        "earnings".to_string(),
+        RequestEarnings::<O>::builtin_value(),
+    );
+    fields.insert("splits".to_string(), RequestSplits::<O>::builtin_value());
+    fields.insert(
+        "economic".to_string(),
+        RequestEconomic::<O>::builtin_value(),
+    );
+    fields.insert(
+        "currency_rate".to_string(),
+        RequestCurrencyRate::<O>::builtin_value(),
+    );
+    fields.insert("quandl".to_string(), RequestQuandl::<O>::builtin_value());
+    fields.insert("seed".to_string(), RequestSeed::<O>::builtin_value());
+    fields.insert(
+        "footprint".to_string(),
+        RequestFootprint::<O>::builtin_value(),
     );
     Value::Object {
         type_name: "request".to_string(),

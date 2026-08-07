@@ -1,12 +1,12 @@
-//! The `alertcondition(condition, title, message)` declaration.
-//!
-//! A global function that declares a named alert. The condition is a per-bar
-//! boolean series; in a headless run there is no alerting engine, so the
-//! declaration (title + message) is simply recorded via [`AlertConditionOutput`].
+//! The `alertcondition(...)` declaration and the `alert(...)` fire, which share
+//! the [`AlertConditionOutput`] sink.
 
 use pine_builtin_macro::BuiltinFunction;
-use pine_core::{AlertCondition, AlertConditionOutput, PineOutput};
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_core::{AlertCondition, AlertConditionOutput, Frequency, PineOutput};
+use pine_interpreter::{Builtin, BuiltinFn, Interpreter, RuntimeError, Value};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 /// alertcondition(condition, title, message)
 #[derive(BuiltinFunction)]
@@ -26,6 +26,7 @@ impl<O: PineOutput + AlertConditionOutput> Alertcondition<O> {
             ctx.output.add_alertcondition(AlertCondition {
                 title: self.title.clone(),
                 message: self.message.clone(),
+                frequency: None,
             });
         }
         Ok(Value::Na)
@@ -35,4 +36,43 @@ impl<O: PineOutput + AlertConditionOutput> Alertcondition<O> {
 /// The `alertcondition` global function value.
 pub fn register<O: PineOutput + AlertConditionOutput>() -> Value<O> {
     Alertcondition::<O>::builtin_value()
+}
+
+/// alert(message, freq) - Fire an alert, recording it via the same sink.
+#[derive(BuiltinFunction)]
+#[builtin(name = "alert", output = AlertConditionOutput)]
+struct Alert {
+    message: String,
+    #[arg(default = "freq_once_per_bar")]
+    freq: String,
+}
+
+impl Alert {
+    fn execute<O: PineOutput + AlertConditionOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        ctx.output.add_alertcondition(AlertCondition {
+            title: String::new(),
+            message: self.message.clone(),
+            frequency: Some(Frequency::from_const(&self.freq)),
+        });
+        Ok(Value::Na)
+    }
+}
+
+/// The callable `alert` namespace: `alert(...)` plus the `freq_*` constants.
+pub fn register_alert<O: PineOutput + AlertConditionOutput>() -> Value<O> {
+    let mut fields: HashMap<String, Value<O>> = HashMap::new();
+    for freq in ["freq_all", "freq_once_per_bar", "freq_once_per_bar_close"] {
+        fields.insert(freq.to_string(), Value::String(freq.to_string()));
+    }
+    Value::Object {
+        type_name: "alert".to_string(),
+        fields: Rc::new(RefCell::new(fields)),
+        call: Some(Builtin {
+            call: Rc::new(Alert::builtin_fn::<O>) as BuiltinFn<O>,
+            signature: Alert::signature(),
+        }),
+    }
 }

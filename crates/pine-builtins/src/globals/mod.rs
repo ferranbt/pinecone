@@ -72,9 +72,32 @@ impl Barcolor {
 }
 
 /// The `bgcolor` and `barcolor` global functions.
+/// max_bars_back(var, num) - Sizes a variable's historical buffer. A no-op here
+/// (the interpreter keeps full history), so it just returns `na`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "max_bars_back")]
+struct MaxBarsBack<O: PineOutput> {
+    var: Value<O>,
+    num: f64,
+}
+
+impl<O: PineOutput> MaxBarsBack<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = (&self.var, self.num);
+        Ok(Value::Na)
+    }
+}
+
 pub fn register<O: PineOutput + GlobalOutput>() -> HashMap<String, Value<O>> {
     let mut globals: HashMap<String, Value<O>> = HashMap::new();
     globals.insert("bgcolor".to_string(), Bgcolor::builtin_value::<O>());
     globals.insert("barcolor".to_string(), Barcolor::builtin_value::<O>());
+    globals.insert(
+        "max_bars_back".to_string(),
+        MaxBarsBack::<O>::builtin_value(),
+    );
+    // Real-time bid/ask quotes; `na` without a live quote feed.
+    globals.insert("bid".to_string(), Value::Na);
+    globals.insert("ask".to_string(), Value::Na);
     globals
 }
