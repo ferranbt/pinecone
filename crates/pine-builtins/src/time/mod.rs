@@ -3,6 +3,8 @@ use pine_builtin_macro::BuiltinFunction;
 use pine_core::Bar;
 use pine_core::PineOutput;
 use pine_interpreter::{Builtin, BuiltinFn, EvaluatedArg, Interpreter, RuntimeError, Value};
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -230,9 +232,49 @@ pub fn register_time_functions<O: PineOutput>() -> Vec<(String, Value<O>)> {
         ("year".to_string(), Year::builtin_value::<O>()),
         ("month".to_string(), Month::builtin_value::<O>()),
         ("dayofmonth".to_string(), DayOfMonth::builtin_value::<O>()),
-        ("dayofweek".to_string(), DayOfWeek::builtin_value::<O>()),
         ("hour".to_string(), Hour::builtin_value::<O>()),
         ("minute".to_string(), Minute::builtin_value::<O>()),
         ("second".to_string(), Second::builtin_value::<O>()),
     ]
+}
+
+/// Day of week for a UNIX-ms timestamp: `sunday = 1 … saturday = 7`.
+fn dow_of_millis(millis: f64) -> i64 {
+    let days = (millis / 1000.0) as i64 / (24 * 60 * 60);
+    // 1970-01-01 was a Thursday (5).
+    (days + 4).rem_euclid(7) + 1
+}
+
+/// The `dayofweek` name: a value (the current bar's day), a function
+/// (`dayofweek(time)`), and a namespace (`dayofweek.monday` … constants) at once.
+pub fn register_dayofweek<O: PineOutput>() -> Value<O> {
+    let mut fields: HashMap<String, Value<O>> = HashMap::new();
+    for (name, number) in [
+        ("sunday", 1),
+        ("monday", 2),
+        ("tuesday", 3),
+        ("wednesday", 4),
+        ("thursday", 5),
+        ("friday", 6),
+        ("saturday", 7),
+    ] {
+        fields.insert(name.to_string(), Value::Int(number));
+    }
+    Value::Object {
+        type_name: "dayofweek".to_string(),
+        fields: Rc::new(RefCell::new(fields)),
+        call: Some(Builtin {
+            call: Rc::new(DayOfWeek::builtin_fn::<O>) as BuiltinFn<O>,
+            signature: DayOfWeek::signature(),
+        }),
+        value: Some(Rc::new(|ctx: &mut Interpreter<O>| {
+            let millis = match ctx.get_variable("time") {
+                Some(time) => time.to_number()?,
+                None => None,
+            };
+            Ok(millis
+                .map(|m| Value::Int(dow_of_millis(m)))
+                .unwrap_or(Value::Na))
+        })),
+    }
 }

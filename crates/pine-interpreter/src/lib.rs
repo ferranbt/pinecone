@@ -106,6 +106,12 @@ pub struct Series<O: PineOutput = DefaultPineOutput> {
     pub current: Box<Value<O>>,
 }
 
+/// The lazy scalar an object carries, so a single name can be *both* a namespace
+/// and a value: `dayofweek.monday` reads a member while bare `dayofweek` invokes
+/// this to get the current day. Computed from live interpreter state on each use
+/// (never called with `()`), so there is no per-bar value to keep refreshed.
+pub type ObjectValueFn<O> = Rc<dyn Fn(&mut Interpreter<O>) -> Result<Value<O>, RuntimeError>>;
+
 /// The insertion-ordered key/value pairs backing a [`Value::Map`].
 pub type MapEntries<O> = Rc<RefCell<Vec<(Value<O>, Value<O>)>>>;
 
@@ -123,6 +129,7 @@ pub enum Value<O: PineOutput> {
         type_name: String, // The type name of this object (e.g., "InfoLabel")
         fields: Rc<RefCell<HashMap<String, Value<O>>>>, // Dictionary/Object with string keys
         call: Option<Builtin<O>>,
+        value: Option<ObjectValueFn<O>>,
     },
     Function {
         params: Vec<pine_ast::FunctionParam>,
@@ -1144,6 +1151,7 @@ impl<O: PineOutput> Interpreter<O> {
                     type_name: name.clone(),
                     fields: Rc::new(RefCell::new(enum_fields)),
                     call: None,
+                    value: None,
                 };
                 self.variables.insert(
                     name.clone(),
@@ -1219,6 +1227,7 @@ impl<O: PineOutput> Interpreter<O> {
                     type_name: alias.clone(),
                     fields: Rc::new(RefCell::new(library_exports.clone())),
                     call: None,
+                    value: None,
                 };
                 self.variables.insert(
                     alias.clone(),
@@ -1356,7 +1365,22 @@ impl<O: PineOutput> Interpreter<O> {
         Ok(LoopControl::None)
     }
 
+    /// Bare use unwraps a value-carrying object to its value; `.member` and
+    /// `(...)` positions use [`eval_expr_raw`] to keep the object.
     fn eval_expr(&mut self, expr: &Expr) -> Result<Value<O>, RuntimeError> {
+        let value = self.eval_expr_raw(expr)?;
+        if let Value::Object {
+            value: Some(compute),
+            ..
+        } = &value
+        {
+            let compute = compute.clone();
+            return compute(self);
+        }
+        Ok(value)
+    }
+
+    fn eval_expr_raw(&mut self, expr: &Expr) -> Result<Value<O>, RuntimeError> {
         match expr {
             Expr::Literal(lit) => Ok(self.eval_literal(lit)),
 
@@ -1545,7 +1569,7 @@ impl<O: PineOutput> Interpreter<O> {
                     // Try to find a method with this name
                     if let Some(method_defs) = self.methods.get(member).cloned() {
                         // Evaluate the object (this will be the first parameter)
-                        let obj_value = self.eval_expr(object)?;
+                        let obj_value = self.eval_expr_raw(object)?;
 
                         // Find the method that matches the object's type
                         let obj_type = self.get_object_type_name(&obj_value)?;
@@ -1577,7 +1601,7 @@ impl<O: PineOutput> Interpreter<O> {
                 // receivers so a side-effecting `f().m()` is not evaluated twice.)
                 if let Expr::MemberAccess { object, member, .. } = callee.as_ref() {
                     if !matches!(object.as_ref(), Expr::Call { .. }) {
-                        let receiver = self.eval_expr(object)?;
+                        let receiver = self.eval_expr_raw(object)?;
                         if let Some(namespace) = builtin_namespace(&receiver) {
                             if let Some(Value::BuiltinFunction(builtin_fn)) =
                                 self.namespace_member(namespace, member)
@@ -1596,7 +1620,7 @@ impl<O: PineOutput> Interpreter<O> {
                 // Not a method call, proceed with regular function call.
                 // Resolve the callee first so a builtin's lazy parameters can
                 // capture their arguments unevaluated.
-                let callee_value = self.eval_expr(callee)?;
+                let callee_value = self.eval_expr_raw(callee)?;
                 let signature = match &callee_value {
                     Value::BuiltinFunction(builtin) => Some(builtin.signature),
                     _ => None,
@@ -1651,7 +1675,7 @@ impl<O: PineOutput> Interpreter<O> {
                     {
                         self.user_types[name].clone()
                     }
-                    _ => self.eval_expr(object)?,
+                    _ => self.eval_expr_raw(object)?,
                 };
                 match obj_value {
                     Value::Object { fields, .. } => {
@@ -2147,6 +2171,7 @@ impl<O: PineOutput> Interpreter<O> {
                     type_name: type_name.clone(),
                     fields: Rc::new(RefCell::new(instance_fields)),
                     call: None,
+                    value: None,
                 })
             },
         )
@@ -2169,6 +2194,7 @@ impl<O: PineOutput> Interpreter<O> {
                             type_name,
                             fields,
                             call,
+                            value: value_fn,
                         } = value
                         {
                             // Create a shallow copy of the object's fields
@@ -2178,6 +2204,7 @@ impl<O: PineOutput> Interpreter<O> {
                                 type_name: type_name.clone(),
                                 fields: Rc::new(RefCell::new(copied_fields)),
                                 call: call.clone(),
+                                value: value_fn.clone(),
                             })
                         } else {
                             Err(RuntimeError::TypeError(

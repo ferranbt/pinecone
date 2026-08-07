@@ -74,5 +74,6 @@ pub fn register_alert<O: PineOutput + AlertConditionOutput>() -> Value<O> {
             call: Rc::new(Alert::builtin_fn::<O>) as BuiltinFn<O>,
             signature: Alert::signature(),
         }),
+        value: None,
     }
 }

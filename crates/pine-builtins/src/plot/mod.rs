@@ -384,6 +384,7 @@ pub fn register_plot_functions<O: PineOutput + PlotOutput>() -> HashMap<String, 
                 call: Rc::new(Plot::<O>::builtin_fn) as BuiltinFn<O>,
                 signature: Plot::<O>::signature(),
             }),
+            value: None,
         },
     );
     functions.insert("plotarrow".to_string(), Plotarrow::<O>::builtin_value());

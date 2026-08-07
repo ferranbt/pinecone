@@ -1291,5 +1291,6 @@ pub fn register<O: PineOutput>() -> Value<O> {
         type_name: "matrix".to_string(),
         fields: Rc::new(RefCell::new(members)),
         call: None,
+        value: None,
     }
 }

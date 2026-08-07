@@ -28,5 +28,6 @@ pub fn register<O: PineOutput>(bar: &Bar) -> Value<O> {
         type_name: "barstate".to_string(),
         fields: Rc::new(RefCell::new(members)),
         call: None,
+        value: None,
     }
 }

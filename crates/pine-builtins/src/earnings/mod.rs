@@ -30,5 +30,6 @@ pub fn register<O: PineOutput>() -> Value<O> {
         type_name: "earnings".to_string(),
         fields: Rc::new(RefCell::new(fields)),
         call: None,
+        value: None,
     }
 }

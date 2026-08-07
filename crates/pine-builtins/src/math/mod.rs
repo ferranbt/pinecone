@@ -486,6 +486,7 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
                 type_name: "math".to_string(),
                 fields: Rc::new(RefCell::new(math_ns)),
                 call: None,
+                value: None,
             },
         );
         obj

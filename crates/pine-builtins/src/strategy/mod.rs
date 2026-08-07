@@ -640,6 +640,7 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
             type_name: "strategy.commission".to_string(),
             fields: Rc::new(RefCell::new(commission)),
             call: None,
+            value: None,
         },
     );
 
@@ -654,6 +655,7 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
             type_name: "strategy.direction".to_string(),
             fields: Rc::new(RefCell::new(direction)),
             call: None,
+            value: None,
         },
     );
 
@@ -689,6 +691,7 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
             type_name: "strategy.risk".to_string(),
             fields: Rc::new(RefCell::new(risk)),
             call: None,
+            value: None,
         },
     );
 
@@ -703,6 +706,7 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
             type_name: "strategy.oca".to_string(),
             fields: Rc::new(RefCell::new(oca)),
             call: None,
+            value: None,
         },
     );
 
@@ -777,5 +781,6 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
         call: Some(Builtin::untyped(
             Rc::new(StrategyFn::builtin_fn) as BuiltinFn<O>
         )),
+        value: None,
     }
 }

@@ -78,5 +78,6 @@ pub fn register<O: PineOutput>(tf: Timeframe) -> Value<O> {
         type_name: "timeframe".to_string(),
         fields: Rc::new(RefCell::new(members)),
         call: None,
+        value: None,
     }
 }

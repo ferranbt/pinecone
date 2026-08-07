@@ -31,6 +31,7 @@ fn point<O: PineOutput>(time: Value<O>, index: Value<O>, price: Value<O>) -> Val
         type_name: "chart.point".to_string(),
         fields: Rc::new(RefCell::new(fields)),
         call: None,
+        value: None,
     }
 }
 
@@ -158,6 +159,7 @@ pub fn register<O: PineOutput>() -> Value<O> {
         type_name: "chart.point".to_string(),
         fields: Rc::new(RefCell::new(point_ns)),
         call: None,
+        value: None,
     };
 
     let mut fields: HashMap<String, Value<O>> = HashMap::new();
@@ -182,5 +184,6 @@ pub fn register<O: PineOutput>() -> Value<O> {
         type_name: "chart".to_string(),
         fields: Rc::new(RefCell::new(fields)),
         call: None,
+        value: None,
     }
 }

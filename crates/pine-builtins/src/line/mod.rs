@@ -404,6 +404,7 @@ fn hline_object<O: PineOutput + LineOutput>() -> Value<O> {
         call: Some(Builtin::untyped(
             Rc::new(Hline::<O>::builtin_fn) as BuiltinFn<O>
         )),
+        value: None,
     }
 }
 
@@ -533,6 +534,7 @@ pub fn register<O: PineOutput + LineOutput>(version: PineVersion) -> Vec<(String
         type_name: "line".to_string(),
         fields: Rc::new(RefCell::new(members)),
         call: None,
+        value: None,
     };
 
     let mut entries = vec![
