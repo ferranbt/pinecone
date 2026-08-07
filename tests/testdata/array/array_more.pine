@@ -1,0 +1,22 @@
+//@version=5
+indicator("array/array_more")
+// covariance, abs, every/some, lastindexof, standardize, binary_search, sort_indices
+
+log.info(str.tostring(array.covariance(array.from(3.0, 1.0, 2.0), array.from(1.0, 2.0, 3.0))))
+log.info(array.join(array.abs(array.from(-1.0, 2.0, -3.0)), ","))
+log.info(str.tostring(array.every(array.from(1.0, 2.0))))
+log.info(str.tostring(array.every(array.from(1.0, 0.0))))
+log.info(str.tostring(array.some(array.from(0.0, 2.0))))
+log.info(str.tostring(array.lastindexof(array.from(1.0, 2.0, 1.0), 1.0)))
+log.info(str.tostring(array.binary_search(array.from(1.0, 3.0, 5.0, 7.0), 5.0)))
+log.info(array.join(array.sort_indices(array.from(3.0, 1.0, 2.0)), ","))
+
+// Expected output:
+// -0.3333333333333333
+// 1,2,3
+// true
+// false
+// true
+// 2
+// 2
+// 1,2,0

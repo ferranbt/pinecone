@@ -1455,6 +1455,7 @@ dependencies = [
  "pine-builtin-macro",
  "pine-core",
  "pine-interpreter",
+ "regex",
 ]
 
 [[package]]

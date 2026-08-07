@@ -688,6 +688,197 @@ fn variance(ns: &[f64], biased: bool) -> Option<f64> {
     Some(ns.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / denominator as f64)
 }
 
+/// Whether a value counts as `true` for `array.every`/`array.some`.
+fn truthy<O: PineOutput>(v: &Value<O>) -> bool {
+    match v {
+        Value::Bool(b) => *b,
+        Value::Int(n) => *n != 0,
+        Value::Number(n) => *n != 0.0 && !n.is_nan(),
+        _ => false,
+    }
+}
+
+macro_rules! array_new {
+    ($name:literal, $ident:ident) => {
+        #[derive(BuiltinFunction)]
+        #[builtin(name = $name)]
+        struct $ident<O: PineOutput> {
+            #[arg(default = 0.0)]
+            size: f64,
+            #[arg(default = Value::Na)]
+            initial_value: Value<O>,
+        }
+
+        impl<O: PineOutput> $ident<O> {
+            fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+                let arr = vec![self.initial_value.clone(); self.size as usize];
+                Ok(Value::Array(Rc::new(RefCell::new(arr))))
+            }
+        }
+    };
+}
+
+array_new!("array.new_bool", ArrayNewBool);
+array_new!("array.new_color", ArrayNewColor);
+array_new!("array.new_box", ArrayNewBox);
+array_new!("array.new_label", ArrayNewLabel);
+array_new!("array.new_line", ArrayNewLine);
+array_new!("array.new_linefill", ArrayNewLinefill);
+array_new!("array.new_table", ArrayNewTable);
+
+/// array.abs(id) - A new array of the absolute values.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.abs")]
+struct ArrayAbs<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayAbs<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let out: Vec<Value<O>> = self
+            .array
+            .as_array()?
+            .borrow()
+            .iter()
+            .map(|v| numeric(v).map_or_else(|| v.clone(), |n| Value::Number(n.abs())))
+            .collect();
+        Ok(Value::Array(Rc::new(RefCell::new(out))))
+    }
+}
+
+/// array.every(id) - Whether every element is true (vacuously true when empty).
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.every")]
+struct ArrayEvery<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayEvery<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        Ok(Value::Bool(self.array.as_array()?.borrow().iter().all(truthy)))
+    }
+}
+
+/// array.some(id) - Whether at least one element is true.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.some")]
+struct ArraySome<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArraySome<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        Ok(Value::Bool(self.array.as_array()?.borrow().iter().any(truthy)))
+    }
+}
+
+/// array.lastindexof(id, value) - Index of the last matching element, or -1.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.lastindexof")]
+struct ArrayLastIndexOf<O: PineOutput> {
+    array: Value<O>,
+    value: Value<O>,
+}
+
+impl<O: PineOutput> ArrayLastIndexOf<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let index = self
+            .array
+            .as_array()?
+            .borrow()
+            .iter()
+            .rposition(|v| *v == self.value);
+        Ok(Value::Int(index.map_or(-1, |i| i as i64)))
+    }
+}
+
+/// array.standardize(id) - A new array of z-scores `(x - mean) / stdev`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.standardize")]
+struct ArrayStandardize<O: PineOutput> {
+    array: Value<O>,
+}
+
+impl<O: PineOutput> ArrayStandardize<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let ns = numbers(&self.array)?;
+        let mean = mean(&ns).unwrap_or(0.0);
+        let stdev = variance(&ns, true).unwrap_or(0.0).sqrt();
+        let out: Vec<Value<O>> = ns
+            .iter()
+            .map(|x| Value::Number(if stdev > 0.0 { (x - mean) / stdev } else { 0.0 }))
+            .collect();
+        Ok(Value::Array(Rc::new(RefCell::new(out))))
+    }
+}
+
+/// array.covariance(id1, id2, biased) - Covariance of two arrays over their
+/// paired finite elements.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.covariance")]
+struct ArrayCovariance<O: PineOutput> {
+    array1: Value<O>,
+    array2: Value<O>,
+    #[arg(default = true)]
+    biased: bool,
+}
+
+impl<O: PineOutput> ArrayCovariance<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let xs = numbers(&self.array1)?;
+        let ys = numbers(&self.array2)?;
+        let n = xs.len().min(ys.len());
+        let denominator = if self.biased { n } else { n.saturating_sub(1) };
+        if denominator == 0 {
+            return Ok(Value::Na);
+        }
+        let mx = xs[..n].iter().sum::<f64>() / n as f64;
+        let my = ys[..n].iter().sum::<f64>() / n as f64;
+        let cov = (0..n).map(|i| (xs[i] - mx) * (ys[i] - my)).sum::<f64>() / denominator as f64;
+        Ok(Value::Number(cov))
+    }
+}
+
+/// array.sort_indices(id, order) - Indices that would sort the array.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.sort_indices")]
+struct ArraySortIndices<O: PineOutput> {
+    array: Value<O>,
+    #[arg(default = "ascending")]
+    order: String,
+}
+
+impl<O: PineOutput> ArraySortIndices<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let arr = self.array.as_array()?.borrow();
+        let mut indices: Vec<usize> = (0..arr.len()).collect();
+        indices.sort_by(|&a, &b| compare_values(&arr[a], &arr[b]));
+        if self.order == "descending" {
+            indices.reverse();
+        }
+        let out = indices.into_iter().map(|i| Value::Int(i as i64)).collect();
+        Ok(Value::Array(Rc::new(RefCell::new(out))))
+    }
+}
+
+/// array.binary_search(id, val) - Index of `val` in a sorted array, or -1.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.binary_search")]
+struct ArrayBinarySearch<O: PineOutput> {
+    array: Value<O>,
+    val: f64,
+}
+
+impl<O: PineOutput> ArrayBinarySearch<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let ns = numbers(&self.array)?;
+        let found = ns
+            .binary_search_by(|x| x.partial_cmp(&self.val).unwrap())
+            .ok();
+        Ok(Value::Int(found.map_or(-1, |i| i as i64)))
+    }
+}
+
 /// Register all array namespace functions and return the namespace object
 pub fn register<O: PineOutput>() -> Value<O> {
     let mut array_ns: std::collections::HashMap<String, Value<O>> =
@@ -732,6 +923,39 @@ pub fn register<O: PineOutput>() -> Value<O> {
     array_ns.insert("variance".to_string(), ArrayVariance::<O>::builtin_value());
     array_ns.insert("stdev".to_string(), ArrayStdev::<O>::builtin_value());
     array_ns.insert("mode".to_string(), ArrayMode::<O>::builtin_value());
+    array_ns.insert("new_bool".to_string(), ArrayNewBool::<O>::builtin_value());
+    array_ns.insert("new_color".to_string(), ArrayNewColor::<O>::builtin_value());
+    array_ns.insert("new_box".to_string(), ArrayNewBox::<O>::builtin_value());
+    array_ns.insert("new_label".to_string(), ArrayNewLabel::<O>::builtin_value());
+    array_ns.insert("new_line".to_string(), ArrayNewLine::<O>::builtin_value());
+    array_ns.insert(
+        "new_linefill".to_string(),
+        ArrayNewLinefill::<O>::builtin_value(),
+    );
+    array_ns.insert("new_table".to_string(), ArrayNewTable::<O>::builtin_value());
+    array_ns.insert("abs".to_string(), ArrayAbs::<O>::builtin_value());
+    array_ns.insert("every".to_string(), ArrayEvery::<O>::builtin_value());
+    array_ns.insert("some".to_string(), ArraySome::<O>::builtin_value());
+    array_ns.insert(
+        "lastindexof".to_string(),
+        ArrayLastIndexOf::<O>::builtin_value(),
+    );
+    array_ns.insert(
+        "standardize".to_string(),
+        ArrayStandardize::<O>::builtin_value(),
+    );
+    array_ns.insert(
+        "covariance".to_string(),
+        ArrayCovariance::<O>::builtin_value(),
+    );
+    array_ns.insert(
+        "sort_indices".to_string(),
+        ArraySortIndices::<O>::builtin_value(),
+    );
+    array_ns.insert(
+        "binary_search".to_string(),
+        ArrayBinarySearch::<O>::builtin_value(),
+    );
 
     Value::Object {
         type_name: "array".to_string(),
