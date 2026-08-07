@@ -127,7 +127,9 @@ pub fn register<O: PineOutput + InputOutput>() -> Vec<(String, Value<O>)> {
     let input_object = Value::Object {
         type_name: "input".to_string(),
         fields: Rc::new(RefCell::new(members)),
-        call: Some(Builtin::untyped(Rc::new(InputLegacy::<O>::builtin_fn) as BuiltinFn<O>)),
+        call: Some(Builtin::untyped(
+            Rc::new(InputLegacy::<O>::builtin_fn) as BuiltinFn<O>
+        )),
     };
 
     let mut entries = vec![("input".to_string(), input_object)];

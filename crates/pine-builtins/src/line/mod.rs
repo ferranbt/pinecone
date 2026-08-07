@@ -401,7 +401,9 @@ fn hline_object<O: PineOutput + LineOutput>() -> Value<O> {
     Value::Object {
         type_name: "hline".to_string(),
         fields: Rc::new(RefCell::new(members)),
-        call: Some(Builtin::untyped(Rc::new(Hline::<O>::builtin_fn) as BuiltinFn<O>)),
+        call: Some(Builtin::untyped(
+            Rc::new(Hline::<O>::builtin_fn) as BuiltinFn<O>
+        )),
     }
 }
 

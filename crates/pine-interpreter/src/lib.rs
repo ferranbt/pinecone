@@ -140,6 +140,12 @@ pub enum Value<O: PineOutput> {
         element_type: String, // Type of elements: "int", "float", "string", "bool"
         data: Rc<RefCell<Vec<Vec<Value<O>>>>>, // 2D matrix - mutable shared reference to rows of columns
     },
+    Map {
+        key_type: String,   // Type of keys, e.g. "int", "string"
+        value_type: String, // Type of values
+        // Insertion-ordered key/value pairs, as Pine maps preserve order.
+        data: Rc<RefCell<Vec<(Value<O>, Value<O>)>>>,
+    },
 }
 
 impl<O: PineOutput> From<Num> for Value<O> {

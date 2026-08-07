@@ -692,6 +692,8 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
     Value::Object {
         type_name: "strategy".to_string(),
         fields: Rc::new(RefCell::new(fields)),
-        call: Some(Builtin::untyped(Rc::new(StrategyFn::builtin_fn) as BuiltinFn<O>)),
+        call: Some(Builtin::untyped(
+            Rc::new(StrategyFn::builtin_fn) as BuiltinFn<O>
+        )),
     }
 }
