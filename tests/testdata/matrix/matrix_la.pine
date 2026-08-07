@@ -1,0 +1,49 @@
+//@version=5
+indicator("matrix/matrix_la")
+// det, rank, inv, mult, diff, pow, kron, submatrix, reshape
+m = matrix.new<float>(0, 0)
+matrix.add_row(m, 0, array.from(1.0, 2.0))
+matrix.add_row(m, 1, array.from(3.0, 4.0))
+
+log.info(str.tostring(matrix.det(m)))
+log.info(str.tostring(matrix.rank(m)))
+inv = matrix.inv(m)
+log.info(str.tostring(matrix.get(inv, 0, 0)))
+log.info(str.tostring(matrix.get(inv, 1, 1)))
+
+b = matrix.new<float>(0, 0)
+matrix.add_row(b, 0, array.from(5.0, 6.0))
+matrix.add_row(b, 1, array.from(7.0, 8.0))
+p = matrix.mult(m, b)
+log.info(str.tostring(matrix.get(p, 0, 0)))
+log.info(str.tostring(matrix.get(p, 1, 1)))
+
+log.info(str.tostring(matrix.get(matrix.diff(m, m), 0, 0)))
+
+pw = matrix.new<float>(0, 0)
+matrix.add_row(pw, 0, array.from(1.0, 1.0))
+matrix.add_row(pw, 1, array.from(0.0, 1.0))
+log.info(str.tostring(matrix.get(matrix.pow(pw, 2), 0, 1)))
+
+scale = matrix.new<float>(0, 0)
+matrix.add_row(scale, 0, array.from(10.0))
+log.info(str.tostring(matrix.get(matrix.kron(m, scale), 1, 1)))
+
+sub = matrix.submatrix(m, 0, 1, 0, 2)
+log.info(array.join(matrix.row(sub, 0), ","))
+
+matrix.reshape(m, 1, 4)
+log.info(str.tostring(matrix.rows(m)) + "x" + str.tostring(matrix.columns(m)))
+
+// Expected output:
+// -2
+// 2
+// -1.9999999999999996
+// -0.49999999999999994
+// 19
+// 50
+// 0
+// 2
+// 40
+// 1,2
+// 1x4
