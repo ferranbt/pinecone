@@ -879,6 +879,133 @@ impl<O: PineOutput> ArrayBinarySearch<O> {
     }
 }
 
+/// array.slice(id, index_from, index_to) - A copy of the `[from, to)` range.
+/// (Pine returns a live view; this returns a shallow copy.)
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.slice")]
+struct ArraySlice<O: PineOutput> {
+    array: Value<O>,
+    index_from: f64,
+    index_to: f64,
+}
+
+impl<O: PineOutput> ArraySlice<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let arr = self.array.as_array()?.borrow();
+        let from = (self.index_from as usize).min(arr.len());
+        let to = (self.index_to as usize).clamp(from, arr.len());
+        Ok(Value::Array(Rc::new(RefCell::new(arr[from..to].to_vec()))))
+    }
+}
+
+/// array.binary_search_leftmost(id, val) - Index of `val`, else the index just
+/// left of where it would lie (-1 before the start). Array must be sorted.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.binary_search_leftmost")]
+struct ArrayBinarySearchLeftmost<O: PineOutput> {
+    array: Value<O>,
+    val: f64,
+}
+
+impl<O: PineOutput> ArrayBinarySearchLeftmost<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let ns = numbers(&self.array)?;
+        let lower = ns.partition_point(|x| *x < self.val);
+        let found = ns.get(lower) == Some(&self.val);
+        Ok(Value::Int(if found { lower as i64 } else { lower as i64 - 1 }))
+    }
+}
+
+/// array.binary_search_rightmost(id, val) - Index of `val`, else the index just
+/// right of where it would lie. Array must be sorted ascending.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.binary_search_rightmost")]
+struct ArrayBinarySearchRightmost<O: PineOutput> {
+    array: Value<O>,
+    val: f64,
+}
+
+impl<O: PineOutput> ArrayBinarySearchRightmost<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let ns = numbers(&self.array)?;
+        let upper = ns.partition_point(|x| *x <= self.val);
+        let found = upper > 0 && ns[upper - 1] == self.val;
+        Ok(Value::Int(if found { upper as i64 - 1 } else { upper as i64 }))
+    }
+}
+
+/// array.percentrank(id, index) - Percentage of elements below the element at
+/// `index`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.percentrank")]
+struct ArrayPercentRank<O: PineOutput> {
+    array: Value<O>,
+    index: f64,
+}
+
+impl<O: PineOutput> ArrayPercentRank<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let arr = self.array.as_array()?.borrow();
+        let index = self.index as usize;
+        let Some(target) = arr.get(index).and_then(numeric) else {
+            return Ok(Value::Na);
+        };
+        if arr.len() < 2 {
+            return Ok(Value::Number(0.0));
+        }
+        let below = arr.iter().filter_map(numeric).filter(|&x| x < target).count();
+        Ok(Value::Number(below as f64 / (arr.len() - 1) as f64 * 100.0))
+    }
+}
+
+/// array.percentile_nearest_rank(id, percentage) - The value at `percentage`
+/// using the nearest-rank method.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.percentile_nearest_rank")]
+struct ArrayPercentileNearestRank<O: PineOutput> {
+    array: Value<O>,
+    percentage: f64,
+}
+
+impl<O: PineOutput> ArrayPercentileNearestRank<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let mut ns = numbers(&self.array)?;
+        if ns.is_empty() {
+            return Ok(Value::Na);
+        }
+        ns.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let rank = (self.percentage / 100.0 * ns.len() as f64).ceil() as usize;
+        Ok(Value::Number(ns[rank.clamp(1, ns.len()) - 1]))
+    }
+}
+
+/// array.percentile_linear_interpolation(id, percentage) - The value at
+/// `percentage`, interpolating between ranks.
+#[derive(BuiltinFunction)]
+#[builtin(name = "array.percentile_linear_interpolation")]
+struct ArrayPercentileLinear<O: PineOutput> {
+    array: Value<O>,
+    percentage: f64,
+}
+
+impl<O: PineOutput> ArrayPercentileLinear<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let mut ns = numbers(&self.array)?;
+        if ns.is_empty() {
+            return Ok(Value::Na);
+        }
+        ns.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let pos = self.percentage / 100.0 * (ns.len() - 1) as f64;
+        let lo = pos.floor() as usize;
+        let value = if lo + 1 < ns.len() {
+            ns[lo] + (pos - lo as f64) * (ns[lo + 1] - ns[lo])
+        } else {
+            ns[lo]
+        };
+        Ok(Value::Number(value))
+    }
+}
+
 /// Register all array namespace functions and return the namespace object
 pub fn register<O: PineOutput>() -> Value<O> {
     let mut array_ns: std::collections::HashMap<String, Value<O>> =
@@ -955,6 +1082,27 @@ pub fn register<O: PineOutput>() -> Value<O> {
     array_ns.insert(
         "binary_search".to_string(),
         ArrayBinarySearch::<O>::builtin_value(),
+    );
+    array_ns.insert("slice".to_string(), ArraySlice::<O>::builtin_value());
+    array_ns.insert(
+        "binary_search_leftmost".to_string(),
+        ArrayBinarySearchLeftmost::<O>::builtin_value(),
+    );
+    array_ns.insert(
+        "binary_search_rightmost".to_string(),
+        ArrayBinarySearchRightmost::<O>::builtin_value(),
+    );
+    array_ns.insert(
+        "percentrank".to_string(),
+        ArrayPercentRank::<O>::builtin_value(),
+    );
+    array_ns.insert(
+        "percentile_nearest_rank".to_string(),
+        ArrayPercentileNearestRank::<O>::builtin_value(),
+    );
+    array_ns.insert(
+        "percentile_linear_interpolation".to_string(),
+        ArrayPercentileLinear::<O>::builtin_value(),
     );
 
     Value::Object {
