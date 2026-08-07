@@ -418,6 +418,64 @@ fn get_line_mut<O: PineOutput + LineOutput>(
         .ok_or_else(|| RuntimeError::TypeError(format!("Line with id {} not found", id)))
 }
 
+/// line.set_first_point(id, point) - Set the first end from a `chart.point`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "line.set_first_point")]
+struct LineSetFirstPoint<O: PineOutput + LineOutput> {
+    id: f64,
+    point: Value<O>,
+}
+
+impl<O: PineOutput + LineOutput> LineSetFirstPoint<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let (x, y) = crate::chart::point_coords(&self.point)?;
+        let line = get_line_mut(ctx, self.id)?;
+        line.x1 = x;
+        line.y1 = y;
+        Ok(Value::Na)
+    }
+}
+
+/// line.set_second_point(id, point) - Set the second end from a `chart.point`.
+#[derive(BuiltinFunction)]
+#[builtin(name = "line.set_second_point")]
+struct LineSetSecondPoint<O: PineOutput + LineOutput> {
+    id: f64,
+    point: Value<O>,
+}
+
+impl<O: PineOutput + LineOutput> LineSetSecondPoint<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let (x, y) = crate::chart::point_coords(&self.point)?;
+        let line = get_line_mut(ctx, self.id)?;
+        line.x2 = x;
+        line.y2 = y;
+        Ok(Value::Na)
+    }
+}
+
+/// line.set_xloc(id, x1, x2, xloc) - Set both x coordinates and the `xloc` mode.
+#[derive(BuiltinFunction)]
+#[builtin(name = "line.set_xloc")]
+struct LineSetXloc<O: PineOutput + LineOutput> {
+    id: f64,
+    x1: Value<O>,
+    x2: Value<O>,
+    xloc: String,
+}
+
+impl<O: PineOutput + LineOutput> LineSetXloc<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let (x1, x2) = (self.x1.as_number()?, self.x2.as_number()?);
+        let xloc = self.xloc.clone();
+        let line = get_line_mut(ctx, self.id)?;
+        line.x1 = x1;
+        line.x2 = x2;
+        line.xloc = xloc;
+        Ok(Value::Na)
+    }
+}
+
 /// Every name this module contributes: the `line` namespace, the `hline` global,
 /// and (v3/v4 only) the bare `linestyle=dotted` constants.
 pub fn register<O: PineOutput + LineOutput>(version: PineVersion) -> Vec<(String, Value<O>)> {
@@ -444,6 +502,10 @@ pub fn register<O: PineOutput + LineOutput>(version: PineVersion) -> Vec<(String
     members.insert("get_price".to_string(), LineGetPrice::builtin_value::<O>());
     members.insert("delete".to_string(), LineDelete::builtin_value::<O>());
     members.insert("copy".to_string(), LineCopy::builtin_value::<O>());
+    members.insert("set_first_point".to_string(), LineSetFirstPoint::<O>::builtin_value());
+    members.insert("set_second_point".to_string(), LineSetSecondPoint::<O>::builtin_value());
+    members.insert("set_xloc".to_string(), LineSetXloc::<O>::builtin_value());
+    members.insert("all".to_string(), Value::Array(Rc::new(RefCell::new(Vec::new()))));
 
     // Style constants.
     for style in [
