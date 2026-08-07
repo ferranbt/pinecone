@@ -502,10 +502,19 @@ pub fn register<O: PineOutput + LineOutput>(version: PineVersion) -> Vec<(String
     members.insert("get_price".to_string(), LineGetPrice::builtin_value::<O>());
     members.insert("delete".to_string(), LineDelete::builtin_value::<O>());
     members.insert("copy".to_string(), LineCopy::builtin_value::<O>());
-    members.insert("set_first_point".to_string(), LineSetFirstPoint::<O>::builtin_value());
-    members.insert("set_second_point".to_string(), LineSetSecondPoint::<O>::builtin_value());
+    members.insert(
+        "set_first_point".to_string(),
+        LineSetFirstPoint::<O>::builtin_value(),
+    );
+    members.insert(
+        "set_second_point".to_string(),
+        LineSetSecondPoint::<O>::builtin_value(),
+    );
     members.insert("set_xloc".to_string(), LineSetXloc::<O>::builtin_value());
-    members.insert("all".to_string(), Value::Array(Rc::new(RefCell::new(Vec::new()))));
+    members.insert(
+        "all".to_string(),
+        Value::Array(Rc::new(RefCell::new(Vec::new()))),
+    );
 
     // Style constants.
     for style in [

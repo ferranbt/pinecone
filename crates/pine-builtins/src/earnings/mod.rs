@@ -17,7 +17,12 @@ pub fn register<O: PineOutput>() -> Value<O> {
     }
 
     // Upcoming earnings, `na` without a fundamentals feed.
-    for var in ["future_eps", "future_revenue", "future_time", "future_period_end_time"] {
+    for var in [
+        "future_eps",
+        "future_revenue",
+        "future_time",
+        "future_period_end_time",
+    ] {
         fields.insert(var.to_string(), Value::Na);
     }
 

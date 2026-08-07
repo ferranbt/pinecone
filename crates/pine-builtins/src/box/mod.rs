@@ -755,13 +755,22 @@ pub fn register<O: PineOutput + BoxOutput>() -> Value<O> {
     members.insert("get_bottom".to_string(), BoxGetBottom::builtin_value::<O>());
     members.insert("delete".to_string(), BoxDelete::builtin_value::<O>());
     members.insert("copy".to_string(), BoxCopy::builtin_value::<O>());
-    members.insert("set_top_left_point".to_string(), BoxSetTopLeftPoint::<O>::builtin_value());
+    members.insert(
+        "set_top_left_point".to_string(),
+        BoxSetTopLeftPoint::<O>::builtin_value(),
+    );
     members.insert(
         "set_bottom_right_point".to_string(),
         BoxSetBottomRightPoint::<O>::builtin_value(),
     );
-    members.insert("set_text_formatting".to_string(), BoxSetTextFormatting::builtin_value::<O>());
-    members.insert("all".to_string(), Value::Array(Rc::new(RefCell::new(Vec::new()))));
+    members.insert(
+        "set_text_formatting".to_string(),
+        BoxSetTextFormatting::builtin_value::<O>(),
+    );
+    members.insert(
+        "all".to_string(),
+        Value::Array(Rc::new(RefCell::new(Vec::new()))),
+    );
 
     Value::Object {
         type_name: "box".to_string(),

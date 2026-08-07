@@ -13,7 +13,10 @@ pub fn register<O: PineOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
 
     for settlement in SETTLEMENTS {
-        members.insert(settlement.to_string(), Value::String(settlement.to_string()));
+        members.insert(
+            settlement.to_string(),
+            Value::String(settlement.to_string()),
+        );
     }
 
     Value::Object {

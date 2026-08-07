@@ -12,7 +12,10 @@ pub fn register<O: PineOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
 
     for adjustment in ADJUSTMENTS {
-        members.insert(adjustment.to_string(), Value::String(adjustment.to_string()));
+        members.insert(
+            adjustment.to_string(),
+            Value::String(adjustment.to_string()),
+        );
     }
 
     Value::Object {

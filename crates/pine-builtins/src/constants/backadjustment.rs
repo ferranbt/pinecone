@@ -13,7 +13,10 @@ pub fn register<O: PineOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
 
     for backadjustment in BACKADJUSTMENTS {
-        members.insert(backadjustment.to_string(), Value::String(backadjustment.to_string()));
+        members.insert(
+            backadjustment.to_string(),
+            Value::String(backadjustment.to_string()),
+        );
     }
 
     Value::Object {

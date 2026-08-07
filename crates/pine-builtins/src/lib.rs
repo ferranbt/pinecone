@@ -256,7 +256,10 @@ pub fn register_namespace_objects<
     namespaces.insert("font".to_string(), constants::font::register());
     namespaces.insert("splits".to_string(), constants::splits::register());
     namespaces.insert("adjustment".to_string(), constants::adjustment::register());
-    namespaces.insert("backadjustment".to_string(), constants::backadjustment::register());
+    namespaces.insert(
+        "backadjustment".to_string(),
+        constants::backadjustment::register(),
+    );
     namespaces.insert(
         "settlement_as_close".to_string(),
         constants::settlement_as_close::register(),

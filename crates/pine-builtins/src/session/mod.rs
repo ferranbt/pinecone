@@ -15,7 +15,10 @@ pub fn register<O: PineOutput>() -> Value<O> {
 
     // Session-type constants (arguments to `ticker.new`/`request.security`).
     fields.insert("regular".to_string(), Value::String("regular".to_string()));
-    fields.insert("extended".to_string(), Value::String("extended".to_string()));
+    fields.insert(
+        "extended".to_string(),
+        Value::String("extended".to_string()),
+    );
 
     // Session-state variables: treat every bar as regular-session, first/last off.
     fields.insert("ismarket".to_string(), Value::Bool(true));

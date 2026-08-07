@@ -129,7 +129,12 @@ pub fn point_coords<O: PineOutput>(point: &Value<O>) -> Result<(f64, f64), Runti
         return Err(RuntimeError::TypeError("expected a chart.point".into()));
     };
     let fields = fields.borrow();
-    let read = |name: &str| fields.get(name).and_then(|v| v.as_number().ok()).unwrap_or(f64::NAN);
+    let read = |name: &str| {
+        fields
+            .get(name)
+            .and_then(|v| v.as_number().ok())
+            .unwrap_or(f64::NAN)
+    };
     let index = read("index");
     let x = if index.is_nan() { read("time") } else { index };
     Ok((x, read("price")))

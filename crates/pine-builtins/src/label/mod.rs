@@ -625,7 +625,10 @@ pub fn register<O: PineOutput + LabelOutput>() -> Value<O> {
         "set_text_formatting".to_string(),
         LabelSetTextFormatting::builtin_value::<O>(),
     );
-    members.insert("all".to_string(), Value::Array(Rc::new(RefCell::new(Vec::new()))));
+    members.insert(
+        "all".to_string(),
+        Value::Array(Rc::new(RefCell::new(Vec::new()))),
+    );
 
     Value::Object {
         type_name: "label".to_string(),
