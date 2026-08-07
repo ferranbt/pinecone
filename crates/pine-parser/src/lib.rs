@@ -1769,7 +1769,14 @@ impl Parser {
 
         // Switch expression: switch value \n case => result
         if self.match_token(&[TokenType::Switch]) {
-            let value = Box::new(self.expression()?);
+            // The subjectless form (`switch` with boolean arms) has no expression
+            // after the keyword — just a newline. Treat it as `switch true`, so an
+            // arm matches when its condition evaluates to `true`.
+            let value = if self.check(&TokenType::Newline) {
+                Box::new(Expr::Literal(Literal::Bool(true)))
+            } else {
+                Box::new(self.expression()?)
+            };
 
             // Skip newline after switch value
             self.match_token(&[TokenType::Newline]);

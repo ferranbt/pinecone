@@ -1,0 +1,21 @@
+//@version=6
+indicator("basics/switch_subjectless")
+a = 2
+// Subjectless switch: first true arm wins (second arm here).
+s = switch
+    a == 1 => 10
+    a == 2 => 20
+    => 99
+// Subjectless switch falling through to the default.
+d = switch
+    a == 1 => 10
+    a == 5 => 20
+    => 99
+// Subjectful switch still works.
+m = switch a
+    1 => "one"
+    2 => "two"
+    => "other"
+log.info(str.tostring(s) + "," + str.tostring(d) + "," + m)
+// Expected output:
+// 20,99,two
