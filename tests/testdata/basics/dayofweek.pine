@@ -1,0 +1,17 @@
+//@version=6
+indicator("basics/dayofweek")
+// Skip PineTS: `dayofweek` as a bare value + namespace is our unification, not
+// something PineTS models the same way.
+// `dayofweek` is three things at once: a value (the current bar's day), a
+// function (`dayofweek(t)`), and a namespace of weekday constants.
+log.info(str.tostring(dayofweek))                       // bar time 199000ms → Thursday = 5
+log.info(str.tostring(dayofweek == dayofweek.thursday)) // 5 == 5 → true
+log.info(str.tostring(dayofweek(timestamp("2024-01-01")))) // Monday = 2
+// Every weekday constant (sunday = 1 … saturday = 7).
+log.info(str.tostring(dayofweek.sunday) + str.tostring(dayofweek.monday) + str.tostring(dayofweek.tuesday) + str.tostring(dayofweek.wednesday) + str.tostring(dayofweek.thursday) + str.tostring(dayofweek.friday) + str.tostring(dayofweek.saturday))
+
+// Expected output:
+// 5
+// true
+// 2
+// 1234567

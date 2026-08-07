@@ -451,5 +451,6 @@ fn register_v56<O: PineOutput + InputOutput>() -> Value<O> {
             call: Rc::new(InputAuto::<O>::builtin_fn) as BuiltinFn<O>,
             signature: InputAuto::<O>::signature(),
         }),
+        value: None,
     }
 }

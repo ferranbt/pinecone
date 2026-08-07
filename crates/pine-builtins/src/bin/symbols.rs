@@ -8,9 +8,16 @@ use pine_interpreter::Value;
 
 fn walk(name: &str, value: &Value<DefaultPineOutput>, out: &mut Vec<String>) {
     match value {
-        Value::Object { fields, call, .. } => {
-            if call.is_some() {
-                out.push(name.to_string()); // a callable namespace, e.g. `strategy`
+        Value::Object {
+            fields,
+            call,
+            value,
+            ..
+        } => {
+            if call.is_some() || value.is_some() {
+                // A namespace usable bare too: callable (`strategy`) or
+                // value-carrying (`dayofweek`, `strategy.closedtrades`).
+                out.push(name.to_string());
             }
             for (field, v) in fields.borrow().iter() {
                 walk(&format!("{name}.{field}"), v, out);

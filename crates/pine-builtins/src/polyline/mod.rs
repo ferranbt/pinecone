@@ -86,5 +86,6 @@ pub fn register<O: PineOutput + DrawingOutput>() -> Value<O> {
         type_name: "polyline".to_string(),
         fields: Rc::new(RefCell::new(members)),
         call: None,
+        value: None,
     }
 }

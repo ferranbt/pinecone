@@ -776,5 +776,6 @@ pub fn register<O: PineOutput + BoxOutput>() -> Value<O> {
         type_name: "box".to_string(),
         fields: Rc::new(RefCell::new(members)),
         call: None,
+        value: None,
     }
 }

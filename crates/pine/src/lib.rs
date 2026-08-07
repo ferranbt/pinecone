@@ -352,6 +352,8 @@ impl<O: PineOutput> Script<O> {
     pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
         use interpreter::Value;
 
+        self.interpreter.current_time = Some(bar.time);
+
         for (name, value) in pine_builtins::per_bar_variables(bar) {
             if matches!(value, Value::Series(_)) {
                 self.interpreter.advance_series(&name, value);
@@ -401,7 +403,6 @@ impl<O: PineOutput> Script<O> {
         let intrabar_low = equity_hi.min(equity_lo);
         let intrabar_high = equity_hi.max(equity_lo);
         let open_profit: f64 = broker.open_trades().iter().map(|t| t.profit(close)).sum();
-        let open_trades = broker.open_trades().len() as i64;
         let closed_trades = broker.closed_trades().len() as i64;
 
         let (mut gross_profit, mut gross_loss) = (0.0, 0.0);
@@ -490,8 +491,8 @@ impl<O: PineOutput> Script<O> {
             ("grossloss", Value::Number(gross_loss)),
             ("max_drawdown", Value::Number(self.max_drawdown)),
             ("max_runup", Value::Number(self.max_runup)),
-            ("opentrades", Value::Int(open_trades)),
-            ("closedtrades", Value::Int(closed_trades)),
+            // `opentrades` / `closedtrades` are value-objects that read their
+            // count straight from the broker, so they are not refreshed here.
             ("wintrades", Value::Int(wins)),
             ("losstrades", Value::Int(losses)),
             ("eventrades", Value::Int(evens)),

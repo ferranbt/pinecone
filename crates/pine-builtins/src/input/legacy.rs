@@ -130,6 +130,7 @@ pub fn register<O: PineOutput + InputOutput>() -> Vec<(String, Value<O>)> {
         call: Some(Builtin::untyped(
             Rc::new(InputLegacy::<O>::builtin_fn) as BuiltinFn<O>
         )),
+        value: None,
     };
 
     let mut entries = vec![("input".to_string(), input_object)];

@@ -298,6 +298,9 @@ pub fn register_namespace_objects<
     for (name, func) in time::register_time_functions() {
         namespaces.insert(name, func);
     }
+    // `dayofweek` is value + function + namespace at once; its scalar is
+    // refreshed each bar via `per_bar_object_values`.
+    namespaces.insert("dayofweek".to_string(), time::register_dayofweek());
 
     // Register plot functions
     for (name, func) in plot::register_plot_functions() {
@@ -314,7 +317,6 @@ pub fn register_namespace_objects<
 pub fn register_per_bar<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
     vec![
         ("barstate".to_string(), barstate::register(bar)),
-        ("time".to_string(), time::register_bar_time(bar)),
         ("timenow".to_string(), time::register_timenow()),
     ]
 }

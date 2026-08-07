@@ -477,6 +477,7 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
             type_name: "str".to_string(),
             fields: Rc::new(RefCell::new(str_ns)),
             call: None,
+            value: None,
         },
     );
     out

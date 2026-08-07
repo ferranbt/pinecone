@@ -146,5 +146,6 @@ pub fn register<O: PineOutput + DrawingOutput>() -> Value<O> {
         type_name: "linefill".to_string(),
         fields: Rc::new(RefCell::new(members)),
         call: None,
+        value: None,
     }
 }

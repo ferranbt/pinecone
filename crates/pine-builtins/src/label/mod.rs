@@ -634,5 +634,6 @@ pub fn register<O: PineOutput + LabelOutput>() -> Value<O> {
         type_name: "label".to_string(),
         fields: Rc::new(RefCell::new(members)),
         call: None,
+        value: None,
     }
 }

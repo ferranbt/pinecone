@@ -53,6 +53,10 @@ one_day = 86400000
 dow2 = dayofweek(one_day)
 log.info(str.tostring(dow2))
 
+// weekofyear: epoch is in ISO week 1; mid-June 2024 is week 24.
+log.info(str.tostring(weekofyear(epoch)))
+log.info(str.tostring(weekofyear(timestamp("2024-06-15"))))
+
 // Expected output:
 // 1970
 // 1
@@ -65,3 +69,5 @@ log.info(str.tostring(dow2))
 // 30
 // 45
 // 6
+// 1
+// 24

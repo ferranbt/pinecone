@@ -14,11 +14,11 @@ use std::rc::Rc;
 
 use pine_broker::{
     BrokerConfig, Commission, Direction, EntryFilter, Exit, OcaType, Order, OrderKind, RiskRule,
-    RiskType, Sizing,
+    RiskType, Sizing, Trade,
 };
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, PineVersion};
-use pine_interpreter::{Builtin, BuiltinFn, Interpreter, RuntimeError, Value};
+use pine_interpreter::{Builtin, BuiltinFn, EvaluatedArg, Interpreter, RuntimeError, Value};
 
 /// TradingView's default starting capital.
 const DEFAULT_INITIAL_CAPITAL: f64 = 1_000_000.0;
@@ -590,6 +590,195 @@ impl StrategyDefaultEntryQty {
     }
 }
 
+/// A trade's profit as a percentage of the capital it tied up at entry.
+fn profit_percent(trade: &Trade, close: f64) -> f64 {
+    let cost = trade.entry_price * trade.size.abs();
+    if cost == 0.0 {
+        0.0
+    } else {
+        trade.profit(close) / cost * 100.0
+    }
+}
+
+/// A `strategy.*trades.<field>(trade_num)` accessor: reads one field off trade
+/// `trade_num` of the open or closed log (via the interpreter's broker), or `na`
+/// when the index is out of range. `select` also gets the current close, for the
+/// open-profit fields.
+fn trade_field<O: PineOutput>(open: bool, select: fn(&Trade, f64) -> Value<O>) -> Value<O> {
+    Value::BuiltinFunction(Builtin::untyped(Rc::new(
+        move |ctx: &mut Interpreter<O>, args| {
+            let n = args
+                .args
+                .first()
+                .and_then(|arg| match arg {
+                    EvaluatedArg::Positional(v) => v.to_number().ok().flatten(),
+                    EvaluatedArg::Named { value, .. } => value.to_number().ok().flatten(),
+                })
+                .unwrap_or(0.0);
+            if n < 0.0 {
+                return Ok(Value::Na);
+            }
+            let close = ctx
+                .get_variable("close")
+                .and_then(|v| v.to_number().ok().flatten())
+                .unwrap_or(f64::NAN);
+            let Some(broker) = ctx.broker.as_ref() else {
+                return Ok(Value::Na);
+            };
+            let index = n as usize;
+            let selected = if open {
+                broker
+                    .open_trades()
+                    .get(index)
+                    .copied()
+                    .map(|t| select(t, close))
+            } else {
+                broker.closed_trades().get(index).map(|t| select(t, close))
+            };
+            Ok(selected.unwrap_or(Value::Na))
+        },
+    )))
+}
+
+/// The `strategy.closedtrades` object: bare, the number of closed trades; as a
+/// namespace, per-trade accessors over the closed log. Time/comment/exit-id and
+/// per-trade drawdown/runup are not modelled by the broker, so they are `na`.
+fn register_closedtrades<O: PineOutput>() -> Value<O> {
+    let mut m: HashMap<String, Value<O>> = HashMap::new();
+    m.insert(
+        "entry_price".into(),
+        trade_field(false, |t, _| Value::Number(t.entry_price)),
+    );
+    m.insert(
+        "entry_bar_index".into(),
+        trade_field(false, |t, _| Value::Int(t.entry_bar as i64)),
+    );
+    m.insert(
+        "entry_id".into(),
+        trade_field(false, |t, _| Value::String(t.entry_id.clone())),
+    );
+    m.insert(
+        "exit_price".into(),
+        trade_field(false, |t, _| {
+            t.exit_price.map(Value::Number).unwrap_or(Value::Na)
+        }),
+    );
+    m.insert(
+        "exit_bar_index".into(),
+        trade_field(false, |t, _| {
+            t.exit_bar
+                .map(|b| Value::Int(b as i64))
+                .unwrap_or(Value::Na)
+        }),
+    );
+    m.insert(
+        "size".into(),
+        trade_field(false, |t, _| Value::Number(t.size)),
+    );
+    m.insert(
+        "commission".into(),
+        trade_field(false, |t, _| Value::Number(t.commission)),
+    );
+    m.insert(
+        "profit".into(),
+        trade_field(false, |t, close| Value::Number(t.profit(close))),
+    );
+    m.insert(
+        "profit_percent".into(),
+        trade_field(false, |t, close| Value::Number(profit_percent(t, close))),
+    );
+    for name in [
+        "entry_time",
+        "entry_comment",
+        "exit_time",
+        "exit_id",
+        "exit_comment",
+        "max_drawdown",
+        "max_drawdown_percent",
+        "max_runup",
+        "max_runup_percent",
+    ] {
+        m.insert(name.into(), trade_field(false, |_, _| Value::Na));
+    }
+    // The trade number of the first closed trade in the set.
+    m.insert("first_index".into(), Value::Int(0));
+    Value::Object {
+        type_name: "strategy.closedtrades".into(),
+        fields: Rc::new(RefCell::new(m)),
+        call: None,
+        value: Some(Rc::new(|ctx: &mut Interpreter<O>| {
+            Ok(Value::Int(
+                ctx.broker
+                    .as_ref()
+                    .map(|b| b.closed_trades().len() as i64)
+                    .unwrap_or(0),
+            ))
+        })),
+    }
+}
+
+/// The `strategy.opentrades` object: bare, the number of open trades; as a
+/// namespace, per-trade accessors over the open log.
+fn register_opentrades<O: PineOutput>() -> Value<O> {
+    let mut m: HashMap<String, Value<O>> = HashMap::new();
+    m.insert(
+        "entry_price".into(),
+        trade_field(true, |t, _| Value::Number(t.entry_price)),
+    );
+    m.insert(
+        "entry_bar_index".into(),
+        trade_field(true, |t, _| Value::Int(t.entry_bar as i64)),
+    );
+    m.insert(
+        "entry_id".into(),
+        trade_field(true, |t, _| Value::String(t.entry_id.clone())),
+    );
+    m.insert(
+        "size".into(),
+        trade_field(true, |t, _| Value::Number(t.size)),
+    );
+    m.insert(
+        "commission".into(),
+        trade_field(true, |t, _| Value::Number(t.commission)),
+    );
+    m.insert(
+        "profit".into(),
+        trade_field(true, |t, close| Value::Number(t.profit(close))),
+    );
+    m.insert(
+        "profit_percent".into(),
+        trade_field(true, |t, close| Value::Number(profit_percent(t, close))),
+    );
+    // Capital the open trade ties up: entry price times absolute size.
+    m.insert(
+        "capital_held".into(),
+        trade_field(true, |t, _| Value::Number(t.entry_price * t.size.abs())),
+    );
+    for name in [
+        "entry_time",
+        "entry_comment",
+        "max_drawdown",
+        "max_drawdown_percent",
+        "max_runup",
+        "max_runup_percent",
+    ] {
+        m.insert(name.into(), trade_field(true, |_, _| Value::Na));
+    }
+    Value::Object {
+        type_name: "strategy.opentrades".into(),
+        fields: Rc::new(RefCell::new(m)),
+        call: None,
+        value: Some(Rc::new(|ctx: &mut Interpreter<O>| {
+            Ok(Value::Int(
+                ctx.broker
+                    .as_ref()
+                    .map(|b| b.open_trades().len() as i64)
+                    .unwrap_or(0),
+            ))
+        })),
+    }
+}
+
 /// Build the `strategy` namespace object: the callable declaration, the order
 /// commands, the direction and sizing constants, and the read-only values the
 /// host refreshes each bar (seeded to a flat, zero-profit account).
@@ -640,6 +829,7 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
             type_name: "strategy.commission".to_string(),
             fields: Rc::new(RefCell::new(commission)),
             call: None,
+            value: None,
         },
     );
 
@@ -654,6 +844,7 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
             type_name: "strategy.direction".to_string(),
             fields: Rc::new(RefCell::new(direction)),
             call: None,
+            value: None,
         },
     );
 
@@ -689,6 +880,7 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
             type_name: "strategy.risk".to_string(),
             fields: Rc::new(RefCell::new(risk)),
             call: None,
+            value: None,
         },
     );
 
@@ -703,6 +895,7 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
             type_name: "strategy.oca".to_string(),
             fields: Rc::new(RefCell::new(oca)),
             call: None,
+            value: None,
         },
     );
 
@@ -761,15 +954,13 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
         "default_entry_qty".to_string(),
         StrategyDefaultEntryQty::builtin_value::<O>(),
     );
-    for name in [
-        "opentrades",
-        "closedtrades",
-        "wintrades",
-        "losstrades",
-        "eventrades",
-    ] {
+    for name in ["wintrades", "losstrades", "eventrades"] {
         fields.insert(name.to_string(), Value::Int(0));
     }
+    // Both a count (bare) and a namespace of per-trade accessors; the count is
+    // read from the broker on use, so the host no longer refreshes it.
+    fields.insert("closedtrades".to_string(), register_closedtrades());
+    fields.insert("opentrades".to_string(), register_opentrades());
 
     Value::Object {
         type_name: "strategy".to_string(),
@@ -777,5 +968,6 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
         call: Some(Builtin::untyped(
             Rc::new(StrategyFn::builtin_fn) as BuiltinFn<O>
         )),
+        value: None,
     }
 }
