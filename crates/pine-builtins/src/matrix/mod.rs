@@ -1,3 +1,4 @@
+use nalgebra::DMatrix;
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::PineOutput;
 use pine_interpreter::{Interpreter, RuntimeError, Value};
@@ -767,69 +768,28 @@ fn determinant(mut a: Vec<Vec<f64>>) -> f64 {
     det
 }
 
-/// Inverse by Gauss-Jordan elimination, or `None` when singular.
-#[allow(clippy::needless_range_loop)]
+/// Inverse of a square matrix, or `None` when singular.
 fn inverse(a: &[Vec<f64>]) -> Option<Vec<Vec<f64>>> {
-    let n = a.len();
-    let mut m: Vec<Vec<f64>> = a
-        .iter()
-        .enumerate()
-        .map(|(i, row)| {
-            let mut r = row.clone();
-            r.extend((0..n).map(|j| if i == j { 1.0 } else { 0.0 }));
-            r
-        })
-        .collect();
-    for i in 0..n {
-        let pivot = (i..n).max_by(|&x, &y| m[x][i].abs().total_cmp(&m[y][i].abs())).unwrap();
-        if m[pivot][i].abs() < 1e-12 {
-            return None;
-        }
-        m.swap(i, pivot);
-        let d = m[i][i];
-        for c in 0..2 * n {
-            m[i][c] /= d;
-        }
-        for r in 0..n {
-            if r != i {
-                let factor = m[r][i];
-                for c in 0..2 * n {
-                    m[r][c] -= factor * m[i][c];
-                }
-            }
-        }
-    }
-    Some(m.iter().map(|row| row[n..].to_vec()).collect())
+    to_dmatrix(a).try_inverse().map(|m| from_dmatrix(&m))
 }
 
-/// Rank by row reduction.
-#[allow(clippy::needless_range_loop)]
+/// Rank of the matrix.
 fn matrix_rank(a: &[Vec<f64>]) -> usize {
-    let rows = a.len();
-    let cols = a.first().map_or(0, |r| r.len());
-    let mut m = a.to_vec();
-    let (mut rank, mut row) = (0, 0);
-    for col in 0..cols {
-        if row >= rows {
-            break;
-        }
-        let pivot = (row..rows).max_by(|&x, &y| m[x][col].abs().total_cmp(&m[y][col].abs())).unwrap();
-        if m[pivot][col].abs() < 1e-9 {
-            continue;
-        }
-        m.swap(row, pivot);
-        for r in 0..rows {
-            if r != row {
-                let factor = m[r][col] / m[row][col];
-                for c in col..cols {
-                    m[r][c] -= factor * m[row][c];
-                }
-            }
-        }
-        row += 1;
-        rank += 1;
+    if a.is_empty() {
+        return 0;
     }
-    rank
+    to_dmatrix(a).rank(1e-12)
+}
+
+/// Convert an `f64` grid into an `nalgebra` dynamic matrix.
+fn to_dmatrix(g: &[Vec<f64>]) -> DMatrix<f64> {
+    let (r, c) = (g.len(), g.first().map_or(0, |x| x.len()));
+    DMatrix::from_fn(r, c, |i, j| g[i][j])
+}
+
+/// Convert an `nalgebra` dynamic matrix back into an `f64` grid.
+fn from_dmatrix(m: &DMatrix<f64>) -> Vec<Vec<f64>> {
+    (0..m.nrows()).map(|i| (0..m.ncols()).map(|j| m[(i, j)]).collect()).collect()
 }
 
 /// matrix.sum(id1, id2) - Matrix addition; `id2` may be a matrix or a scalar.
@@ -1022,6 +982,63 @@ impl<O: PineOutput> MatrixRank<O> {
     }
 }
 
+/// matrix.eigenvalues(id) - Eigenvalues of a symmetric matrix (Implicit QL).
+#[derive(BuiltinFunction)]
+#[builtin(name = "matrix.eigenvalues")]
+struct MatrixEigenvalues<O: PineOutput> {
+    id: Value<O>,
+}
+
+impl<O: PineOutput> MatrixEigenvalues<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let a = grid(&as_matrix(&self.id)?.borrow());
+        let out = if is_square(&a) && !a.is_empty() {
+            to_dmatrix(&a).symmetric_eigen().eigenvalues.iter().copied().map(Value::Number).collect()
+        } else {
+            vec![]
+        };
+        Ok(Value::Array(Rc::new(RefCell::new(out))))
+    }
+}
+
+/// matrix.eigenvectors(id) - Eigenvectors of a symmetric matrix, one per column.
+#[derive(BuiltinFunction)]
+#[builtin(name = "matrix.eigenvectors")]
+struct MatrixEigenvectors<O: PineOutput> {
+    id: Value<O>,
+}
+
+impl<O: PineOutput> MatrixEigenvectors<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let a = grid(&as_matrix(&self.id)?.borrow());
+        let out = if is_square(&a) && !a.is_empty() {
+            from_dmatrix(&to_dmatrix(&a).symmetric_eigen().eigenvectors)
+        } else {
+            vec![]
+        };
+        Ok(from_grid(out, "float"))
+    }
+}
+
+/// matrix.pinv(id) - Moore-Penrose pseudoinverse; `na`-filled when it fails.
+#[derive(BuiltinFunction)]
+#[builtin(name = "matrix.pinv")]
+struct MatrixPinv<O: PineOutput> {
+    id: Value<O>,
+}
+
+impl<O: PineOutput> MatrixPinv<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let a = grid(&as_matrix(&self.id)?.borrow());
+        let (rows, cols) = (a.len(), a.first().map_or(0, |r| r.len()));
+        let out = to_dmatrix(&a)
+            .pseudo_inverse(1e-15)
+            .map(|m| from_dmatrix(&m))
+            .unwrap_or_else(|_| vec![vec![f64::NAN; rows]; cols]);
+        Ok(from_grid(out, "float"))
+    }
+}
+
 /// matrix.concat(id1, id2) - Append `id2`'s rows to `id1`, returning `id1`.
 #[derive(BuiltinFunction)]
 #[builtin(name = "matrix.concat")]
@@ -1209,6 +1226,9 @@ pub fn register<O: PineOutput>() -> Value<O> {
     members.insert("det".to_string(), MatrixDet::<O>::builtin_value());
     members.insert("inv".to_string(), MatrixInv::<O>::builtin_value());
     members.insert("rank".to_string(), MatrixRank::<O>::builtin_value());
+    members.insert("eigenvalues".to_string(), MatrixEigenvalues::<O>::builtin_value());
+    members.insert("eigenvectors".to_string(), MatrixEigenvectors::<O>::builtin_value());
+    members.insert("pinv".to_string(), MatrixPinv::<O>::builtin_value());
     members.insert("concat".to_string(), MatrixConcat::<O>::builtin_value());
     members.insert("reshape".to_string(), MatrixReshape::<O>::builtin_value());
     members.insert(

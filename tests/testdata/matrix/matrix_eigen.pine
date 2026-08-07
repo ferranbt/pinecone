@@ -1,0 +1,35 @@
+//@version=5
+indicator("matrix/matrix_eigen")
+// Skip PineTS: PineTS stubs eigenvectors as identity and only does 2x2 eigenvalues.
+m = matrix.new<float>(0, 0)
+matrix.add_row(m, 0, array.from(4.0, 1.0, -2.0))
+matrix.add_row(m, 1, array.from(1.0, 2.0, 0.0))
+matrix.add_row(m, 2, array.from(-2.0, 0.0, 3.0))
+
+// Sum of eigenvalues equals the trace (4+2+3), order-independent.
+ev = matrix.eigenvalues(m)
+log.info(str.tostring(math.round(array.sum(ev), 6)))
+
+// A*v == lambda*v: the Rayleigh ratio of column 0 matches ev[0].
+vecs = matrix.eigenvectors(m)
+v0 = matrix.col(vecs, 0)
+mv = matrix.mult(m, v0)
+log.info(str.tostring(math.round(array.get(mv, 0) / array.get(v0, 0), 6)))
+log.info(str.tostring(math.round(array.get(ev, 0), 6)))
+
+// Pseudoinverse of a tall 3x2 matrix: pinv(A) is 2x3 and pinv(A)*A == I(2).
+t = matrix.new<float>(0, 0)
+matrix.add_row(t, 0, array.from(1.0, 2.0))
+matrix.add_row(t, 1, array.from(3.0, 4.0))
+matrix.add_row(t, 2, array.from(5.0, 6.0))
+pi = matrix.pinv(t)
+log.info(str.tostring(matrix.rows(pi)) + "x" + str.tostring(matrix.columns(pi)))
+prod = matrix.mult(pi, t)
+log.info(str.tostring(math.round(matrix.get(prod, 0, 0), 6)) + "," + str.tostring(math.round(matrix.get(prod, 0, 1), 6)))
+
+// Expected output:
+// 9
+// 5.732051
+// 5.732051
+// 2x3
+// 1,0

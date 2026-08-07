@@ -38,8 +38,8 @@ log.info(str.tostring(matrix.rows(m)) + "x" + str.tostring(matrix.columns(m)))
 // Expected output:
 // -2
 // 2
-// -1.9999999999999996
-// -0.49999999999999994
+// -2
+// -0.5
 // 19
 // 50
 // 0

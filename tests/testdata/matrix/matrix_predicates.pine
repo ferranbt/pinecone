@@ -1,0 +1,50 @@
+//@version=5
+indicator("matrix/matrix_predicates")
+
+zero = matrix.new<float>(2, 2, 0.0)
+log.info(str.tostring(matrix.is_zero(zero)))
+
+bin = matrix.new<float>(0, 0)
+matrix.add_row(bin, 0, array.from(1.0, 0.0))
+matrix.add_row(bin, 1, array.from(1.0, 1.0))
+log.info(str.tostring(matrix.is_binary(bin)))
+
+diag = matrix.new<float>(0, 0)
+matrix.add_row(diag, 0, array.from(1.0, 0.0))
+matrix.add_row(diag, 1, array.from(0.0, 2.0))
+log.info(str.tostring(matrix.is_diagonal(diag)))
+
+tri = matrix.new<float>(0, 0)
+matrix.add_row(tri, 0, array.from(1.0, 2.0))
+matrix.add_row(tri, 1, array.from(0.0, 3.0))
+log.info(str.tostring(matrix.is_triangular(tri)))
+
+anti = matrix.new<float>(0, 0)
+matrix.add_row(anti, 0, array.from(0.0, 1.0))
+matrix.add_row(anti, 1, array.from(2.0, 0.0))
+log.info(str.tostring(matrix.is_antidiagonal(anti)))
+
+asym = matrix.new<float>(0, 0)
+matrix.add_row(asym, 0, array.from(0.0, 1.0))
+matrix.add_row(asym, 1, array.from(-1.0, 0.0))
+log.info(str.tostring(matrix.is_antisymmetric(asym)))
+
+stoch = matrix.new<float>(0, 0)
+matrix.add_row(stoch, 0, array.from(0.5, 0.5))
+matrix.add_row(stoch, 1, array.from(0.2, 0.8))
+log.info(str.tostring(matrix.is_stochastic(stoch)))
+
+mo = matrix.new<float>(0, 0)
+matrix.add_row(mo, 0, array.from(2.0, 2.0, 2.0))
+matrix.add_row(mo, 1, array.from(1.0, 3.0, 4.0))
+log.info(str.tostring(matrix.mode(mo)))
+
+// Expected output:
+// true
+// true
+// true
+// true
+// true
+// true
+// true
+// 2
