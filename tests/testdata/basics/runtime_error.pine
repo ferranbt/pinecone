@@ -1,0 +1,5 @@
+//@version=6
+indicator("basics/runtime_error")
+runtime.error("custom failure message")
+// Expected error:
+// custom failure message

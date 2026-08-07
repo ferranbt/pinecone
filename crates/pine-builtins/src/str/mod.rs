@@ -5,6 +5,48 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+/// Translate a Pine (Java `SimpleDateFormat`) date format into a `chrono`
+/// `strftime` format. Longer tokens are replaced first so `MMMM`/`MMM`/`MM` do
+/// not collide, and single-quoted runs (the `'T'` in the default) are literal.
+fn java_to_chrono(fmt: &str) -> String {
+    fmt.replace("yyyy", "%Y")
+        .replace("yy", "%y")
+        .replace("MMMM", "%B")
+        .replace("MMM", "%b")
+        .replace("MM", "%m")
+        .replace("dd", "%d")
+        .replace("HH", "%H")
+        .replace("hh", "%I")
+        .replace("mm", "%M")
+        .replace("ss", "%S")
+        .replace('Z', "%z")
+        .replace('\'', "")
+}
+
+/// str.format_time(time, format, timezone) - Format a UNIX-ms timestamp. The
+/// timezone is ignored (times are formatted in UTC).
+#[derive(BuiltinFunction)]
+#[builtin(name = "str.format_time")]
+struct StrFormatTime {
+    time: f64,
+    #[arg(default = "yyyy-MM-dd'T'HH:mm:ssZ")]
+    format: String,
+    #[arg(default = "")]
+    timezone: String,
+}
+
+impl StrFormatTime {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.timezone;
+        let Some(dt) = chrono::DateTime::from_timestamp_millis(self.time as i64) else {
+            return Ok(Value::Na);
+        };
+        Ok(Value::String(
+            dt.format(&java_to_chrono(&self.format)).to_string(),
+        ))
+    }
+}
+
 /// str.length(string) - Returns the length of a string
 #[derive(BuiltinFunction)]
 #[builtin(name = "str.length")]
@@ -413,6 +455,10 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     str_ns.insert("trim".to_string(), StrTrim::builtin_value::<O>());
     str_ns.insert("match".to_string(), StrMatch::builtin_value::<O>());
     str_ns.insert("format".to_string(), StrFormat::<O>::builtin_value());
+    str_ns.insert(
+        "format_time".to_string(),
+        StrFormatTime::builtin_value::<O>(),
+    );
 
     let mut out: HashMap<String, Value<O>> = HashMap::new();
 
@@ -434,4 +480,26 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
         },
     );
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::java_to_chrono;
+
+    #[test]
+    fn translates_pine_date_formats() {
+        // The default format: the quoted `'T'` is literal, `Z` is the zone.
+        assert_eq!(
+            java_to_chrono("yyyy-MM-dd'T'HH:mm:ssZ"),
+            "%Y-%m-%dT%H:%M:%S%z"
+        );
+        // Month name width and the 12-hour clock.
+        assert_eq!(java_to_chrono("MMMM dd, yyyy"), "%B %d, %Y");
+        assert_eq!(java_to_chrono("MMM"), "%b");
+        assert_eq!(java_to_chrono("hh:mm"), "%I:%M");
+        // Month (`MM`) and minute (`mm`) are distinguished by case, not order.
+        assert_eq!(java_to_chrono("MM/mm"), "%m/%M");
+        // Two-digit year.
+        assert_eq!(java_to_chrono("yy"), "%y");
+    }
 }
