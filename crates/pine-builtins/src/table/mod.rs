@@ -243,6 +243,295 @@ fn set_cell<O: PineOutput + TableOutput>(
 
 /// The `table` namespace. `table.new`'s `position` argument is satisfied by the
 /// `position.*` constants registered separately (see `constants::position`).
+/// table.cell_set_text_size(table_id, column, row, text_size)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.cell_set_text_size", output = TableOutput)]
+struct TableCellSetTextSize {
+    table_id: f64,
+    column: f64,
+    row: f64,
+    text_size: String,
+}
+
+impl TableCellSetTextSize {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let text_size = self.text_size.clone();
+        cell_mut(ctx, self.table_id, self.column, self.row)?.text_size = text_size;
+        Ok(Value::Na)
+    }
+}
+
+/// table.cell_set_text_halign(table_id, column, row, text_halign)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.cell_set_text_halign", output = TableOutput)]
+struct TableCellSetTextHalign {
+    table_id: f64,
+    column: f64,
+    row: f64,
+    text_halign: String,
+}
+
+impl TableCellSetTextHalign {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let text_halign = self.text_halign.clone();
+        cell_mut(ctx, self.table_id, self.column, self.row)?.text_halign = text_halign;
+        Ok(Value::Na)
+    }
+}
+
+/// table.cell_set_text_valign(table_id, column, row, text_valign)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.cell_set_text_valign", output = TableOutput)]
+struct TableCellSetTextValign {
+    table_id: f64,
+    column: f64,
+    row: f64,
+    text_valign: String,
+}
+
+impl TableCellSetTextValign {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let text_valign = self.text_valign.clone();
+        cell_mut(ctx, self.table_id, self.column, self.row)?.text_valign = text_valign;
+        Ok(Value::Na)
+    }
+}
+
+/// table.set_position(table_id, position)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.set_position", output = TableOutput)]
+struct TableSetPosition {
+    table_id: f64,
+    position: String,
+}
+
+impl TableSetPosition {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let position = self.position.clone();
+        table_mut(ctx, self.table_id)?.position = position;
+        Ok(Value::Na)
+    }
+}
+
+// The setters below adjust rendering hints the output model does not store
+// (cell size, fonts, frame/border, merges). They validate the target exists and
+// are otherwise no-ops, matching `table.new`, which likewise ignores those hints.
+
+/// table.cell_set_width(table_id, column, row, width)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.cell_set_width", output = TableOutput)]
+struct TableCellSetWidth {
+    table_id: f64,
+    column: f64,
+    row: f64,
+    width: f64,
+}
+
+impl TableCellSetWidth {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = self.width;
+        cell_mut(ctx, self.table_id, self.column, self.row)?;
+        Ok(Value::Na)
+    }
+}
+
+/// table.cell_set_height(table_id, column, row, height)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.cell_set_height", output = TableOutput)]
+struct TableCellSetHeight {
+    table_id: f64,
+    column: f64,
+    row: f64,
+    height: f64,
+}
+
+impl TableCellSetHeight {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = self.height;
+        cell_mut(ctx, self.table_id, self.column, self.row)?;
+        Ok(Value::Na)
+    }
+}
+
+/// table.cell_set_text_font_family(table_id, column, row, text_font_family)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.cell_set_text_font_family", output = TableOutput)]
+struct TableCellSetTextFontFamily {
+    table_id: f64,
+    column: f64,
+    row: f64,
+    text_font_family: String,
+}
+
+impl TableCellSetTextFontFamily {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.text_font_family;
+        cell_mut(ctx, self.table_id, self.column, self.row)?;
+        Ok(Value::Na)
+    }
+}
+
+/// table.cell_set_text_formatting(table_id, column, row, text_formatting)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.cell_set_text_formatting", output = TableOutput)]
+struct TableCellSetTextFormatting {
+    table_id: f64,
+    column: f64,
+    row: f64,
+    text_formatting: String,
+}
+
+impl TableCellSetTextFormatting {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.text_formatting;
+        cell_mut(ctx, self.table_id, self.column, self.row)?;
+        Ok(Value::Na)
+    }
+}
+
+/// table.cell_set_tooltip(table_id, column, row, tooltip)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.cell_set_tooltip", output = TableOutput)]
+struct TableCellSetTooltip {
+    table_id: f64,
+    column: f64,
+    row: f64,
+    tooltip: String,
+}
+
+impl TableCellSetTooltip {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.tooltip;
+        cell_mut(ctx, self.table_id, self.column, self.row)?;
+        Ok(Value::Na)
+    }
+}
+
+/// table.merge_cells(table_id, start_column, start_row, end_column, end_row)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.merge_cells", output = TableOutput)]
+struct TableMergeCells {
+    table_id: f64,
+    start_column: f64,
+    start_row: f64,
+    end_column: f64,
+    end_row: f64,
+}
+
+impl TableMergeCells {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = (self.start_column, self.start_row, self.end_column, self.end_row);
+        table_mut(ctx, self.table_id)?;
+        Ok(Value::Na)
+    }
+}
+
+/// table.set_border_color(table_id, border_color)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.set_border_color", output = TableOutput)]
+struct TableSetBorderColor {
+    table_id: f64,
+    border_color: Color,
+}
+
+impl TableSetBorderColor {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.border_color;
+        table_mut(ctx, self.table_id)?;
+        Ok(Value::Na)
+    }
+}
+
+/// table.set_border_width(table_id, border_width)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.set_border_width", output = TableOutput)]
+struct TableSetBorderWidth {
+    table_id: f64,
+    border_width: f64,
+}
+
+impl TableSetBorderWidth {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = self.border_width;
+        table_mut(ctx, self.table_id)?;
+        Ok(Value::Na)
+    }
+}
+
+/// table.set_frame_color(table_id, frame_color)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.set_frame_color", output = TableOutput)]
+struct TableSetFrameColor {
+    table_id: f64,
+    frame_color: Color,
+}
+
+impl TableSetFrameColor {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.frame_color;
+        table_mut(ctx, self.table_id)?;
+        Ok(Value::Na)
+    }
+}
+
+/// table.set_frame_width(table_id, frame_width)
+#[derive(BuiltinFunction)]
+#[builtin(name = "table.set_frame_width", output = TableOutput)]
+struct TableSetFrameWidth {
+    table_id: f64,
+    frame_width: f64,
+}
+
+impl TableSetFrameWidth {
+    fn execute<O: PineOutput + TableOutput>(
+        &self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let _ = self.frame_width;
+        table_mut(ctx, self.table_id)?;
+        Ok(Value::Na)
+    }
+}
+
 pub fn register<O: PineOutput + TableOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
     members.insert("new".to_string(), TableNew::builtin_value::<O>());
@@ -265,6 +554,33 @@ pub fn register<O: PineOutput + TableOutput>() -> Value<O> {
     );
     members.insert("clear".to_string(), TableClear::builtin_value::<O>());
     members.insert("delete".to_string(), TableDelete::builtin_value::<O>());
+    members.insert("cell_set_width".to_string(), TableCellSetWidth::builtin_value::<O>());
+    members.insert("cell_set_height".to_string(), TableCellSetHeight::builtin_value::<O>());
+    members.insert("cell_set_text_size".to_string(), TableCellSetTextSize::builtin_value::<O>());
+    members.insert(
+        "cell_set_text_halign".to_string(),
+        TableCellSetTextHalign::builtin_value::<O>(),
+    );
+    members.insert(
+        "cell_set_text_valign".to_string(),
+        TableCellSetTextValign::builtin_value::<O>(),
+    );
+    members.insert(
+        "cell_set_text_font_family".to_string(),
+        TableCellSetTextFontFamily::builtin_value::<O>(),
+    );
+    members.insert(
+        "cell_set_text_formatting".to_string(),
+        TableCellSetTextFormatting::builtin_value::<O>(),
+    );
+    members.insert("cell_set_tooltip".to_string(), TableCellSetTooltip::builtin_value::<O>());
+    members.insert("merge_cells".to_string(), TableMergeCells::builtin_value::<O>());
+    members.insert("set_position".to_string(), TableSetPosition::builtin_value::<O>());
+    members.insert("set_border_color".to_string(), TableSetBorderColor::builtin_value::<O>());
+    members.insert("set_border_width".to_string(), TableSetBorderWidth::builtin_value::<O>());
+    members.insert("set_frame_color".to_string(), TableSetFrameColor::builtin_value::<O>());
+    members.insert("set_frame_width".to_string(), TableSetFrameWidth::builtin_value::<O>());
+    members.insert("all".to_string(), Value::Array(Rc::new(RefCell::new(Vec::new()))));
     Value::Object {
         type_name: "table".to_string(),
         fields: Rc::new(RefCell::new(members)),
