@@ -31,6 +31,7 @@ mod label;
 mod library;
 mod line;
 mod log;
+mod map;
 mod math;
 mod matrix;
 mod plot;
@@ -208,6 +209,7 @@ pub fn register_namespace_objects<
     namespaces.insert("box".to_string(), r#box::register());
     namespaces.insert("chart".to_string(), chart::register());
     namespaces.insert("color".to_string(), color::register());
+    namespaces.insert("map".to_string(), map::register());
     namespaces.insert("currency".to_string(), currency::register());
     for (name, value) in input::register(version) {
         namespaces.insert(name, value);

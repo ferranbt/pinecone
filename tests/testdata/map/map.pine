@@ -1,0 +1,30 @@
+//@version=5
+indicator("map/map")
+m = map.new<string, int>()
+map.put(m, "a", 1)
+map.put(m, "b", 2)
+log.info(str.tostring(map.get(m, "a")) + "," + str.tostring(map.get(m, "b")) + "," + str.tostring(map.get(m, "z")))
+log.info(str.tostring(map.size(m)) + "," + str.tostring(map.contains(m, "a")) + "," + str.tostring(map.contains(m, "z")))
+old = map.put(m, "a", 10)
+log.info(str.tostring(old) + "," + str.tostring(map.get(m, "a")))
+rem = map.remove(m, "b")
+log.info(str.tostring(rem) + "," + str.tostring(map.size(m)))
+log.info(array.join(map.keys(m), ",") + "|" + array.join(map.values(m), ","))
+c = map.copy(m)
+map.put(c, "x", 99)
+log.info(str.tostring(map.size(m)) + "," + str.tostring(map.size(c)))
+m2 = map.new<string, int>()
+map.put(m2, "p", 5)
+map.put_all(m, m2)
+log.info(str.tostring(map.size(m)) + "," + str.tostring(map.get(m, "p")))
+map.clear(m)
+log.info(str.tostring(map.size(m)))
+// Expected output:
+// 1,2,NaN
+// 2,true,false
+// 1,10
+// 2,1
+// a|10
+// 1,2
+// 2,5
+// 0

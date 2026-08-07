@@ -103,6 +103,9 @@ pub struct Series<O: PineOutput = DefaultPineOutput> {
     pub current: Box<Value<O>>,
 }
 
+/// The insertion-ordered key/value pairs backing a [`Value::Map`].
+pub type MapEntries<O> = Rc<RefCell<Vec<(Value<O>, Value<O>)>>>;
+
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value<O: PineOutput> {
@@ -141,10 +144,9 @@ pub enum Value<O: PineOutput> {
         data: Rc<RefCell<Vec<Vec<Value<O>>>>>, // 2D matrix - mutable shared reference to rows of columns
     },
     Map {
-        key_type: String,   // Type of keys, e.g. "int", "string"
-        value_type: String, // Type of values
-        // Insertion-ordered key/value pairs, as Pine maps preserve order.
-        data: Rc<RefCell<Vec<(Value<O>, Value<O>)>>>,
+        key_type: String,
+        value_type: String,
+        data: MapEntries<O>,
     },
 }
 
@@ -195,7 +197,11 @@ impl<O: PineOutput> std::fmt::Debug for Value<O> {
             Value::Matrix { element_type, data } => {
                 write!(f, "Matrix<{}>({:?})", element_type, data)
             }
-            Value::Map { key_type, value_type, data } => {
+            Value::Map {
+                key_type,
+                value_type,
+                data,
+            } => {
                 write!(f, "Map<{}, {}>({:?})", key_type, value_type, data)
             }
         }
