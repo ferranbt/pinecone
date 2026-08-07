@@ -1,0 +1,8 @@
+//@version=6
+
+// Subjectless switch: boolean-condition arms, no expression after `switch`.
+// Parses as `switch true`, so an arm matches when its condition is true.
+result = switch
+    close > open => 1
+    close < open => -1
+    => 0

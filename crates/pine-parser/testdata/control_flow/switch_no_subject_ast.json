@@ -1,0 +1,80 @@
+[
+  {
+    "VarDecl": {
+      "name": "result",
+      "type_annotation": null,
+      "initializer": {
+        "Switch": {
+          "value": {
+            "Literal": {
+              "Bool": true
+            }
+          },
+          "cases": [
+            [
+              {
+                "Binary": {
+                  "left": {
+                    "Variable": {
+                      "name": "close"
+                    }
+                  },
+                  "op": "Greater",
+                  "right": {
+                    "Variable": {
+                      "name": "open"
+                    }
+                  }
+                }
+              },
+              {
+                "Literal": {
+                  "Int": 1
+                }
+              }
+            ],
+            [
+              {
+                "Binary": {
+                  "left": {
+                    "Variable": {
+                      "name": "close"
+                    }
+                  },
+                  "op": "Less",
+                  "right": {
+                    "Variable": {
+                      "name": "open"
+                    }
+                  }
+                }
+              },
+              {
+                "Unary": {
+                  "op": "Neg",
+                  "expr": {
+                    "Literal": {
+                      "Int": 1
+                    }
+                  }
+                }
+              }
+            ],
+            [
+              {
+                "Literal": {
+                  "Bool": true
+                }
+              },
+              {
+                "Literal": {
+                  "Int": 0
+                }
+              }
+            ]
+          ]
+        }
+      }
+    }
+  }
+]
