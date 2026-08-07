@@ -13,6 +13,11 @@ log.info(str.tostring(syminfo.mintick))
 log.info(str.tostring(syminfo.pointvalue))
 log.info(str.tostring(syminfo.timezone))
 log.info(str.tostring(syminfo.session))
+log.info(str.tostring(syminfo.sector))
+log.info(str.tostring(syminfo.industry))
+log.info(str.tostring(syminfo.pricescale))
+log.info(str.tostring(syminfo.recommendations_total))
+log.info(str.tostring(syminfo.target_price_median))
 
 // Expected output:
 // AAPL
@@ -25,3 +30,8 @@ log.info(str.tostring(syminfo.session))
 // 1
 // America/New_York
 // 0930-1600
+// Technology
+// Electronic Technology
+// 100
+// 0
+// 0

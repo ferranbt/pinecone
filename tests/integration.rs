@@ -117,6 +117,10 @@ mod tests {
             pointvalue: 1.0,
             timezone: "America/New_York".to_string(),
             session: "0930-1600".to_string(),
+            sector: "Technology".to_string(),
+            industry: "Electronic Technology".to_string(),
+            pricescale: 100.0,
+            ..Default::default()
         }
     }
 
