@@ -476,3 +476,22 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     );
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::java_to_chrono;
+
+    #[test]
+    fn translates_pine_date_formats() {
+        // The default format: the quoted `'T'` is literal, `Z` is the zone.
+        assert_eq!(java_to_chrono("yyyy-MM-dd'T'HH:mm:ssZ"), "%Y-%m-%dT%H:%M:%S%z");
+        // Month name width and the 12-hour clock.
+        assert_eq!(java_to_chrono("MMMM dd, yyyy"), "%B %d, %Y");
+        assert_eq!(java_to_chrono("MMM"), "%b");
+        assert_eq!(java_to_chrono("hh:mm"), "%I:%M");
+        // Month (`MM`) and minute (`mm`) are distinguished by case, not order.
+        assert_eq!(java_to_chrono("MM/mm"), "%m/%M");
+        // Two-digit year.
+        assert_eq!(java_to_chrono("yy"), "%y");
+    }
+}
