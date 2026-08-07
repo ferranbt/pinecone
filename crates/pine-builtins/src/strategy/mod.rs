@@ -627,7 +627,11 @@ fn trade_field<O: PineOutput>(open: bool, select: fn(&Trade, f64) -> Value<O>) -
             };
             let index = n as usize;
             let selected = if open {
-                broker.open_trades().get(index).copied().map(|t| select(t, close))
+                broker
+                    .open_trades()
+                    .get(index)
+                    .copied()
+                    .map(|t| select(t, close))
             } else {
                 broker.closed_trades().get(index).map(|t| select(t, close))
             };
@@ -641,16 +645,59 @@ fn trade_field<O: PineOutput>(open: bool, select: fn(&Trade, f64) -> Value<O>) -
 /// per-trade drawdown/runup are not modelled by the broker, so they are `na`.
 fn register_closedtrades<O: PineOutput>() -> Value<O> {
     let mut m: HashMap<String, Value<O>> = HashMap::new();
-    m.insert("entry_price".into(), trade_field(false, |t, _| Value::Number(t.entry_price)));
-    m.insert("entry_bar_index".into(), trade_field(false, |t, _| Value::Int(t.entry_bar as i64)));
-    m.insert("entry_id".into(), trade_field(false, |t, _| Value::String(t.entry_id.clone())));
-    m.insert("exit_price".into(), trade_field(false, |t, _| t.exit_price.map(Value::Number).unwrap_or(Value::Na)));
-    m.insert("exit_bar_index".into(), trade_field(false, |t, _| t.exit_bar.map(|b| Value::Int(b as i64)).unwrap_or(Value::Na)));
-    m.insert("size".into(), trade_field(false, |t, _| Value::Number(t.size)));
-    m.insert("commission".into(), trade_field(false, |t, _| Value::Number(t.commission)));
-    m.insert("profit".into(), trade_field(false, |t, close| Value::Number(t.profit(close))));
-    m.insert("profit_percent".into(), trade_field(false, |t, close| Value::Number(profit_percent(t, close))));
-    for name in ["entry_time", "entry_comment", "exit_time", "exit_id", "exit_comment", "max_drawdown", "max_drawdown_percent", "max_runup", "max_runup_percent"] {
+    m.insert(
+        "entry_price".into(),
+        trade_field(false, |t, _| Value::Number(t.entry_price)),
+    );
+    m.insert(
+        "entry_bar_index".into(),
+        trade_field(false, |t, _| Value::Int(t.entry_bar as i64)),
+    );
+    m.insert(
+        "entry_id".into(),
+        trade_field(false, |t, _| Value::String(t.entry_id.clone())),
+    );
+    m.insert(
+        "exit_price".into(),
+        trade_field(false, |t, _| {
+            t.exit_price.map(Value::Number).unwrap_or(Value::Na)
+        }),
+    );
+    m.insert(
+        "exit_bar_index".into(),
+        trade_field(false, |t, _| {
+            t.exit_bar
+                .map(|b| Value::Int(b as i64))
+                .unwrap_or(Value::Na)
+        }),
+    );
+    m.insert(
+        "size".into(),
+        trade_field(false, |t, _| Value::Number(t.size)),
+    );
+    m.insert(
+        "commission".into(),
+        trade_field(false, |t, _| Value::Number(t.commission)),
+    );
+    m.insert(
+        "profit".into(),
+        trade_field(false, |t, close| Value::Number(t.profit(close))),
+    );
+    m.insert(
+        "profit_percent".into(),
+        trade_field(false, |t, close| Value::Number(profit_percent(t, close))),
+    );
+    for name in [
+        "entry_time",
+        "entry_comment",
+        "exit_time",
+        "exit_id",
+        "exit_comment",
+        "max_drawdown",
+        "max_drawdown_percent",
+        "max_runup",
+        "max_runup_percent",
+    ] {
         m.insert(name.into(), trade_field(false, |_, _| Value::Na));
     }
     // The trade number of the first closed trade in the set.
@@ -661,7 +708,10 @@ fn register_closedtrades<O: PineOutput>() -> Value<O> {
         call: None,
         value: Some(Rc::new(|ctx: &mut Interpreter<O>| {
             Ok(Value::Int(
-                ctx.broker.as_ref().map(|b| b.closed_trades().len() as i64).unwrap_or(0),
+                ctx.broker
+                    .as_ref()
+                    .map(|b| b.closed_trades().len() as i64)
+                    .unwrap_or(0),
             ))
         })),
     }
@@ -671,16 +721,47 @@ fn register_closedtrades<O: PineOutput>() -> Value<O> {
 /// namespace, per-trade accessors over the open log.
 fn register_opentrades<O: PineOutput>() -> Value<O> {
     let mut m: HashMap<String, Value<O>> = HashMap::new();
-    m.insert("entry_price".into(), trade_field(true, |t, _| Value::Number(t.entry_price)));
-    m.insert("entry_bar_index".into(), trade_field(true, |t, _| Value::Int(t.entry_bar as i64)));
-    m.insert("entry_id".into(), trade_field(true, |t, _| Value::String(t.entry_id.clone())));
-    m.insert("size".into(), trade_field(true, |t, _| Value::Number(t.size)));
-    m.insert("commission".into(), trade_field(true, |t, _| Value::Number(t.commission)));
-    m.insert("profit".into(), trade_field(true, |t, close| Value::Number(t.profit(close))));
-    m.insert("profit_percent".into(), trade_field(true, |t, close| Value::Number(profit_percent(t, close))));
+    m.insert(
+        "entry_price".into(),
+        trade_field(true, |t, _| Value::Number(t.entry_price)),
+    );
+    m.insert(
+        "entry_bar_index".into(),
+        trade_field(true, |t, _| Value::Int(t.entry_bar as i64)),
+    );
+    m.insert(
+        "entry_id".into(),
+        trade_field(true, |t, _| Value::String(t.entry_id.clone())),
+    );
+    m.insert(
+        "size".into(),
+        trade_field(true, |t, _| Value::Number(t.size)),
+    );
+    m.insert(
+        "commission".into(),
+        trade_field(true, |t, _| Value::Number(t.commission)),
+    );
+    m.insert(
+        "profit".into(),
+        trade_field(true, |t, close| Value::Number(t.profit(close))),
+    );
+    m.insert(
+        "profit_percent".into(),
+        trade_field(true, |t, close| Value::Number(profit_percent(t, close))),
+    );
     // Capital the open trade ties up: entry price times absolute size.
-    m.insert("capital_held".into(), trade_field(true, |t, _| Value::Number(t.entry_price * t.size.abs())));
-    for name in ["entry_time", "entry_comment", "max_drawdown", "max_drawdown_percent", "max_runup", "max_runup_percent"] {
+    m.insert(
+        "capital_held".into(),
+        trade_field(true, |t, _| Value::Number(t.entry_price * t.size.abs())),
+    );
+    for name in [
+        "entry_time",
+        "entry_comment",
+        "max_drawdown",
+        "max_drawdown_percent",
+        "max_runup",
+        "max_runup_percent",
+    ] {
         m.insert(name.into(), trade_field(true, |_, _| Value::Na));
     }
     Value::Object {
@@ -689,7 +770,10 @@ fn register_opentrades<O: PineOutput>() -> Value<O> {
         call: None,
         value: Some(Rc::new(|ctx: &mut Interpreter<O>| {
             Ok(Value::Int(
-                ctx.broker.as_ref().map(|b| b.open_trades().len() as i64).unwrap_or(0),
+                ctx.broker
+                    .as_ref()
+                    .map(|b| b.open_trades().len() as i64)
+                    .unwrap_or(0),
             ))
         })),
     }
