@@ -401,7 +401,10 @@ fn register_v56<O: PineOutput + InputOutput>() -> Value<O> {
     members.insert("source".to_string(), InputSource::<O>::builtin_value());
     members.insert("price".to_string(), InputPrice::<O>::builtin_value());
     members.insert("symbol".to_string(), InputSymbol::builtin_value::<O>());
-    members.insert("timeframe".to_string(), InputTimeframe::builtin_value::<O>());
+    members.insert(
+        "timeframe".to_string(),
+        InputTimeframe::builtin_value::<O>(),
+    );
     members.insert("text_area".to_string(), InputTextArea::builtin_value::<O>());
     members.insert("enum".to_string(), InputEnum::<O>::builtin_value());
 
