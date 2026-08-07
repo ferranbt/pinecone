@@ -1,0 +1,20 @@
+//@version=6
+indicator("basics/const_namespaces")
+// Skip PineTS: PineTS does not model these constant namespaces.
+log.info(yloc.abovebar + "," + yloc.price)
+log.info(scale.left + "," + scale.none)
+log.info(font.family_default + "," + font.family_monospace)
+log.info(splits.numerator + "," + splits.denominator)
+log.info(adjustment.dividends + "," + adjustment.none)
+log.info(backadjustment.inherit + "," + backadjustment.on)
+log.info(settlement_as_close.off + "," + settlement_as_close.on)
+log.info(text.format_bold + "," + text.format_none)
+// Expected output:
+// abovebar,price
+// left,none
+// family_default,family_monospace
+// numerator,denominator
+// dividends,none
+// inherit,on
+// off,on
+// format_bold,format_none

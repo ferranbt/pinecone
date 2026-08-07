@@ -13,6 +13,9 @@ const TEXTS: &[&str] = &[
     "align_bottom",
     "wrap_none",
     "wrap_auto",
+    "format_none",
+    "format_bold",
+    "format_italic",
 ];
 
 /// Register the text namespace with all text constants.
