@@ -1,0 +1,15 @@
+//@version=5
+indicator("ta/kc")
+// Bars: 8
+[mid, up, lo] = ta.kc(close, 5, 2.0)
+log.info(str.tostring(math.round(mid, 5)) + "," + str.tostring(math.round(up, 5)) + "," + str.tostring(math.round(lo, 5)))
+
+// Expected output:
+// NaN,NaN,NaN
+// NaN,NaN,NaN
+// NaN,NaN,NaN
+// NaN,NaN,NaN
+// NaN,NaN,NaN
+// 297,317,277
+// 298,318,278
+// 299,319,279

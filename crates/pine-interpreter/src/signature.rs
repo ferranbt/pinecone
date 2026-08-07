@@ -72,6 +72,12 @@ pub struct BuiltinSignature {
 }
 
 impl BuiltinSignature {
+    /// A shared empty signature, for builtins whose arguments are not described.
+    pub fn empty() -> &'static BuiltinSignature {
+        static EMPTY: std::sync::OnceLock<BuiltinSignature> = std::sync::OnceLock::new();
+        EMPTY.get_or_init(BuiltinSignature::default)
+    }
+
     /// The parameter an argument at `index` binds to; a trailing variadic
     /// parameter takes every argument past it. `None` means the call passed
     /// more arguments than the builtin accepts.

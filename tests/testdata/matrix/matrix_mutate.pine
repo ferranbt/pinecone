@@ -1,0 +1,44 @@
+//@version=5
+indicator("matrix/matrix_mutate")
+// swap_rows then swap_columns
+a = matrix.new<float>(0, 0)
+matrix.add_row(a, 0, array.from(1.0, 2.0))
+matrix.add_row(a, 1, array.from(3.0, 4.0))
+matrix.swap_rows(a, 0, 1)
+matrix.swap_columns(a, 0, 1)
+log.info(array.join(matrix.row(a, 0), ",") + "|" + array.join(matrix.row(a, 1), ","))
+
+// reverse flips both row and column order
+r = matrix.new<float>(0, 0)
+matrix.add_row(r, 0, array.from(1.0, 2.0, 3.0))
+matrix.add_row(r, 1, array.from(4.0, 5.0, 6.0))
+matrix.reverse(r)
+log.info(array.join(matrix.row(r, 0), ",") + "|" + array.join(matrix.row(r, 1), ","))
+
+// add_col inserts a column at index 1
+c = matrix.new<float>(0, 0)
+matrix.add_row(c, 0, array.from(1.0, 2.0))
+matrix.add_row(c, 1, array.from(3.0, 4.0))
+matrix.add_col(c, 1, array.from(9.0, 8.0))
+log.info(array.join(matrix.row(c, 0), ",") + "|" + array.join(matrix.row(c, 1), ","))
+
+// remove_row returns the removed row
+d = matrix.new<float>(0, 0)
+matrix.add_row(d, 0, array.from(1.0, 2.0))
+matrix.add_row(d, 1, array.from(3.0, 4.0))
+rr = matrix.remove_row(d, 0)
+log.info(array.join(rr, ",") + " rows=" + str.tostring(matrix.rows(d)))
+
+// remove_col returns the removed column
+e = matrix.new<float>(0, 0)
+matrix.add_row(e, 0, array.from(1.0, 2.0, 3.0))
+matrix.add_row(e, 1, array.from(4.0, 5.0, 6.0))
+rc = matrix.remove_col(e, 1)
+log.info(array.join(rc, ",") + " cols=" + str.tostring(matrix.columns(e)))
+
+// Expected output:
+// 4,3|2,1
+// 6,5,4|3,2,1
+// 1,9,2|3,8,4
+// 1,2 rows=1
+// 2,5 cols=2

@@ -1,0 +1,36 @@
+//@version=5
+indicator("matrix/matrix_ops")
+m = matrix.new<float>(0, 0)
+matrix.add_row(m, 0, array.from(1.0, 2.0))
+matrix.add_row(m, 1, array.from(3.0, 4.0))
+
+log.info(str.tostring(matrix.avg(m)))
+log.info(str.tostring(matrix.min(m)))
+log.info(str.tostring(matrix.max(m)))
+log.info(str.tostring(matrix.median(m)))
+log.info(str.tostring(matrix.trace(m)))
+log.info(str.tostring(matrix.is_square(m)))
+log.info(str.tostring(matrix.is_symmetric(m)))
+log.info(array.join(matrix.row(m, 0), ","))
+log.info(array.join(matrix.col(m, 1), ","))
+
+s = matrix.sum(m, 10)
+log.info(str.tostring(matrix.get(s, 0, 0)) + "," + str.tostring(matrix.get(s, 1, 1)))
+
+id = matrix.new<float>(2, 2, 0.0)
+matrix.set(id, 0, 0, 1.0)
+matrix.set(id, 1, 1, 1.0)
+log.info(str.tostring(matrix.is_identity(id)))
+
+// Expected output:
+// 2.5
+// 1
+// 4
+// 2.5
+// 5
+// true
+// false
+// 1,2
+// 2,4
+// 11,14
+// true

@@ -1,0 +1,19 @@
+//@version=5
+indicator("str/str_new")
+// str.trim / str.match / str.format
+// Skip PineTS: on no match PineTS returns na; the reference specifies an empty string, which we return.
+
+log.info("[" + str.trim("  hi  ") + "]")
+log.info(str.match("abc123def", "[0-9]+"))
+log.info("[" + str.match("no digits", "[0-9]+") + "]")
+log.info(str.format("{0} + {1} = {2}", 2, 3, 5))
+log.info(str.format("{0}% of {1}", 50, "x"))
+log.info(str.format("{{literal}}"))
+
+// Expected output:
+// [hi]
+// 123
+// []
+// 2 + 3 = 5
+// 50% of x
+// {literal}

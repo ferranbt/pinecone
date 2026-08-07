@@ -1,0 +1,16 @@
+//@version=5
+indicator("ta/supertrend")
+// Bars: 10
+[st, dir] = ta.supertrend(0.1, 3)
+log.info(str.tostring(math.round(st, 3)) + "," + str.tostring(dir))
+// Expected output:
+// NaN,NaN
+// NaN,NaN
+// 293,1
+// 292,-1
+// 293,-1
+// 294,-1
+// 295,-1
+// 296,-1
+// 297,-1
+// 298,-1

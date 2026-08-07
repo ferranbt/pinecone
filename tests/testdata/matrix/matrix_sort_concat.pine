@@ -1,0 +1,24 @@
+//@version=5
+indicator("matrix/matrix_sort_concat")
+// Skip PineTS: PineTS sorts order.ascending backwards; the reference (and we) sort ascending.
+s = matrix.new<float>(0, 0)
+matrix.add_row(s, 0, array.from(3.0, 30.0))
+matrix.add_row(s, 1, array.from(1.0, 10.0))
+matrix.add_row(s, 2, array.from(2.0, 20.0))
+matrix.sort(s, 0, order.ascending)
+log.info(array.join(matrix.col(s, 0), ","))
+log.info(array.join(matrix.col(s, 1), ","))
+
+c1 = matrix.new<float>(0, 0)
+matrix.add_row(c1, 0, array.from(1.0, 2.0))
+c2 = matrix.new<float>(0, 0)
+matrix.add_row(c2, 0, array.from(3.0, 4.0))
+matrix.concat(c1, c2)
+log.info(str.tostring(matrix.rows(c1)))
+log.info(array.join(matrix.row(c1, 1), ","))
+
+// Expected output:
+// 1,2,3
+// 10,20,30
+// 2
+// 3,4

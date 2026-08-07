@@ -1,0 +1,13 @@
+//@version=5
+indicator("ta/valuewhen")
+// Bars: 8
+log.info(str.tostring(ta.valuewhen(bar_index % 3 == 0, close, 0)))
+// Expected output:
+// 294
+// 294
+// 294
+// 297
+// 297
+// 297
+// 300
+// 300

@@ -1,0 +1,14 @@
+//@version=5
+indicator("ta/range")
+// Bars: 8
+log.info(str.tostring(ta.range(close, 5)))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 4
+// 4
+// 4
+// 4

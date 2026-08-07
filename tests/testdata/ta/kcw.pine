@@ -1,0 +1,14 @@
+//@version=5
+indicator("ta/kcw")
+// Bars: 8
+log.info(str.tostring(math.round(ta.kcw(close, 5, 2.0), 6)))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// NaN
+// 0.13468
+// 0.134228
+// 0.133779

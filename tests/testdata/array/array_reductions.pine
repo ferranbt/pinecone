@@ -1,0 +1,40 @@
+//@version=5
+indicator("array/array_reductions")
+// New array reductions/utilities and math constants.
+
+a = array.from(3.0, 1.0, 2.0, 4.0)
+log.info(str.tostring(array.sum(a)))
+log.info(str.tostring(array.avg(a)))
+log.info(str.tostring(array.min(a)))
+log.info(str.tostring(array.max(a)))
+log.info(str.tostring(array.range(a)))
+log.info(str.tostring(array.median(a)))
+log.info(str.tostring(array.variance(a)))
+log.info(str.tostring(array.first(a)))
+log.info(str.tostring(array.last(a)))
+
+b = array.from(1.0, 2.0, 3.0)
+array.reverse(b)
+array.insert(b, 1, 9.0)
+log.info(array.join(b, ","))
+log.info(str.tostring(array.pop(b)))
+log.info(str.tostring(array.shift(b)))
+
+log.info(str.tostring(math.round(math.pi * 1000)))
+log.info(str.tostring(math.round(math.phi * 1000)))
+
+// Expected output:
+// 10
+// 2.5
+// 1
+// 4
+// 3
+// 2.5
+// 1.25
+// 3
+// 4
+// 3,9,2,1
+// 1
+// 3
+// 3142
+// 1618

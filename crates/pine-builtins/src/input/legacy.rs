@@ -11,7 +11,7 @@
 
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{Input, InputOutput, InputValue, PineOutput};
-use pine_interpreter::{BuiltinFn, Interpreter, RuntimeError, Value};
+use pine_interpreter::{Builtin, BuiltinFn, Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -127,7 +127,9 @@ pub fn register<O: PineOutput + InputOutput>() -> Vec<(String, Value<O>)> {
     let input_object = Value::Object {
         type_name: "input".to_string(),
         fields: Rc::new(RefCell::new(members)),
-        call: Some(Rc::new(InputLegacy::<O>::builtin_fn) as BuiltinFn<O>),
+        call: Some(Builtin::untyped(
+            Rc::new(InputLegacy::<O>::builtin_fn) as BuiltinFn<O>
+        )),
     };
 
     let mut entries = vec![("input".to_string(), input_object)];

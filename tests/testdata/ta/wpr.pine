@@ -1,0 +1,13 @@
+//@version=5
+indicator("ta/wpr")
+// Bars: 8
+log.info(str.tostring(math.round(ta.wpr(5), 5)))
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// -21.42857
+// -21.42857
+// -21.42857
+// -21.42857

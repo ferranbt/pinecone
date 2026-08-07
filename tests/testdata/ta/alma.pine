@@ -1,0 +1,13 @@
+//@version=5
+indicator("ta/alma")
+// Bars: 8
+log.info(str.tostring(math.round(ta.alma(close, 5, 0.85, 6), 5)))
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 297.25769
+// 298.25769
+// 299.25769
+// 300.25769

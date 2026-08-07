@@ -248,6 +248,14 @@ fn render_value<O: PineOutput>(value: &Value<O>) -> String {
             let cols = if rows > 0 { matrix_ref[0].len() } else { 0 };
             format!("[Matrix:{}x{}]", rows, cols)
         }
+        Value::Map { data, .. } => {
+            let parts: Vec<String> = data
+                .borrow()
+                .iter()
+                .map(|(k, v)| format!("{}={}", render_value(k), render_value(v)))
+                .collect();
+            format!("{{{}}}", parts.join(", "))
+        }
     }
 }
 
@@ -284,6 +292,100 @@ impl StrRepeat {
     }
 }
 
+/// str.trim(source) - Strip leading and trailing whitespace.
+#[derive(BuiltinFunction)]
+#[builtin(name = "str.trim")]
+struct StrTrim {
+    source: String,
+}
+
+impl StrTrim {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        Ok(Value::String(self.source.trim().to_string()))
+    }
+}
+
+/// str.match(source, regex) - The first substring matching `regex`, else empty.
+#[derive(BuiltinFunction)]
+#[builtin(name = "str.match")]
+struct StrMatch {
+    source: String,
+    regex: String,
+}
+
+impl StrMatch {
+    fn execute<O: PineOutput>(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let matched = regex::Regex::new(&self.regex)
+            .ok()
+            .and_then(|re| re.find(&self.source).map(|m| m.as_str().to_string()))
+            .unwrap_or_default();
+        Ok(Value::String(matched))
+    }
+}
+
+/// str.format(formatString, ...args) - Substitute `{N}` placeholders with the
+/// Nth argument. A trailing format spec (`{0,number,#.##}`) is accepted but not
+/// applied; `{{`/`}}` are literal braces. Fully variadic since the macro can't
+/// place a fixed parameter before a variadic one — the format string is arg 0.
+#[derive(BuiltinFunction)]
+#[builtin(name = "str.format")]
+struct StrFormat<O: PineOutput> {
+    #[arg(variadic)]
+    parts: Vec<Value<O>>,
+}
+
+impl<O: PineOutput> StrFormat<O> {
+    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let Some((format_string, args)) = self.parts.split_first() else {
+            return Ok(Value::String(String::new()));
+        };
+        let format_string = format_value(format_string);
+
+        let mut out = String::new();
+        let mut chars = format_string.chars().peekable();
+        while let Some(c) = chars.next() {
+            match c {
+                '{' if chars.peek() == Some(&'{') => {
+                    chars.next();
+                    out.push('{');
+                }
+                '}' if chars.peek() == Some(&'}') => {
+                    chars.next();
+                    out.push('}');
+                }
+                '{' => {
+                    let inner: String = chars.by_ref().take_while(|&c| c != '}').collect();
+                    let index = inner
+                        .split(',')
+                        .next()
+                        .unwrap_or("")
+                        .trim()
+                        .parse::<usize>();
+                    match index.ok().and_then(|i| args.get(i)) {
+                        Some(value) => out.push_str(&format_value(value)),
+                        None => out.push_str(&format!("{{{inner}}}")),
+                    }
+                }
+                _ => out.push(c),
+            }
+        }
+        Ok(Value::String(out))
+    }
+}
+
+/// Renders a value for `str.format`.
+fn format_value<O: PineOutput>(v: &Value<O>) -> String {
+    match v {
+        Value::Int(n) => n.to_string(),
+        Value::Number(n) if n.fract() == 0.0 && n.is_finite() => (*n as i64).to_string(),
+        Value::Number(n) => n.to_string(),
+        Value::String(s) => s.clone(),
+        Value::Bool(b) => b.to_string(),
+        Value::Na => "NaN".to_string(),
+        other => format!("{other:?}"),
+    }
+}
+
 /// Register all str namespace functions and return the namespace object
 pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>> {
     let mut str_ns: HashMap<String, Value<O>> = std::collections::HashMap::new();
@@ -308,6 +410,9 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     str_ns.insert("tostring".to_string(), StrToString::<O>::builtin_value());
     str_ns.insert("pos".to_string(), StrPos::builtin_value::<O>());
     str_ns.insert("repeat".to_string(), StrRepeat::builtin_value::<O>());
+    str_ns.insert("trim".to_string(), StrTrim::builtin_value::<O>());
+    str_ns.insert("match".to_string(), StrMatch::builtin_value::<O>());
+    str_ns.insert("format".to_string(), StrFormat::<O>::builtin_value());
 
     let mut out: HashMap<String, Value<O>> = HashMap::new();
 

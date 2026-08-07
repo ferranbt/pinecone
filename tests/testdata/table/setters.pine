@@ -1,0 +1,24 @@
+//@version=5
+indicator("table/setters")
+// Skip PineTS: PineTS does not model these table drawing setters.
+// Exercises every table setter. Tables have no getters in Pine, so this only
+// asserts the calls run without error and that table.all is readable.
+t = table.new(position.top_right, 2, 2)
+table.cell(t, 0, 0, "A")
+table.cell_set_text_size(t, 0, 0, size.small)
+table.cell_set_text_halign(t, 0, 0, text.align_left)
+table.cell_set_text_valign(t, 0, 0, text.align_top)
+table.cell_set_width(t, 0, 0, 10)
+table.cell_set_height(t, 0, 0, 5)
+table.cell_set_text_font_family(t, 0, 0, "Default")
+table.cell_set_text_formatting(t, 0, 0, "bold")
+table.cell_set_tooltip(t, 0, 0, "tip")
+table.merge_cells(t, 0, 0, 1, 1)
+table.set_position(t, position.bottom_left)
+table.set_border_color(t, color.red)
+table.set_border_width(t, 2)
+table.set_frame_color(t, color.blue)
+table.set_frame_width(t, 1)
+log.info(str.tostring(t) + "," + str.tostring(array.size(table.all)))
+// Expected output:
+// 0,0

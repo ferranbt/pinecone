@@ -1,0 +1,17 @@
+//@version=5
+indicator("ta/min")
+// Bars: 8
+// Skip PineTS: PineTS implements ta.min as a variadic min of its arguments; the
+// reference defines ta.min(source) as the running all-time low, which we return.
+src = bar_index % 4
+log.info(str.tostring(ta.min(src)))
+
+// Expected output:
+// 0
+// 0
+// 0
+// 0
+// 0
+// 0
+// 0
+// 0

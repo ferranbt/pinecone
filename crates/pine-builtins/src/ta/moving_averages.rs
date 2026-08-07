@@ -12,6 +12,46 @@ pub(crate) fn smooth_step(previous: Option<f64>, source: f64, alpha: f64, seed: 
     }
 }
 
+/// One EMA step over a persistent `(window, previous)` pair: seeds with the SMA
+/// of the first `length` values, then recurses with `alpha = 2 / (length + 1)`.
+/// An `na` source holds the last value without advancing the seed, which is how
+/// Pine composes an EMA over a series that starts `na` (e.g. the range in
+/// `ta.kc`).
+pub(crate) fn ema_step(
+    window: &mut SeriesBuffer<f64>,
+    previous: &mut Option<f64>,
+    source: f64,
+    length: usize,
+) -> Option<f64> {
+    if source.is_nan() {
+        return *previous;
+    }
+    let seed = window.observe(source, length)?;
+    let alpha = 2.0 / (length as f64 + 1.0);
+    let ema = smooth_step(*previous, source, alpha, &seed);
+    *previous = Some(ema);
+    Some(ema)
+}
+
+/// One Wilder (RMA) step over a persistent `(window, previous)` pair: seeds with
+/// the SMA of the first `length` values, then recurses with `alpha = 1 / length`.
+/// An `na` source holds the last value without advancing the seed.
+pub(crate) fn wilder_step(
+    window: &mut SeriesBuffer<f64>,
+    previous: &mut Option<f64>,
+    source: f64,
+    length: usize,
+) -> Option<f64> {
+    if source.is_nan() {
+        return *previous;
+    }
+    let seed = window.observe(source, length)?;
+    let alpha = 1.0 / length as f64;
+    let value = smooth_step(*previous, source, alpha, &seed);
+    *previous = Some(value);
+    Some(value)
+}
+
 /// Weighted average of `values` (newest first), weighting the newest highest:
 /// `n, n-1, … 1`.
 pub(crate) fn weighted_average(values: &[f64]) -> f64 {
@@ -269,5 +309,45 @@ impl TaSwma {
 
         let swma = (values[0] + 2.0 * values[1] + 2.0 * values[2] + values[3]) / 6.0;
         Ok(Value::Number(swma))
+    }
+}
+
+/// ta.alma(series, length, offset, sigma) - Arnaud Legoux Moving Average.
+///
+/// A Gaussian-weighted average of the last `length` values; `offset` (`0…1`)
+/// slides the weight peak toward the newest bar and `sigma` sets its spread.
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.alma", stateful)]
+pub struct TaAlma {
+    series: f64,
+    length: f64,
+    offset: f64,
+    sigma: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
+}
+
+impl TaAlma {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let length = checked_length(self.length)?;
+        let Some(values) = self.window.observe(self.series, length) else {
+            return Ok(Value::Na);
+        };
+        let m = self.offset * (length as f64 - 1.0);
+        let s = length as f64 / self.sigma;
+        let weights: Vec<f64> = (0..length)
+            .map(|w| (-((w as f64 - m).powi(2)) / (2.0 * s * s)).exp())
+            .collect();
+        let norm: f64 = weights.iter().sum();
+        // `values` is newest-first, so weight `w` pairs with `values[length-1-w]`.
+        let sum: f64 = weights
+            .iter()
+            .enumerate()
+            .map(|(w, weight)| weight * values[length - 1 - w])
+            .sum();
+        Ok(Value::Number(sum / norm))
     }
 }

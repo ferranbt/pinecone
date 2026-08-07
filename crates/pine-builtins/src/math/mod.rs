@@ -413,6 +413,12 @@ impl MathRandom {
 pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>> {
     let mut math_ns: HashMap<String, Value<O>> = HashMap::new();
 
+    // Constants.
+    math_ns.insert("pi".to_string(), Value::Number(std::f64::consts::PI));
+    math_ns.insert("e".to_string(), Value::Number(std::f64::consts::E));
+    math_ns.insert("phi".to_string(), Value::Number(1.618_033_988_749_895));
+    math_ns.insert("rphi".to_string(), Value::Number(0.618_033_988_749_895));
+
     // Single-argument functions
     math_ns.insert("abs".to_string(), MathAbs::builtin_value::<O>());
     math_ns.insert("ceil".to_string(), MathCeil::builtin_value::<O>());

@@ -338,3 +338,125 @@ impl TaCrossunder {
         Ok(Value::Bool(!crossing.now_above && crossing.was_above))
     }
 }
+
+/// ta.barssince(condition) - Bars since `condition` was last true (`0` on the
+/// bar it is true); `na` until it has been true at least once.
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.barssince", stateful)]
+pub struct TaBarssince {
+    condition: bool,
+    #[state]
+    since: Option<u64>,
+}
+
+impl TaBarssince {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        self.since = if self.condition {
+            Some(0)
+        } else {
+            self.since.map(|s| s + 1)
+        };
+        Ok(self.since.map_or(Value::Na, |s| Value::Number(s as f64)))
+    }
+}
+
+/// ta.valuewhen(condition, source, occurrence) - The value of `source` when
+/// `condition` was true `occurrence` times ago (`0` is the most recent).
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.valuewhen", stateful)]
+pub struct TaValuewhen {
+    condition: bool,
+    source: f64,
+    occurrence: f64,
+    #[state]
+    values: Vec<f64>,
+}
+
+impl TaValuewhen {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        if self.condition {
+            self.values.push(self.source);
+        }
+        if self.occurrence < 0.0 || self.occurrence.is_nan() {
+            return Ok(Value::Na);
+        }
+        let occurrence = self.occurrence as usize;
+        let Some(index) = self.values.len().checked_sub(occurrence + 1) else {
+            return Ok(Value::Na);
+        };
+        Ok(Value::Number(self.values[index]))
+    }
+}
+
+/// The pivot value `rightbars` bars back if it is the strict extreme of the
+/// `leftbars + 1 + rightbars` window, else `None`. `strict_max` picks a high pivot.
+fn pivot(window: &[f64], rightbars: usize, strict_max: bool) -> Option<f64> {
+    let candidate = window[rightbars];
+    let is_pivot = window.iter().enumerate().all(|(i, &v)| {
+        i == rightbars
+            || if strict_max {
+                candidate > v
+            } else {
+                candidate < v
+            }
+    });
+    is_pivot.then_some(candidate)
+}
+
+/// ta.pivothigh(source, leftbars, rightbars) - The pivot high `rightbars` bars
+/// back (`source` defaults to `high`).
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.pivothigh", stateful)]
+pub struct TaPivothigh {
+    #[arg(default = bar_source(ctx, "high"))]
+    source: f64,
+    leftbars: f64,
+    rightbars: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
+}
+
+impl TaPivothigh {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let (left, right) = (self.leftbars as usize, self.rightbars as usize);
+        let Some(window) = self.window.observe(self.source, left + right + 1) else {
+            return Ok(Value::Na);
+        };
+        Ok(pivot(&window, right, true).map_or(Value::Na, Value::Number))
+    }
+}
+
+/// ta.pivotlow(source, leftbars, rightbars) - The pivot low `rightbars` bars back
+/// (`source` defaults to `low`).
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.pivotlow", stateful)]
+pub struct TaPivotlow {
+    #[arg(default = bar_source(ctx, "low"))]
+    source: f64,
+    leftbars: f64,
+    rightbars: f64,
+    #[state]
+    window: SeriesBuffer<f64>,
+}
+
+impl TaPivotlow {
+    fn execute<O: PineOutput>(
+        &mut self,
+        _ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let (left, right) = (self.leftbars as usize, self.rightbars as usize);
+        let Some(window) = self.window.observe(self.source, left + right + 1) else {
+            return Ok(Value::Na);
+        };
+        Ok(pivot(&window, right, false).map_or(Value::Na, Value::Number))
+    }
+}

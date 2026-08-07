@@ -103,6 +103,9 @@ pub struct Series<O: PineOutput = DefaultPineOutput> {
     pub current: Box<Value<O>>,
 }
 
+/// The insertion-ordered key/value pairs backing a [`Value::Map`].
+pub type MapEntries<O> = Rc<RefCell<Vec<(Value<O>, Value<O>)>>>;
+
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value<O: PineOutput> {
@@ -116,7 +119,7 @@ pub enum Value<O: PineOutput> {
     Object {
         type_name: String, // The type name of this object (e.g., "InfoLabel")
         fields: Rc<RefCell<HashMap<String, Value<O>>>>, // Dictionary/Object with string keys
-        call: Option<BuiltinFn<O>>,
+        call: Option<Builtin<O>>,
     },
     Function {
         params: Vec<pine_ast::FunctionParam>,
@@ -139,6 +142,11 @@ pub enum Value<O: PineOutput> {
     Matrix {
         element_type: String, // Type of elements: "int", "float", "string", "bool"
         data: Rc<RefCell<Vec<Vec<Value<O>>>>>, // 2D matrix - mutable shared reference to rows of columns
+    },
+    Map {
+        key_type: String,
+        value_type: String,
+        data: MapEntries<O>,
     },
 }
 
@@ -189,6 +197,13 @@ impl<O: PineOutput> std::fmt::Debug for Value<O> {
             Value::Matrix { element_type, data } => {
                 write!(f, "Matrix<{}>({:?})", element_type, data)
             }
+            Value::Map {
+                key_type,
+                value_type,
+                data,
+            } => {
+                write!(f, "Map<{}, {}>({:?})", key_type, value_type, data)
+            }
         }
     }
 }
@@ -232,6 +247,8 @@ impl<O: PineOutput> PartialEq for Value<O> {
             (Value::Color(c1), Value::Color(c2)) => c1 == c2,
             // Matrices compare by reference (Rc pointer equality)
             (Value::Matrix { data: a, .. }, Value::Matrix { data: b, .. }) => Rc::ptr_eq(a, b),
+            // Maps compare by reference (Rc pointer equality)
+            (Value::Map { data: a, .. }, Value::Map { data: b, .. }) => Rc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -285,7 +302,9 @@ pub type BuiltinFn<O> =
 #[derive(Clone)]
 pub struct Builtin<O: PineOutput> {
     pub call: BuiltinFn<O>,
-    pub signature: BuiltinSignature,
+    // Shared for the life of the process: signatures are invariant, so they are
+    // built once (per builtin) rather than reallocated on every compile/call.
+    pub signature: &'static BuiltinSignature,
 }
 
 impl<O: PineOutput> Builtin<O> {
@@ -294,7 +313,7 @@ impl<O: PineOutput> Builtin<O> {
     pub fn untyped(call: BuiltinFn<O>) -> Self {
         Self {
             call,
-            signature: BuiltinSignature::default(),
+            signature: BuiltinSignature::empty(),
         }
     }
 }
@@ -546,6 +565,7 @@ fn builtin_namespace<O: PineOutput>(value: &Value<O>) -> Option<&'static str> {
     match value {
         Value::Array(_) => Some("array"),
         Value::Matrix { .. } => Some("matrix"),
+        Value::Map { .. } => Some("map"),
         _ => None,
     }
 }
@@ -1575,10 +1595,10 @@ impl<O: PineOutput> Interpreter<O> {
                 // capture their arguments unevaluated.
                 let callee_value = self.eval_expr(callee)?;
                 let signature = match &callee_value {
-                    Value::BuiltinFunction(builtin) => Some(builtin.signature.clone()),
+                    Value::BuiltinFunction(builtin) => Some(builtin.signature),
                     _ => None,
                 };
-                let evaluated_args = self.evaluate_arguments(args, signature.as_ref())?;
+                let evaluated_args = self.evaluate_arguments(args, signature)?;
 
                 // Call the function based on its type
                 match callee_value {
@@ -1597,12 +1617,12 @@ impl<O: PineOutput> Interpreter<O> {
                     // A callable namespace object, like `input(...)` alongside
                     // `input.int(...)`. Objects without a `call` are not callable.
                     Value::Object {
-                        call: Some(builtin_fn),
+                        call: Some(builtin),
                         ..
                     } => {
                         let call_args = FunctionCallArgs::new(type_args.clone(), evaluated_args)
                             .with_call_id(*id);
-                        (builtin_fn)(self, call_args)
+                        (builtin.call)(self, call_args)
                     }
                     // Pine's `na` is a keyword that doubles as a function: na(x) → is x na?
                     Value::Na => {

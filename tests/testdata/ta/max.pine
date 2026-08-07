@@ -1,0 +1,17 @@
+//@version=5
+indicator("ta/max")
+// Bars: 8
+// Skip PineTS: PineTS implements ta.max as a variadic max of its arguments; the
+// reference defines ta.max(source) as the running all-time high, which we return.
+src = bar_index % 4
+log.info(str.tostring(ta.max(src)))
+
+// Expected output:
+// 0
+// 1
+// 2
+// 3
+// 3
+// 3
+// 3
+// 3

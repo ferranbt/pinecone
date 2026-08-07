@@ -1,0 +1,13 @@
+//@version=5
+indicator("ta/percentile_linear_interpolation")
+// Bars: 8
+log.info(str.tostring(math.round(ta.percentile_linear_interpolation(close, 5, 50), 5)))
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 296
+// 297
+// 298
+// 299

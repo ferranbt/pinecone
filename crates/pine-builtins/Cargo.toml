@@ -14,3 +14,5 @@ pine-core = { workspace = true }
 pine-broker = { workspace = true }
 pine-interpreter = { workspace = true }
 chrono = { workspace = true }
+regex = "1"
+nalgebra = "0.33"

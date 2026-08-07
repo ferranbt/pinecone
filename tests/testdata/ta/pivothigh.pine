@@ -1,0 +1,14 @@
+//@version=5
+indicator("ta/pivothigh")
+// Bars: 8
+src = bar_index % 4
+log.info(str.tostring(ta.pivothigh(src, 1, 1)))
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 3
+// NaN
+// NaN
+// NaN

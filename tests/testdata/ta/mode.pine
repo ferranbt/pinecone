@@ -1,0 +1,15 @@
+//@version=5
+indicator("ta/mode")
+// Bars: 8
+src = bar_index % 3
+log.info(str.tostring(ta.mode(src, 5)))
+
+// Expected output:
+// NaN
+// NaN
+// NaN
+// NaN
+// 0
+// 1
+// 0
+// 0
