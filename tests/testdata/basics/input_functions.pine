@@ -1,0 +1,14 @@
+//@version=6
+indicator("basics/input_functions")
+// Skip PineTS: input.* return their defaults; PineTS models the inputs UI differently.
+enum Dir
+    up = "Up"
+    down = "Down"
+p = input.price(42.5, "px")
+s = input.symbol("AAPL", "sym")
+t = input.timeframe("60", "tf")
+note = input.text_area("hello", "note")
+d = input.enum(Dir.down, "dir")
+log.info(str.tostring(p) + "," + s + "," + t + "," + note + "," + str.tostring(d))
+// Expected output:
+// 42.5,AAPL,60,hello,Dir::down
