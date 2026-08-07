@@ -286,6 +286,102 @@ impl<O: PineOutput + InputOutput> InputSource<O> {
     }
 }
 
+/// input.price(defval, ...) - A price input; returns its default.
+#[derive(BuiltinFunction)]
+#[builtin(name = "input.price")]
+struct InputPrice<O: PineOutput + InputOutput> {
+    defval: f64,
+    #[arg(default = "")]
+    title: String,
+    #[arg(default = "")]
+    group: String,
+    #[arg(default = "")]
+    tooltip: String,
+    #[arg(default = Value::Na)]
+    options: Value<O>,
+}
+
+impl<O: PineOutput + InputOutput> InputPrice<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = (&self.tooltip, &self.options);
+        ctx.output.add_input(Input {
+            kind: "price".to_string(),
+            title: self.title.clone(),
+            group: self.group.clone(),
+            default: InputValue::Float(self.defval),
+        });
+        Ok(Value::Number(self.defval))
+    }
+}
+
+/// Defines a string-valued input (`input.symbol`/`input.timeframe`/
+/// `input.text_area`) that records a `$kind` widget and returns its default.
+macro_rules! input_string_like {
+    ($ident:ident, $name:literal, $kind:literal) => {
+        #[derive(BuiltinFunction)]
+        #[builtin(name = $name, output = InputOutput)]
+        struct $ident {
+            defval: String,
+            #[arg(default = "")]
+            title: String,
+            #[arg(default = "")]
+            group: String,
+            #[arg(default = "")]
+            tooltip: String,
+        }
+
+        impl $ident {
+            fn execute<O: PineOutput + InputOutput>(
+                &self,
+                ctx: &mut Interpreter<O>,
+            ) -> Result<Value<O>, RuntimeError> {
+                let _ = &self.tooltip;
+                ctx.output.add_input(Input {
+                    kind: $kind.to_string(),
+                    title: self.title.clone(),
+                    group: self.group.clone(),
+                    default: InputValue::Str(self.defval.clone()),
+                });
+                Ok(Value::String(self.defval.clone()))
+            }
+        }
+    };
+}
+
+input_string_like!(InputSymbol, "input.symbol", "symbol");
+input_string_like!(InputTimeframe, "input.timeframe", "timeframe");
+input_string_like!(InputTextArea, "input.text_area", "text_area");
+
+/// input.enum(defval, ...) - An enum input; returns its default member.
+#[derive(BuiltinFunction)]
+#[builtin(name = "input.enum")]
+struct InputEnum<O: PineOutput + InputOutput> {
+    defval: Value<O>,
+    #[arg(default = "")]
+    title: String,
+    #[arg(default = "")]
+    group: String,
+    #[arg(default = "")]
+    tooltip: String,
+}
+
+impl<O: PineOutput + InputOutput> InputEnum<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.tooltip;
+        let member = match &self.defval {
+            Value::Enum { field_name, .. } => field_name.clone(),
+            _ => String::new(),
+        };
+        ctx.output.add_input(Input {
+            kind: "enum".to_string(),
+            title: self.title.clone(),
+            group: self.group.clone(),
+            default: InputValue::Str(member),
+        });
+        Ok(self.defval.clone())
+    }
+}
+
 /// Build the `input` namespace object.
 ///
 /// `input.integer` is v4's spelling of `input.int`; both share one
@@ -303,6 +399,11 @@ fn register_v56<O: PineOutput + InputOutput>() -> Value<O> {
     members.insert("color".to_string(), InputColor::builtin_value::<O>());
     members.insert("time".to_string(), InputTime::builtin_value::<O>());
     members.insert("source".to_string(), InputSource::<O>::builtin_value());
+    members.insert("price".to_string(), InputPrice::<O>::builtin_value());
+    members.insert("symbol".to_string(), InputSymbol::builtin_value::<O>());
+    members.insert("timeframe".to_string(), InputTimeframe::builtin_value::<O>());
+    members.insert("text_area".to_string(), InputTextArea::builtin_value::<O>());
+    members.insert("enum".to_string(), InputEnum::<O>::builtin_value());
 
     Value::Object {
         type_name: "input".to_string(),
