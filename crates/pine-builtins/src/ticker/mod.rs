@@ -123,11 +123,20 @@ pub fn register<O: PineOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
     members.insert("new".to_string(), TickerNew::<O>::builtin_value());
     members.insert("modify".to_string(), TickerModify::<O>::builtin_value());
-    members.insert("heikinashi".to_string(), TickerHeikinashi::<O>::builtin_value());
+    members.insert(
+        "heikinashi".to_string(),
+        TickerHeikinashi::<O>::builtin_value(),
+    );
     members.insert("renko".to_string(), TickerRenko::<O>::builtin_value());
     members.insert("kagi".to_string(), TickerKagi::<O>::builtin_value());
-    members.insert("pointfigure".to_string(), TickerPointfigure::<O>::builtin_value());
-    members.insert("linebreak".to_string(), TickerLinebreak::<O>::builtin_value());
+    members.insert(
+        "pointfigure".to_string(),
+        TickerPointfigure::<O>::builtin_value(),
+    );
+    members.insert(
+        "linebreak".to_string(),
+        TickerLinebreak::<O>::builtin_value(),
+    );
     members.insert("standard".to_string(), TickerStandard::builtin_value::<O>());
     members.insert("inherit".to_string(), TickerInherit::builtin_value::<O>());
     Value::Object {

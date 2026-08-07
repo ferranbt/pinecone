@@ -220,15 +220,33 @@ pub fn register<O: PineOutput>() -> Value<O> {
         "security_lower_tf".to_string(),
         RequestSecurityLowerTf::<O>::builtin_value(),
     );
-    fields.insert("financial".to_string(), RequestFinancial::<O>::builtin_value());
-    fields.insert("dividends".to_string(), RequestDividends::<O>::builtin_value());
-    fields.insert("earnings".to_string(), RequestEarnings::<O>::builtin_value());
+    fields.insert(
+        "financial".to_string(),
+        RequestFinancial::<O>::builtin_value(),
+    );
+    fields.insert(
+        "dividends".to_string(),
+        RequestDividends::<O>::builtin_value(),
+    );
+    fields.insert(
+        "earnings".to_string(),
+        RequestEarnings::<O>::builtin_value(),
+    );
     fields.insert("splits".to_string(), RequestSplits::<O>::builtin_value());
-    fields.insert("economic".to_string(), RequestEconomic::<O>::builtin_value());
-    fields.insert("currency_rate".to_string(), RequestCurrencyRate::<O>::builtin_value());
+    fields.insert(
+        "economic".to_string(),
+        RequestEconomic::<O>::builtin_value(),
+    );
+    fields.insert(
+        "currency_rate".to_string(),
+        RequestCurrencyRate::<O>::builtin_value(),
+    );
     fields.insert("quandl".to_string(), RequestQuandl::<O>::builtin_value());
     fields.insert("seed".to_string(), RequestSeed::<O>::builtin_value());
-    fields.insert("footprint".to_string(), RequestFootprint::<O>::builtin_value());
+    fields.insert(
+        "footprint".to_string(),
+        RequestFootprint::<O>::builtin_value(),
+    );
     Value::Object {
         type_name: "request".to_string(),
         fields: Rc::new(RefCell::new(fields)),

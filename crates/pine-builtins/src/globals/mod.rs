@@ -92,7 +92,10 @@ pub fn register<O: PineOutput + GlobalOutput>() -> HashMap<String, Value<O>> {
     let mut globals: HashMap<String, Value<O>> = HashMap::new();
     globals.insert("bgcolor".to_string(), Bgcolor::builtin_value::<O>());
     globals.insert("barcolor".to_string(), Barcolor::builtin_value::<O>());
-    globals.insert("max_bars_back".to_string(), MaxBarsBack::<O>::builtin_value());
+    globals.insert(
+        "max_bars_back".to_string(),
+        MaxBarsBack::<O>::builtin_value(),
+    );
     // Real-time bid/ask quotes; `na` without a live quote feed.
     globals.insert("bid".to_string(), Value::Na);
     globals.insert("ask".to_string(), Value::Na);
