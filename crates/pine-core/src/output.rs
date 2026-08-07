@@ -55,11 +55,36 @@ pub struct GlobalContext {
     pub barcolor: Option<Color>,
 }
 
-/// An `alertcondition(...)` declaration — a named alert with a message.
+/// How often an `alert(...)` call re-fires within a bar / across bars.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Frequency {
+    /// Every time the call is reached (`alert.freq_all`).
+    All,
+    /// Once per realtime bar (`alert.freq_once_per_bar`).
+    OncePerBar,
+    /// Once per bar, on the bar's close (`alert.freq_once_per_bar_close`).
+    OncePerBarClose,
+}
+
+impl Frequency {
+    /// Parse a `freq_*` constant string, defaulting to `OncePerBar`.
+    pub fn from_const(value: &str) -> Frequency {
+        match value {
+            "freq_all" => Frequency::All,
+            "freq_once_per_bar_close" => Frequency::OncePerBarClose,
+            _ => Frequency::OncePerBar,
+        }
+    }
+}
+
+/// An `alertcondition(...)` declaration or an `alert(...)` fire — a named alert
+/// with a message. `frequency` is `None` for `alertcondition` and `Some` for
+/// `alert`, which specifies one.
 #[derive(Clone, Debug, Default)]
 pub struct AlertCondition {
     pub title: String,
     pub message: String,
+    pub frequency: Option<Frequency>,
 }
 
 /// The `indicator(...)` declaration — a script's identity and display settings.

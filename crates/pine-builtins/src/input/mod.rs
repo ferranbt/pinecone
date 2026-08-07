@@ -14,7 +14,7 @@ mod legacy;
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::PineVersion;
 use pine_core::{Color, Input, InputOutput, InputValue, PineOutput};
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Builtin, BuiltinFn, Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -382,11 +382,47 @@ impl<O: PineOutput + InputOutput> InputEnum<O> {
     }
 }
 
+/// input(defval, ...) - The type-inferring shorthand; records the input and
+/// returns `defval` unchanged, its type taken from the default's.
+#[derive(BuiltinFunction)]
+#[builtin(name = "input")]
+struct InputAuto<O: PineOutput + InputOutput> {
+    defval: Value<O>,
+    #[arg(default = "")]
+    title: String,
+    #[arg(default = "")]
+    group: String,
+    #[arg(default = "")]
+    tooltip: String,
+}
+
+impl<O: PineOutput + InputOutput> InputAuto<O> {
+    fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        let _ = &self.tooltip;
+        let (kind, default) = match &self.defval {
+            Value::Bool(b) => ("bool", InputValue::Bool(*b)),
+            Value::Int(n) => ("int", InputValue::Int(*n)),
+            Value::Number(n) => ("float", InputValue::Float(*n)),
+            Value::String(s) => ("string", InputValue::Str(s.clone())),
+            Value::Color(c) => ("color", InputValue::Color(c.clone())),
+            _ => ("source", InputValue::Str(String::new())),
+        };
+        ctx.output.add_input(Input {
+            kind: kind.to_string(),
+            title: self.title.clone(),
+            group: self.group.clone(),
+            default,
+        });
+        Ok(self.defval.clone())
+    }
+}
+
 /// Build the `input` namespace object.
 ///
 /// `input.integer` is v4's spelling of `input.int`; both share one
 /// implementation.
-/// The v5/v6 `input` object: type-specific member functions (`input.int(...)`).
+/// The v5/v6 `input` object: type-specific member functions (`input.int(...)`),
+/// and callable itself as the type-inferring `input(...)` shorthand.
 fn register_v56<O: PineOutput + InputOutput>() -> Value<O> {
     let mut members: HashMap<String, Value<O>> = HashMap::new();
 
@@ -411,6 +447,9 @@ fn register_v56<O: PineOutput + InputOutput>() -> Value<O> {
     Value::Object {
         type_name: "input".to_string(),
         fields: Rc::new(RefCell::new(members)),
-        call: None,
+        call: Some(Builtin {
+            call: Rc::new(InputAuto::<O>::builtin_fn) as BuiltinFn<O>,
+            signature: InputAuto::<O>::signature(),
+        }),
     }
 }

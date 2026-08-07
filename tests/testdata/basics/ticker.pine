@@ -1,0 +1,14 @@
+//@version=6
+indicator("basics/ticker")
+// Skip PineTS: ticker-id strings use our own encoding, not TradingView's.
+t = ticker.new("NASDAQ", "AAPL")
+log.info(t)
+ha = ticker.heikinashi(t)
+log.info(ha + "|" + ticker.standard(ha))
+log.info(ticker.renko("BINANCE:BTCUSDT") + "|" + ticker.kagi("EURUSD"))
+log.info(ticker.inherit(ha, "MSFT") + "|" + ticker.modify("X:Y"))
+// Expected output:
+// NASDAQ:AAPL
+// NASDAQ:AAPL_HeikinAshi|NASDAQ:AAPL
+// BINANCE:BTCUSDT_Renko|EURUSD_Kagi
+// MSFT_HeikinAshi|X:Y

@@ -10,7 +10,8 @@ pub use bar::{Bar, Data, Ohlcv};
 pub use library::{DirLoader, FileResolver, LibraryLoader};
 pub use output::{
     AlertCondition, AlertConditionOutput, BoxOutput, Color, DefaultPineOutput, DrawingOutput,
-    FillObject, FillOutput, GlobalContext, GlobalOutput, Indicator, Input, InputOutput, InputValue,
+    FillObject, FillOutput, Frequency, GlobalContext, GlobalOutput, Indicator, Input, InputOutput,
+    InputValue,
     Label, LabelOutput, Library, LineObject, LineOutput, LinefillObject, LogEntry, LogLevel,
     LogOutput, MetadataOutput, PineBox, PineOutput, Plot, PlotOutput, Plotarrow, Plotbar,
     Plotcandle, Plotchar, Plotshape, PolylineObject, Table, TableCell, TableOutput,

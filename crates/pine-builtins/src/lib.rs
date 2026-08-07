@@ -47,6 +47,7 @@ mod strategy;
 mod syminfo;
 mod ta;
 mod table;
+mod ticker;
 mod time;
 mod timeframe;
 
@@ -219,6 +220,8 @@ pub fn register_namespace_objects<
     namespaces.insert("map".to_string(), map::register());
     namespaces.insert("session".to_string(), session::register());
     namespaces.insert("runtime".to_string(), runtime::register());
+    namespaces.insert("alert".to_string(), alertcondition::register_alert());
+    namespaces.insert("ticker".to_string(), ticker::register());
     namespaces.insert("earnings".to_string(), earnings::register());
     namespaces.insert("dividends".to_string(), dividends::register());
     namespaces.insert("currency".to_string(), currency::register());
