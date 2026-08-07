@@ -19,7 +19,10 @@ impl TimeframeInSeconds {
         let millis = if self.timeframe.is_empty() {
             ctx.chart_period
         } else {
-            self.timeframe.parse::<Timeframe>().ok().and_then(|tf| tf.to_millis())
+            self.timeframe
+                .parse::<Timeframe>()
+                .ok()
+                .and_then(|tf| tf.to_millis())
         };
         Ok(millis.map_or(Value::Na, |ms| Value::Int(ms / 1000)))
     }
@@ -50,8 +53,14 @@ pub fn register<O: PineOutput>(tf: Timeframe) -> Value<O> {
 
     members.insert("period".to_string(), Value::String(tf.period()));
     members.insert("main_period".to_string(), Value::String(tf.period()));
-    members.insert("in_seconds".to_string(), TimeframeInSeconds::builtin_value::<O>());
-    members.insert("from_seconds".to_string(), TimeframeFromSeconds::builtin_value::<O>());
+    members.insert(
+        "in_seconds".to_string(),
+        TimeframeInSeconds::builtin_value::<O>(),
+    );
+    members.insert(
+        "from_seconds".to_string(),
+        TimeframeFromSeconds::builtin_value::<O>(),
+    );
     members.insert(
         "multiplier".to_string(),
         Value::Number(tf.multiplier as f64),

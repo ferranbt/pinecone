@@ -473,7 +473,10 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
 
     // Special functions
     math_ns.insert("random".to_string(), MathRandom::builtin_value::<O>());
-    math_ns.insert("round_to_mintick".to_string(), MathRoundToMintick::builtin_value::<O>());
+    math_ns.insert(
+        "round_to_mintick".to_string(),
+        MathRoundToMintick::builtin_value::<O>(),
+    );
 
     if matches!(version, PineVersion::V5 | PineVersion::V6) {
         let mut obj: HashMap<String, Value<O>> = HashMap::new();

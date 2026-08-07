@@ -41,7 +41,9 @@ impl StrFormatTime {
         let Some(dt) = chrono::DateTime::from_timestamp_millis(self.time as i64) else {
             return Ok(Value::Na);
         };
-        Ok(Value::String(dt.format(&java_to_chrono(&self.format)).to_string()))
+        Ok(Value::String(
+            dt.format(&java_to_chrono(&self.format)).to_string(),
+        ))
     }
 }
 
@@ -453,7 +455,10 @@ pub fn register<O: PineOutput>(version: PineVersion) -> HashMap<String, Value<O>
     str_ns.insert("trim".to_string(), StrTrim::builtin_value::<O>());
     str_ns.insert("match".to_string(), StrMatch::builtin_value::<O>());
     str_ns.insert("format".to_string(), StrFormat::<O>::builtin_value());
-    str_ns.insert("format_time".to_string(), StrFormatTime::builtin_value::<O>());
+    str_ns.insert(
+        "format_time".to_string(),
+        StrFormatTime::builtin_value::<O>(),
+    );
 
     let mut out: HashMap<String, Value<O>> = HashMap::new();
 
@@ -484,7 +489,10 @@ mod tests {
     #[test]
     fn translates_pine_date_formats() {
         // The default format: the quoted `'T'` is literal, `Z` is the zone.
-        assert_eq!(java_to_chrono("yyyy-MM-dd'T'HH:mm:ssZ"), "%Y-%m-%dT%H:%M:%S%z");
+        assert_eq!(
+            java_to_chrono("yyyy-MM-dd'T'HH:mm:ssZ"),
+            "%Y-%m-%dT%H:%M:%S%z"
+        );
         // Month name width and the 12-hour clock.
         assert_eq!(java_to_chrono("MMMM dd, yyyy"), "%B %d, %Y");
         assert_eq!(java_to_chrono("MMM"), "%b");
