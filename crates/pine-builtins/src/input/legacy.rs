@@ -81,9 +81,13 @@ impl<O: PineOutput + InputOutput> InputLegacy<O> {
             Value::Int(n) => Value::Number(
                 super::num_input(ctx, &self.title, *n as f64, self.minval, self.maxval).trunc(),
             ),
-            Value::Number(n) => {
-                Value::Number(super::num_input(ctx, &self.title, *n, self.minval, self.maxval))
-            }
+            Value::Number(n) => Value::Number(super::num_input(
+                ctx,
+                &self.title,
+                *n,
+                self.minval,
+                self.maxval,
+            )),
             Value::String(s) => {
                 Value::String(super::string_input(ctx, &self.title, s, &self.options))
             }

@@ -159,7 +159,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
         self.inputs = inputs;
         self
     }
-    
+
     /// Host-supplied variables the script can reference, registered as consts
     /// alongside the builtin namespaces.
     pub fn with_custom_variables(mut self, variables: HashMap<String, Value<O>>) -> Self {
@@ -661,8 +661,8 @@ mod tests {
 
     #[test]
     fn decodes_input_overrides_from_json() {
-        let map =
-            inputs_from_json(r#"{"Length": 20, "Ratio": 1.5, "On": true, "Mode": "fast"}"#).unwrap();
+        let map = inputs_from_json(r#"{"Length": 20, "Ratio": 1.5, "On": true, "Mode": "fast"}"#)
+            .unwrap();
         assert_eq!(map["Length"], InputValue::Int(20));
         assert_eq!(map["Ratio"], InputValue::Float(1.5));
         assert_eq!(map["On"], InputValue::Bool(true));

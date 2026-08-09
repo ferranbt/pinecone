@@ -187,7 +187,9 @@ mod tests {
 
         // Use `// Inputs: {json}` to override input.* values, keyed by title.
         let inputs = directive::<String>(source, "// Inputs:")
-            .map(|json| pine_lang::inputs_from_json(&json).expect("`// Inputs:` should be valid JSON"))
+            .map(|json| {
+                pine_lang::inputs_from_json(&json).expect("`// Inputs:` should be valid JSON")
+            })
             .unwrap_or_default();
 
         let outputs = ScriptBuilder::<DefaultPineOutput>::with_code(source)

@@ -465,19 +465,39 @@ impl<O: PineOutput + InputOutput> InputAuto<O> {
         let (kind, default, effective, effective_value) = match &self.defval {
             Value::Bool(b) => {
                 let v = bool_input(ctx, &self.title, *b);
-                ("bool", InputValue::Bool(*b), Value::Bool(v), InputValue::Bool(v))
+                (
+                    "bool",
+                    InputValue::Bool(*b),
+                    Value::Bool(v),
+                    InputValue::Bool(v),
+                )
             }
             Value::Int(n) => {
                 let v = num_input(ctx, &self.title, *n as f64, None, None).trunc();
-                ("int", InputValue::Int(*n), Value::Number(v), InputValue::Int(v as i64))
+                (
+                    "int",
+                    InputValue::Int(*n),
+                    Value::Number(v),
+                    InputValue::Int(v as i64),
+                )
             }
             Value::Number(n) => {
                 let v = num_input(ctx, &self.title, *n, None, None);
-                ("float", InputValue::Float(*n), Value::Number(v), InputValue::Float(v))
+                (
+                    "float",
+                    InputValue::Float(*n),
+                    Value::Number(v),
+                    InputValue::Float(v),
+                )
             }
             Value::String(s) => {
                 let v = string_input(ctx, &self.title, s, &Value::Na);
-                ("string", InputValue::Str(s.clone()), Value::String(v.clone()), InputValue::Str(v))
+                (
+                    "string",
+                    InputValue::Str(s.clone()),
+                    Value::String(v.clone()),
+                    InputValue::Str(v),
+                )
             }
             Value::Color(c) => (
                 "color",
