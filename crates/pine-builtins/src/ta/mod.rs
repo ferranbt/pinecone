@@ -7,12 +7,14 @@ use std::rc::Rc;
 mod comparison;
 mod moving_averages;
 mod oscillators;
+mod pivots;
 mod statistics;
 mod volatility;
 
 pub use comparison::*;
 pub use moving_averages::*;
 pub use oscillators::*;
+pub use pivots::*;
 pub use statistics::*;
 pub use volatility::*;
 
@@ -107,6 +109,10 @@ pub fn register<O: PineOutput>(
         "percentile_linear_interpolation".to_string(),
         TaPercentileLinearInterpolation::builtin_value::<O>(),
     );
+    ta_ns.insert(
+        "pivot_point_levels".to_string(),
+        TaPivotPointLevels::builtin_value::<O>(),
+    );
 
     for &(name, seed, _) in ACCUMULATORS {
         ta_ns.insert(
@@ -118,6 +124,16 @@ pub fn register<O: PineOutput>(
             }),
         );
     }
+    // vwap is session-anchored, not a plain running total, so it lives outside
+    // the ACCUMULATORS table; seed it `na` until the first bar.
+    ta_ns.insert(
+        "vwap".to_string(),
+        Value::Series(Series {
+            id: "ta.vwap".to_string(),
+            current: Box::new(Value::Na),
+            history: Some(Rc::new(RefCell::new(Vec::new()))),
+        }),
+    );
 
     if matches!(version, PineVersion::V5 | PineVersion::V6) {
         let fields = Rc::new(RefCell::new(ta_ns));
@@ -256,10 +272,59 @@ fn iii_next(_prev: f64, b: &Bars) -> f64 {
     }
 }
 
+/// The current numeric value of a builtin-owned series field, `na` → `None`.
+fn field_number<O: PineOutput>(
+    fields: &RefCell<HashMap<String, Value<O>>>,
+    name: &str,
+) -> Option<f64> {
+    match fields.borrow().get(name) {
+        Some(Value::Series(s)) => s.current.as_number().ok().filter(|n| !n.is_nan()),
+        _ => None,
+    }
+}
+
+/// Advance a builtin-owned series field to `next`: push the prior value into its
+/// history buffer (from the second bar on) and set the new current value.
+fn commit_series<O: PineOutput>(
+    fields: &RefCell<HashMap<String, Value<O>>>,
+    name: &str,
+    push: bool,
+    next: f64,
+) {
+    let (previous, history) = match fields.borrow().get(name) {
+        Some(Value::Series(s)) => ((*s.current).clone(), s.history.clone()),
+        _ => (Value::Na, None),
+    };
+    if push {
+        if let Some(history) = &history {
+            let mut history = history.borrow_mut();
+            history.push(previous);
+            if history.len() > MAX_LOOKBACK {
+                let excess = history.len() - MAX_LOOKBACK;
+                history.drain(..excess);
+            }
+        }
+    }
+    if let Some(Value::Series(s)) = fields.borrow_mut().get_mut(name) {
+        *s.current = Value::Number(next);
+    }
+}
+
+/// The trading-day bucket a UNIX-ms timestamp falls in (UTC midnight boundaries).
+/// Session-anchored series (`vwap`, pivot levels) reset when it changes.
+fn day_bucket(millis: i64) -> i64 {
+    const DAY_MS: i64 = 86_400_000;
+    millis.div_euclid(DAY_MS)
+}
+
 fn advance_accumulators<O: PineOutput>(
     fields: Rc<RefCell<HashMap<String, Value<O>>>>,
 ) -> PerBarAdvance<O> {
     let advanced = Cell::new(false);
+    // vwap's running sums and the session it is accumulating, reset each new day.
+    let cum_pv = Cell::new(0.0f64);
+    let cum_v = Cell::new(0.0f64);
+    let session = Cell::new(i64::MIN);
     Rc::new(move |ctx: &mut Interpreter<O>| {
         let Some(bars) = read_bars(ctx) else {
             return;
@@ -267,29 +332,26 @@ fn advance_accumulators<O: PineOutput>(
         // The previous bar's value only exists to be pushed from the second bar on.
         let push = advanced.replace(true);
         for &(name, seed, formula) in ACCUMULATORS {
-            let (previous, history) = match fields.borrow().get(name) {
-                Some(Value::Series(s)) => ((*s.current).clone(), s.history.clone()),
-                _ => (Value::Na, None),
+            let prev = field_number(&fields, name).unwrap_or(seed);
+            commit_series(&fields, name, push, formula(prev, &bars));
+        }
+
+        if let Some(time) = ctx.current_time {
+            let bucket = day_bucket(time);
+            if session.get() != bucket {
+                cum_pv.set(0.0);
+                cum_v.set(0.0);
+                session.set(bucket);
+            }
+            let hlc3 = (bars.high + bars.low + bars.close) / 3.0;
+            cum_pv.set(cum_pv.get() + hlc3 * bars.volume);
+            cum_v.set(cum_v.get() + bars.volume);
+            let vwap = if cum_v.get() != 0.0 {
+                cum_pv.get() / cum_v.get()
+            } else {
+                f64::NAN
             };
-            let prev = previous
-                .as_number()
-                .ok()
-                .filter(|n| !n.is_nan())
-                .unwrap_or(seed);
-            let next = formula(prev, &bars);
-            if push {
-                if let Some(history) = &history {
-                    let mut history = history.borrow_mut();
-                    history.push(previous);
-                    if history.len() > MAX_LOOKBACK {
-                        let excess = history.len() - MAX_LOOKBACK;
-                        history.drain(..excess);
-                    }
-                }
-            }
-            if let Some(Value::Series(s)) = fields.borrow_mut().get_mut(name) {
-                *s.current = Value::Number(next);
-            }
+            commit_series(&fields, "vwap", push, vwap);
         }
     })
 }

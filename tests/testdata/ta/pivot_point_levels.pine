@@ -1,0 +1,18 @@
+//@version=6
+indicator("ta/pivot_point_levels")
+// Skip PineTS: pivot levels anchor to a session PineTS cannot establish on the
+// synthetic bars (returns na); ours computes them from the period before the
+// anchor. Anchor on the last bar → basis is bars 197-198 (H=303, L=292, C=300).
+// Bars: 3
+anchor = bar_index == 199
+levels = ta.pivot_point_levels("Traditional", anchor)
+if barstate.islast
+    p = array.get(levels, 0)
+    r1 = array.get(levels, 1)
+    s1 = array.get(levels, 2)
+    log.info(str.tostring(math.round(p, 4)) + "|" + str.tostring(math.round(r1, 4)) + "|" + str.tostring(math.round(s1, 4)))
+    log.info(str.tostring(array.size(levels)))
+
+// Expected output:
+// 298.3333|304.6667|293.6667
+// 11

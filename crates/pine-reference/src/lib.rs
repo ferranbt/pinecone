@@ -161,6 +161,12 @@ pub fn symbols(version: PineVersion) -> eyre::Result<Vec<String>> {
             }
         }
     }
+
+    // `true`/`false` are bool literals the lexer handles, not environment symbols,
+    // so they are dropped: the list exists to diff against the registered
+    // builtins, where they would be a false gap.
+    names.retain(|name| name != "true" && name != "false");
+
     names.sort();
     names.dedup();
     Ok(names)
