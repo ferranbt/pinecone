@@ -114,9 +114,19 @@ pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Dia
     Ok(pine_sema::analyze(&program, &env, loader))
 }
 
+/// Decode `input.*` overrides from a JSON object — `{"Length": 20, "Smooth":
+/// true, "Source": "close"}` — keyed by input title, for
+/// [`ScriptBuilder::with_inputs`].
+pub fn inputs_from_json(
+    json: &str,
+) -> Result<HashMap<String, pine_core::InputValue>, serde_json::Error> {
+    serde_json::from_str(json)
+}
+
 pub struct ScriptBuilder<O: PineOutput> {
     source: String,
     custom_variables: HashMap<String, Value<O>>,
+    inputs: HashMap<String, pine_core::InputValue>,
     library_loader: Option<Box<dyn LibraryLoader>>,
     request_provider: Option<Box<dyn DataProvider>>,
     ticker: Option<String>,
@@ -131,6 +141,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
         Self {
             source: source.to_string(),
             custom_variables: HashMap::new(),
+            inputs: HashMap::new(),
             library_loader: None,
             request_provider: None,
             ticker: None,
@@ -141,6 +152,14 @@ impl<O: PineOutput> ScriptBuilder<O> {
         }
     }
 
+    /// Host overrides for the script's `input.*` calls, keyed by input title.
+    /// Each `input.*` returns (and validates) the override for its title if one
+    /// is present, else its declared default. See [`inputs_from_json`].
+    pub fn with_inputs(mut self, inputs: HashMap<String, pine_core::InputValue>) -> Self {
+        self.inputs = inputs;
+        self
+    }
+    
     /// Host-supplied variables the script can reference, registered as consts
     /// alongside the builtin namespaces.
     pub fn with_custom_variables(mut self, variables: HashMap<String, Value<O>>) -> Self {
@@ -293,6 +312,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
         }
         interpreter.set_const_variables(consts);
         interpreter.per_bar_advances = advances;
+        interpreter.inputs = self.inputs;
 
         Ok(Script {
             program,
@@ -632,4 +652,20 @@ pub fn execute(source: &str, data: Data) -> Result<(), Error> {
         .compile()?
         .run()
         .map(|_| ())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::inputs_from_json;
+    use pine_core::InputValue;
+
+    #[test]
+    fn decodes_input_overrides_from_json() {
+        let map =
+            inputs_from_json(r#"{"Length": 20, "Ratio": 1.5, "On": true, "Mode": "fast"}"#).unwrap();
+        assert_eq!(map["Length"], InputValue::Int(20));
+        assert_eq!(map["Ratio"], InputValue::Float(1.5));
+        assert_eq!(map["On"], InputValue::Bool(true));
+        assert_eq!(map["Mode"], InputValue::Str("fast".to_string()));
+    }
 }

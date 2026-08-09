@@ -1,0 +1,17 @@
+//@version=6
+indicator("basics/inputs")
+// Skip PineTS: input overrides are a host feature (our `// Inputs:` directive);
+// PineTS has no override mechanism and uses the declared defaults.
+// Inputs: {"Length": 50, "On": false, "Mode": "fast", "Clamp": 999, "Bad": "nope"}
+length = input.int(20, "Length", minval = 1, maxval = 100)
+on = input.bool(true, "On")
+mode = input.string("slow", "Mode", options = ["slow", "fast"])
+clamp = input.int(20, "Clamp", minval = 1, maxval = 10)
+bad = input.string("slow", "Bad", options = ["slow", "fast"])
+def = input.float(1.5, "Untouched")
+log.info(str.tostring(length) + "|" + str.tostring(on) + "|" + mode)
+log.info(str.tostring(clamp) + "|" + bad + "|" + str.tostring(def))
+
+// Expected output:
+// 50|false|fast
+// 10|slow|1.5

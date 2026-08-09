@@ -294,20 +294,24 @@ pub struct LogEntry {
 
 /// The default value of a declared input, preserved with its type so a host can
 /// render the right settings widget.
-#[derive(Debug, Clone, PartialEq)]
+///
+/// Deserializes from a JSON scalar (untagged) so host input overrides can be read
+/// from config.
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
+#[serde(untagged)]
 pub enum InputValue {
+    Bool(bool),
     Int(i64),
     Float(f64),
-    Bool(bool),
     Str(String),
+    #[serde(skip)]
     Color(Color),
 }
 
 /// A declared script input (`input.int(...)`, `input.source(...)`, ...).
 ///
 /// Recorded into the output so a host can enumerate a script's configurable
-/// settings without executing anything itself. The script still receives the
-/// default value at runtime.
+/// settings without executing anything itself.
 #[derive(Debug, Clone)]
 pub struct Input {
     /// Which `input.*` function declared it: `"int"`, `"float"`, `"bool"`,
@@ -317,8 +321,9 @@ pub struct Input {
     pub title: String,
     /// Group the input belongs to (`group` argument), empty when none.
     pub group: String,
-    /// Default value returned to the script.
+    /// The `defval` the script declared.
     pub default: InputValue,
+    pub value: InputValue,
 }
 
 /// Base trait for all output implementations

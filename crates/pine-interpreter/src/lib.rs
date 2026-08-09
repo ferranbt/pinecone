@@ -527,6 +527,8 @@ pub struct Interpreter<O: PineOutput> {
     /// (`time`, `year`, …) derives its bare value from. Set by the host each bar.
     pub current_time: Option<i64>,
     pub per_bar_advances: Vec<PerBarAdvance<O>>,
+    /// Host-supplied `input.*` overrides, keyed by the input's title.
+    pub inputs: HashMap<String, pine_core::InputValue>,
 }
 
 /// Names a statement block ASSIGNS (declares or writes) directly — i.e. the true
@@ -615,6 +617,17 @@ impl<O: PineOutput> Interpreter<O> {
             chart_period: None,
             current_time: None,
             per_bar_advances: Vec::new(),
+            inputs: HashMap::new(),
+        }
+    }
+
+    /// A host-supplied `input.*` override for `title`, if any. An empty title
+    /// (an untitled input) is never overridable.
+    pub fn input(&self, title: &str) -> Option<&pine_core::InputValue> {
+        if title.is_empty() {
+            None
+        } else {
+            self.inputs.get(title)
         }
     }
 

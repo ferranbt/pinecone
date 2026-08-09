@@ -19,3 +19,5 @@ pine-core.workspace = true
 pine-data.workspace = true
 eyre.workspace = true
 walkdir = "2"
+serde.workspace = true
+serde_json.workspace = true

@@ -19,6 +19,63 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+/// The effective numeric value: a host override for `title`, clamped to
+/// `[minval, maxval]`, if present and numeric; otherwise `default`.
+fn num_input<O: PineOutput>(
+    ctx: &Interpreter<O>,
+    title: &str,
+    default: f64,
+    minval: Option<f64>,
+    maxval: Option<f64>,
+) -> f64 {
+    let mut value = match ctx.input(title) {
+        Some(InputValue::Int(n)) => *n as f64,
+        Some(InputValue::Float(f)) => *f,
+        _ => return default,
+    };
+    if let Some(lo) = minval {
+        value = value.max(lo);
+    }
+    if let Some(hi) = maxval {
+        value = value.min(hi);
+    }
+    value
+}
+
+/// The effective boolean value: a boolean override for `title`, else `default`.
+fn bool_input<O: PineOutput>(ctx: &Interpreter<O>, title: &str, default: bool) -> bool {
+    match ctx.input(title) {
+        Some(InputValue::Bool(b)) => *b,
+        _ => default,
+    }
+}
+
+/// The effective string value: a string override for `title` if present and, when
+/// `options` is a list, one of its members; otherwise `default`.
+fn string_input<O: PineOutput>(
+    ctx: &Interpreter<O>,
+    title: &str,
+    default: &str,
+    options: &Value<O>,
+) -> String {
+    let InputValue::Str(value) = (match ctx.input(title) {
+        Some(v) => v,
+        None => return default.to_string(),
+    }) else {
+        return default.to_string();
+    };
+    if let Value::Array(list) = options {
+        let allowed = list
+            .borrow()
+            .iter()
+            .any(|o| matches!(o, Value::String(s) if s == value));
+        if !allowed {
+            return default.to_string();
+        }
+    }
+    value.clone()
+}
+
 /// Every name the `input` namespace contributes, chosen by version: the v5/v6
 /// namespaced functions, or the v3/v4 overloaded `input()` plus its type
 /// constants.
@@ -53,22 +110,16 @@ struct InputInt<O: PineOutput + InputOutput> {
 
 impl<O: PineOutput + InputOutput> InputInt<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        // Constraints and dropdown options refine the settings UI only; they do
-        // not change the value handed to the script.
-        let _ = (
-            self.minval,
-            self.maxval,
-            self.step,
-            &self.tooltip,
-            &self.options,
-        );
+        let _ = (self.step, &self.tooltip, &self.options);
+        let value = num_input(ctx, &self.title, self.defval, self.minval, self.maxval).trunc();
         ctx.output.add_input(Input {
             kind: "int".to_string(),
             title: self.title.clone(),
             group: self.group.clone(),
             default: InputValue::Int(self.defval as i64),
+            value: InputValue::Int(value as i64),
         });
-        Ok(Value::Number(self.defval.trunc()))
+        Ok(Value::Number(value))
     }
 }
 
@@ -95,20 +146,16 @@ struct InputFloat<O: PineOutput + InputOutput> {
 
 impl<O: PineOutput + InputOutput> InputFloat<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let _ = (
-            self.minval,
-            self.maxval,
-            self.step,
-            &self.tooltip,
-            &self.options,
-        );
+        let _ = (self.step, &self.tooltip, &self.options);
+        let value = num_input(ctx, &self.title, self.defval, self.minval, self.maxval);
         ctx.output.add_input(Input {
             kind: "float".to_string(),
             title: self.title.clone(),
             group: self.group.clone(),
             default: InputValue::Float(self.defval),
+            value: InputValue::Float(value),
         });
-        Ok(Value::Number(self.defval))
+        Ok(Value::Number(value))
     }
 }
 
@@ -131,13 +178,15 @@ impl InputBool {
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let _ = &self.tooltip;
+        let value = bool_input(ctx, &self.title, self.defval);
         ctx.output.add_input(Input {
             kind: "bool".to_string(),
             title: self.title.clone(),
             group: self.group.clone(),
             default: InputValue::Bool(self.defval),
+            value: InputValue::Bool(value),
         });
-        Ok(Value::Bool(self.defval))
+        Ok(Value::Bool(value))
     }
 }
 
@@ -158,14 +207,16 @@ struct InputString<O: PineOutput + InputOutput> {
 
 impl<O: PineOutput + InputOutput> InputString<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let _ = (&self.tooltip, &self.options);
+        let _ = &self.tooltip;
+        let value = string_input(ctx, &self.title, &self.defval, &self.options);
         ctx.output.add_input(Input {
             kind: "string".to_string(),
             title: self.title.clone(),
             group: self.group.clone(),
             default: InputValue::Str(self.defval.clone()),
+            value: InputValue::Str(value.clone()),
         });
-        Ok(Value::String(self.defval.clone()))
+        Ok(Value::String(value))
     }
 }
 
@@ -186,14 +237,16 @@ struct InputSession<O: PineOutput + InputOutput> {
 
 impl<O: PineOutput + InputOutput> InputSession<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let _ = (&self.tooltip, &self.options);
+        let _ = &self.tooltip;
+        let value = string_input(ctx, &self.title, &self.defval, &self.options);
         ctx.output.add_input(Input {
             kind: "session".to_string(),
             title: self.title.clone(),
             group: self.group.clone(),
             default: InputValue::Str(self.defval.clone()),
+            value: InputValue::Str(value.clone()),
         });
-        Ok(Value::String(self.defval.clone()))
+        Ok(Value::String(value))
     }
 }
 
@@ -221,6 +274,7 @@ impl InputColor {
             title: self.title.clone(),
             group: self.group.clone(),
             default: InputValue::Color(self.defval.clone()),
+            value: InputValue::Color(self.defval.clone()),
         });
         Ok(Value::Color(self.defval.clone()))
     }
@@ -245,13 +299,15 @@ impl InputTime {
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let _ = &self.tooltip;
+        let value = num_input(ctx, &self.title, self.defval, None, None);
         ctx.output.add_input(Input {
             kind: "time".to_string(),
             title: self.title.clone(),
             group: self.group.clone(),
             default: InputValue::Int(self.defval as i64),
+            value: InputValue::Int(value as i64),
         });
-        Ok(Value::Number(self.defval))
+        Ok(Value::Number(value))
     }
 }
 
@@ -280,7 +336,8 @@ impl<O: PineOutput + InputOutput> InputSource<O> {
             kind: "source".to_string(),
             title: self.title.clone(),
             group: self.group.clone(),
-            default: InputValue::Str(series_id),
+            default: InputValue::Str(series_id.clone()),
+            value: InputValue::Str(series_id),
         });
         Ok(self.defval.clone())
     }
@@ -304,13 +361,15 @@ struct InputPrice<O: PineOutput + InputOutput> {
 impl<O: PineOutput + InputOutput> InputPrice<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let _ = (&self.tooltip, &self.options);
+        let value = num_input(ctx, &self.title, self.defval, None, None);
         ctx.output.add_input(Input {
             kind: "price".to_string(),
             title: self.title.clone(),
             group: self.group.clone(),
             default: InputValue::Float(self.defval),
+            value: InputValue::Float(value),
         });
-        Ok(Value::Number(self.defval))
+        Ok(Value::Number(value))
     }
 }
 
@@ -336,13 +395,15 @@ macro_rules! input_string_like {
                 ctx: &mut Interpreter<O>,
             ) -> Result<Value<O>, RuntimeError> {
                 let _ = &self.tooltip;
+                let value = string_input(ctx, &self.title, &self.defval, &Value::Na);
                 ctx.output.add_input(Input {
                     kind: $kind.to_string(),
                     title: self.title.clone(),
                     group: self.group.clone(),
                     default: InputValue::Str(self.defval.clone()),
+                    value: InputValue::Str(value.clone()),
                 });
-                Ok(Value::String(self.defval.clone()))
+                Ok(Value::String(value))
             }
         }
     };
@@ -376,7 +437,8 @@ impl<O: PineOutput + InputOutput> InputEnum<O> {
             kind: "enum".to_string(),
             title: self.title.clone(),
             group: self.group.clone(),
-            default: InputValue::Str(member),
+            default: InputValue::Str(member.clone()),
+            value: InputValue::Str(member),
         });
         Ok(self.defval.clone())
     }
@@ -399,21 +461,45 @@ struct InputAuto<O: PineOutput + InputOutput> {
 impl<O: PineOutput + InputOutput> InputAuto<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let _ = &self.tooltip;
-        let (kind, default) = match &self.defval {
-            Value::Bool(b) => ("bool", InputValue::Bool(*b)),
-            Value::Int(n) => ("int", InputValue::Int(*n)),
-            Value::Number(n) => ("float", InputValue::Float(*n)),
-            Value::String(s) => ("string", InputValue::Str(s.clone())),
-            Value::Color(c) => ("color", InputValue::Color(c.clone())),
-            _ => ("source", InputValue::Str(String::new())),
+        // The type is inferred from the default, and the override coerced to it.
+        let (kind, default, effective, effective_value) = match &self.defval {
+            Value::Bool(b) => {
+                let v = bool_input(ctx, &self.title, *b);
+                ("bool", InputValue::Bool(*b), Value::Bool(v), InputValue::Bool(v))
+            }
+            Value::Int(n) => {
+                let v = num_input(ctx, &self.title, *n as f64, None, None).trunc();
+                ("int", InputValue::Int(*n), Value::Number(v), InputValue::Int(v as i64))
+            }
+            Value::Number(n) => {
+                let v = num_input(ctx, &self.title, *n, None, None);
+                ("float", InputValue::Float(*n), Value::Number(v), InputValue::Float(v))
+            }
+            Value::String(s) => {
+                let v = string_input(ctx, &self.title, s, &Value::Na);
+                ("string", InputValue::Str(s.clone()), Value::String(v.clone()), InputValue::Str(v))
+            }
+            Value::Color(c) => (
+                "color",
+                InputValue::Color(c.clone()),
+                Value::Color(c.clone()),
+                InputValue::Color(c.clone()),
+            ),
+            other => (
+                "source",
+                InputValue::Str(String::new()),
+                other.clone(),
+                InputValue::Str(String::new()),
+            ),
         };
         ctx.output.add_input(Input {
             kind: kind.to_string(),
             title: self.title.clone(),
             group: self.group.clone(),
             default,
+            value: effective_value,
         });
-        Ok(self.defval.clone())
+        Ok(effective)
     }
 }
 
