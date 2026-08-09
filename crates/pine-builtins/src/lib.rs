@@ -4,8 +4,9 @@ use pine_core::{
     LabelOutput, LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
 };
 use pine_core::{PineVersion, SymInfo, Timeframe};
-use pine_interpreter::{Interpreter, RuntimeError, Value};
+use pine_interpreter::{Builtin, Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
+use std::rc::Rc;
 
 // Re-export for convenience
 pub use pine_core::Bar;
@@ -173,6 +174,37 @@ impl<O: PineOutput> Fixnan<O> {
     }
 }
 
+/// The na-cast functions (`box(x)`, `color(x)`, `string(x)`, …) — they cast `na`
+/// to a type, which in our dynamic typing is the identity on the argument.
+fn na_cast<O: PineOutput>() -> BuiltinFn<O> {
+    Rc::new(|_ctx, call_args| {
+        Ok(match call_args.args.into_iter().next() {
+            Some(EvaluatedArg::Positional(v)) => v,
+            Some(EvaluatedArg::Named { value, .. }) => value,
+            None => Value::Na,
+        })
+    })
+}
+
+/// Makes a namespace object also callable as its type's na-cast (`box.new` and
+/// `box(x)` on the same name).
+fn callable_namespace<O: PineOutput>(namespace: Value<O>) -> Value<O> {
+    match namespace {
+        Value::Object {
+            type_name,
+            fields,
+            value,
+            ..
+        } => Value::Object {
+            type_name,
+            fields,
+            value,
+            call: Some(Builtin::untyped(na_cast::<O>())),
+        },
+        other => other,
+    }
+}
+
 /// Register all builtin namespaces as objects and global functions
 /// Returns namespace objects to be loaded as variables (e.g., "array", "str", "ta")
 /// and global builtin functions (e.g., "na")
@@ -218,9 +250,9 @@ pub fn register_namespace_objects<
 
     // Register namespace objects
     namespaces.insert("array".to_string(), array::register());
-    namespaces.insert("box".to_string(), r#box::register());
+    namespaces.insert("box".to_string(), callable_namespace(r#box::register()));
     namespaces.insert("chart".to_string(), chart::register());
-    namespaces.insert("color".to_string(), color::register());
+    namespaces.insert("color".to_string(), callable_namespace(color::register()));
     namespaces.insert("map".to_string(), map::register());
     namespaces.insert("session".to_string(), session::register());
     namespaces.insert("runtime".to_string(), runtime::register());
@@ -232,13 +264,26 @@ pub fn register_namespace_objects<
     for (name, value) in input::register(version) {
         namespaces.insert(name, value);
     }
-    namespaces.insert("label".to_string(), label::register());
+    namespaces.insert("label".to_string(), callable_namespace(label::register()));
     for (name, value) in line::register(version) {
+        // `line` is also the `line(x)` na-cast; `hline` stays as-is.
+        let value = if name == "line" {
+            callable_namespace(value)
+        } else {
+            value
+        };
         namespaces.insert(name, value);
     }
-    namespaces.insert("linefill".to_string(), linefill::register());
+    namespaces.insert(
+        "string".to_string(),
+        Value::BuiltinFunction(Builtin::untyped(na_cast::<O>())),
+    );
+    namespaces.insert(
+        "linefill".to_string(),
+        callable_namespace(linefill::register()),
+    );
     namespaces.insert("polyline".to_string(), polyline::register());
-    namespaces.insert("table".to_string(), table::register());
+    namespaces.insert("table".to_string(), callable_namespace(table::register()));
     for (name, value) in indicator::register(version) {
         namespaces.insert(name, value);
     }

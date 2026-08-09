@@ -217,11 +217,12 @@ pub fn register_time<O: PineOutput>() -> Value<O> {
     }
 }
 
-/// The bar's closing UNIX ms: its open time plus the chart period.
+/// The bar's closing UNIX ms: the last millisecond of the bar, i.e. its open time
+/// plus the chart period, minus one.
 fn close_time<O: PineOutput>(ctx: &Interpreter<O>) -> Value<O> {
-    match ctx.current_time {
-        Some(time) => Value::Number((time + ctx.chart_period.unwrap_or(0)) as f64),
-        None => Value::Na,
+    match (ctx.current_time, ctx.chart_period) {
+        (Some(time), Some(period)) => Value::Number((time + period - 1) as f64),
+        _ => Value::Na,
     }
 }
 

@@ -1,0 +1,13 @@
+//@version=6
+indicator("basics/timeframe_change")
+// Skip PineTS: our timeframe.change is true on the first bar of a new period
+// (including the dataset's first bar) and for timeframes at or below the chart's;
+// PineTS returns false in those cases.
+// Bars: 3
+c1s = timeframe.change("1S")
+c1d = timeframe.change("1D")
+if barstate.islast
+    log.info(str.tostring(c1s) + "|" + str.tostring(c1d))
+
+// Expected output:
+// true|false

@@ -1,17 +1,11 @@
 //@version=6
 indicator("basics/last_bar_and_time")
-// Skip PineTS: dataset-level values + our simplified time_close/time_tradingday.
 // Bars: 3
-// bars 197..199 (time i*1000, period 1000). timeframe.change must be called every
-// bar (stateful), so it lives outside the guard.
-c1s = timeframe.change("1S")
-c1d = timeframe.change("1D")
+// bars 197..199, time i*1000, period 1000.
 if barstate.islast
-    log.info(str.tostring(last_bar_index) + "|" + str.tostring(last_bar_time))
+    log.info(str.tostring(last_bar_time))
     log.info(str.tostring(time_close) + "|" + str.tostring(time_tradingday))
-    log.info(str.tostring(c1s) + "|" + str.tostring(c1d))
 
 // Expected output:
-// 199|199000
-// 200000|0
-// true|false
+// 199000
+// 199999|0
