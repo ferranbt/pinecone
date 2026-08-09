@@ -1,0 +1,12 @@
+//@version=6
+indicator("ta/vwap")
+// Skip PineTS: PineTS returns na for ta.vwap on these synthetic bars (it needs a
+// real intraday/session context to anchor); ours accumulates the day-anchored
+// vwap (hlc3, reset each UTC day).
+// Bars: 3
+log.info(str.tostring(math.round(ta.vwap, 4)) + "|" + str.tostring(math.round(ta.vwap[1], 4)))
+
+// Expected output:
+// 297.6667|NaN
+// 298.1675|297.6667
+// 298.6689|298.1675
