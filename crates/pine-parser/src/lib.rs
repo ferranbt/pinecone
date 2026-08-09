@@ -545,20 +545,10 @@ impl Parser {
             // Parse optional type qualifier (const, input, simple, series)
             let type_qualifier = p.parse_optional_type_qualifier();
 
-            // Parse field: type_annotation field_name [= default_value]
-            // First, get the type annotation (int, float, or identifier)
-            let field_type = if p.match_token(&[TokenType::Int, TokenType::Float]) {
-                p.tokens[p.current - 1].lexeme.clone()
-            } else if let TokenType::Ident(type_name) = &p.peek().typ {
-                let type_name = type_name.clone();
-                p.advance();
-                type_name
-            } else {
-                return Err(ParserError::UnexpectedToken(
-                    p.peek().typ.clone(),
-                    p.peek().line,
-                ));
-            };
+            // Parse field: type_annotation field_name [= default_value]. The
+            // type may be generic (`array<float>`, `map<string, int>`), so it
+            // goes through the same parser as variable and parameter types.
+            let field_type = p.parse_type()?;
 
             // Parse field name
             let field_loc = p.cur_loc();

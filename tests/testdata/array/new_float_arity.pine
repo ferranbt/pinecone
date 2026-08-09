@@ -1,0 +1,10 @@
+//@version=6
+indicator("array/new_float_arity")
+// array.new_float's size and initial_value are both optional.
+a = array.new_float(0)
+array.push(a, close)
+b = array.new_float(2, 1.5)
+log.info(str.tostring(array.size(a)) + "|" + str.tostring(array.size(b)) + "|" + str.tostring(array.get(b, 0)))
+
+// Expected output:
+// 1|2|1.5

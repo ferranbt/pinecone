@@ -1976,8 +1976,10 @@ impl<O: PineOutput> Interpreter<O> {
             }
         }
 
-        // Check argument count
-        if positional_values.len() != params.len() {
+        // Parameters with a default may be omitted, so the count must land
+        // between the required parameters and the full list.
+        let required = params.iter().filter(|p| p.default_value.is_none()).count();
+        if positional_values.len() < required || positional_values.len() > params.len() {
             return Err(RuntimeError::TypeError(format!(
                 "Expected {} arguments, got {}",
                 params.len(),
@@ -1999,23 +2001,32 @@ impl<O: PineOutput> Interpreter<O> {
             }
         }
 
-        // Bind parameters to arguments with the appropriate const flag, then run
-        // the body as a stateful call site.
-        let param_bindings: Vec<(String, Variable<O>)> = params
-            .iter()
-            .zip(positional_values)
-            .map(|(param, value)| {
-                let is_const = matches!(param.type_qualifier, Some(pine_ast::TypeQualifier::Const));
-                (
-                    param.name.clone(),
-                    Variable {
-                        value,
-                        is_const,
-                        is_var_persistent: false,
-                    },
-                )
-            })
-            .collect();
+        // Bind each parameter to its argument, falling back to the declared
+        // default (evaluated in the caller's scope) when one was omitted.
+        let mut param_bindings: Vec<(String, Variable<O>)> = Vec::with_capacity(params.len());
+        for (i, param) in params.iter().enumerate() {
+            let value = match positional_values.get(i) {
+                Some(value) => value.clone(),
+                None => {
+                    let default = param.default_value.as_ref().ok_or_else(|| {
+                        RuntimeError::TypeError(format!(
+                            "Missing argument for parameter '{}'",
+                            param.name
+                        ))
+                    })?;
+                    self.eval_expr(default)?
+                }
+            };
+            let is_const = matches!(param.type_qualifier, Some(pine_ast::TypeQualifier::Const));
+            param_bindings.push((
+                param.name.clone(),
+                Variable {
+                    value,
+                    is_const,
+                    is_var_persistent: false,
+                },
+            ));
+        }
 
         self.run_call_site_body(call_id, param_bindings, body)
     }

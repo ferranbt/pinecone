@@ -1,0 +1,14 @@
+//@version=6
+indicator("table/cell_after_new")
+// A `var` table created on the first bar survives to a later one: mutating it on
+// the last bar must not fail with "table not found".
+// Bars: 3
+var tb = table.new(position.top_right, 1, 1)
+if barstate.islast
+    table.cell(tb, 0, 0, "hi")
+log.info(str.tostring(tb))
+
+// Expected output:
+// 0
+// 0
+// 0

@@ -1,0 +1,11 @@
+//@version=6
+indicator("ta/vwap_call")
+// ta.vwap is callable as ta.vwap(source); the bare ta.vwap value still anchors
+// hlc3. On one bar, vwap == the source, so the call form of close differs from
+// the bare hlc3 form.
+// Skip PineTS: PineTS returns na for ta.vwap on these synthetic bars (no
+// intraday session context); ours anchors on the UTC day.
+log.info(str.tostring(math.round(ta.vwap(close), 4)) + "|" + str.tostring(math.round(ta.vwap, 4)))
+
+// Expected output:
+// 301|299.6667

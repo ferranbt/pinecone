@@ -96,15 +96,11 @@ struct Int<O: PineOutput> {
 
 impl<O: PineOutput> Int<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        match &self.x {
-            Value::Int(n) => Ok(Value::Int(*n)),
-            Value::Number(n) => Ok(Value::Int(n.trunc() as i64)),
-            Value::Bool(b) => Ok(Value::Int(if *b { 1 } else { 0 })),
-            Value::Na => Ok(Value::Na),
-            _ => Err(RuntimeError::TypeError(format!(
-                "Cannot convert {:?} to int",
-                self.x
-            ))),
+        // `to_number` unwraps a series to its current value, so `int(close)`
+        // works exactly like `int(literal)`; na stays na.
+        match self.x.to_number()? {
+            Some(n) => Ok(Value::Int(n.trunc() as i64)),
+            None => Ok(Value::Na),
         }
     }
 }
@@ -118,15 +114,11 @@ struct Float<O: PineOutput> {
 
 impl<O: PineOutput> Float<O> {
     fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        match &self.x {
-            Value::Int(n) => Ok(Value::Number(*n as f64)),
-            Value::Number(n) => Ok(Value::Number(*n)),
-            Value::Bool(b) => Ok(Value::Number(if *b { 1.0 } else { 0.0 })),
-            Value::Na => Ok(Value::Na),
-            _ => Err(RuntimeError::TypeError(format!(
-                "Cannot convert {:?} to float",
-                self.x
-            ))),
+        // `to_number` unwraps a series to its current value, so `float(close)`
+        // works exactly like `float(literal)`; na stays na.
+        match self.x.to_number()? {
+            Some(n) => Ok(Value::Number(n)),
+            None => Ok(Value::Na),
         }
     }
 }

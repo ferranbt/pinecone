@@ -1,0 +1,12 @@
+//@version=6
+indicator("types/array_field")
+// A generic collection is allowed as a user-type field, not only as a variable
+// or parameter type.
+type Bucket
+    array<float> xs
+b = Bucket.new(array.new<float>(0))
+array.push(b.xs, close)
+log.info(str.tostring(array.size(b.xs)) + "|" + str.tostring(array.get(b.xs, 0)))
+
+// Expected output:
+// 1|301
