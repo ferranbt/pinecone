@@ -1,0 +1,6 @@
+# Mock volume footprint rows for the request.footprint test provider, lowest
+# price first. Columns: down_price,up_price,buy_volume,sell_volume
+100,101,10,50
+101,102,60,20
+102,103,80,15
+103,104,5,5

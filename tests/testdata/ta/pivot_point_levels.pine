@@ -1,8 +1,7 @@
 //@version=6
 indicator("ta/pivot_point_levels")
-// Skip PineTS: pivot levels anchor to a session PineTS cannot establish on the
-// synthetic bars (returns na); ours computes them from the period before the
-// anchor. Anchor on the last bar → basis is bars 197-198 (H=303, L=292, C=300).
+// Skip PineTS: PineTS (0.9.29) does not implement ta.pivot_point_levels ("is not
+// a function"). Anchor on the last bar → basis is bars 197-198 (H=303, L=292, C=300).
 // Bars: 3
 anchor = bar_index == 199
 levels = ta.pivot_point_levels("Traditional", anchor)

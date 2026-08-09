@@ -25,8 +25,30 @@ pub type ProviderError = Box<dyn std::error::Error + Send + Sync>;
 
 /// A source of market data: given a symbol and a Pine timeframe, produce its
 /// bars.
+/// One price row of a volume footprint: the price range it spans and the volume
+/// traded into the bid (`sell`) and ask (`buy`) at that level.
+#[derive(Debug, Clone)]
+pub struct FootprintRow {
+    pub down_price: f64,
+    pub up_price: f64,
+    pub buy_volume: f64,
+    pub sell_volume: f64,
+}
+
 pub trait DataProvider {
     fn request(&self, symbol: &str, timeframe: Timeframe) -> Result<Data, ProviderError>;
+
+    /// The volume footprint rows for the current bar (`request.footprint`),
+    /// lowest price first. `None` — the default — means the host has no order-flow
+    /// feed, so the script reads `na`.
+    fn footprint(
+        &self,
+        _ticks_per_row: f64,
+        _va_percent: f64,
+        _imbalance_percent: f64,
+    ) -> Option<Vec<FootprintRow>> {
+        None
+    }
 
     /// A fundamental financial metric (`request.financial`), e.g. `id =
     /// "TOTAL_REVENUE"`, `period = "FY"`/`"FQ"`. `None` — the default — means the

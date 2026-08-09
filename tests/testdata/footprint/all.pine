@@ -1,0 +1,26 @@
+//@version=6
+indicator("footprint/all")
+// Skip PineTS: PineTS (0.9.29) does not implement footprint.*/volume_row.*; our
+// test provider mocks the request.footprint feed.
+// Footprint: footprint.csv
+// Rows (down,up,buy,sell): (100,101,10,50) (101,102,60,20) (102,103,80,15) (103,104,5,5)
+// totals: buy=155 sell=90 total=245 delta=65; POC=row2 (102-103), VA(70%)=rows1..2.
+f = request.footprint(1, 70, 300)
+log.info(str.tostring(footprint.buy_volume(f)) + "|" + str.tostring(footprint.sell_volume(f)) + "|" + str.tostring(footprint.total_volume(f)) + "|" + str.tostring(footprint.delta(f)))
+log.info(str.tostring(array.size(footprint.rows(f))))
+poc = footprint.poc(f)
+val = footprint.val(f)
+vah = footprint.vah(f)
+log.info(str.tostring(volume_row.up_price(val)) + "|" + str.tostring(volume_row.up_price(poc)) + "|" + str.tostring(volume_row.up_price(vah)))
+log.info(str.tostring(volume_row.buy_volume(poc)) + "|" + str.tostring(volume_row.sell_volume(poc)) + "|" + str.tostring(volume_row.total_volume(poc)) + "|" + str.tostring(volume_row.delta(poc)))
+log.info(str.tostring(volume_row.down_price(poc)) + "|" + str.tostring(volume_row.has_buy_imbalance(poc)) + "|" + str.tostring(volume_row.has_sell_imbalance(poc)))
+r = footprint.get_row_by_price(f, 101.5)
+log.info(str.tostring(volume_row.down_price(r)) + "|" + str.tostring(volume_row.up_price(r)))
+
+// Expected output:
+// 155|90|245|65
+// 4
+// 102|103|103
+// 80|15|95|65
+// 102|true|true
+// 101|102

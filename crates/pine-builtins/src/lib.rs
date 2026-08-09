@@ -27,6 +27,7 @@ mod currency;
 mod dividends;
 mod earnings;
 mod fill;
+mod footprint;
 mod globals;
 mod indicator;
 mod input;
@@ -259,6 +260,8 @@ pub fn register_namespace_objects<
     namespaces.insert("alert".to_string(), alertcondition::register_alert());
     namespaces.insert("ticker".to_string(), ticker::register());
     namespaces.insert("earnings".to_string(), earnings::register());
+    namespaces.insert("footprint".to_string(), footprint::register_footprint());
+    namespaces.insert("volume_row".to_string(), footprint::register_volume_row());
     namespaces.insert("dividends".to_string(), dividends::register());
     namespaces.insert("currency".to_string(), currency::register());
     for (name, value) in input::register(version) {
