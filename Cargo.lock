@@ -1560,6 +1560,7 @@ dependencies = [
 name = "pine-core"
 version = "0.2.1"
 dependencies = [
+ "serde",
  "thiserror",
 ]
 
@@ -1599,6 +1600,8 @@ dependencies = [
  "pine-data",
  "pine-interpreter",
  "pine-lang",
+ "serde",
+ "serde_json",
  "walkdir",
 ]
 
@@ -1631,6 +1634,7 @@ dependencies = [
  "pine-lint",
  "pine-parser",
  "pine-sema",
+ "serde_json",
 ]
 
 [[package]]

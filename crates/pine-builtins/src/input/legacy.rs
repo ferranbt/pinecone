@@ -70,26 +70,37 @@ struct InputLegacy<O: PineOutput + InputOutput> {
 
 impl<O: PineOutput + InputOutput> InputLegacy<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        // Settings-UI only; do not affect the value handed to the script.
-        let _ = (
-            self.minval,
-            self.maxval,
-            self.step,
-            &self.tooltip,
-            &self.options,
-            self.confirm,
-        );
+        let _ = (self.step, &self.tooltip, self.confirm);
         let kind = match &self.r#type {
             Value::String(tag) if !tag.is_empty() => tag.clone(),
             _ => infer_kind(&self.defval),
+        };
+        // Coerce a host override for this title to the default's type.
+        let effective = match &self.defval {
+            Value::Bool(b) => Value::Bool(super::bool_input(ctx, &self.title, *b)),
+            Value::Int(n) => Value::Number(
+                super::num_input(ctx, &self.title, *n as f64, self.minval, self.maxval).trunc(),
+            ),
+            Value::Number(n) => Value::Number(super::num_input(
+                ctx,
+                &self.title,
+                *n,
+                self.minval,
+                self.maxval,
+            )),
+            Value::String(s) => {
+                Value::String(super::string_input(ctx, &self.title, s, &self.options))
+            }
+            other => other.clone(),
         };
         ctx.output.add_input(Input {
             title: self.title.clone(),
             group: self.group.clone(),
             default: to_input_value(&kind, &self.defval),
+            value: to_input_value(&kind, &effective),
             kind,
         });
-        Ok(self.defval.clone())
+        Ok(effective)
     }
 }
 

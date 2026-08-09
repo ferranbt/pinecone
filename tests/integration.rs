@@ -185,11 +185,19 @@ mod tests {
         // Use `// Bars: N` to choose how many bars to use.
         let bar_count = directive::<usize>(source, "// Bars:").unwrap_or(1);
 
+        // Use `// Inputs: {json}` to override input.* values, keyed by title.
+        let inputs = directive::<String>(source, "// Inputs:")
+            .map(|json| {
+                pine_lang::inputs_from_json(&json).expect("`// Inputs:` should be valid JSON")
+            })
+            .unwrap_or_default();
+
         let outputs = ScriptBuilder::<DefaultPineOutput>::with_code(source)
             .with_library_loader(Box::new(library_loader))
             .with_ticker(TICKER_NAME.to_string())
             .with_timeframe(timeframe)
             .with_bar_count(bar_count)
+            .with_inputs(inputs)
             .with_request_provider(Box::new(provider))
             .compile()?
             .run()?

@@ -8,6 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+serde_json = { workspace = true }
 pine-core = { workspace = true }
 pine-data = { workspace = true }
 pine-ast = { workspace = true }
