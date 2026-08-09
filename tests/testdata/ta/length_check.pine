@@ -1,0 +1,9 @@
+//@version=6
+indicator("ta/length_check")
+// A zero length is rejected before the builtin runs, by the `#[length_check]`
+// argument attribute rather than a hand-written guard in each `ta.*`.
+// Skip PineTS: exercises our runtime length validation (error path).
+plot(ta.sma(close, 0))
+
+// Expected error:
+// length must be greater than 0

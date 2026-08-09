@@ -1,4 +1,3 @@
-use super::moving_averages::checked_length;
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, SeriesBuffer};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
@@ -8,6 +7,7 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 #[builtin(name = "ta.stdev", stateful)]
 pub struct TaStdev {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -19,11 +19,6 @@ impl TaStdev {
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -56,6 +51,7 @@ impl TaStdev {
 #[builtin(name = "ta.variance", stateful)]
 pub struct TaVariance {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -67,11 +63,6 @@ impl TaVariance {
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -103,6 +94,7 @@ impl TaVariance {
 #[builtin(name = "ta.median", stateful)]
 pub struct TaMedian {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -114,11 +106,6 @@ impl TaMedian {
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
 
         let Some(mut values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -147,6 +134,7 @@ impl TaMedian {
 #[builtin(name = "ta.percentile_nearest_rank", stateful)]
 pub struct TaPercentileNearestRank {
     source: f64,
+    #[length_check]
     length: f64,
     percentage: f64,
     #[state]
@@ -159,11 +147,6 @@ impl TaPercentileNearestRank {
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
 
         let Some(mut values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -209,6 +192,7 @@ impl TaCum {
 #[builtin(name = "ta.dev", stateful)]
 pub struct TaDev {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -220,11 +204,6 @@ impl TaDev {
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -248,6 +227,7 @@ impl TaDev {
 pub struct TaCorrelation {
     source1: f64,
     source2: f64,
+    #[length_check]
     length: f64,
     #[state]
     window1: SeriesBuffer<f64>,
@@ -260,7 +240,7 @@ impl TaCorrelation {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let xs = self.window1.observe(self.source1, length);
         let Some(ys) = self.window2.observe(self.source2, length) else {
             return Ok(Value::Na);
@@ -291,6 +271,7 @@ impl TaCorrelation {
 #[builtin(name = "ta.percentrank", stateful)]
 pub struct TaPercentrank {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -301,7 +282,7 @@ impl TaPercentrank {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         // The current value plus the `length` values that precede it.
         let Some(values) = self.window.observe(self.source, length + 1) else {
             return Ok(Value::Na);
@@ -318,6 +299,7 @@ impl TaPercentrank {
 #[builtin(name = "ta.percentile_linear_interpolation", stateful)]
 pub struct TaPercentileLinearInterpolation {
     source: f64,
+    #[length_check]
     length: f64,
     percentage: f64,
     #[state]
@@ -329,7 +311,7 @@ impl TaPercentileLinearInterpolation {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
         };
@@ -393,6 +375,7 @@ impl TaMin {
 #[builtin(name = "ta.range", stateful)]
 pub struct TaRange {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -403,7 +386,7 @@ impl TaRange {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
         };
@@ -419,6 +402,7 @@ impl TaRange {
 #[builtin(name = "ta.mode", stateful)]
 pub struct TaMode {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -429,7 +413,7 @@ impl TaMode {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
         };
@@ -459,6 +443,7 @@ impl TaMode {
 #[builtin(name = "ta.cog", stateful)]
 pub struct TaCog {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -469,7 +454,7 @@ impl TaCog {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
         };
@@ -515,6 +500,7 @@ fn average_ranks(values: &[f64]) -> Vec<f64> {
 #[builtin(name = "ta.rci", stateful)]
 pub struct TaRci {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -525,7 +511,7 @@ impl TaRci {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
         };

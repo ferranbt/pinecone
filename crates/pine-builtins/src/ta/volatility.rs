@@ -1,4 +1,4 @@
-use super::moving_averages::{checked_length, ema_step, smooth_step, wilder_step};
+use super::moving_averages::{ema_step, smooth_step, wilder_step};
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, SeriesBuffer};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
@@ -66,6 +66,7 @@ impl TaTr {
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.atr", stateful)]
 pub struct TaAtr {
+    #[length_check]
     length: f64,
     #[state]
     previous_close: Option<f64>,
@@ -80,7 +81,7 @@ impl TaAtr {
         &mut self,
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let (high, low, close) = hlc(ctx)?;
         let previous_close = self.previous_close.replace(close);
@@ -104,6 +105,7 @@ impl TaAtr {
 #[builtin(name = "ta.bb", stateful)]
 pub struct TaBb {
     series: f64,
+    #[length_check]
     length: f64,
     mult: f64,
     #[state]
@@ -115,7 +117,7 @@ impl TaBb {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let Some(values) = self.window.observe(self.series, length) else {
             return Ok(bands(Value::Na, Value::Na, Value::Na));
@@ -278,6 +280,7 @@ impl TaSar {
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.wpr", stateful)]
 pub struct TaWpr {
+    #[length_check]
     length: f64,
     #[state]
     highs: SeriesBuffer<f64>,
@@ -290,7 +293,7 @@ impl TaWpr {
         &mut self,
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let (high, low, close) = hlc(ctx)?;
         let highs = self.highs.observe(high, length);
         let Some(lows) = self.lows.observe(low, length) else {
@@ -321,7 +324,9 @@ fn pair<O: PineOutput>(a: Value<O>, b: Value<O>) -> Value<O> {
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.dmi", stateful)]
 pub struct TaDmi {
+    #[length_check]
     di_length: f64,
+    #[length_check]
     adx_smoothing: f64,
     #[state]
     previous_high: Option<f64>,
@@ -352,10 +357,7 @@ impl TaDmi {
         &mut self,
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let (di_length, adx_smoothing) = (
-            checked_length(self.di_length)?,
-            checked_length(self.adx_smoothing)?,
-        );
+        let (di_length, adx_smoothing) = (self.di_length as usize, self.adx_smoothing as usize);
         let na = || pair3(Value::Na, Value::Na, Value::Na);
         let (high, low, close) = hlc(ctx)?;
         let (Some(ph), Some(pl), Some(pc)) =
@@ -419,6 +421,7 @@ impl TaDmi {
 #[builtin(name = "ta.supertrend", stateful)]
 pub struct TaSupertrend {
     factor: f64,
+    #[length_check]
     atr_period: f64,
     #[state]
     previous_close: Option<f64>,
@@ -439,7 +442,7 @@ impl TaSupertrend {
         &mut self,
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let atr_period = checked_length(self.atr_period)?;
+        let atr_period = self.atr_period as usize;
         let (high, low, close) = hlc(ctx)?;
         let previous_close = self.previous_close.replace(close);
         // True range falls back to `high - low` on the first bar.
@@ -497,8 +500,11 @@ fn pair3<O: PineOutput>(a: Value<O>, b: Value<O>, c: Value<O>) -> Value<O> {
 #[builtin(name = "ta.macd", stateful)]
 pub struct TaMacd {
     source: f64,
+    #[length_check]
     fast: f64,
+    #[length_check]
     slow: f64,
+    #[length_check]
     signal: f64,
     #[state]
     fast_win: SeriesBuffer<f64>,
@@ -520,9 +526,9 @@ impl TaMacd {
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let (fast, slow, signal) = (
-            checked_length(self.fast)?,
-            checked_length(self.slow)?,
-            checked_length(self.signal)?,
+            self.fast as usize,
+            self.slow as usize,
+            self.signal as usize,
         );
         let f = ema_step(&mut self.fast_win, &mut self.fast_prev, self.source, fast);
         let d = ema_step(&mut self.slow_win, &mut self.slow_prev, self.source, slow);
@@ -551,6 +557,7 @@ impl TaMacd {
 #[builtin(name = "ta.bbw", stateful)]
 pub struct TaBbw {
     series: f64,
+    #[length_check]
     length: f64,
     mult: f64,
     #[state]
@@ -562,7 +569,7 @@ impl TaBbw {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let Some(values) = self.window.observe(self.series, length) else {
             return Ok(Value::Na);
         };
@@ -585,6 +592,7 @@ impl TaBbw {
 #[builtin(name = "ta.kc", stateful)]
 pub struct TaKc {
     series: f64,
+    #[length_check]
     length: f64,
     mult: f64,
     #[arg(default = true)]
@@ -606,7 +614,7 @@ impl TaKc {
         &mut self,
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let (high, low, close) = hlc(ctx)?;
         let previous_close = self.previous_close.replace(close);
         let range = if self.use_true_range {
@@ -641,6 +649,7 @@ impl TaKc {
 #[builtin(name = "ta.kcw", stateful)]
 pub struct TaKcw {
     series: f64,
+    #[length_check]
     length: f64,
     mult: f64,
     #[arg(default = true)]
@@ -662,7 +671,7 @@ impl TaKcw {
         &mut self,
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let (high, low, close) = hlc(ctx)?;
         let previous_close = self.previous_close.replace(close);
         let range = if self.use_true_range {

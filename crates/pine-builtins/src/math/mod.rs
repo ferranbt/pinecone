@@ -1,4 +1,3 @@
-use crate::ta::checked_length;
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, PineVersion, SeriesBuffer};
 use pine_interpreter::{Interpreter, Num, RuntimeError, Value};
@@ -357,6 +356,7 @@ impl<O: PineOutput> MathAvg<O> {
 #[builtin(name = "math.sum", stateful)]
 struct MathSum {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -367,7 +367,7 @@ impl MathSum {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         // na arrives as NaN and is skipped rather than entering the window.
         if !self.source.is_nan() {

@@ -30,7 +30,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Field, Fields, Meta};
 ///     }
 /// }
 /// ```
-#[proc_macro_derive(BuiltinFunction, attributes(builtin, arg, type_param, state))]
+#[proc_macro_derive(BuiltinFunction, attributes(builtin, arg, type_param, state, length_check))]
 pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -441,6 +441,18 @@ fn is_field_state(field: &Field) -> bool {
     })
 }
 
+/// `#[length_check]` marks a numeric argument (a window length) that must be
+/// greater than zero.
+fn is_field_length_check(field: &Field) -> bool {
+    field.attrs.iter().any(|attr| {
+        if let Meta::Path(path) = &attr.meta {
+            path.is_ident("length_check")
+        } else {
+            false
+        }
+    })
+}
+
 fn generate_field_parsing(
     fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>,
 ) -> proc_macro2::TokenStream {
@@ -842,6 +854,9 @@ fn generate_field_validation(
     fields: &syn::punctuated::Punctuated<Field, syn::token::Comma>,
 ) -> proc_macro2::TokenStream {
     let mut validations = Vec::new();
+    // Length checks run after every required field is unwrapped, so a
+    // `#[length_check]` field is a concrete number here regardless of order.
+    let mut length_checks = Vec::new();
 
     for field in fields {
         let field_name = field.ident.as_ref().unwrap();
@@ -878,10 +893,21 @@ fn generate_field_validation(
                 })?;
             });
         }
+
+        if is_field_length_check(field) {
+            length_checks.push(quote! {
+                if (#field_name as usize) == 0 {
+                    return Err(RuntimeError::TypeError(
+                        "length must be greater than 0".to_string(),
+                    ));
+                }
+            });
+        }
     }
 
     quote! {
         #(#validations)*
+        #(#length_checks)*
     }
 }
 

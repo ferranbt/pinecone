@@ -65,22 +65,12 @@ pub(crate) fn weighted_average(values: &[f64]) -> f64 {
     weighted / total_weight
 }
 
-/// Rejects a zero length, which every windowed average requires.
-pub(crate) fn checked_length(length: f64) -> Result<usize, RuntimeError> {
-    let length = length as usize;
-    if length == 0 {
-        return Err(RuntimeError::TypeError(
-            "length must be greater than 0".to_string(),
-        ));
-    }
-    Ok(length)
-}
-
 /// ta.sma(source, length) - Simple Moving Average
 #[derive(BuiltinFunction)]
 #[builtin(name = "ta.sma", stateful)]
 pub struct TaSma {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -91,7 +81,7 @@ impl TaSma {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -110,6 +100,7 @@ impl TaSma {
 #[builtin(name = "ta.ema", stateful)]
 pub struct TaEma {
     source: f64,
+    #[length_check]
     length: f64,
     /// Holds the first `length` values, which seed the recursion.
     #[state]
@@ -123,7 +114,7 @@ impl TaEma {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let Some(seed) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -145,6 +136,7 @@ impl TaEma {
 #[builtin(name = "ta.rma", stateful)]
 pub struct TaRma {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -157,7 +149,7 @@ impl TaRma {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         // `na` inputs are ignored: they neither seed the window nor advance the
         // recursion, so the average is over `length` non-`na` values (v6 spec).
@@ -181,6 +173,7 @@ impl TaRma {
 #[builtin(name = "ta.wma", stateful)]
 pub struct TaWma {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -191,7 +184,7 @@ impl TaWma {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -206,6 +199,7 @@ impl TaWma {
 #[builtin(name = "ta.vwma", stateful)]
 pub struct TaVwma {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     prices: SeriesBuffer<f64>,
@@ -218,7 +212,7 @@ impl TaVwma {
         &mut self,
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let volume = ctx
             .get_variable("volume")
@@ -255,6 +249,7 @@ impl TaVwma {
 #[builtin(name = "ta.hma", stateful)]
 pub struct TaHma {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -269,7 +264,7 @@ impl TaHma {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let half = (length / 2).max(1);
         let root = ((length as f64).sqrt().floor() as usize).max(1);
 
@@ -320,6 +315,7 @@ impl TaSwma {
 #[builtin(name = "ta.alma", stateful)]
 pub struct TaAlma {
     series: f64,
+    #[length_check]
     length: f64,
     offset: f64,
     sigma: f64,
@@ -332,7 +328,7 @@ impl TaAlma {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
         let Some(values) = self.window.observe(self.series, length) else {
             return Ok(Value::Na);
         };
