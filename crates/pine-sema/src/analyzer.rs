@@ -63,8 +63,22 @@ const SCRIPT_DECLARATIONS: &[&str] = &["study", "indicator", "strategy", "librar
 
 /// Built-in type names an annotation may use without a user declaration.
 const BUILTIN_TYPES: &[&str] = &[
-    "int", "float", "bool", "string", "color", "line", "linefill", "label", "box", "table",
-    "polyline", "array", "matrix", "map",
+    "int",
+    "float",
+    "bool",
+    "string",
+    "color",
+    "line",
+    "linefill",
+    "label",
+    "box",
+    "table",
+    "polyline",
+    "array",
+    "matrix",
+    "map",
+    "footprint",
+    "volume_row",
 ];
 
 /// The called name as written, for diagnostics: `plot` or `ta.sma`.

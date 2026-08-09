@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
     use pine_core::{AlertConditionOutput, DefaultPineOutput, LibraryLoader, LogOutput};
-    use pine_core::{SymInfo, Timeframe, TimeframeUnit};
+    use pine_core::{
+        Data, DataProvider, FootprintRow, ProviderError, SymInfo, Timeframe, TimeframeUnit,
+    };
     use pine_data::StaticProvider;
     use pine_lang::ScriptBuilder;
     use std::fs;
@@ -11,6 +13,43 @@ mod tests {
         StaticProvider::from_csv(&path)
             .expect("bar fixture should load")
             .with_syminfo(test_syminfo())
+    }
+
+    /// Wraps the bar provider and serves mock request data our synthetic bars
+    /// don't carry — currently a fixed volume footprint (`// Footprint: <file>`)
+    /// so the `footprint.*` / `volume_row.*` accessors can be exercised.
+    struct TestProvider {
+        bars: StaticProvider,
+        footprint: Option<Vec<FootprintRow>>,
+    }
+
+    impl DataProvider for TestProvider {
+        fn request(&self, symbol: &str, timeframe: Timeframe) -> Result<Data, ProviderError> {
+            self.bars.request(symbol, timeframe)
+        }
+        fn footprint(&self, _tpr: f64, _va: f64, _imbalance: f64) -> Option<Vec<FootprintRow>> {
+            self.footprint.clone()
+        }
+    }
+
+    fn load_footprint(name: &str) -> Vec<FootprintRow> {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("data")
+            .join(name);
+        fs::read_to_string(&path)
+            .expect("footprint fixture should load")
+            .lines()
+            .filter(|line| !line.trim_start().starts_with('#') && !line.trim().is_empty())
+            .map(|line| {
+                let c: Vec<f64> = line.split(',').map(|v| v.trim().parse().unwrap()).collect();
+                FootprintRow {
+                    down_price: c[0],
+                    up_price: c[1],
+                    buy_volume: c[2],
+                    sell_volume: c[3],
+                }
+            })
+            .collect()
     }
 
     const TICKER_NAME: &str = "AAPL";
@@ -134,7 +173,10 @@ mod tests {
             .join("data")
             .join(name);
 
-        let provider = load_test_data(data_file);
+        let provider = TestProvider {
+            bars: load_test_data(data_file),
+            footprint: directive::<String>(source, "// Footprint:").map(|f| load_footprint(&f)),
+        };
 
         // Use `// Timeframe:` to set a custom timeframe, defaults to 1 second
         let timeframe =

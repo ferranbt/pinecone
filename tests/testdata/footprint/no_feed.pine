@@ -1,0 +1,12 @@
+//@version=6
+indicator("footprint/no_feed")
+// Skip PineTS: PineTS does not implement request.footprint/footprint.*.
+// Without a feed, our request.footprint reads na.
+f = request.footprint(1, 70, 300)
+r = footprint.poc(f)
+log.info(str.tostring(na(f)) + "|" + str.tostring(footprint.delta(f)) + "|" + str.tostring(na(r)))
+log.info(str.tostring(volume_row.buy_volume(r)) + "|" + str.tostring(volume_row.has_buy_imbalance(r)))
+
+// Expected output:
+// true|NaN|true
+// NaN|NaN

@@ -195,18 +195,31 @@ impl<O: PineOutput> RequestSeed<O> {
     }
 }
 
-/// request.footprint(...) - Footprint/volume-profile rows; `na` (not modeled).
+/// request.footprint(ticks_per_row, va_percent, imbalance_percent) - The current
+/// bar's volume footprint from the order-flow feed, or `na` without one.
 #[derive(BuiltinFunction)]
 #[builtin(name = "request.footprint")]
-struct RequestFootprint<O: PineOutput> {
-    #[arg(variadic)]
-    options: Vec<Value<O>>,
+struct RequestFootprint {
+    #[arg(default = 0.0)]
+    ticks_per_row: f64,
+    #[arg(default = 70.0)]
+    va_percent: f64,
+    #[arg(default = 300.0)]
+    imbalance_percent: f64,
 }
 
-impl<O: PineOutput> RequestFootprint<O> {
-    fn execute(&self, _ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let _ = &self.options;
-        Ok(Value::Na)
+impl RequestFootprint {
+    fn execute<O: PineOutput>(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
+        Ok(ctx
+            .request_provider
+            .as_ref()
+            .and_then(|provider| {
+                provider.footprint(self.ticks_per_row, self.va_percent, self.imbalance_percent)
+            })
+            .map(|rows| {
+                crate::footprint::build_footprint(rows, self.va_percent, self.imbalance_percent)
+            })
+            .unwrap_or(Value::Na))
     }
 }
 
@@ -245,7 +258,7 @@ pub fn register<O: PineOutput>() -> Value<O> {
     fields.insert("seed".to_string(), RequestSeed::<O>::builtin_value());
     fields.insert(
         "footprint".to_string(),
-        RequestFootprint::<O>::builtin_value(),
+        RequestFootprint::builtin_value::<O>(),
     );
     Value::Object {
         type_name: "request".to_string(),
