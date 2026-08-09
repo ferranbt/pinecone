@@ -1,4 +1,4 @@
-use super::moving_averages::{checked_length, ema_step, smooth_step};
+use super::moving_averages::{ema_step, smooth_step};
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, SeriesBuffer};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
@@ -13,6 +13,7 @@ use pine_interpreter::{Interpreter, RuntimeError, Value};
 #[builtin(name = "ta.rsi", stateful)]
 pub struct TaRsi {
     source: f64,
+    #[length_check]
     length: f64,
     /// Last bar's source, to difference against. `None` on the first bar, when
     /// there is no change to measure yet.
@@ -34,11 +35,6 @@ impl TaRsi {
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let length = self.length as usize;
-        if length == 0 {
-            return Err(RuntimeError::TypeError(
-                "length must be greater than 0".to_string(),
-            ));
-        }
 
         let Some(previous) = self.previous.replace(self.source) else {
             // First bar: no previous value, so no change to measure yet.
@@ -78,6 +74,7 @@ impl TaRsi {
 #[builtin(name = "ta.cci", stateful)]
 pub struct TaCci {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -88,7 +85,7 @@ impl TaCci {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -166,6 +163,7 @@ impl TaRoc {
 #[builtin(name = "ta.cmo", stateful)]
 pub struct TaCmo {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -176,7 +174,7 @@ impl TaCmo {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         // `length` changes need `length + 1` values in hand.
         let Some(values) = self.window.observe(self.source, length + 1) else {
@@ -211,6 +209,7 @@ pub struct TaStoch {
     source: f64,
     high: f64,
     low: f64,
+    #[length_check]
     length: f64,
     #[state]
     highs: SeriesBuffer<f64>,
@@ -223,7 +222,7 @@ impl TaStoch {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         // Both sides advance together, so they fill on the same bar.
         let highs = self.highs.observe(self.high, length);
@@ -261,6 +260,7 @@ impl TaStoch {
 #[builtin(name = "ta.mfi", stateful)]
 pub struct TaMfi {
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     upper: SeriesBuffer<f64>,
@@ -275,7 +275,7 @@ impl TaMfi {
         &mut self,
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let volume = ctx
             .get_variable("volume")
@@ -324,6 +324,7 @@ impl TaMfi {
 #[builtin(name = "ta.linreg", stateful)]
 pub struct TaLinreg {
     source: f64,
+    #[length_check]
     length: f64,
     #[arg(default = 0.0)]
     offset: f64,
@@ -336,7 +337,7 @@ impl TaLinreg {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -374,7 +375,9 @@ impl TaLinreg {
 #[builtin(name = "ta.tsi", stateful)]
 pub struct TaTsi {
     source: f64,
+    #[length_check]
     short_length: f64,
+    #[length_check]
     long_length: f64,
     #[state]
     previous_source: Option<f64>,
@@ -401,10 +404,7 @@ impl TaTsi {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let (short, long) = (
-            checked_length(self.short_length)?,
-            checked_length(self.long_length)?,
-        );
+        let (short, long) = (self.short_length as usize, self.long_length as usize);
         let Some(previous) = self.previous_source.replace(self.source) else {
             return Ok(Value::Na);
         };

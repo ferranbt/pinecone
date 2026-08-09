@@ -1,4 +1,3 @@
-use super::moving_averages::checked_length;
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, SeriesBuffer};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
@@ -47,6 +46,7 @@ impl TaChange {
 pub struct TaHighest {
     #[arg(default = bar_source(ctx, "high"))]
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -57,7 +57,7 @@ impl TaHighest {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -75,6 +75,7 @@ impl TaHighest {
 pub struct TaLowest {
     #[arg(default = bar_source(ctx, "low"))]
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -85,7 +86,7 @@ impl TaLowest {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -120,6 +121,7 @@ fn extreme_offset(values: &[f64], better: fn(f64, f64) -> bool) -> f64 {
 pub struct TaHighestbars {
     #[arg(default = bar_source(ctx, "high"))]
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -130,7 +132,7 @@ impl TaHighestbars {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
@@ -146,6 +148,7 @@ impl TaHighestbars {
 pub struct TaLowestbars {
     #[arg(default = bar_source(ctx, "low"))]
     source: f64,
+    #[length_check]
     length: f64,
     #[state]
     window: SeriesBuffer<f64>,
@@ -156,7 +159,7 @@ impl TaLowestbars {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let length = checked_length(self.length)?;
+        let length = self.length as usize;
 
         let Some(values) = self.window.observe(self.source, length) else {
             return Ok(Value::Na);
