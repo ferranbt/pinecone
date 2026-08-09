@@ -301,10 +301,14 @@ impl<O: PineOutput> RequestSecurity<O> {
             &self.currency,
             &self.calc_bars_count,
         );
+        // A tuple expression (`[high, low]`) always resolves to a tuple, so a
+        // `[h, l] = request.security(...)` destructuring works even when the
+        // feed is unavailable — each element is then na.
+        let arity = tuple_arity(&self.expression);
         let (Value::Expr(expr), Ok(timeframe)) =
             (&self.expression, self.timeframe.parse::<Timeframe>())
         else {
-            return Ok(Value::Na);
+            return Ok(na_shaped(arity));
         };
         let expr = Rc::clone(expr);
 
@@ -313,7 +317,10 @@ impl<O: PineOutput> RequestSecurity<O> {
             self.series = Some(Rc::new(request_series(ctx, &self.symbol, timeframe, &expr)));
         }
         let series = self.series.as_ref().expect("series built above");
-        Ok(aligned(series, current_time(ctx)))
+        Ok(match aligned(series, current_time(ctx)) {
+            Value::Na => na_shaped(arity),
+            value => value,
+        })
     }
 }
 
@@ -476,4 +483,25 @@ fn aligned<O: PineOutput>(series: &[(i64, Value<O>)], now: i64) -> Value<O> {
 
 fn current_time<O: PineOutput>(ctx: &Interpreter<O>) -> i64 {
     ctx.current_time.unwrap_or(0)
+}
+
+/// The element count of a captured tuple expression (`[a, b]`), or `None` when
+/// the request is for a single series.
+fn tuple_arity<O: PineOutput>(expression: &Value<O>) -> Option<usize> {
+    match expression {
+        Value::Expr(expr) => match expr.as_ref() {
+            Expr::Array(elements) => Some(elements.len()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// The na result of a request: a bare na for a single series, or a na-filled
+/// tuple of the requested arity so destructuring still binds every name.
+fn na_shaped<O: PineOutput>(arity: Option<usize>) -> Value<O> {
+    match arity {
+        Some(n) => Value::Array(Rc::new(RefCell::new(vec![Value::Na; n]))),
+        None => Value::Na,
+    }
 }

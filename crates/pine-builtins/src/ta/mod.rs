@@ -1,5 +1,6 @@
+use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, PineVersion, MAX_LOOKBACK};
-use pine_interpreter::{Interpreter, PerBarAdvance, Series, Value};
+use pine_interpreter::{Builtin, Interpreter, PerBarAdvance, RuntimeError, Series, Value};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -125,19 +126,30 @@ pub fn register<O: PineOutput>(
         );
     }
     // vwap is session-anchored, not a plain running total, so it lives outside
-    // the ACCUMULATORS table; seed it `na` until the first bar.
-    ta_ns.insert(
-        "vwap".to_string(),
-        Value::Series(Series {
-            id: "ta.vwap".to_string(),
-            current: Box::new(Value::Na),
-            history: Some(Rc::new(RefCell::new(Vec::new()))),
-        }),
-    );
+    // the ACCUMULATORS table. `ta.vwap` is both a value — the day-anchored vwap
+    // of hlc3, held in this shared cell and advanced each bar — and a function
+    // `ta.vwap(source)` that anchors an arbitrary source. Seed it `na`.
+    let vwap_series = Rc::new(RefCell::new(Value::Series(Series {
+        id: "ta.vwap".to_string(),
+        current: Box::new(Value::Na),
+        history: Some(Rc::new(RefCell::new(Vec::new()))),
+    })));
+    ta_ns.insert("vwap".to_string(), {
+        let cell = Rc::clone(&vwap_series);
+        Value::Object {
+            type_name: "ta.vwap".to_string(),
+            fields: Rc::new(RefCell::new(HashMap::new())),
+            call: Some(Builtin {
+                call: TaVwap::builtin_fn::<O>(),
+                signature: TaVwap::signature(),
+            }),
+            value: Some(Rc::new(move |_ctx| Ok(cell.borrow().clone()))),
+        }
+    });
 
     if matches!(version, PineVersion::V5 | PineVersion::V6) {
         let fields = Rc::new(RefCell::new(ta_ns));
-        let advance = advance_accumulators(Rc::clone(&fields));
+        let advance = advance_accumulators(Rc::clone(&fields), vwap_series);
         let mut obj: HashMap<String, Value<O>> = HashMap::new();
         obj.insert(
             "ta".to_string(),
@@ -283,30 +295,33 @@ fn field_number<O: PineOutput>(
     }
 }
 
-/// Advance a builtin-owned series field to `next`: push the prior value into its
+/// Advance a builtin-owned series to `next`: push the prior value into its
 /// history buffer (from the second bar on) and set the new current value.
+fn step_series<O: PineOutput>(series: &mut Value<O>, push: bool, next: f64) {
+    if let Value::Series(s) = series {
+        if push {
+            if let Some(history) = &s.history {
+                let mut history = history.borrow_mut();
+                history.push((*s.current).clone());
+                if history.len() > MAX_LOOKBACK {
+                    let excess = history.len() - MAX_LOOKBACK;
+                    history.drain(..excess);
+                }
+            }
+        }
+        *s.current = Value::Number(next);
+    }
+}
+
+/// [`step_series`] on a named field of a builtin-owned namespace.
 fn commit_series<O: PineOutput>(
     fields: &RefCell<HashMap<String, Value<O>>>,
     name: &str,
     push: bool,
     next: f64,
 ) {
-    let (previous, history) = match fields.borrow().get(name) {
-        Some(Value::Series(s)) => ((*s.current).clone(), s.history.clone()),
-        _ => (Value::Na, None),
-    };
-    if push {
-        if let Some(history) = &history {
-            let mut history = history.borrow_mut();
-            history.push(previous);
-            if history.len() > MAX_LOOKBACK {
-                let excess = history.len() - MAX_LOOKBACK;
-                history.drain(..excess);
-            }
-        }
-    }
-    if let Some(Value::Series(s)) = fields.borrow_mut().get_mut(name) {
-        *s.current = Value::Number(next);
+    if let Some(series) = fields.borrow_mut().get_mut(name) {
+        step_series(series, push, next);
     }
 }
 
@@ -319,6 +334,7 @@ fn day_bucket(millis: i64) -> i64 {
 
 fn advance_accumulators<O: PineOutput>(
     fields: Rc<RefCell<HashMap<String, Value<O>>>>,
+    vwap_series: Rc<RefCell<Value<O>>>,
 ) -> PerBarAdvance<O> {
     let advanced = Cell::new(false);
     // vwap's running sums and the session it is accumulating, reset each new day.
@@ -351,7 +367,51 @@ fn advance_accumulators<O: PineOutput>(
             } else {
                 f64::NAN
             };
-            commit_series(&fields, "vwap", push, vwap);
+            step_series(&mut vwap_series.borrow_mut(), push, vwap);
         }
     })
+}
+
+/// ta.vwap(source) - session-anchored VWAP of `source`, reset each UTC day.
+///
+/// The bare `ta.vwap` value uses hlc3; this call form anchors whatever source it
+/// is given, which is how a script vwaps a custom price. Session anchoring
+/// follows the same day boundary as the bare value.
+#[derive(BuiltinFunction)]
+#[builtin(name = "ta.vwap", stateful)]
+struct TaVwap {
+    source: f64,
+    #[state]
+    cum_pv: f64,
+    #[state]
+    cum_v: f64,
+    #[state]
+    session: Option<i64>,
+}
+
+impl TaVwap {
+    fn execute<O: PineOutput>(
+        &mut self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let Some(time) = ctx.current_time else {
+            return Ok(Value::Na);
+        };
+        let Some(volume) = series_now(ctx, "volume") else {
+            return Ok(Value::Na);
+        };
+        let bucket = day_bucket(time);
+        if self.session != Some(bucket) {
+            self.cum_pv = 0.0;
+            self.cum_v = 0.0;
+            self.session = Some(bucket);
+        }
+        self.cum_pv += self.source * volume;
+        self.cum_v += volume;
+        if self.cum_v != 0.0 {
+            Ok(Value::Number(self.cum_pv / self.cum_v))
+        } else {
+            Ok(Value::Na)
+        }
+    }
 }

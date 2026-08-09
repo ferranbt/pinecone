@@ -751,8 +751,8 @@ pub struct DefaultPineOutput {
 
 impl PineOutput for DefaultPineOutput {
     fn clear(&mut self) {
-        self.labels.clear();
-        self.boxes.clear();
+        // Per-bar streams: re-emitted every bar, so the snapshot holds only the
+        // current bar's values.
         self.plots.clear();
         self.plotarrows.clear();
         self.plotbars.clear();
@@ -765,13 +765,11 @@ impl PineOutput for DefaultPineOutput {
         self.globals = GlobalContext::default();
         self.alertconditions.clear();
         self.fills.clear();
-        self.lines.clear();
-        self.tables.clear();
-        // Reset ID counters
-        self.next_label_id = 0;
-        self.next_box_id = 0;
-        self.next_line_id = 0;
-        self.next_table_id = 0;
+        // Labels, lines, boxes, tables, linefills and polylines are persistent
+        // handle objects: a `var`-held id created on an early bar must still be
+        // there to mutate on a later one (e.g. populate a table on the last
+        // bar). They are not cleared, and their id counters keep rising, so ids
+        // stay unique across the whole run like Pine's.
     }
 }
 

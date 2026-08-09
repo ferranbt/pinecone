@@ -40,7 +40,9 @@ impl<O: PineOutput> ArrayNew<O> {
 #[derive(BuiltinFunction)]
 #[builtin(name = "array.new_float")]
 struct ArrayNewFloat<O: PineOutput> {
+    #[arg(default = 0.0)]
     size: f64,
+    #[arg(default = Value::Na)]
     initial_value: Value<O>,
 }
 

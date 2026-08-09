@@ -1,0 +1,9 @@
+//@version=6
+indicator("functions/default_args")
+// A parameter default is applied when the argument is omitted.
+f(a, b = 2.0) =>
+    a * b
+log.info(str.tostring(f(close)) + "|" + str.tostring(f(close, 3.0)))
+
+// Expected output:
+// 602|903

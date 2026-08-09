@@ -1,0 +1,14 @@
+//@version=6
+indicator("request/security_tuple")
+// request.security returns several series at once via a tuple expression. With
+// data it resolves each (here a "1D" resample: daily high=304, low=95); with no
+// feed for the symbol it still destructures, binding each name to na.
+// Skip PineTS: on these synthetic bars PineTS does not resample to "1D" (it
+// returns the last bar's raw 304|294) and ignores the unknown symbol (so its
+// second request is not na) — provider differences, not the tuple feature.
+[h, l] = request.security(syminfo.tickerid, "1D", [high, low])
+[nh, nl] = request.security("NO_SUCH_SYMBOL", "1D", [high, low])
+log.info(str.tostring(h) + "|" + str.tostring(l) + "|" + str.tostring(na(nh)) + "|" + str.tostring(na(nl)))
+
+// Expected output:
+// 304|95|true|true

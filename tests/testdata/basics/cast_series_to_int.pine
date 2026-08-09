@@ -1,0 +1,7 @@
+//@version=6
+indicator("basics/cast_series_to_int")
+// int()/float() unwrap a series to its current value, like they do a literal.
+log.info(str.tostring(int(hlc3)) + "|" + str.tostring(int(close)) + "|" + str.tostring(float(close) > 0))
+
+// Expected output:
+// 299|301|true
