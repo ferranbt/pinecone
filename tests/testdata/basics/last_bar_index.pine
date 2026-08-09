@@ -1,0 +1,10 @@
+//@version=6
+indicator("basics/last_bar_index")
+// Skip PineTS: last_bar_index is the dataset's global bar index (199), while
+// PineTS reindexes the loaded window from 0 (=2).
+// Bars: 3
+if barstate.islast
+    log.info(str.tostring(last_bar_index))
+
+// Expected output:
+// 199

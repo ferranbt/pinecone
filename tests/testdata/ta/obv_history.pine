@@ -1,6 +1,7 @@
 //@version=6
 indicator("ta/obv_history")
-// Skip PineTS: prototype accumulator history.
+// Skip PineTS: bar_index is the dataset's global index (PineTS reindexes from 0),
+// and PineTS gaps ta.obv[1] read only inside a conditional.
 // Bars: 5
 // obv[1] read only on even bars must still give the true previous-bar obv
 // (bars 195..199: obv = 0, 2960, 5930, 8910, 11900).

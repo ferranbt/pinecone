@@ -1,9 +1,9 @@
 //@version=6
 indicator("ta/accdist_history")
-// Skip PineTS: builtin-owned accumulator series.
+// Skip PineTS: reading ta.accdist[1]/[2] only inside a conditional gaps in PineTS
+// (it returns na); our builtin-owned series keeps the true history.
 // Bars: 3
-// accdist[1] read only on the last bar must still be the previous bar's value
-// (accdist over bars 197..199 = 1188, 2380, 3576).
+// accdist over bars 197..199 = 1188, 2380, 3576.
 if barstate.islast
     log.info(str.tostring(ta.accdist) + "|" + str.tostring(ta.accdist[1]) + "|" + str.tostring(ta.accdist[2]))
 

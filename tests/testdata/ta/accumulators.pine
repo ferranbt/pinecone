@@ -1,6 +1,5 @@
 //@version=6
 indicator("ta/accumulators")
-// Skip PineTS: builtin-owned accumulator series.
 // Bars: 3
 log.info(str.tostring(ta.obv) + "|" + str.tostring(ta.accdist) + "|" + str.tostring(ta.wad))
 log.info(str.tostring(math.round(ta.pvt, 4)) + "|" + str.tostring(math.round(ta.pvi, 6)) + "|" + str.tostring(ta.nvi))

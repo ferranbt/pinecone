@@ -1,0 +1,14 @@
+//@version=6
+indicator("basics/type_casts")
+// na-cast functions pass their argument through; the same names still work as
+// namespaces. (string(na) is left out: PineTS treats it non-na, while we follow
+// the reference — "casts na to string" — and keep na.)
+allna = na(box(na)) and na(color(na)) and na(line(na)) and na(label(na)) and na(table(na)) and na(linefill(na))
+log.info(str.tostring(allna) + "|" + string("hi"))
+// box(x) alongside box.new(...): the cast passes a value through, the namespace builds one.
+b = box.new(0, 1.0, 1, 0.0)
+log.info(str.tostring(na(box(b))) + "|" + str.tostring(na(b)))
+
+// Expected output:
+// true|hi
+// false|false
