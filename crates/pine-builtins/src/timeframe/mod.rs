@@ -43,6 +43,39 @@ impl TimeframeFromSeconds {
     }
 }
 
+/// timeframe.change(timeframe) - True on the first bar of each new period of the
+/// given timeframe.
+#[derive(BuiltinFunction)]
+#[builtin(name = "timeframe.change", stateful)]
+struct TimeframeChange {
+    timeframe: String,
+    #[state]
+    prev_bucket: Option<i64>,
+}
+
+impl TimeframeChange {
+    fn execute<O: PineOutput>(
+        &mut self,
+        ctx: &mut Interpreter<O>,
+    ) -> Result<Value<O>, RuntimeError> {
+        let Some(time) = ctx.current_time else {
+            return Ok(Value::Bool(false));
+        };
+        let bucket = match self
+            .timeframe
+            .parse::<Timeframe>()
+            .ok()
+            .and_then(|tf| tf.to_millis())
+        {
+            Some(ms) if ms > 0 => time.div_euclid(ms),
+            _ => time,
+        };
+        let changed = self.prev_bucket != Some(bucket);
+        self.prev_bucket = Some(bucket);
+        Ok(Value::Bool(changed))
+    }
+}
+
 /// Build the `timeframe` namespace object from the host-supplied timeframe.
 ///
 /// Exposes the data members `timeframe.period` / `timeframe.multiplier` and the
@@ -61,6 +94,7 @@ pub fn register<O: PineOutput>(tf: Timeframe) -> Value<O> {
         "from_seconds".to_string(),
         TimeframeFromSeconds::builtin_value::<O>(),
     );
+    members.insert("change".to_string(), TimeframeChange::builtin_value::<O>());
     members.insert(
         "multiplier".to_string(),
         Value::Number(tf.multiplier as f64),

@@ -35,7 +35,7 @@ fn main() {
         .unwrap_or(PineVersion::LATEST);
 
     let (mut env, _) = register_namespace_objects::<DefaultPineOutput>(version, None, None);
-    for (name, value) in per_bar_variables::<DefaultPineOutput>(&Bar::default()) {
+    for (name, value) in per_bar_variables::<DefaultPineOutput>(&Bar::default(), None) {
         env.insert(name, value);
     }
 
