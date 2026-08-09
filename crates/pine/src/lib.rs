@@ -107,7 +107,7 @@ pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Dia
 
     let (mut env, _): (HashMap<String, Value<DefaultPineOutput>>, _) =
         pine_builtins::register_namespace_objects(version, None, None);
-    for (name, value) in pine_builtins::per_bar_variables(&Bar::default()) {
+    for (name, value) in pine_builtins::per_bar_variables(&Bar::default(), None) {
         env.insert(name, value);
     }
 
@@ -269,7 +269,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
         }
 
         let mut builtins = consts.clone();
-        for (name, value) in pine_builtins::per_bar_variables(&Bar::default()) {
+        for (name, value) in pine_builtins::per_bar_variables(&Bar::default(), None) {
             builtins.insert(name, value);
         }
 
@@ -350,12 +350,12 @@ pub struct Script<O: PineOutput> {
 impl<O: PineOutput> Script<O> {
     /// Run one bar. Private: bars must be replayed in order from the first, so
     /// [`Script::run`] is the only way in.
-    pub fn execute(&mut self, bar: &Bar) -> Result<O, Error> {
+    pub fn execute(&mut self, bar: &Bar, last_bar: Option<&Bar>) -> Result<O, Error> {
         use interpreter::Value;
 
         self.interpreter.current_time = Some(bar.time);
 
-        for (name, value) in pine_builtins::per_bar_variables(bar) {
+        for (name, value) in pine_builtins::per_bar_variables(bar, last_bar) {
             if matches!(value, Value::Series(_)) {
                 self.interpreter.advance_series(&name, value);
             } else {
@@ -566,9 +566,10 @@ impl<O: PineOutput> Script<O> {
     /// one produced.
     pub fn run(mut self) -> Result<Run<O>, Error> {
         let bars = std::mem::take(&mut self.bars);
+        let last_bar = bars.last().cloned();
         let outputs = bars
             .iter()
-            .map(|bar| self.execute(bar))
+            .map(|bar| self.execute(bar, last_bar.as_ref()))
             .collect::<Result<Vec<O>, Error>>()?;
         let backtest = self.take_backtest();
         Ok(Run { outputs, backtest })

@@ -217,6 +217,42 @@ pub fn register_time<O: PineOutput>() -> Value<O> {
     }
 }
 
+/// The bar's closing UNIX ms: its open time plus the chart period.
+fn close_time<O: PineOutput>(ctx: &Interpreter<O>) -> Value<O> {
+    match ctx.current_time {
+        Some(time) => Value::Number((time + ctx.chart_period.unwrap_or(0)) as f64),
+        None => Value::Na,
+    }
+}
+
+/// The `time_close` name: a value (the bar's closing UNIX ms) and a function.
+pub fn register_time_close<O: PineOutput>() -> Value<O> {
+    Value::Object {
+        type_name: "time_close".to_string(),
+        fields: Rc::new(RefCell::new(HashMap::new())),
+        call: Some(Builtin::untyped(Rc::new(
+            |ctx: &mut Interpreter<O>, _args| Ok(close_time(ctx)),
+        ))),
+        value: Some(Rc::new(|ctx: &mut Interpreter<O>| Ok(close_time(ctx)))),
+    }
+}
+
+/// The `time_tradingday` value: the start of the bar's trading day (UTC midnight).
+pub fn register_time_tradingday<O: PineOutput>() -> Value<O> {
+    Value::Object {
+        type_name: "time_tradingday".to_string(),
+        fields: Rc::new(RefCell::new(HashMap::new())),
+        call: None,
+        value: Some(Rc::new(|ctx: &mut Interpreter<O>| {
+            const DAY_MS: i64 = 86_400_000;
+            Ok(ctx
+                .current_time
+                .map(|ms| Value::Number((ms.div_euclid(DAY_MS) * DAY_MS) as f64))
+                .unwrap_or(Value::Na))
+        })),
+    }
+}
+
 pub fn register_time_functions<O: PineOutput>() -> Vec<(String, Value<O>)> {
     vec![
         (

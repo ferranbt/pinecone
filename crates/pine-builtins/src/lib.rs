@@ -307,6 +307,11 @@ pub fn register_namespace_objects<
     // `dayofweek` is value + function + namespace at once; its scalar is
     // refreshed each bar via `per_bar_object_values`.
     namespaces.insert("dayofweek".to_string(), time::register_dayofweek());
+    namespaces.insert("time_close".to_string(), time::register_time_close());
+    namespaces.insert(
+        "time_tradingday".to_string(),
+        time::register_time_tradingday(),
+    );
 
     // Register plot functions
     for (name, func) in plot::register_plot_functions() {
@@ -336,7 +341,10 @@ pub fn register_per_bar<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
 /// `Value::Series` is one the interpreter should advance to accumulate lookback
 /// (`close[1]`); everything else is a plain assignment. Sema, needing only the
 /// names to resolve, registers them as-is.
-pub fn per_bar_variables<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
+pub fn per_bar_variables<O: PineOutput>(
+    bar: &Bar,
+    last_bar: Option<&Bar>,
+) -> Vec<(String, Value<O>)> {
     let series = |id: &str, value: f64| {
         (
             id.to_string(),
@@ -358,6 +366,14 @@ pub fn per_bar_variables<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
         series("hlcc4", (bar.high + bar.low + bar.close * 2.0) / 4.0),
         series("ohlc4", (bar.open + bar.high + bar.low + bar.close) / 4.0),
         ("bar_index".to_string(), Value::Number(bar.index as f64)),
+        (
+            "last_bar_index".to_string(),
+            last_bar.map_or(Value::Na, |b| Value::Number(b.index as f64)),
+        ),
+        (
+            "last_bar_time".to_string(),
+            last_bar.map_or(Value::Na, |b| Value::Number(b.time as f64)),
+        ),
     ];
     vars.extend(register_per_bar(bar));
     vars
