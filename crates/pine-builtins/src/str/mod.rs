@@ -273,7 +273,7 @@ fn render_value<O: PineOutput>(value: &Value<O>) -> String {
             let parts: Vec<String> = arr.borrow().iter().map(render_value).collect();
             format!("[{}]", parts.join(", "))
         }
-        Value::Series(series) => format!("[Series:{}]", series.id),
+        Value::Series(series) => render_value(&series.current),
         Value::Object { type_name, .. } => format!("[Object:{}]", type_name),
         Value::Function { .. } => "[Function]".to_string(),
         Value::BuiltinFunction(_) => "[BuiltinFunction]".to_string(),

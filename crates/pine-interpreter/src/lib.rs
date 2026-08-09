@@ -104,6 +104,7 @@ struct Variable<O: PineOutput = DefaultPineOutput> {
 pub struct Series<O: PineOutput = DefaultPineOutput> {
     pub id: String,
     pub current: Box<Value<O>>,
+    pub history: Option<Rc<RefCell<Vec<Value<O>>>>>,
 }
 
 /// The lazy scalar an object carries, so a single name can be *both* a namespace
@@ -111,6 +112,8 @@ pub struct Series<O: PineOutput = DefaultPineOutput> {
 /// this to get the current day. Computed from live interpreter state on each use
 /// (never called with `()`), so there is no per-bar value to keep refreshed.
 pub type ObjectValueFn<O> = Rc<dyn Fn(&mut Interpreter<O>) -> Result<Value<O>, RuntimeError>>;
+
+pub type PerBarAdvance<O> = Rc<dyn Fn(&mut Interpreter<O>)>;
 
 /// The insertion-ordered key/value pairs backing a [`Value::Map`].
 pub type MapEntries<O> = Rc<RefCell<Vec<(Value<O>, Value<O>)>>>;
@@ -523,6 +526,7 @@ pub struct Interpreter<O: PineOutput> {
     /// The current bar's opening time (UNIX ms), the raw datum every date name
     /// (`time`, `year`, …) derives its bare value from. Set by the host each bar.
     pub current_time: Option<i64>,
+    pub per_bar_advances: Vec<PerBarAdvance<O>>,
 }
 
 /// Names a statement block ASSIGNS (declares or writes) directly — i.e. the true
@@ -610,6 +614,7 @@ impl<O: PineOutput> Interpreter<O> {
             request_provider: None,
             chart_period: None,
             current_time: None,
+            per_bar_advances: Vec::new(),
         }
     }
 
@@ -645,6 +650,10 @@ impl<O: PineOutput> Interpreter<O> {
         self.output.clear();
         // A new bar: stateful builtins may advance their state again.
         self.bar_seq += 1;
+
+        for advance in self.per_bar_advances.clone() {
+            advance(self);
+        }
 
         for stmt in &program.statements {
             self.execute_stmt(stmt)?;
@@ -1493,6 +1502,23 @@ impl<O: PineOutput> Interpreter<O> {
                 }
 
                 let val = self.eval_expr(expr)?;
+
+                // A builtin-owned series (e.g. `ta.obv`) carries its own lookback,
+                // advanced every bar, so `[n]` is robust regardless of where it is
+                // read.
+                if let Value::Series(series) = &val {
+                    if let Some(history) = &series.history {
+                        if index_val == 0 {
+                            return Ok((*series.current).clone());
+                        }
+                        let h = history.borrow();
+                        return Ok(if h.len() >= index_val {
+                            h[h.len() - index_val].clone()
+                        } else {
+                            Value::Na
+                        });
+                    }
+                }
 
                 // Array element access — decided by the value, not the id.
                 if let Value::Array(arr_ref) = &val {

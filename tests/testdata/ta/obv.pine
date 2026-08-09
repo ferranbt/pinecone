@@ -1,0 +1,13 @@
+//@version=6
+indicator("ta/obv")
+// Skip PineTS: prototype for the per-bar accumulator mechanism.
+// Bars: 5
+// close rises every bar, so obv accumulates that bar's volume (volume = 1000+10i).
+log.info(str.tostring(ta.obv) + "|" + str.tostring(ta.obv[1]))
+
+// Expected output:
+// 0|NaN
+// 2960|0
+// 5930|2960
+// 8910|5930
+// 11900|8910
