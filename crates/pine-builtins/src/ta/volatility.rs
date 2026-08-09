@@ -525,11 +525,7 @@ impl TaMacd {
         &mut self,
         _ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
-        let (fast, slow, signal) = (
-            self.fast as usize,
-            self.slow as usize,
-            self.signal as usize,
-        );
+        let (fast, slow, signal) = (self.fast as usize, self.slow as usize, self.signal as usize);
         let f = ema_step(&mut self.fast_win, &mut self.fast_prev, self.source, fast);
         let d = ema_step(&mut self.slow_win, &mut self.slow_prev, self.source, slow);
         let macd = match (f, d) {

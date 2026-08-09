@@ -30,7 +30,10 @@ use syn::{parse_macro_input, Data, DeriveInput, Field, Fields, Meta};
 ///     }
 /// }
 /// ```
-#[proc_macro_derive(BuiltinFunction, attributes(builtin, arg, type_param, state, length_check))]
+#[proc_macro_derive(
+    BuiltinFunction,
+    attributes(builtin, arg, type_param, state, length_check)
+)]
 pub fn builtin_function_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
