@@ -105,7 +105,7 @@ pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Dia
     let tokens = Lexer::with_version(source, version).tokenize()?;
     let program = Program::new(Parser::new(tokens).parse()?);
 
-    let mut env: HashMap<String, Value<DefaultPineOutput>> =
+    let (mut env, _): (HashMap<String, Value<DefaultPineOutput>>, _) =
         pine_builtins::register_namespace_objects(version, None, None);
     for (name, value) in pine_builtins::per_bar_variables(&Bar::default()) {
         env.insert(name, value);
@@ -259,7 +259,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
 
         // The interpreter's const environment: the registered namespaces plus any
         // host-supplied globals. Built once and handed over as-is.
-        let mut consts = pine_builtins::register_namespace_objects(
+        let (mut consts, advances) = pine_builtins::register_namespace_objects(
             version,
             Some(syminfo),
             Some(timeframe.clone()),
@@ -292,6 +292,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
             interpreter.broker_factory = Some(broker_factory);
         }
         interpreter.set_const_variables(consts);
+        interpreter.per_bar_advances = advances;
 
         Ok(Script {
             program,

@@ -1,0 +1,12 @@
+//@version=6
+indicator("ta/obv_history")
+// Skip PineTS: prototype accumulator history.
+// Bars: 5
+// obv[1] read only on even bars must still give the true previous-bar obv
+// (bars 195..199: obv = 0, 2960, 5930, 8910, 11900).
+if bar_index % 2 == 0
+    log.info(str.tostring(bar_index) + ":" + str.tostring(ta.obv[1]))
+
+// Expected output:
+// 196:0
+// 198:5930

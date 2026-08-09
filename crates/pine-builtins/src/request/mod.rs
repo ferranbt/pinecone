@@ -440,6 +440,7 @@ fn bind_bar<O: PineOutput>(interp: &mut Interpreter<O>, bar: &pine_core::Bar) {
             Value::Series(Series {
                 id: id.to_string(),
                 current: Box::new(Value::Number(value)),
+                history: None,
             }),
         );
     }

@@ -1,0 +1,18 @@
+//@version=6
+indicator("ta/accumulators")
+// Skip PineTS: builtin-owned accumulator series.
+// Bars: 3
+log.info(str.tostring(ta.obv) + "|" + str.tostring(ta.accdist) + "|" + str.tostring(ta.wad))
+log.info(str.tostring(math.round(ta.pvt, 4)) + "|" + str.tostring(math.round(ta.pvi, 6)) + "|" + str.tostring(ta.nvi))
+log.info(str.tostring(ta.wvad) + "|" + str.tostring(math.round(ta.iii, 8)))
+
+// Expected output:
+// 0|1188|0
+// 0|1|1
+// 594|0.00013468
+// 2980|2380|7
+// 9.9666|1.003344|1
+// 596|0.00013423
+// 5970|3576|14
+// 19.9332|1.006689|1
+// 598|0.00013378

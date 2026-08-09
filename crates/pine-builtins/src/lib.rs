@@ -198,8 +198,12 @@ pub fn register_namespace_objects<
     version: PineVersion,
     syminfo: Option<SymInfo>,
     timeframe: Option<Timeframe>,
-) -> HashMap<String, Value<O>> {
+) -> (
+    HashMap<String, Value<O>>,
+    Vec<pine_interpreter::PerBarAdvance<O>>,
+) {
     let mut namespaces = HashMap::new();
+    let mut advances = Vec::new();
 
     // `syminfo` and `timeframe` are always present in Pine, so an absent one
     // falls back to defaults.
@@ -282,9 +286,11 @@ pub fn register_namespace_objects<
     for (name, func) in str::register(version) {
         namespaces.insert(name, func);
     }
-    for (name, func) in ta::register(version) {
+    let (ta_ns, ta_advance) = ta::register(version);
+    for (name, func) in ta_ns {
         namespaces.insert(name, func);
     }
+    advances.push(ta_advance);
 
     // Register global builtin functions
     namespaces.insert("na".to_string(), Na::<O>::builtin_value());
@@ -307,7 +313,7 @@ pub fn register_namespace_objects<
         namespaces.insert(name, func);
     }
 
-    namespaces
+    (namespaces, advances)
 }
 
 /// Per-bar variables, rebuilt for each [`Bar`] and registered before it executes.
@@ -337,6 +343,7 @@ pub fn per_bar_variables<O: PineOutput>(bar: &Bar) -> Vec<(String, Value<O>)> {
             Value::Series(pine_interpreter::Series {
                 id: id.to_string(),
                 current: Box::new(Value::Number(value)),
+                history: None,
             }),
         )
     };

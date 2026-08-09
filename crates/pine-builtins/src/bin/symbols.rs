@@ -34,7 +34,7 @@ fn main() {
         .and_then(PineVersion::from_number)
         .unwrap_or(PineVersion::LATEST);
 
-    let mut env = register_namespace_objects::<DefaultPineOutput>(version, None, None);
+    let (mut env, _) = register_namespace_objects::<DefaultPineOutput>(version, None, None);
     for (name, value) in per_bar_variables::<DefaultPineOutput>(&Bar::default()) {
         env.insert(name, value);
     }
