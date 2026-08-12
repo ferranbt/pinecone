@@ -1,0 +1,11 @@
+plot(
+    close,
+    // pick a color
+    color=color.red
+)
+----
+plot(
+    close,
+    // pick a color
+    color=color.red
+)
