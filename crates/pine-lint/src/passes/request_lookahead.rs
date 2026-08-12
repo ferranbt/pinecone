@@ -24,7 +24,9 @@ pub struct RequestLookahead {
 fn dotted(expr: &Expr) -> Option<String> {
     match expr {
         Expr::Variable { name, .. } => Some(name.clone()),
-        Expr::MemberAccess { object, member, .. } => Some(format!("{}.{}", dotted(object)?, member)),
+        Expr::MemberAccess { object, member, .. } => {
+            Some(format!("{}.{}", dotted(object)?, member))
+        }
         _ => None,
     }
 }
@@ -83,7 +85,11 @@ mod tests {
 
     #[test]
     fn ignores_default_and_lookahead_off() {
-        assert!(for_rule("x = request.security(syminfo.tickerid, \"D\", close)\n", "request-lookahead").is_empty());
+        assert!(for_rule(
+            "x = request.security(syminfo.tickerid, \"D\", close)\n",
+            "request-lookahead"
+        )
+        .is_empty());
         assert!(for_rule(
             "x = request.security(syminfo.tickerid, \"D\", close, lookahead = barmerge.lookahead_off)\n",
             "request-lookahead"

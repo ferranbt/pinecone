@@ -59,9 +59,11 @@ impl Suppressions {
         let Some((line, _)) = diagnostic.pos else {
             return false;
         };
-        [line, line.saturating_sub(1)]
-            .iter()
-            .any(|l| self.by_line.get(l).is_some_and(|f| f.matches(diagnostic.rule)))
+        [line, line.saturating_sub(1)].iter().any(|l| {
+            self.by_line
+                .get(l)
+                .is_some_and(|f| f.matches(diagnostic.rule))
+        })
     }
 }
 
