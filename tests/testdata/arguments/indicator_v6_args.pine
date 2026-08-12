@@ -1,0 +1,8 @@
+//@version=6
+// The v6 indicator() display/capacity hints are accepted (and ignored) rather
+// than rejected as unknown arguments.
+indicator("arguments/indicator_v6_args", behind_chart = true, dynamic_requests = true, timeframe_gaps = false, explicit_plot_zorder = true, calc_bars_count = 100, max_polylines_count = 50)
+log.info("ok")
+
+// Expected output:
+// ok
