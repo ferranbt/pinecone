@@ -135,13 +135,15 @@ fn is_const_negative(index: &Expr) -> bool {
         Expr::Unary {
             op: UnOp::Neg,
             expr,
-        } => matches!(
-            expr.as_ref(),
-            Expr::Literal(Literal::Int(n)) if *n > 0,
-        ) || matches!(
-            expr.as_ref(),
-            Expr::Literal(Literal::Number(n)) if *n > 0.0,
-        ),
+        } => {
+            matches!(
+                expr.as_ref(),
+                Expr::Literal(Literal::Int(n)) if *n > 0,
+            ) || matches!(
+                expr.as_ref(),
+                Expr::Literal(Literal::Number(n)) if *n > 0.0,
+            )
+        }
         _ => false,
     }
 }
