@@ -1,0 +1,9 @@
+//@version=6
+indicator("errors/negative_offset")
+// A negative history offset would read a future bar; Pine rejects it, and so
+// does sema.
+x = close[-1]
+plot(x)
+
+// Expected error:
+// a history-reference offset cannot be negative

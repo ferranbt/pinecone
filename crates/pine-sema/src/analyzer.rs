@@ -9,7 +9,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use pine_ast::{Argument, ExportItem, Expr, FunctionParam, Literal, Loc, Program, Stmt};
+use pine_ast::{Argument, ExportItem, Expr, FunctionParam, Literal, Loc, Program, Stmt, UnOp};
 use pine_core::{LibraryLoader, PineOutput};
 use pine_interpreter::{BuiltinSignature, Value};
 use pine_parser::Parser;
@@ -124,6 +124,39 @@ fn type_names(annotation: &str) -> impl Iterator<Item = &str> {
     annotation
         .split(['<', '>', ',', '[', ']', ' '])
         .filter(|name| !name.is_empty())
+}
+
+/// A statically-known negative offset, however written: `-1`, or `-(1)` as a
+/// unary negation of a positive literal.
+fn is_const_negative(index: &Expr) -> bool {
+    match index {
+        Expr::Literal(Literal::Int(n)) => *n < 0,
+        Expr::Literal(Literal::Number(n)) => *n < 0.0,
+        Expr::Unary {
+            op: UnOp::Neg,
+            expr,
+        } => matches!(
+            expr.as_ref(),
+            Expr::Literal(Literal::Int(n)) if *n > 0,
+        ) || matches!(
+            expr.as_ref(),
+            Expr::Literal(Literal::Number(n)) if *n > 0.0,
+        ),
+        _ => false,
+    }
+}
+
+/// The first tracked location reachable from `expr`, so a finding on a node that
+/// carries no `Loc` of its own (an `Index`) can still point somewhere.
+fn expr_loc(expr: &Expr) -> Loc {
+    match expr {
+        Expr::Variable { loc, .. } => *loc,
+        Expr::MemberAccess { member_loc, .. } => *member_loc,
+        Expr::Call { loc, .. } => *loc,
+        Expr::Binary { loc, .. } => *loc,
+        Expr::Index { expr, .. } | Expr::Unary { expr, .. } => expr_loc(expr),
+        _ => Loc::default(),
+    }
 }
 
 /// How to name a literal's type in a diagnostic.
@@ -1101,6 +1134,16 @@ impl<'a, O: PineOutput> Analyzer<'a, O> {
             Expr::Index { expr, index, .. } => {
                 self.check_expr(expr);
                 self.check_expr(index);
+                // `series[n]` reads `n` bars back; a constant negative offset
+                // would be a forbidden look into the future, rejected by Pine.
+                if is_const_negative(index) {
+                    self.emit(
+                        "negative-offset",
+                        expr_loc(expr),
+                        "a history-reference offset cannot be negative; `[]` reads the \
+                         current or earlier bars, never a future one",
+                    );
+                }
             }
             // When the object's type is known, record the member's occurrence.
             Expr::MemberAccess {

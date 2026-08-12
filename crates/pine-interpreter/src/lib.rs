@@ -1488,7 +1488,13 @@ impl<O: PineOutput> Interpreter<O> {
             }
 
             Expr::Index { expr, index, id } => {
-                let index_val = self.eval_expr(index)?.as_number()? as usize;
+                let index_num = self.eval_expr(index)?.as_number()?;
+                if index_num < 0.0 {
+                    return Err(RuntimeError::TypeError(format!(
+                        "a history-reference offset cannot be negative, got {index_num}"
+                    )));
+                }
+                let index_val = index_num as usize;
 
                 // A named variable with tracked history looks up
                 // user_series_history: history[len-1] = previous bar. A tracked

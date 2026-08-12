@@ -1,0 +1,11 @@
+//@version=6
+indicator("errors/negative_offset_runtime")
+// A negative offset that only appears at runtime (through a variable) is past
+// what sema can see, so the interpreter is the one that must reject it rather
+// than saturating it to the current bar.
+n = -1
+x = close[n]
+plot(x)
+
+// Expected error:
+// a history-reference offset cannot be negative
