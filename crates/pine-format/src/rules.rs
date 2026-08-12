@@ -73,6 +73,33 @@ impl Rules {
         )
     }
 
+    /// An indented body of one-per-line items (type/enum fields), attaching each
+    /// item's leading and trailing comments the way [`Self::list_items`] does for
+    /// statements. Each item is `(source line, rendered text)`.
+    fn field_body(&mut self, items: Vec<(Option<u32>, String)>) -> Doc {
+        let mut entries: Vec<(bool, Doc)> = Vec::new();
+        for (line, mut rendered) in items {
+            let mut blank = false;
+            for lead in self.comments.take_leading(line) {
+                match lead {
+                    Lead::Blank => blank = true,
+                    Lead::Comment(comment) => {
+                        entries.push((blank, text(comment)));
+                        blank = false;
+                    }
+                }
+            }
+            if let Some(comment) = self.comments.take_trailing(line) {
+                rendered.push_str(&format!(" {comment}"));
+            }
+            entries.push((blank, text(rendered)));
+        }
+        nest(
+            BLOCK_INDENT,
+            concat(vec![hardline(), join_entries(entries)]),
+        )
+    }
+
     fn stmt(&mut self, stmt: &Stmt, trailing: Doc) -> Doc {
         match stmt {
             // A bare `name(params) => body` parses as a var whose initializer is
@@ -187,11 +214,11 @@ impl Rules {
                 ..
             } => {
                 let head = text(format!("{}type {name}", export_prefix(*export)));
-                let body: Vec<Doc> = fields
+                let items: Vec<(Option<u32>, String)> = fields
                     .iter()
-                    .map(|f| text(self.type_field(f)))
-                    .collect::<Vec<_>>();
-                let body = nest(BLOCK_INDENT, concat(interleave_hardlines(body)));
+                    .map(|f| (f.loc.line(), self.type_field(f)))
+                    .collect();
+                let body = self.field_body(items);
                 concat(vec![head, trailing, body])
             }
             Stmt::EnumDecl {
@@ -201,8 +228,11 @@ impl Rules {
                 ..
             } => {
                 let head = text(format!("{}enum {name}", export_prefix(*export)));
-                let body: Vec<Doc> = fields.iter().map(|f| text(enum_field(f))).collect();
-                let body = nest(BLOCK_INDENT, concat(interleave_hardlines(body)));
+                let items: Vec<(Option<u32>, String)> = fields
+                    .iter()
+                    .map(|f| (f.loc.line(), enum_field(f)))
+                    .collect();
+                let body = self.field_body(items);
                 concat(vec![head, trailing, body])
             }
             Stmt::FunctionDecl {
@@ -323,8 +353,106 @@ impl Rules {
                 let head = text(format!("({}) =>", self.params(params)));
                 concat(vec![head, self.block(body)])
             }
+            Expr::Call {
+                callee,
+                type_args,
+                args,
+                ..
+            } => self.call_value(callee, type_args, args),
+            Expr::Array(elements) => self.array_value(elements),
             _ => self.expr(expr),
         }
+    }
+
+    /// `callee(args)` at statement level, claiming any comments anchored to an
+    /// argument's line. With no such comment this is byte-identical to the
+    /// inline [`Self::expr`] form (a group that may still wrap on width); with
+    /// one, the group is dropped so the ambient break lays each argument on its
+    /// own line, leading comments above and trailing comments after the comma.
+    fn call_value(&mut self, callee: &Expr, type_args: &[String], args: &[Argument]) -> Doc {
+        let type_args = if type_args.is_empty() {
+            String::new()
+        } else {
+            format!("<{}>", type_args.join(", "))
+        };
+        let head = concat(vec![self.postfix_operand(callee), text(type_args)]);
+        if args.is_empty() {
+            return concat(vec![head, text("()")]);
+        }
+        let items: Vec<(Option<u32>, Doc)> = args
+            .iter()
+            .map(|a| (expr_line(argument_expr(a)), self.argument(a)))
+            .collect();
+        let (inner, any_comment) = self.comment_aware_items(items);
+        let doc = concat(vec![
+            head,
+            text("("),
+            nest(BLOCK_INDENT, inner),
+            softline(),
+            text(")"),
+        ]);
+        if any_comment {
+            doc
+        } else {
+            group(doc)
+        }
+    }
+
+    /// `[elements]` at statement level, with the same comment-aware behaviour as
+    /// [`Self::call_value`].
+    fn array_value(&mut self, elements: &[Expr]) -> Doc {
+        if elements.is_empty() {
+            return text("[]");
+        }
+        let items: Vec<(Option<u32>, Doc)> = elements
+            .iter()
+            .map(|e| (expr_line(e), self.expr(e)))
+            .collect();
+        let (inner, any_comment) = self.comment_aware_items(items);
+        let doc = concat(vec![
+            text("["),
+            nest(BLOCK_INDENT, inner),
+            softline(),
+            text("]"),
+        ]);
+        if any_comment {
+            doc
+        } else {
+            group(doc)
+        }
+    }
+
+    /// Lay out comma-separated `items` (`(source line, rendered doc)`), pulling
+    /// in each item's leading and trailing comments. Returns the bracket-interior
+    /// doc (a leading softline, the items, comments interleaved) and whether any
+    /// comment was found — the caller drops the enclosing group when it was, so
+    /// the break is forced.
+    fn comment_aware_items(&mut self, items: Vec<(Option<u32>, Doc)>) -> (Doc, bool) {
+        let mut parts: Vec<Doc> = vec![softline()];
+        let mut any_comment = false;
+        let last = items.len().saturating_sub(1);
+        for (i, (item_line, item)) in items.into_iter().enumerate() {
+            for lead in self.comments.take_leading(item_line) {
+                if let Lead::Comment(comment) = lead {
+                    parts.push(text(comment));
+                    parts.push(hardline());
+                    any_comment = true;
+                }
+            }
+            parts.push(item);
+            let trailing = self.comments.take_trailing(item_line);
+            any_comment |= trailing.is_some();
+            if i < last {
+                parts.push(text(","));
+                if let Some(comment) = trailing {
+                    parts.push(text(format!(" {comment}")));
+                }
+                parts.push(line());
+            } else if let Some(comment) = trailing {
+                parts.push(text(format!(" {comment}")));
+            }
+        }
+        (concat(parts), any_comment)
     }
 
     /// The indented body of an `if`-expression branch.
@@ -711,6 +839,13 @@ fn stmt_line(stmt: &Stmt) -> Option<u32> {
 }
 
 /// The earliest source line recorded anywhere in an expression, if any.
+fn argument_expr(arg: &Argument) -> &Expr {
+    match arg {
+        Argument::Positional(e) => e,
+        Argument::Named { value, .. } => value,
+    }
+}
+
 fn expr_line(expr: &Expr) -> Option<u32> {
     match expr {
         Expr::Variable { loc, .. } => loc.line(),
