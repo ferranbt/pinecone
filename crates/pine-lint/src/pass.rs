@@ -29,6 +29,8 @@ fn all_passes() -> Vec<Box<dyn LintPass>> {
         Box::new(passes::EqNa::default()),
         Box::new(passes::ConstantCondition::default()),
         Box::new(passes::RequestLookahead::default()),
+        Box::new(passes::CalcOnEveryTick::default()),
+        Box::new(passes::SecurityRepaint::default()),
     ]
 }
 
