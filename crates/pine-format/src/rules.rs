@@ -409,7 +409,12 @@ impl Rules {
             .map(|e| (expr_line(e), self.expr(e)))
             .collect();
         let (inner, any_comment) = self.comment_aware_items(items);
-        let doc = concat(vec![text("["), nest(BLOCK_INDENT, inner), softline(), text("]")]);
+        let doc = concat(vec![
+            text("["),
+            nest(BLOCK_INDENT, inner),
+            softline(),
+            text("]"),
+        ]);
         if any_comment {
             doc
         } else {
