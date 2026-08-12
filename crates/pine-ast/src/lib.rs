@@ -364,14 +364,30 @@ pub struct TypeField {
     pub loc: Loc,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Comment {
+    pub line: u32,
+    pub text: String,
+}
+
 /// A program is a collection of statements
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Program {
     pub statements: Vec<Stmt>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub comments: Vec<Comment>,
 }
 
 impl Program {
     pub fn new(statements: Vec<Stmt>) -> Self {
-        Self { statements }
+        Self {
+            statements,
+            comments: Vec::new(),
+        }
+    }
+
+    pub fn with_comments(mut self, comments: Vec<Comment>) -> Self {
+        self.comments = comments;
+        self
     }
 }

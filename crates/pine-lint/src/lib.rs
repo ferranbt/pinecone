@@ -26,6 +26,7 @@
 
 mod pass;
 mod passes;
+mod suppress;
 
 #[cfg(test)]
 mod test_util;
