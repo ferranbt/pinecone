@@ -11,13 +11,16 @@ use std::path::Path;
 use std::process::Command;
 
 /// Public repositories that make up the corpus.
-const CORPUS: &[&str] = &["https://github.com/everget/tradingview-pinescript-indicators.git"];
+const CORPUS: &[(&str, &str)] = &[(
+    "https://github.com/everget/tradingview-pinescript-indicators.git",
+    "60c93d3711d222b8f2db96160defe568429348e0",
+)];
 
 /// Clone every corpus repository that is not present yet.
 fn init_corpus(corpus_dir: &Path) -> eyre::Result<()> {
     fs::create_dir_all(corpus_dir)?;
 
-    for url in CORPUS {
+    for (url, commit) in CORPUS {
         // "https://.../foo.git" -> "foo"
         let name = url
             .rsplit('/')
@@ -30,13 +33,21 @@ fn init_corpus(corpus_dir: &Path) -> eyre::Result<()> {
             continue;
         }
 
-        println!("Cloning {url}");
+        println!("Cloning {url} @ {commit}");
         let status = Command::new("git")
-            .args(["clone", "--depth", "1", url])
+            .args(["clone", url])
             .arg(&dest)
             .status()?;
         if !status.success() {
             return Err(eyre::eyre!("failed to clone {url}"));
+        }
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(&dest)
+            .args(["checkout", "-q", commit])
+            .status()?;
+        if !status.success() {
+            return Err(eyre::eyre!("failed to checkout {commit} in {url}"));
         }
     }
 

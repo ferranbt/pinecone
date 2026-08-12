@@ -33,8 +33,20 @@ struct IndicatorFn {
     max_labels_count: Option<f64>,
     #[arg(default = None)]
     max_boxes_count: Option<f64>,
+    #[arg(default = None)]
+    max_polylines_count: Option<f64>,
+    #[arg(default = None)]
+    calc_bars_count: Option<f64>,
     #[arg(default = "")]
     scale: String,
+    #[arg(default = None)]
+    timeframe_gaps: Option<bool>,
+    #[arg(default = None)]
+    explicit_plot_zorder: Option<bool>,
+    #[arg(default = None)]
+    dynamic_requests: Option<bool>,
+    #[arg(default = None)]
+    behind_chart: Option<bool>,
 }
 
 impl IndicatorFn {
@@ -47,7 +59,13 @@ impl IndicatorFn {
             self.max_lines_count,
             self.max_labels_count,
             self.max_boxes_count,
+            self.max_polylines_count,
+            self.calc_bars_count,
             &self.scale,
+            self.timeframe_gaps,
+            self.explicit_plot_zorder,
+            self.dynamic_requests,
+            self.behind_chart,
         );
         ctx.output.set_indicator(Indicator {
             title: self.title.clone(),
