@@ -103,7 +103,7 @@ impl From<VersionError> for Error {
 pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Diagnostic>, Error> {
     let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
     let tokens = Lexer::with_version(source, version).tokenize()?;
-    let program = Program::new(Parser::new(tokens).parse()?);
+    let program = Parser::new(tokens).parse_program()?;
 
     let (mut env, _): (HashMap<String, Value<DefaultPineOutput>>, _) =
         pine_builtins::register_namespace_objects(version, None, None);
@@ -111,7 +111,10 @@ pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Dia
         env.insert(name, value);
     }
 
-    Ok(pine_sema::analyze(&program, &env, loader))
+    let mut diagnostics = pine_sema::analyze(&program, &env, loader);
+    diagnostics.extend(pine_lint::lint(&program));
+    diagnostics.sort_by_key(|d| d.pos.unwrap_or((u32::MAX, u32::MAX)));
+    Ok(diagnostics)
 }
 
 /// Decode `input.*` overrides from a JSON object — `{"Length": 20, "Smooth":
