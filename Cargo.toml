@@ -1,5 +1,5 @@
 [workspace.package]
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 rust-version = "1.83"
 license = "MPL-2.0"
@@ -29,21 +29,21 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-pine-broker = { path = "crates/pine-broker", version = "0.2.2" }
-pine-core = { path = "crates/pine-core", version = "0.2.2" }
-pine-data = { path = "crates/pine-data", version = "0.2.2" }
-pine-lexer = { path = "crates/pine-lexer", version = "0.2.2" }
-pine-parser = { path = "crates/pine-parser", version = "0.2.2" }
-pine-ast = { path = "crates/pine-ast", version = "0.2.2" }
-pine-diagnostics = { path = "crates/pine-diagnostics", version = "0.2.2" }
-pine-format = { path = "crates/pine-format", version = "0.2.2" }
-pine-interpreter = { path = "crates/pine-interpreter", version = "0.2.2" }
-pine-builtin-macro = { path = "crates/pine-builtin-macro", version = "0.2.2" }
-pine-builtins = { path = "crates/pine-builtins", version = "0.2.2" }
-pine-lint = { path = "crates/pine-lint", version = "0.2.2" }
-pine-sema = { path = "crates/pine-sema", version = "0.2.2" }
-pine-lang = { path = "crates/pine", version = "0.2.2" }
-pine-reference = { path = "crates/pine-reference", version = "0.2.2" }
+pine-broker = { path = "crates/pine-broker", version = "0.2.3" }
+pine-core = { path = "crates/pine-core", version = "0.2.3" }
+pine-data = { path = "crates/pine-data", version = "0.2.3" }
+pine-lexer = { path = "crates/pine-lexer", version = "0.2.3" }
+pine-parser = { path = "crates/pine-parser", version = "0.2.3" }
+pine-ast = { path = "crates/pine-ast", version = "0.2.3" }
+pine-diagnostics = { path = "crates/pine-diagnostics", version = "0.2.3" }
+pine-format = { path = "crates/pine-format", version = "0.2.3" }
+pine-interpreter = { path = "crates/pine-interpreter", version = "0.2.3" }
+pine-builtin-macro = { path = "crates/pine-builtin-macro", version = "0.2.3" }
+pine-builtins = { path = "crates/pine-builtins", version = "0.2.3" }
+pine-lint = { path = "crates/pine-lint", version = "0.2.3" }
+pine-sema = { path = "crates/pine-sema", version = "0.2.3" }
+pine-lang = { path = "crates/pine", version = "0.2.3" }
+pine-reference = { path = "crates/pine-reference", version = "0.2.3" }
 eyre = "0.6"
 thiserror = "2.0"
 clap = { version = "4.5", features = ["derive"] }
