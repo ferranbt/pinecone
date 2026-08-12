@@ -7,6 +7,8 @@
 
 mod constant_condition;
 mod eq_na;
+mod request_lookahead;
 
 pub use constant_condition::ConstantCondition;
 pub use eq_na::EqNa;
+pub use request_lookahead::RequestLookahead;

@@ -1,4 +1,4 @@
-pub use pine_ast::{Argument, BinOp, Expr, Literal, Loc, Program, Stmt, UnOp, VarKind};
+pub use pine_ast::{Argument, BinOp, Comment, Expr, Literal, Loc, Program, Stmt, UnOp, VarKind};
 use pine_lexer::{Token, TokenType};
 use thiserror::Error;
 
@@ -69,18 +69,29 @@ impl TokenTypeExt for TokenType {
 
 pub struct Parser {
     tokens: Vec<Token>,
+    comments: Vec<Comment>,
     current: usize,
     next_call_id: u32,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
+        let mut comments = Vec::new();
         let tokens = tokens
             .into_iter()
-            .filter(|t| !matches!(t.typ, TokenType::Comment(_) | TokenType::BlankLine))
+            .filter(|t| {
+                if let TokenType::Comment(text) = &t.typ {
+                    comments.push(Comment {
+                        line: t.line as u32,
+                        text: text.clone(),
+                    });
+                }
+                !matches!(t.typ, TokenType::Comment(_) | TokenType::BlankLine)
+            })
             .collect();
         Self {
             tokens,
+            comments,
             current: 0,
             next_call_id: 1,
         }
@@ -89,7 +100,9 @@ impl Parser {
     /// Lex and parse `source` into a program in one step.
     pub fn parse_source(source: &str) -> Result<Program, ParserError> {
         let tokens = pine_lexer::Lexer::new(source).tokenize()?;
-        Ok(Program::new(Self::new(tokens).parse()?))
+        let mut parser = Self::new(tokens);
+        let statements = parser.parse()?;
+        Ok(Program::new(statements).with_comments(parser.comments))
     }
 
     fn next_call_id(&mut self) -> u32 {

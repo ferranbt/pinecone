@@ -75,7 +75,7 @@ fn preserves_ast_and_is_idempotent() {
         };
 
         match ast(&formatted) {
-            Some(reparsed) if reparsed == original => {}
+            Some(reparsed) if reparsed.statements == original.statements => {}
             _ => ast_diff.push(file.clone()),
         }
         if format(&formatted).ok().as_deref() != Some(formatted.as_str()) {

@@ -28,13 +28,19 @@ fn all_passes() -> Vec<Box<dyn LintPass>> {
     vec![
         Box::new(passes::EqNa::default()),
         Box::new(passes::ConstantCondition::default()),
+        Box::new(passes::RequestLookahead::default()),
     ]
 }
 
-/// Run every built-in lint pass over `program` and return all findings,
-/// sorted by line for stable, readable output.
+/// Run every built-in lint pass over `program` and return all findings, sorted
+/// by line for stable, readable output. Findings silenced by a `// @skip(...)`
+/// comment on the program are dropped.
 pub fn lint(program: &Program) -> Vec<Diagnostic> {
+    let suppressions = crate::suppress::Suppressions::from_comments(&program.comments);
     lint_with(program, all_passes())
+        .into_iter()
+        .filter(|diagnostic| !suppressions.suppresses(diagnostic))
+        .collect()
 }
 
 /// Run a specific set of passes. Useful for tests that want to exercise one
