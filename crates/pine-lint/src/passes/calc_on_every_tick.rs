@@ -25,8 +25,12 @@ fn is_true(expr: &Expr) -> bool {
 
 impl Visitor for CalcOnEveryTick {
     fn visit_expr(&mut self, expr: &Expr) {
-        if let Expr::Call { callee, args, loc, .. } = expr {
-            let is_strategy = matches!(callee.as_ref(), Expr::Variable { name, .. } if name == "strategy");
+        if let Expr::Call {
+            callee, args, loc, ..
+        } = expr
+        {
+            let is_strategy =
+                matches!(callee.as_ref(), Expr::Variable { name, .. } if name == "strategy");
             if is_strategy {
                 for arg in args {
                     if let Argument::Named { name, value } = arg {
@@ -70,7 +74,11 @@ mod tests {
 
     #[test]
     fn ignores_false_or_absent() {
-        assert!(for_rule("strategy(\"S\", calc_on_every_tick = false)\n", "calc-on-every-tick").is_empty());
+        assert!(for_rule(
+            "strategy(\"S\", calc_on_every_tick = false)\n",
+            "calc-on-every-tick"
+        )
+        .is_empty());
         assert!(for_rule("strategy(\"S\")\n", "calc-on-every-tick").is_empty());
     }
 }

@@ -30,7 +30,9 @@ pub struct SecurityRepaint {
 fn dotted(expr: &Expr) -> Option<String> {
     match expr {
         Expr::Variable { name, .. } => Some(name.clone()),
-        Expr::MemberAccess { object, member, .. } => Some(format!("{}.{}", dotted(object)?, member)),
+        Expr::MemberAccess { object, member, .. } => {
+            Some(format!("{}.{}", dotted(object)?, member))
+        }
         _ => None,
     }
 }
@@ -68,7 +70,10 @@ fn uses_lookahead_on(args: &[Argument]) -> bool {
 
 impl Visitor for SecurityRepaint {
     fn visit_expr(&mut self, expr: &Expr) {
-        if let Expr::Call { callee, args, loc, .. } = expr {
+        if let Expr::Call {
+            callee, args, loc, ..
+        } = expr
+        {
             if dotted(callee).as_deref() == Some("request.security")
                 && arg(args, 2, "expression").is_some_and(is_bare_source)
                 && !uses_lookahead_on(args)
@@ -109,9 +114,17 @@ mod tests {
     #[test]
     fn ignores_offset_and_expressions_and_lookahead() {
         // Offset to a confirmed bar — the non-repainting idiom.
-        assert!(for_rule("x = request.security(syminfo.tickerid, \"D\", close[1])\n", "security-repaint").is_empty());
+        assert!(for_rule(
+            "x = request.security(syminfo.tickerid, \"D\", close[1])\n",
+            "security-repaint"
+        )
+        .is_empty());
         // A computed expression, not a bare source.
-        assert!(for_rule("x = request.security(syminfo.tickerid, \"D\", ta.sma(close, 20))\n", "security-repaint").is_empty());
+        assert!(for_rule(
+            "x = request.security(syminfo.tickerid, \"D\", ta.sma(close, 20))\n",
+            "security-repaint"
+        )
+        .is_empty());
         // lookahead_on is RequestLookahead's concern, not this one.
         assert!(for_rule(
             "x = request.security(syminfo.tickerid, \"D\", close, lookahead = barmerge.lookahead_on)\n",
