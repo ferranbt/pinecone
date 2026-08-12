@@ -73,6 +73,33 @@ impl Rules {
         )
     }
 
+    /// An indented body of one-per-line items (type/enum fields), attaching each
+    /// item's leading and trailing comments the way [`Self::list_items`] does for
+    /// statements. Each item is `(source line, rendered text)`.
+    fn field_body(&mut self, items: Vec<(Option<u32>, String)>) -> Doc {
+        let mut entries: Vec<(bool, Doc)> = Vec::new();
+        for (line, mut rendered) in items {
+            let mut blank = false;
+            for lead in self.comments.take_leading(line) {
+                match lead {
+                    Lead::Blank => blank = true,
+                    Lead::Comment(comment) => {
+                        entries.push((blank, text(comment)));
+                        blank = false;
+                    }
+                }
+            }
+            if let Some(comment) = self.comments.take_trailing(line) {
+                rendered.push_str(&format!(" {comment}"));
+            }
+            entries.push((blank, text(rendered)));
+        }
+        nest(
+            BLOCK_INDENT,
+            concat(vec![hardline(), join_entries(entries)]),
+        )
+    }
+
     fn stmt(&mut self, stmt: &Stmt, trailing: Doc) -> Doc {
         match stmt {
             // A bare `name(params) => body` parses as a var whose initializer is
@@ -187,11 +214,11 @@ impl Rules {
                 ..
             } => {
                 let head = text(format!("{}type {name}", export_prefix(*export)));
-                let body: Vec<Doc> = fields
+                let items: Vec<(Option<u32>, String)> = fields
                     .iter()
-                    .map(|f| text(self.type_field(f)))
-                    .collect::<Vec<_>>();
-                let body = nest(BLOCK_INDENT, concat(interleave_hardlines(body)));
+                    .map(|f| (f.loc.line(), self.type_field(f)))
+                    .collect();
+                let body = self.field_body(items);
                 concat(vec![head, trailing, body])
             }
             Stmt::EnumDecl {
@@ -201,8 +228,11 @@ impl Rules {
                 ..
             } => {
                 let head = text(format!("{}enum {name}", export_prefix(*export)));
-                let body: Vec<Doc> = fields.iter().map(|f| text(enum_field(f))).collect();
-                let body = nest(BLOCK_INDENT, concat(interleave_hardlines(body)));
+                let items: Vec<(Option<u32>, String)> = fields
+                    .iter()
+                    .map(|f| (f.loc.line(), enum_field(f)))
+                    .collect();
+                let body = self.field_body(items);
                 concat(vec![head, trailing, body])
             }
             Stmt::FunctionDecl {

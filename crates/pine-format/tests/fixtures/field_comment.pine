@@ -1,0 +1,25 @@
+type Bucket
+    // running total
+    int count = 0 // trailing on count
+    float sum // accumulated
+
+    // a gap, then a documented field
+    bool ready = false
+
+enum Dir
+    // upward
+    up = "Up" // trailing up
+    down // downward
+----
+type Bucket
+    // running total
+    int count = 0 // trailing on count
+    float sum // accumulated
+
+    // a gap, then a documented field
+    bool ready = false
+
+enum Dir
+    // upward
+    up = "Up" // trailing up
+    down // downward
