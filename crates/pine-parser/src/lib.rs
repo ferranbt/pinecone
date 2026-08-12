@@ -97,12 +97,15 @@ impl Parser {
         }
     }
 
+    pub fn parse_program(mut self) -> Result<Program, ParserError> {
+        let statements = self.parse()?;
+        Ok(Program::new(statements).with_comments(self.comments))
+    }
+
     /// Lex and parse `source` into a program in one step.
     pub fn parse_source(source: &str) -> Result<Program, ParserError> {
         let tokens = pine_lexer::Lexer::new(source).tokenize()?;
-        let mut parser = Self::new(tokens);
-        let statements = parser.parse()?;
-        Ok(Program::new(statements).with_comments(parser.comments))
+        Self::new(tokens).parse_program()
     }
 
     fn next_call_id(&mut self) -> u32 {
