@@ -98,9 +98,13 @@ impl From<VersionError> for Error {
     }
 }
 
-/// Parse and semantically analyze `source` without bars or execution, returning
-/// every diagnostic.
-pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Diagnostic>, Error> {
+pub struct Analysis {
+    pub diagnostics: Vec<Diagnostic>,
+    pub symbols: sema::SymbolTable,
+}
+
+/// Parse, semantically analyze and lint `source`.
+pub fn analyze(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Analysis, Error> {
     let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
     let tokens = Lexer::with_version(source, version).tokenize()?;
     let program = Parser::new(tokens).parse_program()?;
@@ -111,10 +115,18 @@ pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Dia
         env.insert(name, value);
     }
 
-    let mut diagnostics = pine_sema::analyze(&program, &env, loader);
+    let (mut diagnostics, symbols) = pine_sema::analyze_with_symbols(&program, &env, loader);
     diagnostics.extend(pine_lint::lint(&program));
     diagnostics.sort_by_key(|d| d.pos.unwrap_or((u32::MAX, u32::MAX)));
-    Ok(diagnostics)
+    Ok(Analysis {
+        diagnostics,
+        symbols,
+    })
+}
+
+/// The diagnostics from [`analyze`].
+pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Diagnostic>, Error> {
+    Ok(analyze(source, loader)?.diagnostics)
 }
 
 /// Parse and lint `source`, returning only the lint findings (no semantic

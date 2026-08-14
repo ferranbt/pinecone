@@ -1,0 +1,7 @@
+.vscode-test/**
+src/**
+testFixture/**
+tsconfig.json
+**/*.map
+**/*.ts
+node_modules/**

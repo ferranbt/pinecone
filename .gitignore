@@ -1,3 +1,8 @@
 /target
 /tests/corpus
 examples/*/target
+
+# VS Code extension build artifacts
+editors/vscode/node_modules/
+editors/vscode/out/
+editors/vscode/.vscode-test/

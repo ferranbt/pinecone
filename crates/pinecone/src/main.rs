@@ -36,6 +36,12 @@ enum Command {
         #[arg(required = true)]
         paths: Vec<PathBuf>,
     },
+    /// Run the language server over stdio (for editor integration).
+    Lsp {
+        /// Accepted for editor compatibility; communication is always stdio.
+        #[arg(long)]
+        stdio: bool,
+    },
 }
 
 /// What a command was pointed at.
@@ -100,6 +106,10 @@ fn main() -> ExitCode {
             report(file, &diagnostics);
             Ok(!diagnostics.iter().any(|d| d.severity == Severity::Error))
         }),
+        Command::Lsp { .. } => {
+            pine_lsp::run();
+            Ok(true)
+        }
     };
 
     match ok {

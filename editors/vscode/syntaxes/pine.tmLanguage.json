@@ -1,0 +1,87 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Pine Script",
+  "scopeName": "source.pine",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#constants" },
+    { "include": "#types" },
+    { "include": "#namespaces" },
+    { "include": "#functions" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.annotation.pine",
+          "match": "//@\\w+.*$"
+        },
+        {
+          "name": "comment.line.double-slash.pine",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.pine",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [{ "name": "constant.character.escape.pine", "match": "\\\\." }]
+        },
+        {
+          "name": "string.quoted.single.pine",
+          "begin": "'",
+          "end": "'",
+          "patterns": [{ "name": "constant.character.escape.pine", "match": "\\\\." }]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "name": "constant.other.color.pine", "match": "#[0-9a-fA-F]{6,8}\\b" },
+        { "name": "constant.numeric.pine", "match": "\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b" }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.pine",
+          "match": "\\b(if|else|for|while|switch|break|continue|return|to|by|in|import|export|as)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.pine",
+          "match": "\\b(and|or|not)\\b"
+        },
+        {
+          "name": "storage.modifier.pine",
+          "match": "\\b(var|varip|const|simple|series|input|method|type|enum)\\b"
+        },
+        {
+          "name": "keyword.operator.pine",
+          "match": "(:=|=>|\\?|:|\\+|-|\\*|/|%|==|!=|<=|>=|<|>)"
+        }
+      ]
+    },
+    "constants": {
+      "name": "constant.language.pine",
+      "match": "\\b(true|false|na)\\b"
+    },
+    "types": {
+      "name": "storage.type.pine",
+      "match": "\\b(int|float|bool|string|color|line|linefill|label|box|table|polyline|array|matrix|map)\\b"
+    },
+    "namespaces": {
+      "name": "support.class.pine",
+      "match": "\\b(ta|math|str|array|matrix|map|request|ticker|syminfo|timeframe|strategy|barmerge|barstate|chart|session|dayofweek|currency|color|input|plot|hline|line|label|box|table|log|runtime)\\b(?=\\.)"
+    },
+    "functions": {
+      "name": "entity.name.function.pine",
+      "match": "\\b([a-zA-Z_]\\w*)\\s*(?=\\()"
+    }
+  }
+}

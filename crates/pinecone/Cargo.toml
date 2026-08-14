@@ -14,5 +14,6 @@ path = "src/main.rs"
 
 [dependencies]
 pine-lang = { workspace = true }
+pine-lsp = { workspace = true }
 clap = { workspace = true }
 eyre = { workspace = true }

@@ -1,0 +1,69 @@
+{
+  "name": "pinecone",
+  "displayName": "Pine Script (pinecone)",
+  "description": "Pine Script language support: diagnostics, lint and formatting via the pinecone language server.",
+  "version": "0.2.3",
+  "publisher": "pinecone",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Formatters"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "pine",
+        "aliases": [
+          "Pine Script",
+          "pine"
+        ],
+        "extensions": [
+          ".pine"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "pine",
+        "scopeName": "source.pine",
+        "path": "./syntaxes/pine.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Pine Script",
+      "properties": {
+        "pinecone.server.path": {
+          "type": "string",
+          "default": "pinecone",
+          "description": "Path to the `pinecone` executable used as the language server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^18.19.0",
+    "@types/vscode": "^1.75.0",
+    "@vscode/test-electron": "^2.3.9",
+    "glob": "^10.3.10",
+    "mocha": "^10.3.0",
+    "typescript": "^5.4.0"
+  }
+}
