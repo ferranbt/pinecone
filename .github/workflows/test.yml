@@ -72,6 +72,31 @@ jobs:
       - name: Run corpus tests
         run: cargo test -p pine-integration-tests --test corpus -- --nocapture
 
+  extension-tests:
+    name: Run VS Code extension tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      # The extension spawns `target/debug/pinecone lsp` as its language server.
+      - name: Build the pinecone binary
+        run: cargo build -p pinecone
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install extension dependencies
+        working-directory: editors/vscode
+        run: npm install
+
+      # Runs the @vscode/test-electron suite in a headless VS Code.
+      - name: Run extension tests
+        working-directory: editors/vscode
+        run: xvfb-run -a npm test
+
   codspeed:
     name: Benchmarks (CodSpeed)
     runs-on: ubuntu-latest
