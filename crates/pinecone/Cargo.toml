@@ -1,0 +1,18 @@
+[package]
+name = "pinecone"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Pine Script command-line tools: format, lint and check."
+publish = false
+
+[[bin]]
+name = "pinecone"
+path = "src/main.rs"
+
+[dependencies]
+pine-lang = { workspace = true }
+clap = { workspace = true }
+eyre = { workspace = true }

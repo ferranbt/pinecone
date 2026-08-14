@@ -117,6 +117,15 @@ pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Dia
     Ok(diagnostics)
 }
 
+/// Parse and lint `source`, returning only the lint findings (no semantic
+/// analysis). `// @skip(...)` directives are honored.
+pub fn lint_source(source: &str) -> Result<Vec<Diagnostic>, Error> {
+    let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+    let tokens = Lexer::with_version(source, version).tokenize()?;
+    let program = Parser::new(tokens).parse_program()?;
+    Ok(pine_lint::lint(&program))
+}
+
 /// Decode `input.*` overrides from a JSON object — `{"Length": 20, "Smooth":
 /// true, "Source": "close"}` — keyed by input title, for
 /// [`ScriptBuilder::with_inputs`].

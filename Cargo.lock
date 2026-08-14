@@ -1699,6 +1699,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pinecone"
+version = "0.2.3"
+dependencies = [
+ "clap",
+ "eyre",
+ "pine-lang",
+]
+
+[[package]]
 name = "pinecone-benches"
 version = "0.2.3"
 dependencies = [

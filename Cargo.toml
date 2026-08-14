@@ -23,6 +23,7 @@ members = [
     "crates/pine-sema",
     "crates/pine",
     "crates/pine-reference",
+    "crates/pinecone",
     "tests",
     "benches",
 ]
