@@ -1,4 +1,3 @@
-
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -41,7 +40,11 @@ impl Backend {
     async fn update(&self, uri: Uri, text: String) {
         let (diagnostics, symbols) = match analyze(&text, uri_dir(&uri)) {
             Ok(analysis) => (
-                analysis.diagnostics.iter().map(|d| to_lsp(d, &text)).collect(),
+                analysis
+                    .diagnostics
+                    .iter()
+                    .map(|d| to_lsp(d, &text))
+                    .collect(),
                 Some(analysis.symbols),
             ),
             // A lex/parse/version error stops analysis before any position is known.
@@ -51,7 +54,9 @@ impl Backend {
             .lock()
             .unwrap()
             .insert(uri.clone(), Document { text, symbols });
-        self.client.publish_diagnostics(uri, diagnostics, None).await;
+        self.client
+            .publish_diagnostics(uri, diagnostics, None)
+            .await;
     }
 }
 
@@ -94,7 +99,12 @@ impl LanguageServer for Backend {
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
         let uri = params.text_document.uri;
-        let text = self.documents.lock().unwrap().get(&uri).map(|d| d.text.clone());
+        let text = self
+            .documents
+            .lock()
+            .unwrap()
+            .get(&uri)
+            .map(|d| d.text.clone());
         if let Some(text) = text {
             self.update(uri, text).await;
         }
@@ -111,7 +121,13 @@ impl LanguageServer for Backend {
         params: DocumentFormattingParams,
     ) -> jsonrpc::Result<Option<Vec<TextEdit>>> {
         let uri = params.text_document.uri;
-        let Some(text) = self.documents.lock().unwrap().get(&uri).map(|d| d.text.clone()) else {
+        let Some(text) = self
+            .documents
+            .lock()
+            .unwrap()
+            .get(&uri)
+            .map(|d| d.text.clone())
+        else {
             return Ok(None);
         };
         match pine_lang::format::format(&text) {
@@ -284,7 +300,11 @@ mod tests {
     fn lint_warning_becomes_a_diagnostic() {
         let src = "//@version=6\nindicator(\"x\")\nx = request.security(syminfo.tickerid, \"D\", close)\nplot(x)\n";
         let analysis = pine_lang::analyze(src, None).unwrap();
-        let diags: Vec<_> = analysis.diagnostics.iter().map(|d| to_lsp(d, src)).collect();
+        let diags: Vec<_> = analysis
+            .diagnostics
+            .iter()
+            .map(|d| to_lsp(d, src))
+            .collect();
         let repaint = diags
             .iter()
             .find(|d| d.code == Some(NumberOrString::String("security-repaint".into())))
