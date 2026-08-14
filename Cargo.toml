@@ -23,6 +23,7 @@ members = [
     "crates/pine-sema",
     "crates/pine",
     "crates/pine-reference",
+    "crates/pine-lsp",
     "crates/pinecone",
     "tests",
     "benches",
@@ -44,6 +45,7 @@ pine-builtins = { path = "crates/pine-builtins", version = "0.2.3" }
 pine-lint = { path = "crates/pine-lint", version = "0.2.3" }
 pine-sema = { path = "crates/pine-sema", version = "0.2.3" }
 pine-lang = { path = "crates/pine", version = "0.2.3" }
+pine-lsp = { path = "crates/pine-lsp", version = "0.2.3" }
 pine-reference = { path = "crates/pine-reference", version = "0.2.3" }
 eyre = "0.6"
 thiserror = "2.0"

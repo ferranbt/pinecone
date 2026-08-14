@@ -1,0 +1,5 @@
+//@version=6
+indicator("symbols")
+double(x) => x * 2
+y = double(close)
+plot(y)
