@@ -15,7 +15,8 @@ Prerequisites: a Rust toolchain and Node.js 18+.
    npm install
    ```
 
-2. Open the `editors/vscode` folder in VS Code.
+2. Open the repository **root** in VS Code — the root `.vscode/launch.json`
+   targets the extension.
 
 3. Press **F5** (the **Run Extension** launch config). This builds the
    `pinecone` binary and compiles the extension, then opens an *Extension

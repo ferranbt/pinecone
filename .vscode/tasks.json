@@ -5,18 +5,18 @@
       "label": "cargo: build pinecone",
       "type": "shell",
       "command": "cargo build -p pinecone",
-      "options": { "cwd": "${workspaceFolder}/../.." },
       "problemMatcher": ["$rustc"]
     },
     {
-      "label": "npm: compile",
-      "type": "npm",
-      "script": "compile",
+      "label": "npm: compile extension",
+      "type": "shell",
+      "command": "npm run compile",
+      "options": { "cwd": "${workspaceFolder}/editors/vscode" },
       "problemMatcher": ["$tsc"]
     },
     {
-      "label": "build",
-      "dependsOn": ["cargo: build pinecone", "npm: compile"],
+      "label": "build extension",
+      "dependsOn": ["cargo: build pinecone", "npm: compile extension"],
       "dependsOrder": "sequence",
       "group": { "kind": "build", "isDefault": true }
     }
