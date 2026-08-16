@@ -8,6 +8,13 @@
       "problemMatcher": ["$rustc"]
     },
     {
+      "label": "npm: install extension",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/editors/vscode" },
+      "problemMatcher": []
+    },
+    {
       "label": "npm: compile extension",
       "type": "shell",
       "command": "npm run compile",
@@ -16,7 +23,11 @@
     },
     {
       "label": "build extension",
-      "dependsOn": ["cargo: build pinecone", "npm: compile extension"],
+      "dependsOn": [
+        "cargo: build pinecone",
+        "npm: install extension",
+        "npm: compile extension"
+      ],
       "dependsOrder": "sequence",
       "group": { "kind": "build", "isDefault": true }
     }
