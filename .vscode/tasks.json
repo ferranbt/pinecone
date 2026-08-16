@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "cargo: build pinecone",
+      "type": "shell",
+      "command": "cargo build -p pinecone",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "npm: install extension",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/editors/vscode" },
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: compile extension",
+      "type": "shell",
+      "command": "npm run compile",
+      "options": { "cwd": "${workspaceFolder}/editors/vscode" },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "build extension",
+      "dependsOn": [
+        "cargo: build pinecone",
+        "npm: install extension",
+        "npm: compile extension"
+      ],
+      "dependsOrder": "sequence",
+      "group": { "kind": "build", "isDefault": true }
+    }
+  ]
+}

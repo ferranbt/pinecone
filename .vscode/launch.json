@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}/editors/vscode"],
+      "outFiles": ["${workspaceFolder}/editors/vscode/out/**/*.js"],
+      "preLaunchTask": "build extension",
+      "env": {
+        "SERVER_PATH": "${workspaceFolder}/target/debug/pinecone"
+      }
+    },
+    {
+      "name": "Extension Tests",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/editors/vscode",
+        "--extensionTestsPath=${workspaceFolder}/editors/vscode/out/test/suite/index"
+      ],
+      "outFiles": ["${workspaceFolder}/editors/vscode/out/test/**/*.js"],
+      "preLaunchTask": "build extension",
+      "env": {
+        "SERVER_PATH": "${workspaceFolder}/target/debug/pinecone"
+      }
+    }
+  ]
+}
