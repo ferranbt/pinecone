@@ -1,0 +1,34 @@
+name: Publish extension
+
+# When a release is published (you review the draft from `release.yml`, then hit
+# Publish), push the packaged extension to the VS Code Marketplace and Open VSX.
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Publish to marketplaces
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Download the packaged extension
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ github.event.release.tag_name }}" --pattern '*.vsix' --dir dist --repo "${{ github.repository }}"
+
+      - id: vsix
+        run: echo "path=$(ls dist/*.vsix)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to the VS Code Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx --yes @vscode/vsce publish --packagePath "${{ steps.vsix.outputs.path }}"
+
+      - name: Publish to Open VSX
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: npx --yes ovsx publish "${{ steps.vsix.outputs.path }}"

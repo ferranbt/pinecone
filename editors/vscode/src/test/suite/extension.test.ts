@@ -35,7 +35,7 @@ async function open(uri: vscode.Uri): Promise<vscode.TextDocument> {
 
 suite("pinecone language server", () => {
   suiteSetup(async () => {
-    await vscode.extensions.getExtension("pinecone.pinecone")?.activate();
+    await vscode.extensions.getExtension("ferranborreguero.pinecone")?.activate();
   });
 
   test("reports a repaint warning", async () => {

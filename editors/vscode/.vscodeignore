@@ -1,7 +1,9 @@
 .vscode-test/**
 src/**
+out/test/**
 testFixture/**
 tsconfig.json
+package-lock.json
 **/*.map
 **/*.ts
 node_modules/**
