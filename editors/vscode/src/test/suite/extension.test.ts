@@ -102,6 +102,23 @@ suite("pinecone language server", () => {
     assert.strictEqual(locations[0].range.start.line, 2); // `double(x) =>`
   });
 
+  test("goes to a definition in an imported library", async () => {
+    const uri = fixture("imports.pine");
+    await open(uri);
+
+    // `add` in the call `lib.add(1, 2)` on line 6.
+    const locations = await vscode.commands.executeCommand<vscode.Location[]>(
+      "vscode.executeDefinitionProvider",
+      uri,
+      new vscode.Position(5, 8)
+    );
+    assert.ok(locations && locations.length > 0, "expected a definition");
+    const loc = locations[0];
+    // It resolves into the library file, not the main document.
+    assert.ok(loc.uri.path.endsWith("mylib.pine"), loc.uri.toString());
+    assert.strictEqual(loc.range.start.line, 3); // `export add(a, b) =>`
+  });
+
   test("finds references to a function", async () => {
     const uri = fixture("symbols.pine");
     await open(uri);
