@@ -5,8 +5,12 @@
       "name": "Run Extension",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}/editors/vscode"],
-      "outFiles": ["${workspaceFolder}/editors/vscode/dist/**/*.js"],
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/editors/vscode"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/editors/vscode/dist/**/*.js"
+      ],
       "preLaunchTask": "build extension",
       "env": {
         "SERVER_PATH": "${workspaceFolder}/target/debug/pinecone"
