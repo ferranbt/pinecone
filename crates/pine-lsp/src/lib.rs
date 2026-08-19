@@ -6,7 +6,8 @@ use pine_lang::builtins::{register_namespace_objects, DefaultPineOutput};
 use pine_lang::core::PineVersion;
 use pine_lang::diagnostics::{Diagnostic as PineDiagnostic, Severity};
 use pine_lang::interpreter::{BuiltinSignature, Value};
-use pine_lang::sema::{Symbol, SymbolId, SymbolKind, SymbolTable};
+use pine_lang::sema::{FileId, Symbol, SymbolId, SymbolKind, SymbolTable};
+use pine_lang::DirLoader;
 use tower_lsp_server::lsp_types::*;
 use tower_lsp_server::{jsonrpc, Client, LanguageServer, LspService, Server, UriExt};
 
@@ -184,22 +185,22 @@ impl LanguageServer for Backend {
     ) -> jsonrpc::Result<Option<GotoDefinitionResponse>> {
         let at = params.text_document_position_params;
         let uri = at.text_document.uri;
-        let decl = {
+        let location = {
             let documents = self.documents.lock().unwrap();
             documents.get(&uri).and_then(|doc| {
                 let symbols = doc.symbols.as_ref()?;
                 let id = symbol_at(symbols, &doc.text, at.position)?;
                 let (file, line, column) = symbols.declaration_location(id)?;
-                // Cross-file (library) declarations are not resolved yet.
-                (file == SymbolTable::MAIN).then(|| Position::new(line - 1, column - 1))
+                let width = symbols.symbol(id).name.chars().count() as u32;
+                Some(location_at(
+                    file_uri(&uri, symbols, file)?,
+                    line,
+                    column,
+                    width,
+                ))
             })
         };
-        Ok(decl.map(|decl| {
-            GotoDefinitionResponse::Scalar(Location {
-                uri,
-                range: Range::new(decl, decl),
-            })
-        }))
+        Ok(location.map(GotoDefinitionResponse::Scalar))
     }
 
     async fn references(&self, params: ReferenceParams) -> jsonrpc::Result<Option<Vec<Location>>> {
@@ -211,23 +212,20 @@ impl LanguageServer for Backend {
                 let symbols = doc.symbols.as_ref()?;
                 let id = symbol_at(symbols, &doc.text, at.position)?;
                 let width = symbols.symbol(id).name.chars().count() as u32;
-                let mut sites: Vec<(u32, u32)> = Vec::new();
+                let mut sites: Vec<(FileId, u32, u32)> = Vec::new();
                 if params.context.include_declaration {
-                    if let Some((file, line, column)) = symbols.declaration_location(id) {
-                        if file == SymbolTable::MAIN {
-                            sites.push((line, column));
-                        }
+                    if let Some(decl) = symbols.declaration_location(id) {
+                        sites.push(decl);
                     }
                 }
-                for (file, line, column) in symbols.references(id) {
-                    if file == SymbolTable::MAIN {
-                        sites.push((line, column));
-                    }
-                }
+                sites.extend(symbols.references(id));
                 Some(
                     sites
                         .into_iter()
-                        .map(|(line, column)| main_location(&uri, line, column, width))
+                        .filter_map(|(file, line, column)| {
+                            let uri = file_uri(&uri, symbols, file)?;
+                            Some(location_at(uri, line, column, width))
+                        })
                         .collect::<Vec<_>>(),
                 )
             })
@@ -272,13 +270,24 @@ fn symbol_at(
     symbols.symbol_at(SymbolTable::MAIN, position.line + 1, start as u32 + 1)
 }
 
-/// A location in the main document spanning `width` characters from a 1-based
-/// `(line, column)`.
-fn main_location(uri: &Uri, line: u32, column: u32, width: u32) -> Location {
+/// The URI for a symbol-table `file`: the request document for the main file,
+/// or the resolved library file otherwise. `None` when a library file can't be
+/// located on disk (e.g. an in-memory loader).
+fn file_uri(request: &Uri, symbols: &SymbolTable, file: FileId) -> Option<Uri> {
+    if file == SymbolTable::MAIN {
+        return Some(request.clone());
+    }
+    let dir = uri_dir(request)?;
+    let path = DirLoader::new(vec![dir]).resolve_path(symbols.file_path(file))?;
+    Uri::from_file_path(path)
+}
+
+/// A location spanning `width` characters from a 1-based `(line, column)`.
+fn location_at(uri: Uri, line: u32, column: u32, width: u32) -> Location {
     let start = Position::new(line - 1, column - 1);
     let end = Position::new(line - 1, column - 1 + width);
     Location {
-        uri: uri.clone(),
+        uri,
         range: Range::new(start, end),
     }
 }

@@ -62,6 +62,12 @@ impl DirLoader {
         self.loaded.borrow().get(path).cloned()
     }
 
+    /// The on-disk file `path` resolves to, without reading it — for locating a
+    /// library file (e.g. editor go-to-definition).
+    pub fn resolve_path(&self, path: &str) -> Option<PathBuf> {
+        self.candidates(path).into_iter().find(|c| c.is_file())
+    }
+
     /// Every file `path` could name, most specific first.
     fn candidates(&self, path: &str) -> Vec<PathBuf> {
         let trimmed = path.trim_matches('/');

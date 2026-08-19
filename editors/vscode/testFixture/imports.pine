@@ -1,0 +1,7 @@
+//@version=6
+indicator("imports")
+
+import mylib as lib
+
+x = lib.add(1, 2)
+plot(x)
