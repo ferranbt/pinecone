@@ -97,4 +97,19 @@ suite("pinecone language server", () => {
     assert.ok(locations && locations.length > 0, "expected a definition");
     assert.strictEqual(locations[0].range.start.line, 2); // `double(x) =>`
   });
+
+  test("finds references to a function", async () => {
+    const uri = fixture("symbols.pine");
+    await open(uri);
+
+    const locations = await vscode.commands.executeCommand<vscode.Location[]>(
+      "vscode.executeReferenceProvider",
+      uri,
+      new vscode.Position(3, 6) // the `double` call on line 4
+    );
+    assert.ok(locations && locations.length > 0, "expected references");
+    const lines = locations.map((l) => l.range.start.line).sort();
+    // The declaration on line 3 (0-based 2) and the call on line 4 (0-based 3).
+    assert.deepStrictEqual(lines, [2, 3], JSON.stringify(lines));
+  });
 });
