@@ -20,6 +20,14 @@ jobs:
         with:
           node-version: 20
 
+      - name: Verify marketplace credentials
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          npx --yes @vscode/vsce verify-pat ferranborreguero
+          npx --yes ovsx verify-pat ferranborreguero
+
       - name: Download the packaged extension
         env:
           GH_TOKEN: ${{ github.token }}

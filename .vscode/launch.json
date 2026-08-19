@@ -6,7 +6,7 @@
       "type": "extensionHost",
       "request": "launch",
       "args": ["--extensionDevelopmentPath=${workspaceFolder}/editors/vscode"],
-      "outFiles": ["${workspaceFolder}/editors/vscode/out/**/*.js"],
+      "outFiles": ["${workspaceFolder}/editors/vscode/dist/**/*.js"],
       "preLaunchTask": "build extension",
       "env": {
         "SERVER_PATH": "${workspaceFolder}/target/debug/pinecone"
@@ -20,7 +20,10 @@
         "--extensionDevelopmentPath=${workspaceFolder}/editors/vscode",
         "--extensionTestsPath=${workspaceFolder}/editors/vscode/out/test/suite/index"
       ],
-      "outFiles": ["${workspaceFolder}/editors/vscode/out/test/**/*.js"],
+      "outFiles": [
+        "${workspaceFolder}/editors/vscode/dist/**/*.js",
+        "${workspaceFolder}/editors/vscode/out/test/**/*.js"
+      ],
       "preLaunchTask": "build extension",
       "env": {
         "SERVER_PATH": "${workspaceFolder}/target/debug/pinecone"

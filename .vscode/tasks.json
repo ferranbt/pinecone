@@ -17,7 +17,7 @@
     {
       "label": "npm: compile extension",
       "type": "shell",
-      "command": "npm run compile",
+      "command": "npm run pretest",
       "options": { "cwd": "${workspaceFolder}/editors/vscode" },
       "problemMatcher": ["$tsc"]
     },
