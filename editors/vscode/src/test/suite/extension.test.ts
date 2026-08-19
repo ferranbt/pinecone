@@ -79,6 +79,10 @@ suite("pinecone language server", () => {
     assert.ok(hovers && hovers.length > 0, "expected a hover");
     const content = hovers[0].contents[0] as vscode.MarkdownString;
     assert.ok(content.value.includes("double(x)"), content.value);
+    // The signature is followed by the declaration and every call site.
+    assert.ok(content.value.includes("Defined at"), content.value);
+    assert.ok(content.value.includes("1 call"), content.value);
+    assert.ok(content.value.includes("4:5"), content.value); // the call on line 4
   });
 
   test("goes to a definition", async () => {

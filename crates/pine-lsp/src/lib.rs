@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use pine_lang::diagnostics::{Diagnostic as PineDiagnostic, Severity};
-use pine_lang::sema::{Symbol, SymbolKind, SymbolTable};
+use pine_lang::sema::{Symbol, SymbolId, SymbolKind, SymbolTable};
 use tower_lsp_server::lsp_types::*;
 use tower_lsp_server::{jsonrpc, Client, LanguageServer, LspService, Server, UriExt};
 
@@ -146,7 +146,7 @@ impl LanguageServer for Backend {
             documents.get(&at.text_document.uri).and_then(|doc| {
                 let symbols = doc.symbols.as_ref()?;
                 let id = symbol_at(symbols, &doc.text, at.position)?;
-                Some(render_symbol(symbols.symbol(id)))
+                Some(hover_markdown(symbols, id, &at.text_document.uri))
             })
         };
         Ok(markdown.map(|value| Hover {
@@ -223,6 +223,42 @@ fn render_symbol(symbol: &Symbol) -> String {
         },
     };
     format!("```pine\n{signature}\n```\n\n*{}*", symbol.kind.noun())
+}
+
+/// Hover text: the symbol's signature, plus — for a function — where it is
+/// defined and every place it is called. Positions in this file are rendered as
+/// links so the reader can jump to them.
+fn hover_markdown(symbols: &SymbolTable, id: SymbolId, uri: &Uri) -> String {
+    let symbol = symbols.symbol(id);
+    let mut md = render_symbol(symbol);
+    if symbol.kind != SymbolKind::Function {
+        return md;
+    }
+
+    let here = uri.as_str();
+    let link = |line: u32, column: u32| format!("[{line}:{column}]({here}#L{line},{column})");
+
+    match symbols.declaration_location(id) {
+        Some((file, line, column)) if file == SymbolTable::MAIN => {
+            md.push_str(&format!("\n\nDefined at {}", link(line, column)));
+        }
+        Some((file, _, _)) => {
+            md.push_str(&format!("\n\nDefined in `{}`", symbols.file_path(file)));
+        }
+        None => {}
+    }
+
+    let calls: Vec<String> = symbols
+        .references(id)
+        .filter(|(file, _, _)| *file == SymbolTable::MAIN)
+        .map(|(_, line, column)| link(line, column))
+        .collect();
+    match calls.len() {
+        0 => md.push_str("\n\nNo calls in this file."),
+        1 => md.push_str(&format!("\n\n**1 call:** {}", calls[0])),
+        n => md.push_str(&format!("\n\n**{n} calls:** {}", calls.join(", "))),
+    }
+    md
 }
 
 fn to_lsp(diagnostic: &PineDiagnostic, text: &str) -> Diagnostic {
