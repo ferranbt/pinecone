@@ -6,6 +6,10 @@ function fixture(name: string): vscode.Uri {
   return vscode.Uri.file(path.resolve(__dirname, "../../../testFixture", name));
 }
 
+function labelOf(item: vscode.CompletionItem): string {
+  return typeof item.label === "string" ? item.label : item.label.label;
+}
+
 // Resolve once the server has published diagnostics for `uri` — i.e. it has
 // analyzed the document. Event-driven, so tests wait on the real signal rather
 // than a fixed delay.
@@ -111,5 +115,62 @@ suite("pinecone language server", () => {
     const lines = locations.map((l) => l.range.start.line).sort();
     // The declaration on line 3 (0-based 2) and the call on line 4 (0-based 3).
     assert.deepStrictEqual(lines, [2, 3], JSON.stringify(lines));
+  });
+
+  test("completes an object's fields", async () => {
+    const uri = fixture("completion.pine");
+    await open(uri);
+
+    // Just after `p.` on line 7 (`v = p.x`).
+    const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+      "vscode.executeCompletionItemProvider",
+      uri,
+      new vscode.Position(6, 6)
+    );
+    const labels = list.items.map(labelOf);
+    assert.ok(
+      labels.includes("x") && labels.includes("y"),
+      labels.join(", ")
+    );
+  });
+
+  test("completes a builtin namespace", async () => {
+    const uri = fixture("completion.pine");
+    await open(uri);
+
+    // Just after `ta.` on line 8 (`w = ta.sma(close, 5)`).
+    const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+      "vscode.executeCompletionItemProvider",
+      uri,
+      new vscode.Position(7, 7)
+    );
+    const labels = list.items.map(labelOf);
+    assert.ok(labels.includes("sma"), labels.slice(0, 20).join(", "));
+  });
+
+  test("builtin members carry kind and signature", async () => {
+    const uri = fixture("completion.pine");
+    await open(uri);
+
+    // `ta.sma` is a function whose parameters are shown as the detail.
+    const ta = await vscode.commands.executeCommand<vscode.CompletionList>(
+      "vscode.executeCompletionItemProvider",
+      uri,
+      new vscode.Position(7, 7) // after `ta.`
+    );
+    const sma = ta.items.find((i) => labelOf(i) === "sma");
+    assert.ok(sma, "expected ta.sma");
+    assert.strictEqual(sma!.kind, vscode.CompletionItemKind.Function);
+    assert.strictEqual(sma!.detail, "sma(source, length)");
+
+    // `math.pi` is a constant, not a function.
+    const math = await vscode.commands.executeCommand<vscode.CompletionList>(
+      "vscode.executeCompletionItemProvider",
+      uri,
+      new vscode.Position(8, 9) // after `math.`
+    );
+    const pi = math.items.find((i) => labelOf(i) === "pi");
+    assert.ok(pi, "expected math.pi");
+    assert.strictEqual(pi!.kind, vscode.CompletionItemKind.Constant);
   });
 });

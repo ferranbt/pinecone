@@ -1,0 +1,9 @@
+//@version=6
+indicator("complete")
+type Point
+    float x
+    float y
+p = Point.new(1.0, 2.0)
+v = p.x
+w = ta.sma(close, 5)
+r = math.pi
