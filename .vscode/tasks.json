@@ -5,21 +5,29 @@
       "label": "cargo: build pinecone",
       "type": "shell",
       "command": "cargo build -p pinecone",
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ]
     },
     {
       "label": "npm: install extension",
       "type": "shell",
       "command": "npm install",
-      "options": { "cwd": "${workspaceFolder}/editors/vscode" },
+      "options": {
+        "cwd": "${workspaceFolder}/editors/vscode"
+      },
       "problemMatcher": []
     },
     {
       "label": "npm: compile extension",
       "type": "shell",
-      "command": "npm run compile",
-      "options": { "cwd": "${workspaceFolder}/editors/vscode" },
-      "problemMatcher": ["$tsc"]
+      "command": "npm run pretest",
+      "options": {
+        "cwd": "${workspaceFolder}/editors/vscode"
+      },
+      "problemMatcher": [
+        "$tsc"
+      ]
     },
     {
       "label": "build extension",
@@ -29,7 +37,10 @@
         "npm: compile extension"
       ],
       "dependsOrder": "sequence",
-      "group": { "kind": "build", "isDefault": true }
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
     }
   ]
 }

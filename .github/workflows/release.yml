@@ -1,0 +1,104 @@
+name: Release
+
+# Triggered by the tag `cargo release` pushes (crates are published locally).
+# Builds the binaries and the VS Code extension, signs them, and opens a *draft*
+# GitHub release with auto-generated notes to review before publishing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and draft a release for (e.g. v0.2.4)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  binaries:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-apple-darwin
+            os: macos-14
+          - target: x86_64-apple-darwin
+            os: macos-13
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release -p pinecone --target ${{ matrix.target }}
+
+      - name: Archive
+        run: |
+          mkdir -p dist
+          tar -czf "dist/pinecone-${{ inputs.tag || github.ref_name }}-${{ matrix.target }}.tar.gz" \
+            -C "target/${{ matrix.target }}/release" pinecone
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: dist/*.tar.gz
+
+  extension:
+    name: Package VS Code extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Package .vsix
+        working-directory: editors/vscode
+        run: |
+          npm install
+          npx --yes @vscode/vsce package -o "pinecone-${{ inputs.tag || github.ref_name }}.vsix"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension-vsix
+          path: editors/vscode/*.vsix
+
+  release:
+    name: Draft release
+    needs: [binaries, extension]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Import GPG key
+        run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+      - name: Sign artifacts
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          for file in dist/*.tar.gz dist/*.vsix; do
+            gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" \
+              --armor --detach-sign "$file"
+          done
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          draft: true
+          generate_release_notes: true
+          files: dist/*
