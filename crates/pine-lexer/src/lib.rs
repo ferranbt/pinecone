@@ -2,33 +2,37 @@ use pine_core::PineVersion;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum LexerError {
-    #[error("Unterminated string at line {line}, column {column}")]
-    UnterminatedString { line: usize, column: usize },
+pub enum LexerErrorKind {
+    #[error("Unterminated string")]
+    UnterminatedString,
 
-    #[error("Invalid hex color format '{value}' at line {line}, column {column}")]
-    InvalidHexColor {
-        value: String,
-        line: usize,
-        column: usize,
-    },
+    #[error("Invalid hex color format '{value}'")]
+    InvalidHexColor { value: String },
 
-    #[error("Unexpected character '{ch}' at line {line}, column {column}")]
-    UnexpectedCharacter {
-        ch: char,
-        line: usize,
-        column: usize,
-    },
+    #[error("Unexpected character '{ch}'")]
+    UnexpectedCharacter { ch: char },
 
-    #[error("Indentation error at line {line}")]
-    IndentationError { line: usize },
+    #[error("Indentation error")]
+    IndentationError,
 
-    #[error("Invalid number '{value}' at line {line}, column {column}")]
-    InvalidNumber {
-        value: String,
-        line: usize,
-        column: usize,
-    },
+    #[error("Invalid number '{value}'")]
+    InvalidNumber { value: String },
+}
+
+/// A lexing error and the 1-based source position it points at.
+#[derive(Debug, Error)]
+#[error("{kind} at line {line}, column {column}")]
+pub struct LexerError {
+    pub line: usize,
+    pub column: usize,
+    pub kind: LexerErrorKind,
+}
+
+impl LexerError {
+    /// The 1-based `(line, column)` of the offending character.
+    pub fn location(&self) -> (u32, u32) {
+        (self.line as u32, self.column as u32)
+    }
 }
 
 // Token types
@@ -210,24 +214,23 @@ impl Lexer {
         // No decimal point means an integer literal; Pine treats the two types
         // differently. (This lexer does not read scientific notation, so a `.`
         // is the only thing that makes a literal a float.)
-        let typ =
-            if num_str.contains('.') {
-                TokenType::Number(num_str.parse::<f64>().map_err(|_| {
-                    LexerError::InvalidNumber {
-                        value: num_str.clone(),
-                        line: start_line,
-                        column: start_col,
-                    }
-                })?)
-            } else {
-                TokenType::IntLiteral(num_str.parse::<i64>().map_err(|_| {
-                    LexerError::InvalidNumber {
-                        value: num_str.clone(),
-                        line: start_line,
-                        column: start_col,
-                    }
-                })?)
-            };
+        let typ = if num_str.contains('.') {
+            TokenType::Number(num_str.parse::<f64>().map_err(|_| LexerError {
+                line: start_line,
+                column: start_col,
+                kind: LexerErrorKind::InvalidNumber {
+                    value: num_str.clone(),
+                },
+            })?)
+        } else {
+            TokenType::IntLiteral(num_str.parse::<i64>().map_err(|_| LexerError {
+                line: start_line,
+                column: start_col,
+                kind: LexerErrorKind::InvalidNumber {
+                    value: num_str.clone(),
+                },
+            })?)
+        };
         Ok(Token {
             typ,
             lexeme: num_str,
@@ -324,9 +327,10 @@ impl Lexer {
             }
         }
 
-        Err(LexerError::UnterminatedString {
+        Err(LexerError {
             line: start_line,
             column: start_col,
+            kind: LexerErrorKind::UnterminatedString,
         })
     }
 
@@ -350,10 +354,10 @@ impl Lexer {
         // Validate length (should be 6 or 8 hex digits after #)
         let hex_len = hex.len() - 1;
         if hex_len != 6 && hex_len != 8 {
-            return Err(LexerError::InvalidHexColor {
-                value: hex,
+            return Err(LexerError {
                 line: start_line,
                 column: start_col,
+                kind: LexerErrorKind::InvalidHexColor { value: hex },
             });
         }
 
@@ -519,10 +523,10 @@ impl Lexer {
                         column: col,
                     }
                 } else {
-                    return Err(LexerError::UnexpectedCharacter {
-                        ch: '!',
+                    return Err(LexerError {
                         line,
                         column: col,
+                        kind: LexerErrorKind::UnexpectedCharacter { ch: '!' },
                     });
                 }
             }
@@ -668,10 +672,10 @@ impl Lexer {
             _ if ch.is_numeric() => return self.scan_number(),
             _ if ch.is_alphabetic() || ch == '_' => self.scan_identifier(),
             _ => {
-                return Err(LexerError::UnexpectedCharacter {
-                    ch,
+                return Err(LexerError {
                     line,
                     column: col,
+                    kind: LexerErrorKind::UnexpectedCharacter { ch },
                 })
             }
         };
@@ -829,7 +833,11 @@ impl Lexer {
                         // Check for indentation error
                         // SAFETY: indent_stack always has at least one element
                         if *self.indent_stack.last().unwrap() != indent_level {
-                            return Err(LexerError::IndentationError { line });
+                            return Err(LexerError {
+                                line,
+                                column: col,
+                                kind: LexerErrorKind::IndentationError,
+                            });
                         }
                     }
                 }

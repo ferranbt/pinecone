@@ -50,6 +50,18 @@ pub enum Error {
     Data(pine_core::ProviderError),
 }
 
+impl Error {
+    /// The 1-based `(line, column)` an editor should point at, when the error
+    /// carries a position. Version errors have none.
+    pub fn location(&self) -> Option<(u32, u32)> {
+        match self {
+            Error::Lexer(e) => Some(e.location()),
+            Error::Parser(e) => Some(e.location()),
+            _ => None,
+        }
+    }
+}
+
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
