@@ -90,6 +90,10 @@ impl LanguageServer for Backend {
                 references_provider: Some(OneOf::Left(true)),
                 document_symbol_provider: Some(OneOf::Left(true)),
                 document_highlight_provider: Some(OneOf::Left(true)),
+                rename_provider: Some(OneOf::Right(RenameOptions {
+                    prepare_provider: Some(true),
+                    work_done_progress_options: WorkDoneProgressOptions::default(),
+                })),
                 completion_provider: Some(CompletionOptions {
                     trigger_characters: Some(vec![".".to_string()]),
                     ..Default::default()
@@ -280,6 +284,72 @@ impl LanguageServer for Backend {
         Ok(highlights.filter(|h| !h.is_empty()))
     }
 
+    async fn prepare_rename(
+        &self,
+        params: TextDocumentPositionParams,
+    ) -> jsonrpc::Result<Option<PrepareRenameResponse>> {
+        let range = {
+            let documents = self.documents.lock().unwrap();
+            documents.get(&params.text_document.uri).and_then(|doc| {
+                let symbols = doc.symbols.as_ref()?;
+                let id = symbol_at(symbols, &doc.text, params.position)?;
+                // The identifier under the cursor in this document.
+                let line = doc
+                    .text
+                    .lines()
+                    .nth(params.position.line as usize)
+                    .unwrap_or("");
+                let start = identifier_start(line, params.position.character as usize) as u32;
+                let width = symbols.symbol(id).name.chars().count() as u32;
+                let at = Position::new(params.position.line, start);
+                Some(Range::new(at, Position::new(at.line, start + width)))
+            })
+        };
+        Ok(range.map(PrepareRenameResponse::Range))
+    }
+
+    // `Uri`'s interior mutability is a parse cache that doesn't affect its hash;
+    // `WorkspaceEdit.changes` is keyed by `Uri` in lsp_types regardless.
+    #[allow(clippy::mutable_key_type)]
+    async fn rename(&self, params: RenameParams) -> jsonrpc::Result<Option<WorkspaceEdit>> {
+        let new_name = params.new_name;
+        if !is_identifier(&new_name) {
+            return Err(jsonrpc::Error::invalid_params(format!(
+                "`{new_name}` is not a valid name"
+            )));
+        }
+        let at = params.text_document_position;
+        let request_uri = at.text_document.uri;
+        let changes = {
+            let documents = self.documents.lock().unwrap();
+            documents.get(&request_uri).and_then(|doc| {
+                let symbols = doc.symbols.as_ref()?;
+                let id = symbol_at(symbols, &doc.text, at.position)?;
+                let width = symbols.symbol(id).name.chars().count() as u32;
+                let mut sites: Vec<(FileId, u32, u32)> = Vec::new();
+                if let Some(decl) = symbols.declaration_location(id) {
+                    sites.push(decl);
+                }
+                sites.extend(symbols.references(id));
+                let mut changes: HashMap<Uri, Vec<TextEdit>> = HashMap::new();
+                for (file, line, column) in sites {
+                    if let Some(uri) = file_uri(&request_uri, symbols, file) {
+                        changes.entry(uri).or_default().push(TextEdit {
+                            range: name_range(line, column, width),
+                            new_text: new_name.clone(),
+                        });
+                    }
+                }
+                (!changes.is_empty()).then_some(changes)
+            })
+        };
+        Ok(changes.map(|changes| WorkspaceEdit {
+            changes: Some(changes),
+            document_changes: None,
+            change_annotations: None,
+        }))
+    }
+
     async fn completion(
         &self,
         params: CompletionParams,
@@ -327,6 +397,14 @@ fn file_uri(request: &Uri, symbols: &SymbolTable, file: FileId) -> Option<Uri> {
     let dir = uri_dir(request)?;
     let path = DirLoader::new(vec![dir]).resolve_path(symbols.file_path(file))?;
     Uri::from_file_path(path)
+}
+
+/// Whether `name` is a valid Pine identifier — the constraint a rename target
+/// must meet before edits are produced.
+fn is_identifier(name: &str) -> bool {
+    let mut chars = name.chars();
+    chars.next().is_some_and(|c| c.is_alphabetic() || c == '_')
+        && chars.all(|c| c.is_alphanumeric() || c == '_')
 }
 
 /// The `width`-character range of a name at a 1-based `(line, column)`.
