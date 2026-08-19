@@ -2,9 +2,3 @@ allow-branch = ["main"]
 shared-version = true
 tag-prefix = ""
 pre-release-commit-message = "chore: release {{version}}"
-
-# Keep the VS Code extension's version in lockstep with the crates, so the tag,
-# the crates and the published .vsix all carry the same version.
-pre-release-replacements = [
-    { file = "editors/vscode/package.json", search = "\"version\": \"[0-9]+\\.[0-9]+\\.[0-9]+\"", replace = "\"version\": \"{{version}}\"", prerelease = true },
-]
