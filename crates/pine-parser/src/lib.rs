@@ -209,9 +209,7 @@ impl Parser {
                     TokenType::Ident(name) => name.clone(),
                     TokenType::Int => "int".to_string(),
                     TokenType::Float => "float".to_string(),
-                    _ => {
-                        return Err(p.unexpected())
-                    }
+                    _ => return Err(p.unexpected()),
                 };
                 p.advance();
                 type_args.push(type_name);
