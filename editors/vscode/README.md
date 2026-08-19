@@ -11,19 +11,28 @@ powered by the [`pinecone`](https://github.com/ferranbt/pinecone) toolchain.
   `lookahead` bias, and intrabar strategy recalculation.
 - **Formatting** — format a document with the standard *Format Document*
   command (Shift+Alt+F).
-- **Hover** — signatures and kinds for your variables, functions and types.
-- **Go to definition** (F12) for symbols declared in the file.
+- **Hover** — signatures and kinds for your variables, functions and types; for
+  a function, its declaration and every call site.
+- **Completion** — fields, enum cases and library exports after `.`, plus
+  builtin namespace members (`ta.`, `math.`, …) with their signatures.
+- **Go to definition** (F12) and **find all references** (Shift+F12), resolved
+  into imported libraries.
+- **Document outline** and breadcrumbs (Ctrl+Shift+O).
+- **Highlight occurrences** of the symbol under the cursor.
+- **Rename** (F2) across every occurrence, including imported libraries.
 
 ## Requirements
 
-The extension talks to the `pinecone` language server, so that binary needs to
-be available:
+The extension talks to the `pinecone` language server. If it isn't found, the
+extension offers to **download** it for you. Otherwise, make it available by
+either:
 
-- Download a prebuilt `pinecone` from the
-  [releases](https://github.com/ferranbt/pinecone/releases) (or build it from
-  source with `cargo build --release -p pinecone`), and
-- put it on your `PATH`, **or** point the extension at it with the
-  `pinecone.server.path` setting.
+- putting a `pinecone` binary on your `PATH` (install it with
+  [`up.sh`](https://github.com/ferranbt/pinecone#pinecone-binary), download a
+  prebuilt one from the
+  [releases](https://github.com/ferranbt/pinecone/releases), or build it with
+  `cargo build --release -p pinecone`), **or**
+- pointing the extension at it with the `pinecone.server.path` setting.
 
 ## Extension settings
 
