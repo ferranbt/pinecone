@@ -8,6 +8,7 @@ use pine_lang::diagnostics::{Diagnostic as PineDiagnostic, Severity};
 use pine_lang::interpreter::{BuiltinSignature, Value};
 use pine_lang::sema::{FileId, Symbol, SymbolId, SymbolKind, SymbolTable};
 use pine_lang::DirLoader;
+use tower_lsp_server::lsp_types::SymbolKind as LspSymbolKind;
 use tower_lsp_server::lsp_types::*;
 use tower_lsp_server::{jsonrpc, Client, LanguageServer, LspService, Server, UriExt};
 
@@ -87,6 +88,8 @@ impl LanguageServer for Backend {
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 definition_provider: Some(OneOf::Left(true)),
                 references_provider: Some(OneOf::Left(true)),
+                document_symbol_provider: Some(OneOf::Left(true)),
+                document_highlight_provider: Some(OneOf::Left(true)),
                 completion_provider: Some(CompletionOptions {
                     trigger_characters: Some(vec![".".to_string()]),
                     ..Default::default()
@@ -233,6 +236,50 @@ impl LanguageServer for Backend {
         Ok(locations.filter(|l| !l.is_empty()))
     }
 
+    async fn document_symbol(
+        &self,
+        params: DocumentSymbolParams,
+    ) -> jsonrpc::Result<Option<DocumentSymbolResponse>> {
+        let outline = {
+            let documents = self.documents.lock().unwrap();
+            documents
+                .get(&params.text_document.uri)
+                .and_then(|doc| doc.symbols.as_ref().map(document_symbols))
+        };
+        Ok(outline.map(DocumentSymbolResponse::Nested))
+    }
+
+    async fn document_highlight(
+        &self,
+        params: DocumentHighlightParams,
+    ) -> jsonrpc::Result<Option<Vec<DocumentHighlight>>> {
+        let at = params.text_document_position_params;
+        let highlights = {
+            let documents = self.documents.lock().unwrap();
+            documents.get(&at.text_document.uri).and_then(|doc| {
+                let symbols = doc.symbols.as_ref()?;
+                let id = symbol_at(symbols, &doc.text, at.position)?;
+                let width = symbols.symbol(id).name.chars().count() as u32;
+                let mut highlights = Vec::new();
+                if let Some((SymbolTable::MAIN, line, column)) = symbols.declaration_location(id) {
+                    highlights.push(highlight(line, column, width, DocumentHighlightKind::WRITE));
+                }
+                for (file, line, column) in symbols.references(id) {
+                    if file == SymbolTable::MAIN {
+                        highlights.push(highlight(
+                            line,
+                            column,
+                            width,
+                            DocumentHighlightKind::READ,
+                        ));
+                    }
+                }
+                Some(highlights)
+            })
+        };
+        Ok(highlights.filter(|h| !h.is_empty()))
+    }
+
     async fn completion(
         &self,
         params: CompletionParams,
@@ -282,13 +329,92 @@ fn file_uri(request: &Uri, symbols: &SymbolTable, file: FileId) -> Option<Uri> {
     Uri::from_file_path(path)
 }
 
+/// The `width`-character range of a name at a 1-based `(line, column)`.
+fn name_range(line: u32, column: u32, width: u32) -> Range {
+    let start = Position::new(line - 1, column - 1);
+    Range::new(start, Position::new(start.line, start.character + width))
+}
+
 /// A location spanning `width` characters from a 1-based `(line, column)`.
 fn location_at(uri: Uri, line: u32, column: u32, width: u32) -> Location {
-    let start = Position::new(line - 1, column - 1);
-    let end = Position::new(line - 1, column - 1 + width);
     Location {
         uri,
-        range: Range::new(start, end),
+        range: name_range(line, column, width),
+    }
+}
+
+fn highlight(line: u32, column: u32, width: u32, kind: DocumentHighlightKind) -> DocumentHighlight {
+    DocumentHighlight {
+        range: name_range(line, column, width),
+        kind: Some(kind),
+    }
+}
+
+/// The outline of the main document: its top-level declarations, with a type's
+/// fields and an enum's cases nested underneath.
+fn document_symbols(symbols: &SymbolTable) -> Vec<DocumentSymbol> {
+    let root = symbols.file_root(SymbolTable::MAIN);
+    symbols
+        .symbols()
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| {
+            s.file == SymbolTable::MAIN
+                && s.scope == root
+                && s.container.is_none()
+                && s.decl.is_some()
+        })
+        .map(|(id, symbol)| {
+            let members: Vec<DocumentSymbol> = symbols
+                .members_of(id)
+                .filter(|m| m.decl.is_some())
+                .map(|m| outline_symbol(m, member_kind(symbol.kind), Vec::new()))
+                .collect();
+            outline_symbol(symbol, document_symbol_kind(symbol.kind), members)
+        })
+        .collect()
+}
+
+fn outline_symbol(
+    symbol: &Symbol,
+    kind: LspSymbolKind,
+    children: Vec<DocumentSymbol>,
+) -> DocumentSymbol {
+    let (line, column) = symbol.decl.expect("caller filters to declared symbols");
+    let range = name_range(line, column, symbol.name.chars().count() as u32);
+    let detail = match symbol.kind {
+        SymbolKind::Function => Some(format!("({})", symbol.params.join(", "))),
+        _ => symbol.type_annotation.clone(),
+    };
+    #[allow(deprecated)]
+    DocumentSymbol {
+        name: symbol.name.clone(),
+        detail,
+        kind,
+        tags: None,
+        deprecated: None,
+        range,
+        selection_range: range,
+        children: (!children.is_empty()).then_some(children),
+    }
+}
+
+fn document_symbol_kind(kind: SymbolKind) -> LspSymbolKind {
+    match kind {
+        SymbolKind::Function => LspSymbolKind::FUNCTION,
+        SymbolKind::Type => LspSymbolKind::STRUCT,
+        SymbolKind::Enum => LspSymbolKind::ENUM,
+        SymbolKind::Var => LspSymbolKind::VARIABLE,
+        SymbolKind::Import => LspSymbolKind::MODULE,
+    }
+}
+
+/// The kind for a member of a `parent` declaration — an enum's cases versus a
+/// type's fields.
+fn member_kind(parent: SymbolKind) -> LspSymbolKind {
+    match parent {
+        SymbolKind::Enum => LspSymbolKind::ENUM_MEMBER,
+        _ => LspSymbolKind::FIELD,
     }
 }
 
