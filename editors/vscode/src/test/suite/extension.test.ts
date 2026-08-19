@@ -134,6 +134,36 @@ suite("pinecone language server", () => {
     assert.deepStrictEqual(lines, [2, 3], JSON.stringify(lines));
   });
 
+  test("provides a document outline", async () => {
+    const uri = fixture("symbols.pine");
+    await open(uri);
+
+    const syms = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+      "vscode.executeDocumentSymbolProvider",
+      uri
+    );
+    const byName = new Map(syms.map((s) => [s.name, s]));
+    assert.ok(
+      byName.has("double") && byName.has("y"),
+      syms.map((s) => s.name).join(", ")
+    );
+    assert.strictEqual(byName.get("double")!.kind, vscode.SymbolKind.Function);
+    assert.strictEqual(byName.get("y")!.kind, vscode.SymbolKind.Variable);
+  });
+
+  test("highlights every occurrence of a symbol", async () => {
+    const uri = fixture("symbols.pine");
+    await open(uri);
+
+    // On the `double` call on line 4.
+    const highlights = await vscode.commands.executeCommand<
+      vscode.DocumentHighlight[]
+    >("vscode.executeDocumentHighlights", uri, new vscode.Position(3, 6));
+    const lines = highlights.map((h) => h.range.start.line).sort();
+    // Its declaration (line 3) and its use (line 4), 0-based.
+    assert.deepStrictEqual(lines, [2, 3], JSON.stringify(lines));
+  });
+
   test("completes an object's fields", async () => {
     const uri = fixture("completion.pine");
     await open(uri);
