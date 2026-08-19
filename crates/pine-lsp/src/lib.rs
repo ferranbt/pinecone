@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use pine_lang::diagnostics::{Diagnostic as PineDiagnostic, Severity};
-use pine_lang::sema::{Symbol, SymbolKind, SymbolTable};
+use pine_lang::sema::{Symbol, SymbolId, SymbolKind, SymbolTable};
 use tower_lsp_server::lsp_types::*;
 use tower_lsp_server::{jsonrpc, Client, LanguageServer, LspService, Server, UriExt};
 
@@ -70,6 +70,7 @@ impl LanguageServer for Backend {
                 document_formatting_provider: Some(OneOf::Left(true)),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 definition_provider: Some(OneOf::Left(true)),
+                references_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -146,7 +147,7 @@ impl LanguageServer for Backend {
             documents.get(&at.text_document.uri).and_then(|doc| {
                 let symbols = doc.symbols.as_ref()?;
                 let id = symbol_at(symbols, &doc.text, at.position)?;
-                Some(render_symbol(symbols.symbol(id)))
+                Some(hover_markdown(symbols, id, &at.text_document.uri))
             })
         };
         Ok(markdown.map(|value| Hover {
@@ -182,6 +183,39 @@ impl LanguageServer for Backend {
         }))
     }
 
+    async fn references(&self, params: ReferenceParams) -> jsonrpc::Result<Option<Vec<Location>>> {
+        let at = params.text_document_position;
+        let uri = at.text_document.uri;
+        let locations = {
+            let documents = self.documents.lock().unwrap();
+            documents.get(&uri).and_then(|doc| {
+                let symbols = doc.symbols.as_ref()?;
+                let id = symbol_at(symbols, &doc.text, at.position)?;
+                let width = symbols.symbol(id).name.chars().count() as u32;
+                let mut sites: Vec<(u32, u32)> = Vec::new();
+                if params.context.include_declaration {
+                    if let Some((file, line, column)) = symbols.declaration_location(id) {
+                        if file == SymbolTable::MAIN {
+                            sites.push((line, column));
+                        }
+                    }
+                }
+                for (file, line, column) in symbols.references(id) {
+                    if file == SymbolTable::MAIN {
+                        sites.push((line, column));
+                    }
+                }
+                Some(
+                    sites
+                        .into_iter()
+                        .map(|(line, column)| main_location(&uri, line, column, width))
+                        .collect::<Vec<_>>(),
+                )
+            })
+        };
+        Ok(locations.filter(|l| !l.is_empty()))
+    }
+
     async fn shutdown(&self) -> jsonrpc::Result<()> {
         Ok(())
     }
@@ -204,6 +238,17 @@ fn symbol_at(
     symbols.symbol_at(SymbolTable::MAIN, position.line + 1, start as u32 + 1)
 }
 
+/// A location in the main document spanning `width` characters from a 1-based
+/// `(line, column)`.
+fn main_location(uri: &Uri, line: u32, column: u32, width: u32) -> Location {
+    let start = Position::new(line - 1, column - 1);
+    let end = Position::new(line - 1, column - 1 + width);
+    Location {
+        uri: uri.clone(),
+        range: Range::new(start, end),
+    }
+}
+
 /// The start column of the identifier the cursor sits in or just after.
 fn identifier_start(line: &str, column: usize) -> usize {
     let chars: Vec<char> = line.chars().collect();
@@ -223,6 +268,42 @@ fn render_symbol(symbol: &Symbol) -> String {
         },
     };
     format!("```pine\n{signature}\n```\n\n*{}*", symbol.kind.noun())
+}
+
+/// Hover text: the symbol's signature, plus — for a function — where it is
+/// defined and every place it is called. Positions in this file are rendered as
+/// links so the reader can jump to them.
+fn hover_markdown(symbols: &SymbolTable, id: SymbolId, uri: &Uri) -> String {
+    let symbol = symbols.symbol(id);
+    let mut md = render_symbol(symbol);
+    if symbol.kind != SymbolKind::Function {
+        return md;
+    }
+
+    let here = uri.as_str();
+    let link = |line: u32, column: u32| format!("[{line}:{column}]({here}#L{line},{column})");
+
+    match symbols.declaration_location(id) {
+        Some((file, line, column)) if file == SymbolTable::MAIN => {
+            md.push_str(&format!("\n\nDefined at {}", link(line, column)));
+        }
+        Some((file, _, _)) => {
+            md.push_str(&format!("\n\nDefined in `{}`", symbols.file_path(file)));
+        }
+        None => {}
+    }
+
+    let calls: Vec<String> = symbols
+        .references(id)
+        .filter(|(file, _, _)| *file == SymbolTable::MAIN)
+        .map(|(_, line, column)| link(line, column))
+        .collect();
+    match calls.len() {
+        0 => md.push_str("\n\nNo calls in this file."),
+        1 => md.push_str(&format!("\n\n**1 call:** {}", calls[0])),
+        n => md.push_str(&format!("\n\n**{n} calls:** {}", calls.join(", "))),
+    }
+    md
 }
 
 fn to_lsp(diagnostic: &PineDiagnostic, text: &str) -> Diagnostic {

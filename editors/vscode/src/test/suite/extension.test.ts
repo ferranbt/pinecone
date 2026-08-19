@@ -79,6 +79,10 @@ suite("pinecone language server", () => {
     assert.ok(hovers && hovers.length > 0, "expected a hover");
     const content = hovers[0].contents[0] as vscode.MarkdownString;
     assert.ok(content.value.includes("double(x)"), content.value);
+    // The signature is followed by the declaration and every call site.
+    assert.ok(content.value.includes("Defined at"), content.value);
+    assert.ok(content.value.includes("1 call"), content.value);
+    assert.ok(content.value.includes("4:5"), content.value); // the call on line 4
   });
 
   test("goes to a definition", async () => {
@@ -92,5 +96,20 @@ suite("pinecone language server", () => {
     );
     assert.ok(locations && locations.length > 0, "expected a definition");
     assert.strictEqual(locations[0].range.start.line, 2); // `double(x) =>`
+  });
+
+  test("finds references to a function", async () => {
+    const uri = fixture("symbols.pine");
+    await open(uri);
+
+    const locations = await vscode.commands.executeCommand<vscode.Location[]>(
+      "vscode.executeReferenceProvider",
+      uri,
+      new vscode.Position(3, 6) // the `double` call on line 4
+    );
+    assert.ok(locations && locations.length > 0, "expected references");
+    const lines = locations.map((l) => l.range.start.line).sort();
+    // The declaration on line 3 (0-based 2) and the call on line 4 (0-based 3).
+    assert.deepStrictEqual(lines, [2, 3], JSON.stringify(lines));
   });
 });
