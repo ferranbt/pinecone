@@ -2,10 +2,21 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+use pine_lang::builtins::{register_namespace_objects, DefaultPineOutput};
+use pine_lang::core::PineVersion;
 use pine_lang::diagnostics::{Diagnostic as PineDiagnostic, Severity};
+use pine_lang::interpreter::{BuiltinSignature, Value};
 use pine_lang::sema::{Symbol, SymbolId, SymbolKind, SymbolTable};
 use tower_lsp_server::lsp_types::*;
 use tower_lsp_server::{jsonrpc, Client, LanguageServer, LspService, Server, UriExt};
+
+thread_local! {
+    /// The builtin namespaces (`ta`, `math`, `array`, …) as the analyzer sees
+    /// them, for `namespace.` member completion. `Value` is `!Send`, so it can't
+    /// live on the shared `Backend`; each worker thread builds its own copy once.
+    static BUILTINS: HashMap<String, Value<DefaultPineOutput>> =
+        register_namespace_objects(PineVersion::LATEST, None, None).0;
+}
 
 /// Serve the language server over stdio until the client disconnects.
 #[tokio::main]
@@ -38,7 +49,7 @@ impl Backend {
 
     /// Re-analyze `text`, cache the result for `uri`, and publish its diagnostics.
     async fn update(&self, uri: Uri, text: String) {
-        let (diagnostics, symbols) = match analyze(&text, uri_dir(&uri)) {
+        let (diagnostics, analyzed) = match analyze(&text, uri_dir(&uri)) {
             Ok(analysis) => (
                 analysis
                     .diagnostics
@@ -50,10 +61,14 @@ impl Backend {
             // A lex/parse/version error stops analysis before any position is known.
             Err(err) => (vec![error_diagnostic(&err)], None),
         };
-        self.documents
-            .lock()
-            .unwrap()
-            .insert(uri.clone(), Document { text, symbols });
+        {
+            let mut documents = self.documents.lock().unwrap();
+            // A transient parse error yields no table (e.g. right after typing a
+            // `.`); keep the last good one so completion and hover still answer.
+            let symbols =
+                analyzed.or_else(|| documents.get_mut(&uri).and_then(|d| d.symbols.take()));
+            documents.insert(uri.clone(), Document { text, symbols });
+        }
         self.client
             .publish_diagnostics(uri, diagnostics, None)
             .await;
@@ -71,6 +86,10 @@ impl LanguageServer for Backend {
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 definition_provider: Some(OneOf::Left(true)),
                 references_provider: Some(OneOf::Left(true)),
+                completion_provider: Some(CompletionOptions {
+                    trigger_characters: Some(vec![".".to_string()]),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -216,6 +235,21 @@ impl LanguageServer for Backend {
         Ok(locations.filter(|l| !l.is_empty()))
     }
 
+    async fn completion(
+        &self,
+        params: CompletionParams,
+    ) -> jsonrpc::Result<Option<CompletionResponse>> {
+        let at = params.text_document_position;
+        let items = {
+            let documents = self.documents.lock().unwrap();
+            documents.get(&at.text_document.uri).and_then(|doc| {
+                let symbols = doc.symbols.as_ref()?;
+                member_completions(symbols, &doc.text, at.position)
+            })
+        };
+        Ok(items.map(CompletionResponse::Array))
+    }
+
     async fn shutdown(&self) -> jsonrpc::Result<()> {
         Ok(())
     }
@@ -246,6 +280,128 @@ fn main_location(uri: &Uri, line: u32, column: u32, width: u32) -> Location {
     Location {
         uri: uri.clone(),
         range: Range::new(start, end),
+    }
+}
+
+/// Member completions after `receiver.` — a user object's fields/cases/exports,
+/// or the members of a builtin namespace (`ta.`, `math.`, …).
+fn member_completions(
+    symbols: &SymbolTable,
+    text: &str,
+    position: Position,
+) -> Option<Vec<CompletionItem>> {
+    let line = text.lines().nth(position.line as usize).unwrap_or("");
+    let prefix: String = line.chars().take(position.character as usize).collect();
+    let receiver = receiver_before_dot(&prefix)?;
+
+    let root = symbols.file_root(SymbolTable::MAIN);
+    match symbols.resolve_id(root, receiver) {
+        // A user declaration shadows a builtin namespace of the same name.
+        Some(id) => user_member_completions(symbols, id),
+        None => builtin_member_completions(receiver),
+    }
+}
+
+/// The members of a user symbol: the fields/cases of a type (reached directly or
+/// through a variable's declared type), or an import's exported symbols.
+fn user_member_completions(symbols: &SymbolTable, id: SymbolId) -> Option<Vec<CompletionItem>> {
+    let symbol = symbols.symbol(id);
+    let members: Vec<&Symbol> = match symbol.kind {
+        SymbolKind::Import => {
+            let scope = symbol.module?;
+            symbols.symbols_in(scope).filter(|s| s.exported).collect()
+        }
+        SymbolKind::Type | SymbolKind::Enum => symbols.members_of(id).collect(),
+        SymbolKind::Var => symbols.members_of(symbol.type_ref?).collect(),
+        SymbolKind::Function => return None,
+    };
+    let items: Vec<CompletionItem> = members.into_iter().map(completion_item).collect();
+    (!items.is_empty()).then_some(items)
+}
+
+/// The members of a builtin namespace object (`ta.sma`, `math.abs`, …), read
+/// straight from the registered builtins.
+fn builtin_member_completions(namespace: &str) -> Option<Vec<CompletionItem>> {
+    BUILTINS.with(|builtins| {
+        let Some(Value::Object { fields, .. }) = builtins.get(namespace) else {
+            return None;
+        };
+        let mut items: Vec<CompletionItem> = fields
+            .borrow()
+            .iter()
+            .map(|(name, value)| builtin_completion_item(name, value))
+            .collect();
+        items.sort_by(|a, b| a.label.cmp(&b.label));
+        (!items.is_empty()).then_some(items)
+    })
+}
+
+/// A completion for one builtin member: a function (with its signature) when the
+/// value is callable, a nested namespace, or otherwise a constant.
+fn builtin_completion_item(name: &str, value: &Value<DefaultPineOutput>) -> CompletionItem {
+    let (kind, detail) = match value {
+        Value::BuiltinFunction(builtin) => (
+            CompletionItemKind::FUNCTION,
+            signature_detail(name, builtin.signature),
+        ),
+        Value::Object {
+            call: Some(builtin),
+            ..
+        } => (
+            CompletionItemKind::FUNCTION,
+            signature_detail(name, builtin.signature),
+        ),
+        Value::Object { .. } => (CompletionItemKind::MODULE, None),
+        _ => (CompletionItemKind::CONSTANT, None),
+    };
+    CompletionItem {
+        label: name.to_string(),
+        kind: Some(kind),
+        detail,
+        ..Default::default()
+    }
+}
+
+/// `name(param, param, …)` for a builtin whose parameters are declared, else
+/// `None` (an undeclared signature would falsely read as taking no arguments).
+fn signature_detail(name: &str, signature: &BuiltinSignature) -> Option<String> {
+    if signature.params.is_empty() {
+        return None;
+    }
+    let params: Vec<&str> = signature.params.iter().map(|p| p.name.as_str()).collect();
+    Some(format!("{name}({})", params.join(", ")))
+}
+
+/// The receiver identifier in `…receiver.partial` up to the cursor, if the text
+/// before the cursor is a member access. Single hop only.
+fn receiver_before_dot(prefix: &str) -> Option<&str> {
+    let before_dot = prefix
+        .trim_end_matches(|c: char| c.is_alphanumeric() || c == '_')
+        .strip_suffix('.')?;
+    let start = before_dot
+        .rfind(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .map_or(0, |i| i + 1);
+    let receiver = &before_dot[start..];
+    (!receiver.is_empty()).then_some(receiver)
+}
+
+fn completion_item(symbol: &Symbol) -> CompletionItem {
+    let kind = match symbol.kind {
+        SymbolKind::Function => CompletionItemKind::FUNCTION,
+        SymbolKind::Type => CompletionItemKind::STRUCT,
+        SymbolKind::Enum => CompletionItemKind::ENUM,
+        SymbolKind::Var => CompletionItemKind::FIELD,
+        SymbolKind::Import => CompletionItemKind::MODULE,
+    };
+    let detail = match symbol.kind {
+        SymbolKind::Function => Some(format!("{}({})", symbol.name, symbol.params.join(", "))),
+        _ => symbol.type_annotation.clone(),
+    };
+    CompletionItem {
+        label: symbol.name.clone(),
+        kind: Some(kind),
+        detail,
+        ..Default::default()
     }
 }
 
@@ -415,5 +571,17 @@ mod tests {
     #[test]
     fn end_position_is_past_the_last_char() {
         assert_eq!(end_position("ab\ncd"), Position::new(1, 2));
+    }
+
+    #[test]
+    fn completes_builtin_namespace_members() {
+        let ta = builtin_member_completions("ta").expect("ta namespace");
+        assert!(ta.iter().any(|i| i.label == "sma"), "expected ta.sma");
+
+        let math = builtin_member_completions("math").expect("math namespace");
+        assert!(math.iter().any(|i| i.label == "abs"), "expected math.abs");
+
+        // A name that is not a builtin namespace yields nothing.
+        assert!(builtin_member_completions("definitely_not_a_namespace").is_none());
     }
 }
