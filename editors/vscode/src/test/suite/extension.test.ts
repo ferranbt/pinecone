@@ -164,6 +164,47 @@ suite("pinecone language server", () => {
     assert.deepStrictEqual(lines, [2, 3], JSON.stringify(lines));
   });
 
+  test("renames a symbol across its occurrences", async () => {
+    const uri = fixture("symbols.pine");
+    await open(uri);
+
+    // On the `double` declaration on line 3.
+    const edit = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
+      "vscode.executeDocumentRenameProvider",
+      uri,
+      new vscode.Position(2, 0),
+      "triple"
+    );
+    const edits = edit.get(uri);
+    const lines = edits.map((e) => e.range.start.line).sort();
+    // Declaration (line 3) and call (line 4), 0-based, both renamed.
+    assert.deepStrictEqual(lines, [2, 3], JSON.stringify(lines));
+    assert.ok(edits.every((e) => e.newText === "triple"));
+  });
+
+  test("renames across an imported library", async () => {
+    const uri = fixture("imports.pine");
+    await open(uri);
+
+    // On `add` in the call `lib.add(1, 2)`.
+    const edit = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
+      "vscode.executeDocumentRenameProvider",
+      uri,
+      new vscode.Position(5, 8),
+      "sum"
+    );
+    const paths = edit.entries().map(([u]) => u.path);
+    // The edit spans both the caller and the library that declares `add`.
+    assert.ok(
+      paths.some((p) => p.endsWith("imports.pine")),
+      paths.join(", ")
+    );
+    assert.ok(
+      paths.some((p) => p.endsWith("mylib.pine")),
+      paths.join(", ")
+    );
+  });
+
   test("completes an object's fields", async () => {
     const uri = fixture("completion.pine");
     await open(uri);
