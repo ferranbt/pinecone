@@ -1,0 +1,4 @@
+//@version=6
+library("mylib")
+
+export add(a, b) => a + b
