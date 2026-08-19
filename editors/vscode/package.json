@@ -9,6 +9,7 @@
     "type": "git",
     "url": "https://github.com/ferranbt/pinecone"
   },
+  "icon": "images/pinecone.png",
   "engines": {
     "vscode": "^1.75.0"
   },
