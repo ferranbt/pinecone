@@ -3,31 +3,67 @@ use pine_lexer::{Token, TokenType};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum ParserError {
-    #[error("Unexpected token: {0:?} at line {1}")]
-    UnexpectedToken(TokenType, usize),
+pub enum ParserErrorKind {
+    #[error("Unexpected token: {0:?}")]
+    UnexpectedToken(TokenType),
 
-    #[error("Expected {expected} but found {found:?} at line {line}")]
-    ExpectedToken {
-        expected: String,
-        found: TokenType,
-        line: usize,
-    },
+    #[error("{expected} but found {found:?}")]
+    ExpectedToken { expected: String, found: TokenType },
 
-    #[error("Expected variable name at line {0}")]
-    ExpectedVariableName(usize),
+    #[error("Expected variable name")]
+    ExpectedVariableName,
 
-    #[error("Expected parameter name at line {0}")]
-    ExpectedParameterName(usize),
+    #[error("Expected parameter name")]
+    ExpectedParameterName,
 
-    #[error("Can only call identifiers or member access at line {0}")]
-    InvalidCallTarget(usize),
+    #[error("Can only call identifiers or member access")]
+    InvalidCallTarget,
 
-    #[error("Expected identifier after '.' at line {0}")]
-    ExpectedIdentifierAfterDot(usize),
+    #[error("Expected identifier after '.'")]
+    ExpectedIdentifierAfterDot,
 
     #[error(transparent)]
-    Lexer(#[from] pine_lexer::LexerError),
+    Lexer(pine_lexer::LexerError),
+}
+
+/// A parse error and the 1-based source position it points at.
+#[derive(Debug)]
+pub struct ParserError {
+    pub loc: Loc,
+    pub kind: ParserErrorKind,
+}
+
+impl ParserError {
+    /// The 1-based `(line, column)` the error points at.
+    pub fn location(&self) -> (u32, u32) {
+        (self.loc.line, self.loc.column)
+    }
+}
+
+impl std::fmt::Display for ParserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.kind {
+            // Lexer errors already spell out their own line and column.
+            ParserErrorKind::Lexer(e) => write!(f, "{e}"),
+            kind => write!(f, "{kind} at line {}", self.loc.line),
+        }
+    }
+}
+
+impl std::error::Error for ParserError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.kind)
+    }
+}
+
+impl From<pine_lexer::LexerError> for ParserError {
+    fn from(e: pine_lexer::LexerError) -> Self {
+        let (line, column) = e.location();
+        ParserError {
+            loc: Loc::new(line, column),
+            kind: ParserErrorKind::Lexer(e),
+        }
+    }
 }
 
 impl From<ParserError> for String {
@@ -173,12 +209,7 @@ impl Parser {
                     TokenType::Ident(name) => name.clone(),
                     TokenType::Int => "int".to_string(),
                     TokenType::Float => "float".to_string(),
-                    _ => {
-                        return Err(ParserError::UnexpectedToken(
-                            p.peek().typ.clone(),
-                            p.peek().line,
-                        ))
-                    }
+                    _ => return Err(p.unexpected()),
                 };
                 p.advance();
                 type_args.push(type_name);
@@ -189,10 +220,7 @@ impl Parser {
                 } else if p.match_token(&[TokenType::Greater]) {
                     break;
                 } else {
-                    return Err(ParserError::UnexpectedToken(
-                        p.peek().typ.clone(),
-                        p.peek().line,
-                    ));
+                    return Err(p.unexpected());
                 }
             }
 
@@ -245,12 +273,7 @@ impl Parser {
             TokenType::Int => "int".to_string(),
             TokenType::Float => "float".to_string(),
             TokenType::Ident(name) => name.clone(),
-            other => {
-                return Err(ParserError::UnexpectedToken(
-                    other.clone(),
-                    self.peek().line,
-                ))
-            }
+            _ => return Err(self.unexpected()),
         };
         self.advance();
         self.parse_type_suffix(base)
@@ -278,11 +301,10 @@ impl Parser {
         if self.check(&typ) {
             Ok(self.advance())
         } else {
-            Err(ParserError::ExpectedToken {
+            Err(self.error(ParserErrorKind::ExpectedToken {
                 expected: message.to_string(),
                 found: self.peek().typ.clone(),
-                line: self.peek().line,
-            })
+            }))
         }
     }
 
@@ -293,7 +315,7 @@ impl Parser {
             self.advance();
             Ok(name)
         } else {
-            Err(ParserError::ExpectedVariableName(self.peek().line))
+            Err(self.error(ParserErrorKind::ExpectedVariableName))
         }
     }
 
@@ -346,10 +368,7 @@ impl Parser {
                 if p.check(expected) {
                     Ok(())
                 } else {
-                    Err(ParserError::UnexpectedToken(
-                        p.peek().typ.clone(),
-                        p.peek().line,
-                    ))
+                    Err(p.unexpected())
                 }
             });
         }
@@ -365,10 +384,7 @@ impl Parser {
                         return Ok(());
                     }
                 }
-                Err(ParserError::UnexpectedToken(
-                    p.peek().typ.clone(),
-                    p.peek().line,
-                ))
+                Err(p.unexpected())
             });
         }
     }
@@ -417,7 +433,7 @@ impl Parser {
 
                 // Must be followed by identifier to be a type annotation
                 if !matches!(p.peek().typ, TokenType::Ident(_)) {
-                    return Err(ParserError::ExpectedVariableName(p.peek().line));
+                    return Err(p.error(ParserErrorKind::ExpectedVariableName));
                 }
 
                 Ok(final_type)
@@ -488,6 +504,19 @@ impl Parser {
     fn prev_loc(&self) -> Loc {
         let token = &self.tokens[self.current.saturating_sub(1)];
         Loc::new(token.line as u32, token.column as u32)
+    }
+
+    /// Build an error at the current token's position.
+    fn error(&self, kind: ParserErrorKind) -> ParserError {
+        ParserError {
+            loc: self.cur_loc(),
+            kind,
+        }
+    }
+
+    /// The current token is not valid here.
+    fn unexpected(&self) -> ParserError {
+        self.error(ParserErrorKind::UnexpectedToken(self.peek().typ.clone()))
     }
 
     fn declaration(&mut self) -> Result<Stmt, ParserError> {
@@ -619,10 +648,7 @@ impl Parser {
                     p.advance();
                     Some(s)
                 } else {
-                    return Err(ParserError::UnexpectedToken(
-                        p.peek().typ.clone(),
-                        p.peek().line,
-                    ));
+                    return Err(p.unexpected());
                 }
             } else {
                 None
@@ -712,32 +738,23 @@ impl Parser {
                     path_parts.push(n.to_string());
                     self.advance();
                 } else {
-                    return Err(ParserError::UnexpectedToken(
-                        self.peek().typ.clone(),
-                        self.peek().line,
-                    ));
+                    return Err(self.unexpected());
                 }
             }
 
             path_parts.join("/")
         } else {
-            return Err(ParserError::ExpectedVariableName(self.peek().line));
+            return Err(self.error(ParserErrorKind::ExpectedVariableName));
         };
 
         // Expect 'as' keyword - for now we'll check for an identifier "as"
         if let TokenType::Ident(kw) = &self.peek().typ {
             if kw != "as" {
-                return Err(ParserError::UnexpectedToken(
-                    self.peek().typ.clone(),
-                    self.peek().line,
-                ));
+                return Err(self.unexpected());
             }
             self.advance();
         } else {
-            return Err(ParserError::UnexpectedToken(
-                self.peek().typ.clone(),
-                self.peek().line,
-            ));
+            return Err(self.unexpected());
         }
 
         // Parse alias
@@ -901,7 +918,7 @@ impl Parser {
                             p.advance();
                         } else {
                             // Not all identifiers, not tuple destructuring
-                            return Err(ParserError::ExpectedVariableName(p.peek().line));
+                            return Err(p.error(ParserErrorKind::ExpectedVariableName));
                         }
 
                         if !p.match_token(&[TokenType::Comma]) {
@@ -1029,10 +1046,7 @@ impl Parser {
                     })
                 } else {
                     // Not an assignment operator, fail
-                    Err(ParserError::UnexpectedToken(
-                        p.peek().typ.clone(),
-                        p.peek().line,
-                    ))
+                    Err(p.unexpected())
                 }
             }) {
                 return Ok(stmt);
@@ -1198,10 +1212,7 @@ impl Parser {
                         let else_if_body = p.parse_block()?;
                         Ok((else_if_condition, else_if_body))
                     } else {
-                        Err(ParserError::UnexpectedToken(
-                            p.peek().typ.clone(),
-                            p.peek().line,
-                        ))
+                        Err(p.unexpected())
                     }
                 }) {
                     else_if_branches.push((else_if_condition, else_if_body));
@@ -1275,10 +1286,7 @@ impl Parser {
                         p.match_token(&[TokenType::Dedent]);
                         Ok((else_if_condition, else_if_expr))
                     } else {
-                        Err(ParserError::UnexpectedToken(
-                            p.peek().typ.clone(),
-                            p.peek().line,
-                        ))
+                        Err(p.unexpected())
                     }
                 }) {
                     else_if_branches.push((else_if_condition, else_if_expr));
@@ -1592,7 +1600,7 @@ impl Parser {
                             self.advance();
                             lexeme
                         } else {
-                            return Err(ParserError::ExpectedIdentifierAfterDot(self.peek().line));
+                            return Err(self.error(ParserErrorKind::ExpectedIdentifierAfterDot));
                         }
                     }
                 };
@@ -1680,10 +1688,7 @@ impl Parser {
                             let value = p.expression()?;
                             Ok((name.clone(), value))
                         } else {
-                            Err(ParserError::UnexpectedToken(
-                                p.peek().typ.clone(),
-                                p.peek().line,
-                            ))
+                            Err(p.unexpected())
                         }
                     }) {
                         args.push(Argument::Named { name, value });
@@ -1831,10 +1836,7 @@ impl Parser {
 
                     // Expect =>
                     if !p.match_token(&[TokenType::Arrow]) {
-                        return Err(ParserError::UnexpectedToken(
-                            p.peek().typ.clone(),
-                            p.peek().line,
-                        ));
+                        return Err(p.unexpected());
                     }
 
                     // Skip newlines after =>
@@ -1867,10 +1869,7 @@ impl Parser {
             return Ok(Expr::Array(elements));
         }
 
-        Err(ParserError::UnexpectedToken(
-            self.peek().typ.clone(),
-            self.peek().line,
-        ))
+        Err(self.unexpected())
     }
 }
 

@@ -60,8 +60,8 @@ impl Backend {
                     .collect(),
                 Some(analysis.symbols),
             ),
-            // A lex/parse/version error stops analysis before any position is known.
-            Err(err) => (vec![error_diagnostic(&err)], None),
+            // A lex/parse/version error stops analysis; publish it as a single diagnostic.
+            Err(err) => (vec![error_diagnostic(&err, &text)], None),
         };
         {
             let mut documents = self.documents.lock().unwrap();
@@ -693,9 +693,13 @@ fn to_lsp(diagnostic: &PineDiagnostic, text: &str) -> Diagnostic {
     }
 }
 
-fn error_diagnostic(err: &pine_lang::Error) -> Diagnostic {
+fn error_diagnostic(err: &pine_lang::Error, text: &str) -> Diagnostic {
+    let range = match err.location() {
+        Some((line, col)) => token_range(text, line, col),
+        None => Range::default(),
+    };
     Diagnostic {
-        range: Range::new(Position::new(0, 0), Position::new(0, 0)),
+        range,
         severity: Some(DiagnosticSeverity::ERROR),
         source: Some("pinecone".to_string()),
         message: err.to_string(),
@@ -764,14 +768,15 @@ mod tests {
     }
 
     #[test]
-    fn parse_error_becomes_a_single_error() {
-        let Err(err) = pine_lang::analyze("indicator(\n", None) else {
+    fn parse_error_points_at_its_line() {
+        let source = "//@version=6\nindicator(\"x\")\nlog.info(str.tostring. (up))\n";
+        let Err(err) = pine_lang::analyze(source, None) else {
             panic!("expected a parse error");
         };
-        assert_eq!(
-            error_diagnostic(&err).severity,
-            Some(DiagnosticSeverity::ERROR)
-        );
+        let diag = error_diagnostic(&err, source);
+        assert_eq!(diag.severity, Some(DiagnosticSeverity::ERROR));
+        // Points at the offending `up` token, not the top of the file.
+        assert_eq!(diag.range.start, Position::new(2, 24));
     }
 
     #[test]
