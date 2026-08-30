@@ -1562,7 +1562,11 @@ impl<O: PineOutput> Interpreter<O> {
                     site.bar = seq;
                 }
                 site.current = Some(current);
-                Ok(site.history.get(index_val - 1).cloned().unwrap_or(Value::Na))
+                Ok(site
+                    .history
+                    .get(index_val - 1)
+                    .cloned()
+                    .unwrap_or(Value::Na))
             }
 
             Expr::Switch { value, cases } => {
