@@ -22,11 +22,6 @@ name = "interpreter"
 harness = false
 path = "src/interpreter.rs"
 
-[[bench]]
-name = "technical_analysis"
-harness = false
-path = "src/technical_analysis.rs"
-
 [dependencies]
 criterion = { package = "codspeed-criterion-compat", version = "2.7", features = [
     "html_reports",
