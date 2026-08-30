@@ -103,7 +103,7 @@ struct Variable<O: PineOutput = DefaultPineOutput> {
 pub struct Series<O: PineOutput = DefaultPineOutput> {
     pub id: String,
     pub current: Box<Value<O>>,
-    pub history: Option<Rc<RefCell<SeriesBuffer<Value<O>>>>>,
+    pub history: Option<Rc<RefCell<SeriesBuffer<f64>>>>,
 }
 
 /// The lazy scalar an object carries, so a single name can be *both* a namespace
@@ -1526,7 +1526,10 @@ impl<O: PineOutput> Interpreter<O> {
                             return Ok((*series.current).clone());
                         }
                         let h = history.borrow();
-                        return Ok(h.get(index_val - 1).cloned().unwrap_or(Value::Na));
+                        return Ok(match h.get(index_val - 1) {
+                            Some(x) if !x.is_nan() => Value::Number(*x),
+                            _ => Value::Na,
+                        });
                     }
                 }
 

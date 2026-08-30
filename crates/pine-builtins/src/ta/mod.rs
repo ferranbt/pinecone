@@ -301,8 +301,8 @@ fn step_series<O: PineOutput>(series: &mut Value<O>, push: bool, next: f64) {
     if let Value::Series(s) = series {
         if push {
             if let Some(history) = &s.history {
-                let mut history = history.borrow_mut();
-                history.push((*s.current).clone(), MAX_LOOKBACK);
+                let previous = s.current.as_number().unwrap_or(f64::NAN);
+                history.borrow_mut().push(previous, MAX_LOOKBACK);
             }
         }
         *s.current = Value::Number(next);
