@@ -1,6 +1,17 @@
 use pine_core::Bar;
 use pine_core::Data;
 
+pub const TEST_SCRIPTS: &[(&str, &str)] = &[
+    ("simple", include_str!("../test_data/simple.pine")),
+    (
+        "moving_averages",
+        include_str!("../test_data/moving_averages.pine"),
+    ),
+    ("rsi", include_str!("../test_data/rsi.pine")),
+    ("macd", include_str!("../test_data/macd.pine")),
+    ("complex", include_str!("../test_data/complex.pine")),
+];
+
 /// Generate synthetic OHLCV bar data for benchmarking
 pub fn generate_bars(count: usize) -> Data {
     let mut bars = Vec::with_capacity(count);
