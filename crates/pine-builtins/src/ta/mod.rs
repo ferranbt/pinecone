@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_core::{PineOutput, PineVersion, MAX_LOOKBACK};
+use pine_core::{PineOutput, PineVersion, SeriesBuffer, MAX_LOOKBACK};
 use pine_interpreter::{Builtin, Interpreter, PerBarAdvance, RuntimeError, Series, Value};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -121,7 +121,7 @@ pub fn register<O: PineOutput>(
             Value::Series(Series {
                 id: format!("ta.{name}"),
                 current: Box::new(Value::Number(seed)),
-                history: Some(Rc::new(RefCell::new(Vec::new()))),
+                history: Some(Rc::new(RefCell::new(SeriesBuffer::default()))),
             }),
         );
     }
@@ -132,7 +132,7 @@ pub fn register<O: PineOutput>(
     let vwap_series = Rc::new(RefCell::new(Value::Series(Series {
         id: "ta.vwap".to_string(),
         current: Box::new(Value::Na),
-        history: Some(Rc::new(RefCell::new(Vec::new()))),
+        history: Some(Rc::new(RefCell::new(SeriesBuffer::default()))),
     })));
     ta_ns.insert("vwap".to_string(), {
         let cell = Rc::clone(&vwap_series);
@@ -174,7 +174,7 @@ fn series_now<O: PineOutput>(ctx: &Interpreter<O>, name: &str) -> Option<f64> {
 }
 
 fn series_prev<O: PineOutput>(ctx: &Interpreter<O>, name: &str) -> Option<f64> {
-    ctx.user_series_history.get(name)?.last()?.as_number().ok()
+    ctx.user_series_history.get(name)?.get(0)?.as_number().ok()
 }
 
 /// The current bar's OHLCV plus the previous bar's `close`/`volume` — everything
@@ -302,11 +302,7 @@ fn step_series<O: PineOutput>(series: &mut Value<O>, push: bool, next: f64) {
         if push {
             if let Some(history) = &s.history {
                 let mut history = history.borrow_mut();
-                history.push((*s.current).clone());
-                if history.len() > MAX_LOOKBACK {
-                    let excess = history.len() - MAX_LOOKBACK;
-                    history.drain(..excess);
-                }
+                history.push((*s.current).clone(), MAX_LOOKBACK);
             }
         }
         *s.current = Value::Number(next);

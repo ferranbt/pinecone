@@ -4,7 +4,7 @@ mod signature;
 pub use num::Num;
 pub use signature::{BuiltinSignature, Param, ParamType};
 
-use pine_core::{Color, DefaultPineOutput, PineOutput, MAX_LOOKBACK};
+use pine_core::{Color, DefaultPineOutput, PineOutput, SeriesBuffer, MAX_LOOKBACK};
 
 use pine_ast::{Argument, BinOp, Expr, Literal, MethodParam, Program, Stmt, TypeField, UnOp};
 use std::cell::RefCell;
@@ -20,15 +20,14 @@ pub use pine_core::LibraryLoader;
 /// Takes the history map rather than `&mut self` so callers can hold a borrow of
 /// another interpreter field while recording.
 fn push_history<O: PineOutput>(
-    history: &mut HashMap<String, Vec<Value<O>>>,
+    history: &mut HashMap<String, SeriesBuffer<Value<O>>>,
     name: &str,
     value: Value<O>,
 ) {
-    let entries = history.entry(name.to_string()).or_default();
-    entries.push(value);
-    if entries.len() > MAX_LOOKBACK {
-        entries.drain(..entries.len() - MAX_LOOKBACK);
-    }
+    history
+        .entry(name.to_string())
+        .or_default()
+        .push(value, MAX_LOOKBACK);
 }
 
 /// Apply a numeric binary operator under Pine's int/float rule (see [`Num`]).
@@ -104,7 +103,7 @@ struct Variable<O: PineOutput = DefaultPineOutput> {
 pub struct Series<O: PineOutput = DefaultPineOutput> {
     pub id: String,
     pub current: Box<Value<O>>,
-    pub history: Option<Rc<RefCell<Vec<Value<O>>>>>,
+    pub history: Option<Rc<RefCell<SeriesBuffer<Value<O>>>>>,
 }
 
 /// The lazy scalar an object carries, so a single name can be *both* a namespace
@@ -449,8 +448,8 @@ struct MethodDef {
 /// variable (a call, arithmetic, …). Mirrors `user_series_history`, keyed by the
 /// `Expr::Index` node's stable id, so `(expr)[n]` matches `v = expr; v[n]`.
 struct SeriesSite<O: PineOutput> {
-    /// Past bars, oldest first; the last entry is the previous bar.
-    history: Vec<Value<O>>,
+    /// Past bars, newest first; entry 0 is the previous bar.
+    history: SeriesBuffer<Value<O>>,
     /// This bar's value, once the site has been evaluated on it.
     current: Option<Value<O>>,
     /// `bar_seq` when `current` was recorded, so history rolls once per bar.
@@ -460,7 +459,7 @@ struct SeriesSite<O: PineOutput> {
 impl<O: PineOutput> SeriesSite<O> {
     fn new() -> Self {
         Self {
-            history: Vec::new(),
+            history: SeriesBuffer::default(),
             current: None,
             bar: 0,
         }
@@ -484,9 +483,9 @@ pub struct Interpreter<O: PineOutput> {
     /// Output storage for plots, labels, logs, etc.
     pub output: O,
     /// Per-variable history for user-computed series (`var` declarations).
-    /// history[len-1] = previous bar, history[len-2] = two bars ago, etc.
+    /// get(0) = previous bar, get(1) = two bars ago, etc.
     /// Populated on each `Stmt::Assignment`; supports Pine's `name[n]` lookback.
-    pub user_series_history: HashMap<String, Vec<Value<O>>>,
+    pub user_series_history: HashMap<String, SeriesBuffer<Value<O>>>,
     /// History for subscripted non-variable series expressions (`ta.sma(..)[1]`,
     /// `(high+low)[1]`), keyed by the `Expr::Index` node's id — the same
     /// site-keyed pattern as `function_local_state`.
@@ -1497,18 +1496,14 @@ impl<O: PineOutput> Interpreter<O> {
                 let index_val = index_num as usize;
 
                 // A named variable with tracked history looks up
-                // user_series_history: history[len-1] = previous bar. A tracked
+                // user_series_history: get(0) = previous bar. A tracked
                 // variable with insufficient depth yields na (warm-up). Variables
                 // WITHOUT tracked history (e.g. builtin Series like `close` fed by
                 // the host) fall through to the shared path below.
                 if index_val > 0 {
                     if let Expr::Variable { name: var_name, .. } = expr.as_ref() {
                         if let Some(h) = self.user_series_history.get(var_name) {
-                            return Ok(if h.len() >= index_val {
-                                h[h.len() - index_val].clone()
-                            } else {
-                                Value::Na
-                            });
+                            return Ok(h.get(index_val - 1).cloned().unwrap_or(Value::Na));
                         }
                         // A plain non-series value with no history (a user var
                         // assigned only this bar) indexes as na, not an error.
@@ -1531,11 +1526,7 @@ impl<O: PineOutput> Interpreter<O> {
                             return Ok((*series.current).clone());
                         }
                         let h = history.borrow();
-                        return Ok(if h.len() >= index_val {
-                            h[h.len() - index_val].clone()
-                        } else {
-                            Value::Na
-                        });
+                        return Ok(h.get(index_val - 1).cloned().unwrap_or(Value::Na));
                     }
                 }
 
@@ -1566,20 +1557,12 @@ impl<O: PineOutput> Interpreter<O> {
                     // MAX_LOOKBACK, exactly like user_series_history, so memory
                     // stays flat over a long run.
                     if let Some(previous) = site.current.take() {
-                        site.history.push(previous);
-                        if site.history.len() > MAX_LOOKBACK {
-                            let drop = site.history.len() - MAX_LOOKBACK;
-                            site.history.drain(..drop);
-                        }
+                        site.history.push(previous, MAX_LOOKBACK);
                     }
                     site.bar = seq;
                 }
                 site.current = Some(current);
-                Ok(if site.history.len() >= index_val {
-                    site.history[site.history.len() - index_val].clone()
-                } else {
-                    Value::Na
-                })
+                Ok(site.history.get(index_val - 1).cloned().unwrap_or(Value::Na))
             }
 
             Expr::Switch { value, cases } => {
