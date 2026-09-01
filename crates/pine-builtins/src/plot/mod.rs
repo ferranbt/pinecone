@@ -65,6 +65,7 @@ impl<O: PineOutput + PlotOutput> Plot<O> {
             precision: self.precision,
             force_overlay: self.force_overlay,
             linestyle: self.linestyle.clone(),
+            metadata: HashMap::new(),
         };
 
         ctx.output.add_plot(plot);
