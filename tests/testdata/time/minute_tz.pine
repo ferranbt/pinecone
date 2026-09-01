@@ -1,0 +1,14 @@
+//@version=6
+indicator("time/minute_tz")
+// minute(time, timezone) and hour(time, timezone): the timezone shifts the
+// extracted parts. Offsets ("UTC+05:30") and IANA zones ("America/New_York",
+// EDT = UTC-4 in June) are both supported.
+t = timestamp(2021, 6, 15, 13, 45, 0)
+log.info(str.tostring(hour(t)) + "|" + str.tostring(minute(t)))
+log.info(str.tostring(hour(t, "UTC+05:30")) + "|" + str.tostring(minute(t, "UTC+05:30")))
+log.info(str.tostring(hour(t, "America/New_York")) + "|" + str.tostring(minute(t, "America/New_York")))
+
+// Expected output:
+// 13|45
+// 19|15
+// 9|45

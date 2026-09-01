@@ -1,4 +1,5 @@
-use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, Timelike, Utc};
+use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, NaiveDateTime, Timelike};
+use chrono_tz::Tz;
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::PineOutput;
 use pine_interpreter::{
@@ -92,45 +93,83 @@ fn timestamp_fn<O: PineOutput>() -> BuiltinFn<O> {
     })
 }
 
-/// The UTC datetime for a UNIX-ms timestamp, or `None` if out of range.
-fn datetime_of(millis: f64) -> Option<DateTime<Utc>> {
-    DateTime::from_timestamp_millis(millis as i64)
+/// A `"UTC"`/`"GMT"` timezone with an optional numeric offset (`"GMT-5"`,
+/// `"UTC+05:30"`), as a fixed offset. `None` for anything else (an IANA name).
+fn resolve_offset(tz: &str) -> Option<FixedOffset> {
+    let rest = tz
+        .strip_prefix("UTC")
+        .or_else(|| tz.strip_prefix("GMT"))
+        .unwrap_or(tz)
+        .trim();
+    if rest.is_empty() {
+        return FixedOffset::east_opt(0);
+    }
+    let (sign, digits) = match rest.strip_prefix('+') {
+        Some(digits) => (1, digits),
+        None => (-1, rest.strip_prefix('-')?),
+    };
+    let (hours, minutes) = match digits.split_once(':') {
+        Some((h, m)) => (h.parse::<i32>().ok()?, m.parse::<i32>().ok()?),
+        None => (digits.parse::<i32>().ok()?, 0),
+    };
+    FixedOffset::east_opt(sign * (hours * 3600 + minutes * 60))
 }
 
-// The date-part extractors, shared by the `x(time)` functions and the bare-value
-// forms so the two can never disagree. `sunday = 1 … saturday = 7`, matching Pine.
-fn year_of(ms: f64) -> Option<i64> {
-    datetime_of(ms).map(|d| d.year() as i64)
-}
-fn month_of(ms: f64) -> Option<i64> {
-    datetime_of(ms).map(|d| d.month() as i64)
-}
-fn dayofmonth_of(ms: f64) -> Option<i64> {
-    datetime_of(ms).map(|d| d.day() as i64)
-}
-fn dayofweek_of(ms: f64) -> Option<i64> {
-    datetime_of(ms).map(|d| d.weekday().num_days_from_sunday() as i64 + 1)
-}
-fn hour_of(ms: f64) -> Option<i64> {
-    datetime_of(ms).map(|d| d.hour() as i64)
-}
-fn minute_of(ms: f64) -> Option<i64> {
-    datetime_of(ms).map(|d| d.minute() as i64)
-}
-fn second_of(ms: f64) -> Option<i64> {
-    datetime_of(ms).map(|d| d.second() as i64)
-}
-fn weekofyear_of(ms: f64) -> Option<i64> {
-    datetime_of(ms).map(|d| d.iso_week().week() as i64)
+/// The instant `millis` (UNIX ms, UTC) as a local datetime in `tz`. `tz` accepts
+/// a UTC offset (`""`, `"UTC"`, `"GMT-5"`, `"UTC+05:30"`) or an IANA name
+/// (`"America/New_York"`); an unrecognised zone falls back to UTC.
+fn datetime_at(millis: f64, tz: &str) -> Option<DateTime<FixedOffset>> {
+    let utc = DateTime::from_timestamp_millis(millis as i64)?;
+    let tz = tz.trim();
+    if tz.is_empty() {
+        return Some(utc.fixed_offset());
+    }
+    if let Some(offset) = resolve_offset(tz) {
+        return Some(utc.with_timezone(&offset));
+    }
+    match tz.parse::<Tz>() {
+        Ok(zone) => Some(utc.with_timezone(&zone).fixed_offset()),
+        Err(_) => Some(utc.fixed_offset()),
+    }
 }
 
-/// Defines a `name(time)` date function returning an integer part (or `na`).
+// The date-part extractors, shared by the `x(time, timezone)` functions and the
+// bare-value forms so the two can never disagree. `sunday = 1 … saturday = 7`.
+fn year_of(ms: f64, tz: &str) -> Option<i64> {
+    datetime_at(ms, tz).map(|d| d.year() as i64)
+}
+fn month_of(ms: f64, tz: &str) -> Option<i64> {
+    datetime_at(ms, tz).map(|d| d.month() as i64)
+}
+fn dayofmonth_of(ms: f64, tz: &str) -> Option<i64> {
+    datetime_at(ms, tz).map(|d| d.day() as i64)
+}
+fn dayofweek_of(ms: f64, tz: &str) -> Option<i64> {
+    datetime_at(ms, tz).map(|d| d.weekday().num_days_from_sunday() as i64 + 1)
+}
+fn hour_of(ms: f64, tz: &str) -> Option<i64> {
+    datetime_at(ms, tz).map(|d| d.hour() as i64)
+}
+fn minute_of(ms: f64, tz: &str) -> Option<i64> {
+    datetime_at(ms, tz).map(|d| d.minute() as i64)
+}
+fn second_of(ms: f64, tz: &str) -> Option<i64> {
+    datetime_at(ms, tz).map(|d| d.second() as i64)
+}
+fn weekofyear_of(ms: f64, tz: &str) -> Option<i64> {
+    datetime_at(ms, tz).map(|d| d.iso_week().week() as i64)
+}
+
+/// Defines a `name(time, timezone)` date function returning an integer part (or
+/// `na`). The timezone is optional and defaults to UTC.
 macro_rules! date_fn {
     ($ident:ident, $name:literal, $extract:ident) => {
         #[derive(BuiltinFunction)]
         #[builtin(name = $name)]
         struct $ident {
             time: f64,
+            #[arg(default = "")]
+            timezone: String,
         }
 
         impl $ident {
@@ -138,7 +177,9 @@ macro_rules! date_fn {
                 &self,
                 _ctx: &mut Interpreter<O>,
             ) -> Result<Value<O>, RuntimeError> {
-                Ok($extract(self.time).map(Value::Int).unwrap_or(Value::Na))
+                Ok($extract(self.time, &self.timezone)
+                    .map(Value::Int)
+                    .unwrap_or(Value::Na))
             }
         }
     };
@@ -159,7 +200,7 @@ fn date_dual<O: PineOutput>(
     name: &str,
     call: BuiltinFn<O>,
     signature: &'static BuiltinSignature,
-    extract: fn(f64) -> Option<i64>,
+    extract: fn(f64, &str) -> Option<i64>,
 ) -> Value<O> {
     Value::Object {
         type_name: name.to_string(),
@@ -168,7 +209,7 @@ fn date_dual<O: PineOutput>(
         value: Some(Rc::new(move |ctx: &mut Interpreter<O>| {
             Ok(ctx
                 .current_time
-                .and_then(|ms| extract(ms as f64))
+                .and_then(|ms| extract(ms as f64, ""))
                 .map(Value::Int)
                 .unwrap_or(Value::Na))
         })),
@@ -296,9 +337,51 @@ pub fn register_dayofweek<O: PineOutput>() -> Value<O> {
         value: Some(Rc::new(|ctx: &mut Interpreter<O>| {
             Ok(ctx
                 .current_time
-                .and_then(|ms| dayofweek_of(ms as f64))
+                .and_then(|ms| dayofweek_of(ms as f64, ""))
                 .map(Value::Int)
                 .unwrap_or(Value::Na))
         })),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // 2021-01-01 00:00:00 UTC — a Friday.
+    const NEW_YEAR_2021_UTC: f64 = 1_609_459_200_000.0;
+
+    #[test]
+    fn resolve_offset_parses_utc_and_gmt_forms() {
+        assert_eq!(resolve_offset(""), FixedOffset::east_opt(0));
+        assert_eq!(resolve_offset("UTC"), FixedOffset::east_opt(0));
+        assert_eq!(resolve_offset("GMT"), FixedOffset::east_opt(0));
+        assert_eq!(resolve_offset("GMT-5"), FixedOffset::east_opt(-5 * 3600));
+        assert_eq!(resolve_offset("UTC+3"), FixedOffset::east_opt(3 * 3600));
+        assert_eq!(
+            resolve_offset("UTC+5:30"),
+            FixedOffset::east_opt(5 * 3600 + 30 * 60)
+        );
+        // An IANA name is not an offset form.
+        assert_eq!(resolve_offset("America/New_York"), None);
+    }
+
+    #[test]
+    fn datetime_at_applies_offsets_and_iana_zones() {
+        // UTC / empty: midnight.
+        assert_eq!(hour_of(NEW_YEAR_2021_UTC, ""), Some(0));
+        assert_eq!(minute_of(NEW_YEAR_2021_UTC, ""), Some(0));
+        // A half-hour offset shifts hour and minute.
+        assert_eq!(hour_of(NEW_YEAR_2021_UTC, "UTC+05:30"), Some(5));
+        assert_eq!(minute_of(NEW_YEAR_2021_UTC, "UTC+05:30"), Some(30));
+        // GMT-5 rolls back to the previous evening.
+        assert_eq!(hour_of(NEW_YEAR_2021_UTC, "GMT-5"), Some(19));
+        // An IANA zone (EST is -5 in January) matches the offset form.
+        assert_eq!(hour_of(NEW_YEAR_2021_UTC, "America/New_York"), Some(19));
+        // Timezone changes the weekday: Friday (6) in UTC, Thursday (5) at GMT-5.
+        assert_eq!(dayofweek_of(NEW_YEAR_2021_UTC, ""), Some(6));
+        assert_eq!(dayofweek_of(NEW_YEAR_2021_UTC, "GMT-5"), Some(5));
+        // An unrecognised zone falls back to UTC rather than erroring.
+        assert_eq!(hour_of(NEW_YEAR_2021_UTC, "Not/AZone"), Some(0));
     }
 }
