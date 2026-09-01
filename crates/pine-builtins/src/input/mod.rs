@@ -110,7 +110,7 @@ struct InputInt<O: PineOutput + InputOutput> {
 
 impl<O: PineOutput + InputOutput> InputInt<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let _ = (self.step, &self.tooltip, &self.options);
+        let _ = (&self.tooltip, &self.options);
         let value = num_input(ctx, &self.title, self.defval, self.minval, self.maxval).trunc();
         ctx.output.add_input(Input {
             kind: "int".to_string(),
@@ -118,6 +118,9 @@ impl<O: PineOutput + InputOutput> InputInt<O> {
             group: self.group.clone(),
             default: InputValue::Int(self.defval as i64),
             value: InputValue::Int(value as i64),
+            min_val: self.minval,
+            max_val: self.maxval,
+            step: self.step,
         });
         Ok(Value::Number(value))
     }
@@ -146,7 +149,7 @@ struct InputFloat<O: PineOutput + InputOutput> {
 
 impl<O: PineOutput + InputOutput> InputFloat<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let _ = (self.step, &self.tooltip, &self.options);
+        let _ = (&self.tooltip, &self.options);
         let value = num_input(ctx, &self.title, self.defval, self.minval, self.maxval);
         ctx.output.add_input(Input {
             kind: "float".to_string(),
@@ -154,6 +157,9 @@ impl<O: PineOutput + InputOutput> InputFloat<O> {
             group: self.group.clone(),
             default: InputValue::Float(self.defval),
             value: InputValue::Float(value),
+            min_val: self.minval,
+            max_val: self.maxval,
+            step: self.step,
         });
         Ok(Value::Number(value))
     }
@@ -185,6 +191,9 @@ impl InputBool {
             group: self.group.clone(),
             default: InputValue::Bool(self.defval),
             value: InputValue::Bool(value),
+            min_val: None,
+            max_val: None,
+            step: None,
         });
         Ok(Value::Bool(value))
     }
@@ -215,6 +224,9 @@ impl<O: PineOutput + InputOutput> InputString<O> {
             group: self.group.clone(),
             default: InputValue::Str(self.defval.clone()),
             value: InputValue::Str(value.clone()),
+            min_val: None,
+            max_val: None,
+            step: None,
         });
         Ok(Value::String(value))
     }
@@ -245,6 +257,9 @@ impl<O: PineOutput + InputOutput> InputSession<O> {
             group: self.group.clone(),
             default: InputValue::Str(self.defval.clone()),
             value: InputValue::Str(value.clone()),
+            min_val: None,
+            max_val: None,
+            step: None,
         });
         Ok(Value::String(value))
     }
@@ -275,6 +290,9 @@ impl InputColor {
             group: self.group.clone(),
             default: InputValue::Color(self.defval.clone()),
             value: InputValue::Color(self.defval.clone()),
+            min_val: None,
+            max_val: None,
+            step: None,
         });
         Ok(Value::Color(self.defval.clone()))
     }
@@ -306,6 +324,9 @@ impl InputTime {
             group: self.group.clone(),
             default: InputValue::Int(self.defval as i64),
             value: InputValue::Int(value as i64),
+            min_val: None,
+            max_val: None,
+            step: None,
         });
         Ok(Value::Number(value))
     }
@@ -338,6 +359,9 @@ impl<O: PineOutput + InputOutput> InputSource<O> {
             group: self.group.clone(),
             default: InputValue::Str(series_id.clone()),
             value: InputValue::Str(series_id),
+            min_val: None,
+            max_val: None,
+            step: None,
         });
         Ok(self.defval.clone())
     }
@@ -368,6 +392,9 @@ impl<O: PineOutput + InputOutput> InputPrice<O> {
             group: self.group.clone(),
             default: InputValue::Float(self.defval),
             value: InputValue::Float(value),
+            min_val: None,
+            max_val: None,
+            step: None,
         });
         Ok(Value::Number(value))
     }
@@ -402,6 +429,9 @@ macro_rules! input_string_like {
                     group: self.group.clone(),
                     default: InputValue::Str(self.defval.clone()),
                     value: InputValue::Str(value.clone()),
+                    min_val: None,
+                    max_val: None,
+                    step: None,
                 });
                 Ok(Value::String(value))
             }
@@ -439,6 +469,9 @@ impl<O: PineOutput + InputOutput> InputEnum<O> {
             group: self.group.clone(),
             default: InputValue::Str(member.clone()),
             value: InputValue::Str(member),
+            min_val: None,
+            max_val: None,
+            step: None,
         });
         Ok(self.defval.clone())
     }
@@ -518,6 +551,9 @@ impl<O: PineOutput + InputOutput> InputAuto<O> {
             group: self.group.clone(),
             default,
             value: effective_value,
+            min_val: None,
+            max_val: None,
+            step: None,
         });
         Ok(effective)
     }

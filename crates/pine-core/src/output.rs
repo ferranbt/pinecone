@@ -324,6 +324,11 @@ pub struct Input {
     /// The `defval` the script declared.
     pub default: InputValue,
     pub value: InputValue,
+    /// The declared `minval`/`maxval`/`step` of a numeric input, for range
+    /// discovery (e.g. parameter sweeps); `None` when not given.
+    pub min_val: Option<f64>,
+    pub max_val: Option<f64>,
+    pub step: Option<f64>,
 }
 
 /// Base trait for all output implementations
