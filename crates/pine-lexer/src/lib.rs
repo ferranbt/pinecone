@@ -211,10 +211,35 @@ impl Lexer {
             }
         }
 
-        // No decimal point means an integer literal; Pine treats the two types
-        // differently. (This lexer does not read scientific notation, so a `.`
-        // is the only thing that makes a literal a float.)
-        let typ = if num_str.contains('.') {
+        // Scientific notation: `e`/`E`, an optional sign, then digits. A literal
+        // with an exponent is a float, as is one with a `.`; anything else is an
+        // integer, which Pine treats as a distinct type.
+        let mut is_float = num_str.contains('.');
+        if matches!(self.peek(), Some('e') | Some('E')) {
+            let mut ahead = self.current + 1;
+            if matches!(self.input.get(ahead), Some('+') | Some('-')) {
+                ahead += 1;
+            }
+            if self.input.get(ahead).is_some_and(|c| c.is_ascii_digit()) {
+                num_str.push(self.peek().unwrap());
+                self.advance();
+                if matches!(self.peek(), Some('+') | Some('-')) {
+                    num_str.push(self.peek().unwrap());
+                    self.advance();
+                }
+                while let Some(ch) = self.peek() {
+                    if ch.is_ascii_digit() {
+                        num_str.push(ch);
+                        self.advance();
+                    } else {
+                        break;
+                    }
+                }
+                is_float = true;
+            }
+        }
+
+        let typ = if is_float {
             TokenType::Number(num_str.parse::<f64>().map_err(|_| LexerError {
                 line: start_line,
                 column: start_col,
@@ -892,6 +917,22 @@ impl Lexer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scientific_notation_is_a_float_literal() {
+        let number = |src: &str| Lexer::new(src).tokenize().unwrap().remove(0).typ;
+        assert_eq!(number("1e6"), TokenType::Number(1e6));
+        assert_eq!(number("1.5e-3"), TokenType::Number(1.5e-3));
+        assert_eq!(number("2E10"), TokenType::Number(2E10));
+        assert_eq!(number(".5e2"), TokenType::Number(0.5e2));
+        assert_eq!(number("1e+5"), TokenType::Number(1e5));
+        // A plain integer stays an integer.
+        assert_eq!(number("123"), TokenType::IntLiteral(123));
+        // `1e` with no exponent digit: the number is `1`, `e` a separate ident.
+        let toks = Lexer::new("1e").tokenize().unwrap();
+        assert_eq!(toks[0].typ, TokenType::IntLiteral(1));
+        assert_eq!(toks[1].typ, TokenType::Ident("e".to_string()));
+    }
 
     #[test]
     fn test_line_wrapping_non_multiple_of_4_joins_lines() -> eyre::Result<()> {

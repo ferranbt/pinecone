@@ -1,0 +1,14 @@
+//@version=6
+indicator("basics/scientific_notation")
+// A numeric literal with an `e`/`E` exponent is a float. Checked via comparisons
+// so the result does not depend on float-to-string formatting.
+log.info(str.tostring(1e6 == 1000000.0))
+log.info(str.tostring(1.5e3 == 1500.0))
+log.info(str.tostring(2E-2 == 0.02))
+log.info(str.tostring(1e-10 > 0.0 and 1e-10 < 1e-9))
+
+// Expected output:
+// true
+// true
+// true
+// true
