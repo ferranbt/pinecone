@@ -70,7 +70,7 @@ struct InputLegacy<O: PineOutput + InputOutput> {
 
 impl<O: PineOutput + InputOutput> InputLegacy<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
-        let _ = (self.step, &self.tooltip, self.confirm);
+        let _ = (&self.tooltip, self.confirm);
         let kind = match &self.r#type {
             Value::String(tag) if !tag.is_empty() => tag.clone(),
             _ => infer_kind(&self.defval),
@@ -99,6 +99,9 @@ impl<O: PineOutput + InputOutput> InputLegacy<O> {
             default: to_input_value(&kind, &self.defval),
             value: to_input_value(&kind, &effective),
             kind,
+            min_val: self.minval,
+            max_val: self.maxval,
+            step: self.step,
         });
         Ok(effective)
     }
