@@ -181,6 +181,7 @@ pub struct Plot {
     pub precision: Option<f64>,
     pub force_overlay: bool,
     pub linestyle: String,
+    pub metadata: HashMap<String, String>,
 }
 
 /// Represents a plotarrow output
