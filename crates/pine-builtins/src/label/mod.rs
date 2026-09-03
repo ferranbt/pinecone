@@ -637,3 +637,67 @@ pub fn register<O: PineOutput + LabelOutput>() -> Value<O> {
         value: None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pine_core::DefaultPineOutput;
+    use pine_interpreter::{EvaluatedArg, FunctionCallArgs};
+
+    #[derive(BuiltinFunction)]
+    #[builtin(name = "test.opt_style")]
+    struct OptStyle {
+        #[arg(default = None)]
+        style: Option<LabelStyle>,
+    }
+
+    impl OptStyle {
+        fn execute<O: PineOutput>(
+            &self,
+            _ctx: &mut Interpreter<O>,
+        ) -> Result<Value<O>, RuntimeError> {
+            Ok(match self.style {
+                Some(LabelStyle::StyleCircle) => Value::String("circle".to_string()),
+                Some(_) => Value::String("other".to_string()),
+                None => Value::Na,
+            })
+        }
+    }
+
+    fn call(
+        args: Vec<EvaluatedArg<DefaultPineOutput>>,
+    ) -> Result<Value<DefaultPineOutput>, RuntimeError> {
+        let mut interp = Interpreter::<DefaultPineOutput>::new();
+        OptStyle::builtin_fn(
+            &mut interp,
+            FunctionCallArgs {
+                type_args: vec![],
+                args,
+                call_id: 0,
+            },
+        )
+    }
+
+    #[test]
+    fn test_optional_enum_in_builtin() {
+        // present_enum_argument_is_converted
+        let value = call(vec![EvaluatedArg::Positional(Value::String(
+            "style_circle".to_string(),
+        ))])
+        .unwrap();
+        assert!(matches!(value, Value::String(s) if s == "circle"));
+   
+        // absent_and_na_map_to_none
+        assert!(matches!(call(vec![]).unwrap(), Value::Na));
+        assert!(matches!(
+            call(vec![EvaluatedArg::Positional(Value::Na)]).unwrap(),
+            Value::Na
+        ));
+
+        // unknown_variant_is_rejected
+        assert!(call(vec![EvaluatedArg::Positional(Value::String(
+            "nope".to_string()
+        ))])
+        .is_err());
+    }
+}

@@ -757,6 +757,22 @@ fn is_field_lazy(field: &Field) -> bool {
     false
 }
 
+/// The `T` of an `Option<T>` field type, as tokens (`_` if it can't be read).
+fn option_inner_type(ty: &syn::Type) -> proc_macro2::TokenStream {
+    if let syn::Type::Path(path) = ty {
+        if let Some(segment) = path.path.segments.last() {
+            if segment.ident == "Option" {
+                if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                    if let Some(syn::GenericArgument::Type(inner)) = args.args.first() {
+                        return quote! { #inner };
+                    }
+                }
+            }
+        }
+    }
+    quote! { _ }
+}
+
 fn generate_value_conversion(
     field_name: &syn::Ident,
     field_type: &syn::Type,
@@ -810,12 +826,22 @@ fn generate_value_conversion(
                     Some(arg_value.as_bool()?)
                 }
             }
-        } else {
+        } else if type_str.contains("Value") {
             quote! {
                 if matches!(arg_value, Value::Na) {
                     None
                 } else {
                     Some(arg_value)
+                }
+            }
+        } else {
+            // `Option<enum>` and other custom inners: convert from the argument.
+            let inner = option_inner_type(field_type);
+            quote! {
+                if matches!(arg_value, Value::Na) {
+                    None
+                } else {
+                    Some(<#inner as ::pine_interpreter::FromArg<O>>::from_arg(&arg_value)?)
                 }
             }
         }
