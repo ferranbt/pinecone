@@ -14,6 +14,21 @@ use thiserror::Error;
 
 pub use pine_core::LibraryLoader;
 
+/// Convert a call argument into a builtin parameter type. Blanket-implemented for
+/// any `serde`-deserializable type by deserializing the argument's string, so a
+/// string-constant enum (`LabelStyle`, …) can be a builtin parameter directly.
+pub trait FromArg<O: PineOutput>: Sized {
+    fn from_arg(value: &Value<O>) -> Result<Self, RuntimeError>;
+}
+
+impl<O: PineOutput, T: serde::de::DeserializeOwned> FromArg<O> for T {
+    fn from_arg(value: &Value<O>) -> Result<Self, RuntimeError> {
+        let s = value.as_string()?;
+        let de = serde::de::value::StrDeserializer::<serde::de::value::Error>::new(s.as_str());
+        T::deserialize(de).map_err(|e| RuntimeError::TypeError(format!("invalid value `{s}`: {e}")))
+    }
+}
+
 /// Record `value` as what `name` held on a completed bar, so `name[n]` can reach
 /// it. Entries beyond [`MAX_LOOKBACK`] are dropped.
 ///

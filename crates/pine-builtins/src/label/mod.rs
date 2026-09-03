@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_core::{Color, Label, LabelOutput, PineOutput};
+use pine_core::{Color, HAlign, Label, LabelOutput, LabelStyle, PineOutput, Size, XLoc, YLoc};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -13,20 +13,20 @@ struct LabelNew<O: PineOutput + LabelOutput> {
     y: Value<O>,
     #[arg(default = "")]
     text: String,
-    #[arg(default = "bar_index")]
-    xloc: String,
-    #[arg(default = "price")]
-    yloc: String,
+    #[arg(default = XLoc::BarIndex)]
+    xloc: XLoc,
+    #[arg(default = YLoc::Price)]
+    yloc: YLoc,
     #[arg(default = None)]
     color: Option<Color>,
-    #[arg(default = "style_label_down")]
-    style: String,
+    #[arg(default = LabelStyle::StyleLabelDown)]
+    style: LabelStyle,
     #[arg(default = None)]
     textcolor: Option<Color>,
-    #[arg(default = "normal")]
-    size: String,
-    #[arg(default = "center")]
-    textalign: String,
+    #[arg(default = Size::Normal)]
+    size: Size,
+    #[arg(default = HAlign::AlignCenter)]
+    textalign: HAlign,
     #[arg(default = None)]
     tooltip: Option<String>,
     #[arg(default = "default")]
@@ -40,13 +40,13 @@ impl<O: PineOutput + LabelOutput> LabelNew<O> {
             x: self.x.as_number()?,
             y: self.y.as_number()?,
             text: self.text.clone(),
-            xloc: self.xloc.clone(),
-            yloc: self.yloc.clone(),
+            xloc: self.xloc,
+            yloc: self.yloc,
             color: self.color.clone(),
-            style: self.style.clone(),
+            style: self.style,
             textcolor: self.textcolor.clone(),
-            size: self.size.clone(),
-            textalign: self.textalign.clone(),
+            size: self.size,
+            textalign: self.textalign,
             tooltip: self.tooltip.clone(),
             text_font_family: self.text_font_family.clone(),
         };
@@ -127,7 +127,7 @@ impl<O: PineOutput + LabelOutput> LabelSetXy<O> {
 struct LabelSetXloc<O: PineOutput + LabelOutput> {
     id: f64,
     x: Value<O>,
-    xloc: String,
+    xloc: XLoc,
 }
 
 impl<O: PineOutput + LabelOutput> LabelSetXloc<O> {
@@ -138,7 +138,7 @@ impl<O: PineOutput + LabelOutput> LabelSetXloc<O> {
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
         label.x = self.x.as_number()?;
-        label.xloc = self.xloc.clone();
+        label.xloc = self.xloc;
         Ok(Value::Na)
     }
 }
@@ -148,7 +148,7 @@ impl<O: PineOutput + LabelOutput> LabelSetXloc<O> {
 #[builtin(name = "label.set_yloc", output = LabelOutput)]
 struct LabelSetYloc {
     id: f64,
-    yloc: String,
+    yloc: YLoc,
 }
 
 impl LabelSetYloc {
@@ -161,7 +161,7 @@ impl LabelSetYloc {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        label.yloc = self.yloc.clone();
+        label.yloc = self.yloc;
         Ok(Value::Na)
     }
 }
@@ -194,7 +194,7 @@ impl LabelSetColor {
 #[builtin(name = "label.set_style", output = LabelOutput)]
 struct LabelSetStyle {
     id: f64,
-    style: String,
+    style: LabelStyle,
 }
 
 impl LabelSetStyle {
@@ -207,7 +207,7 @@ impl LabelSetStyle {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        label.style = self.style.clone();
+        label.style = self.style;
         Ok(Value::Na)
     }
 }
@@ -263,7 +263,7 @@ impl LabelSetTextcolor {
 #[builtin(name = "label.set_size", output = LabelOutput)]
 struct LabelSetSize {
     id: f64,
-    size: String,
+    size: Size,
 }
 
 impl LabelSetSize {
@@ -276,7 +276,7 @@ impl LabelSetSize {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        label.size = self.size.clone();
+        label.size = self.size;
         Ok(Value::Na)
     }
 }
@@ -286,7 +286,7 @@ impl LabelSetSize {
 #[builtin(name = "label.set_textalign", output = LabelOutput)]
 struct LabelSetTextalign {
     id: f64,
-    textalign: String,
+    textalign: HAlign,
 }
 
 impl LabelSetTextalign {
@@ -299,7 +299,7 @@ impl LabelSetTextalign {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        label.textalign = self.textalign.clone();
+        label.textalign = self.textalign;
         Ok(Value::Na)
     }
 }

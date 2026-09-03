@@ -10,7 +10,7 @@ label.set_y(lbl, 200.0)
 label.set_xy(lbl, 20, 300.0)
 label.set_style(lbl, label.style_arrowup)
 label.set_size(lbl, "large")
-label.set_textalign(lbl, "left")
+label.set_textalign(lbl, text.align_left)
 label.set_tooltip(lbl, "Tooltip text")
 
 // Verify values

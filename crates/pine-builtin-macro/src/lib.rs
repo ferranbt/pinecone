@@ -838,8 +838,9 @@ fn generate_value_conversion(
     } else if type_str.contains("Value") {
         quote! { arg_value }
     } else {
-        // Fallback
-        quote! { arg_value }
+        // Any other type is converted from the argument — e.g. a string-constant
+        // enum deserialized from a `Value::String`.
+        quote! { <#field_type as ::pine_interpreter::FromArg<O>>::from_arg(&arg_value)? }
     };
 
     if has_default {

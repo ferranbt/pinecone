@@ -17,19 +17,110 @@ impl Color {
     }
 }
 
+/// The marker/label shape a `label` draws with (the `label.style_*` constants).
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LabelStyle {
+    StyleNone,
+    StyleXcross,
+    StyleCross,
+    StyleTriangleup,
+    StyleTriangledown,
+    StyleFlag,
+    StyleCircle,
+    StyleArrowup,
+    StyleArrowdown,
+    StyleLabelUp,
+    StyleLabelDown,
+    StyleLabelLeft,
+    StyleLabelRight,
+    StyleLabelLowerLeft,
+    StyleLabelLowerRight,
+    StyleLabelUpperLeft,
+    StyleLabelUpperRight,
+    StyleLabelCenter,
+    StyleSquare,
+    StyleDiamond,
+    StyleTextOutline,
+}
+
+/// The x-axis coordinate system (`xloc.*`).
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum XLoc {
+    BarIndex,
+    BarTime,
+}
+
+/// The y-axis reference for a label (`yloc.*`).
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum YLoc {
+    Price,
+    Abovebar,
+    Belowbar,
+}
+
+/// A drawable's text/marker size (`size.*`).
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Size {
+    Auto,
+    Tiny,
+    Small,
+    Normal,
+    Large,
+    Huge,
+}
+
+/// Horizontal text alignment (`text.align_left`/`_center`/`_right`).
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HAlign {
+    AlignLeft,
+    AlignCenter,
+    AlignRight,
+}
+
+/// How a line/box extends past its endpoints (`extend.*`).
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Extend {
+    None,
+    Left,
+    Right,
+    Both,
+}
+
+/// A line's stroke (`line.style_*`). The `solid`/`dotted`/`dashed` aliases accept
+/// the v3/v4 bare constants as well as the v5/v6 `style_*` ones.
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LineStyle {
+    #[serde(alias = "solid")]
+    StyleSolid,
+    #[serde(alias = "dotted")]
+    StyleDotted,
+    #[serde(alias = "dashed")]
+    StyleDashed,
+    StyleArrowLeft,
+    StyleArrowRight,
+    StyleArrowBoth,
+}
+
 /// Represents a label drawable object
 #[derive(Clone, Debug)]
 pub struct Label {
     pub x: f64,
     pub y: f64,
     pub text: String,
-    pub xloc: String,
-    pub yloc: String,
+    pub xloc: XLoc,
+    pub yloc: YLoc,
     pub color: Option<Color>,
-    pub style: String,
+    pub style: LabelStyle,
     pub textcolor: Option<Color>,
-    pub size: String,
-    pub textalign: String,
+    pub size: Size,
+    pub textalign: HAlign,
     pub tooltip: Option<String>,
     pub text_font_family: String,
 }
@@ -113,10 +204,10 @@ pub struct LineObject {
     pub y1: f64,
     pub x2: f64,
     pub y2: f64,
-    pub xloc: String,
-    pub extend: String,
+    pub xloc: XLoc,
+    pub extend: Extend,
     pub color: Option<Color>,
-    pub style: String,
+    pub style: LineStyle,
     pub width: f64,
 }
 

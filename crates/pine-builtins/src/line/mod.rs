@@ -5,7 +5,7 @@
 
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::PineVersion;
-use pine_core::{Color, LineObject, LineOutput, PineOutput};
+use pine_core::{Color, Extend, LineObject, LineOutput, LineStyle, PineOutput, XLoc};
 use pine_interpreter::{Builtin, BuiltinFn, Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -19,14 +19,14 @@ struct LineNew<O: PineOutput + LineOutput> {
     y1: Value<O>,
     x2: Value<O>,
     y2: Value<O>,
-    #[arg(default = "bar_index")]
-    xloc: String,
-    #[arg(default = "none")]
-    extend: String,
+    #[arg(default = XLoc::BarIndex)]
+    xloc: XLoc,
+    #[arg(default = Extend::None)]
+    extend: Extend,
     #[arg(default = None)]
     color: Option<Color>,
-    #[arg(default = "solid")]
-    style: String,
+    #[arg(default = LineStyle::StyleSolid)]
+    style: LineStyle,
     #[arg(default = 1.0)]
     width: f64,
 }
@@ -38,10 +38,10 @@ impl<O: PineOutput + LineOutput> LineNew<O> {
             y1: self.y1.as_number()?,
             x2: self.x2.as_number()?,
             y2: self.y2.as_number()?,
-            xloc: self.xloc.clone(),
-            extend: self.extend.clone(),
+            xloc: self.xloc,
+            extend: self.extend,
             color: self.color.clone(),
-            style: self.style.clone(),
+            style: self.style,
             width: self.width,
         };
         let id = ctx.output.add_line(line);
@@ -194,7 +194,7 @@ impl LineSetWidth {
 #[builtin(name = "line.set_style", output = LineOutput)]
 struct LineSetStyle {
     id: f64,
-    style: String,
+    style: LineStyle,
 }
 
 impl LineSetStyle {
@@ -203,7 +203,7 @@ impl LineSetStyle {
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let line = get_line_mut(ctx, self.id)?;
-        line.style = self.style.clone();
+        line.style = self.style;
         Ok(Value::Na)
     }
 }
@@ -213,7 +213,7 @@ impl LineSetStyle {
 #[builtin(name = "line.set_extend", output = LineOutput)]
 struct LineSetExtend {
     id: f64,
-    extend: String,
+    extend: Extend,
 }
 
 impl LineSetExtend {
@@ -222,7 +222,7 @@ impl LineSetExtend {
         ctx: &mut Interpreter<O>,
     ) -> Result<Value<O>, RuntimeError> {
         let line = get_line_mut(ctx, self.id)?;
-        line.extend = self.extend.clone();
+        line.extend = self.extend;
         Ok(Value::Na)
     }
 }
@@ -364,8 +364,8 @@ struct Hline<O: PineOutput + LineOutput> {
     title: String,
     #[arg(default = None)]
     color: Option<Color>,
-    #[arg(default = "solid")]
-    linestyle: String,
+    #[arg(default = LineStyle::StyleSolid)]
+    linestyle: LineStyle,
     #[arg(default = 1.0)]
     linewidth: f64,
 }
@@ -379,10 +379,10 @@ impl<O: PineOutput + LineOutput> Hline<O> {
             y1: price,
             x2: 0.0,
             y2: price,
-            xloc: "bar_index".to_string(),
-            extend: "both".to_string(),
+            xloc: XLoc::BarIndex,
+            extend: Extend::Both,
             color: self.color.clone(),
-            style: self.linestyle.clone(),
+            style: self.linestyle,
             width: self.linewidth,
         };
         let id = ctx.output.add_line(line);
@@ -462,13 +462,13 @@ struct LineSetXloc<O: PineOutput + LineOutput> {
     id: f64,
     x1: Value<O>,
     x2: Value<O>,
-    xloc: String,
+    xloc: XLoc,
 }
 
 impl<O: PineOutput + LineOutput> LineSetXloc<O> {
     fn execute(&self, ctx: &mut Interpreter<O>) -> Result<Value<O>, RuntimeError> {
         let (x1, x2) = (self.x1.as_number()?, self.x2.as_number()?);
-        let xloc = self.xloc.clone();
+        let xloc = self.xloc;
         let line = get_line_mut(ctx, self.id)?;
         line.x1 = x1;
         line.x2 = x2;
