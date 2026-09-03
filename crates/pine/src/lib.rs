@@ -615,6 +615,19 @@ impl<O: PineOutput> Script<O> {
         }
     }
 
+    pub fn run_fn<F>(mut self, mut on_output: F) -> Result<(), Error>
+    where
+        F: FnMut(O),
+    {
+        let bars = std::mem::take(&mut self.bars);
+        let last_bar = bars.last().cloned();
+        for bar in &bars {
+            let output = self.execute(bar, last_bar.as_ref())?;
+            on_output(output);
+        }
+        Ok(())
+    }
+
     /// Replay the script over every bar from its source, returning what each
     /// one produced.
     pub fn run(mut self) -> Result<Run<O>, Error> {
