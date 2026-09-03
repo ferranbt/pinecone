@@ -686,7 +686,7 @@ mod tests {
         ))])
         .unwrap();
         assert!(matches!(value, Value::String(s) if s == "circle"));
-   
+
         // absent_and_na_map_to_none
         assert!(matches!(call(vec![]).unwrap(), Value::Na));
         assert!(matches!(
