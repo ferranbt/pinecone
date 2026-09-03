@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 /// The unit of a [`Timeframe`]. Pine writes each as a suffix on the multiplier
 /// (`"3D"`, `"5S"`, `"1W"`); minutes have no suffix (`"60"`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -51,10 +53,35 @@ impl TimeframeUnit {
 /// The chart timeframe a script runs on, exposed as `timeframe.*`.
 ///
 /// A multiplier plus a unit, e.g. `{ 3, Daily }` → `timeframe.period == "3D"`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Timeframe {
     pub multiplier: u32,
     pub unit: TimeframeUnit,
+}
+
+impl Ord for Timeframe {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.sort_key().cmp(&other.sort_key())
+    }
+}
+
+impl PartialOrd for Timeframe {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl serde::Serialize for Timeframe {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.period())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Timeframe {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let period = <String as serde::Deserialize>::deserialize(deserializer)?;
+        period.parse().map_err(serde::de::Error::custom)
+    }
 }
 
 impl Default for Timeframe {
@@ -99,6 +126,22 @@ const REGULAR_UNITS: [TimeframeUnit; 4] = [
 ];
 
 impl Timeframe {
+    fn sort_key(&self) -> (i128, u8, u32) {
+        let (millis_per_unit, rank): (i128, u8) = match self.unit {
+            TimeframeUnit::Ticks => (0, 0),
+            TimeframeUnit::Seconds => (1_000, 1),
+            TimeframeUnit::Minutes => (60_000, 2),
+            TimeframeUnit::Daily => (86_400_000, 3),
+            TimeframeUnit::Weekly => (604_800_000, 4),
+            TimeframeUnit::Monthly => (30 * 86_400_000, 5),
+        };
+        (
+            millis_per_unit * self.multiplier as i128,
+            rank,
+            self.multiplier,
+        )
+    }
+
     /// The whole timeframe expressed in minutes. `None` for sub-minute and month
     /// periods, which have no whole-minute length.
     pub fn as_minutes(&self) -> Option<u32> {
@@ -203,6 +246,20 @@ mod tests {
         );
         // Months and ticks have no fixed length.
         assert_eq!(Timeframe::from_str("1M").unwrap().to_millis(), None);
+    }
+
+    #[test]
+    fn orders_by_real_duration() {
+        let tf = |s: &str| Timeframe::from_str(s).unwrap();
+        assert!(tf("1T") < tf("30S"));
+        assert!(tf("30S") < tf("1"));
+        assert!(tf("1") < tf("60"));
+        assert!(tf("60") < tf("1D"));
+        assert!(tf("1D") < tf("1W"));
+        assert!(tf("1W") < tf("1M"));
+        // Equal duration, different unit: ordered deterministically, not equal.
+        assert!(tf("1440") < tf("1D"));
+        assert_ne!(tf("1440"), tf("1D"));
     }
 
     #[test]
