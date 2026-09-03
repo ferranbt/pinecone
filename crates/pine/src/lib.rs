@@ -21,11 +21,8 @@ pub use pine_core::{DataProvider, DirLoader, FileResolver, LibraryLoader};
 pub use run::{Run, RunResult};
 
 use pine_ast::Program;
-use pine_core::{
-    AlertConditionOutput, BoxOutput, DrawingOutput, FillOutput, GlobalOutput, InputOutput,
-    LabelOutput, LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
-};
 use pine_core::{Bar, Data, PineVersion, Timeframe, VersionError};
+use pine_core::{FullPineOutput, PineOutput};
 use pine_diagnostics::Diagnostic;
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use pine_lexer::{Lexer, LexerError};
@@ -139,6 +136,27 @@ pub fn analyze(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Analy
 /// The diagnostics from [`analyze`].
 pub fn check(source: &str, loader: Option<&dyn LibraryLoader>) -> Result<Vec<Diagnostic>, Error> {
     Ok(analyze(source, loader)?.diagnostics)
+}
+
+/// Collect a program's declared metadata — `indicator`/`library`, `input.*`, and
+/// any custom records the output type keeps — without market data.
+pub fn decode_metadata<O>(
+    source: &str,
+    custom_variables: HashMap<String, Value<O>>,
+) -> Result<O, Error>
+where
+    O: FullPineOutput,
+{
+    let (program, version) = parse_program(source)?;
+    let (mut consts, _) = pine_builtins::register_namespace_objects(version, None, None);
+    for (name, value) in custom_variables {
+        consts.insert(name, value);
+    }
+    let mut interpreter = Interpreter::<O>::new();
+    interpreter.set_const_variables(consts);
+
+    let _ = interpreter.execute(&program);
+    Ok(interpreter.output)
 }
 
 /// Parse and lint `source`, returning only the lint findings (no semantic
@@ -257,18 +275,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
     /// Compile PineScript source code into a Script with default output
     pub fn compile(self) -> Result<Script<O>, Error>
     where
-        O: LogOutput
-            + PlotOutput
-            + LabelOutput
-            + BoxOutput
-            + InputOutput
-            + LineOutput
-            + TableOutput
-            + MetadataOutput
-            + GlobalOutput
-            + AlertConditionOutput
-            + FillOutput
-            + DrawingOutput,
+        O: FullPineOutput,
     {
         let data = match self.data {
             Some(data) => data,
@@ -303,17 +310,8 @@ impl<O: PineOutput> ScriptBuilder<O> {
             .map(|pair| pair[1].time - pair[0].time);
 
         let source = self.source.as_str();
-        let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+        let (program, version) = parse_program(source)?;
 
-        let mut lexer = Lexer::with_version(source, version);
-        let tokens = lexer.tokenize()?;
-
-        let mut parser = Parser::new(tokens);
-        let statements = parser.parse()?;
-        let program = Program::new(statements);
-
-        // The interpreter's const environment: the registered namespaces plus any
-        // host-supplied globals. Built once and handed over as-is.
         let (mut consts, advances) = pine_builtins::register_namespace_objects(
             version,
             Some(syminfo),
@@ -328,7 +326,6 @@ impl<O: PineOutput> ScriptBuilder<O> {
             builtins.insert(name, value);
         }
 
-        // Semantic pre-check: reject if sema produces errors.
         let errors: Vec<_> =
             pine_sema::analyze(&program, &builtins, self.library_loader.as_deref())
                 .into_iter()
@@ -688,6 +685,18 @@ pub fn execute(source: &str, data: Data) -> Result<(), Error> {
         .compile()?
         .run()
         .map(|_| ())
+}
+
+fn parse_program(source: &str) -> Result<(Program, PineVersion), Error> {
+    let version = PineVersion::detect(source)?.unwrap_or(PineVersion::LATEST);
+
+    let mut lexer = Lexer::with_version(source, version);
+    let tokens = lexer.tokenize()?;
+
+    let mut parser = Parser::new(tokens);
+    let statements = parser.parse()?;
+
+    Ok((Program::new(statements), version))
 }
 
 #[cfg(test)]

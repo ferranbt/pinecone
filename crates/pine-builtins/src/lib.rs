@@ -1,8 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_core::{
-    AlertConditionOutput, BoxOutput, DrawingOutput, FillOutput, GlobalOutput, InputOutput,
-    LabelOutput, LineOutput, LogOutput, MetadataOutput, PineOutput, PlotOutput, TableOutput,
-};
+use pine_core::{FullPineOutput, PineOutput};
 use pine_core::{PineVersion, SymInfo, Timeframe};
 use pine_interpreter::{Builtin, Interpreter, RuntimeError, Value};
 use std::collections::HashMap;
@@ -205,21 +202,7 @@ fn callable_namespace<O: PineOutput>(namespace: Value<O>) -> Value<O> {
 ///
 /// This uses DefaultPineOutput for now. Full generic support will be added when the
 /// BuiltinFunction macro is updated to support generic output types.
-pub fn register_namespace_objects<
-    O: PineOutput
-        + LogOutput
-        + PlotOutput
-        + LabelOutput
-        + BoxOutput
-        + InputOutput
-        + LineOutput
-        + TableOutput
-        + MetadataOutput
-        + GlobalOutput
-        + AlertConditionOutput
-        + FillOutput
-        + DrawingOutput,
->(
+pub fn register_namespace_objects<O: FullPineOutput>(
     version: PineVersion,
     syminfo: Option<SymInfo>,
     timeframe: Option<Timeframe>,

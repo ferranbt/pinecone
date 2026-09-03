@@ -2,6 +2,41 @@
 
 use std::collections::HashMap;
 
+/// Umbrella trait for everything a Pine output sink must implement.
+pub trait FullPineOutput:
+    PineOutput
+    + LogOutput
+    + PlotOutput
+    + LabelOutput
+    + BoxOutput
+    + InputOutput
+    + LineOutput
+    + TableOutput
+    + MetadataOutput
+    + GlobalOutput
+    + AlertConditionOutput
+    + FillOutput
+    + DrawingOutput
+{
+}
+
+impl<T> FullPineOutput for T where
+    T: PineOutput
+        + LogOutput
+        + PlotOutput
+        + LabelOutput
+        + BoxOutput
+        + InputOutput
+        + LineOutput
+        + TableOutput
+        + MetadataOutput
+        + GlobalOutput
+        + AlertConditionOutput
+        + FillOutput
+        + DrawingOutput
+{
+}
+
 /// Represents a color with RGBA components
 #[derive(Clone, Debug, PartialEq)]
 pub struct Color {
