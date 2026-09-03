@@ -14,18 +14,25 @@ use thiserror::Error;
 
 pub use pine_core::LibraryLoader;
 
-/// Convert a call argument into a builtin parameter type. Blanket-implemented for
-/// any `serde`-deserializable type by deserializing the argument's string, so a
-/// string-constant enum (`LabelStyle`, …) can be a builtin parameter directly.
+/// Convert a builtin call argument into a custom parameter type — one that isn't
+/// a macro primitive (`String`, `f64`, `bool`, `Color`, `Value`, `Num`).
+///
+/// The rule: the type implements [`serde::Deserialize`] and is deserialized from
+/// the argument's `Value::String`, so a fieldless enum with
+/// `#[serde(rename_all = "snake_case")]` accepts the lowercase constants scripts
+/// write (`"close"`, `"signed"`, …). On mismatch the error names the argument and
+/// — for an enum — lists the accepted variants.
 pub trait FromArg<O: PineOutput>: Sized {
-    fn from_arg(value: &Value<O>) -> Result<Self, RuntimeError>;
+    fn from_arg(arg: &str, value: &Value<O>) -> Result<Self, RuntimeError>;
 }
 
 impl<O: PineOutput, T: serde::de::DeserializeOwned> FromArg<O> for T {
-    fn from_arg(value: &Value<O>) -> Result<Self, RuntimeError> {
-        let s = value.as_string()?;
+    fn from_arg(arg: &str, value: &Value<O>) -> Result<Self, RuntimeError> {
+        let s = value
+            .as_string()
+            .map_err(|_| RuntimeError::TypeError(format!("`{arg}` expects a string constant")))?;
         let de = serde::de::value::StrDeserializer::<serde::de::value::Error>::new(s.as_str());
-        T::deserialize(de).map_err(|e| RuntimeError::TypeError(format!("invalid value `{s}`: {e}")))
+        T::deserialize(de).map_err(|e| RuntimeError::TypeError(format!("`{arg}`: {e}")))
     }
 }
 

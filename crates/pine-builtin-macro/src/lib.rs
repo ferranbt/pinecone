@@ -779,6 +779,8 @@ fn generate_value_conversion(
     has_default: bool,
 ) -> proc_macro2::TokenStream {
     let type_str = quote! { #field_type }.to_string();
+    let field_name_str = field_name.to_string();
+    let field_name_str = field_name_str.trim_start_matches("r#");
 
     // Check if this is an Option type
     let is_option = type_str.contains("Option");
@@ -841,7 +843,7 @@ fn generate_value_conversion(
                 if matches!(arg_value, Value::Na) {
                     None
                 } else {
-                    Some(<#inner as ::pine_interpreter::FromArg<O>>::from_arg(&arg_value)?)
+                    Some(<#inner as ::pine_interpreter::FromArg<O>>::from_arg(#field_name_str, &arg_value)?)
                 }
             }
         }
@@ -866,7 +868,7 @@ fn generate_value_conversion(
     } else {
         // Any other type is converted from the argument — e.g. a string-constant
         // enum deserialized from a `Value::String`.
-        quote! { <#field_type as ::pine_interpreter::FromArg<O>>::from_arg(&arg_value)? }
+        quote! { <#field_type as ::pine_interpreter::FromArg<O>>::from_arg(#field_name_str, &arg_value)? }
     };
 
     if has_default {
