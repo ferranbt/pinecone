@@ -17,6 +17,33 @@ impl Color {
     }
 }
 
+/// The marker/label shape a `label` draws with (the `label.style_*` constants).
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LabelStyle {
+    StyleNone,
+    StyleXcross,
+    StyleCross,
+    StyleTriangleup,
+    StyleTriangledown,
+    StyleFlag,
+    StyleCircle,
+    StyleArrowup,
+    StyleArrowdown,
+    StyleLabelUp,
+    StyleLabelDown,
+    StyleLabelLeft,
+    StyleLabelRight,
+    StyleLabelLowerLeft,
+    StyleLabelLowerRight,
+    StyleLabelUpperLeft,
+    StyleLabelUpperRight,
+    StyleLabelCenter,
+    StyleSquare,
+    StyleDiamond,
+    StyleTextOutline,
+}
+
 /// Represents a label drawable object
 #[derive(Clone, Debug)]
 pub struct Label {
@@ -26,7 +53,7 @@ pub struct Label {
     pub xloc: String,
     pub yloc: String,
     pub color: Option<Color>,
-    pub style: String,
+    pub style: LabelStyle,
     pub textcolor: Option<Color>,
     pub size: String,
     pub textalign: String,

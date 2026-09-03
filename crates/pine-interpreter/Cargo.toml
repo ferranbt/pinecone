@@ -13,6 +13,7 @@ pine-broker = { workspace = true }
 pine-core = { workspace = true }
 pine-parser = { workspace = true }
 thiserror = { workspace = true }
+serde = { workspace = true }
 
 [dev-dependencies]
 eyre = { workspace = true }

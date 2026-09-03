@@ -1,5 +1,5 @@
 use pine_builtin_macro::BuiltinFunction;
-use pine_core::{Color, Label, LabelOutput, PineOutput};
+use pine_core::{Color, Label, LabelOutput, LabelStyle, PineOutput};
 use pine_interpreter::{Interpreter, RuntimeError, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -19,8 +19,8 @@ struct LabelNew<O: PineOutput + LabelOutput> {
     yloc: String,
     #[arg(default = None)]
     color: Option<Color>,
-    #[arg(default = "style_label_down")]
-    style: String,
+    #[arg(default = LabelStyle::StyleLabelDown)]
+    style: LabelStyle,
     #[arg(default = None)]
     textcolor: Option<Color>,
     #[arg(default = "normal")]
@@ -43,7 +43,7 @@ impl<O: PineOutput + LabelOutput> LabelNew<O> {
             xloc: self.xloc.clone(),
             yloc: self.yloc.clone(),
             color: self.color.clone(),
-            style: self.style.clone(),
+            style: self.style,
             textcolor: self.textcolor.clone(),
             size: self.size.clone(),
             textalign: self.textalign.clone(),
@@ -194,7 +194,7 @@ impl LabelSetColor {
 #[builtin(name = "label.set_style", output = LabelOutput)]
 struct LabelSetStyle {
     id: f64,
-    style: String,
+    style: LabelStyle,
 }
 
 impl LabelSetStyle {
@@ -207,7 +207,7 @@ impl LabelSetStyle {
             .output
             .get_label_mut(id)
             .ok_or_else(|| RuntimeError::TypeError(format!("Label with id {} not found", id)))?;
-        label.style = self.style.clone();
+        label.style = self.style;
         Ok(Value::Na)
     }
 }
