@@ -1673,21 +1673,21 @@ checksum = "3b3cff922bd51709b605d9ead9aa71031d81447142d828eb4a6eba76fe619f9b"
 
 [[package]]
 name = "pine-ast"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "pine-broker"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "pine-core",
 ]
 
 [[package]]
 name = "pine-builtin-macro"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1696,7 +1696,7 @@ dependencies = [
 
 [[package]]
 name = "pine-builtins"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -1711,7 +1711,7 @@ dependencies = [
 
 [[package]]
 name = "pine-core"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "serde",
  "thiserror",
@@ -1719,7 +1719,7 @@ dependencies = [
 
 [[package]]
 name = "pine-data"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "csv",
  "pine-core",
@@ -1731,11 +1731,11 @@ dependencies = [
 
 [[package]]
 name = "pine-diagnostics"
-version = "0.2.5"
+version = "0.2.6"
 
 [[package]]
 name = "pine-format"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "clap",
  "pine-ast",
@@ -1746,7 +1746,7 @@ dependencies = [
 
 [[package]]
 name = "pine-integration-tests"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "eyre",
  "pine-core",
@@ -1760,7 +1760,7 @@ dependencies = [
 
 [[package]]
 name = "pine-interpreter"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "eyre",
  "pine-ast",
@@ -1773,7 +1773,7 @@ dependencies = [
 
 [[package]]
 name = "pine-lang"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "eyre",
  "pine-ast",
@@ -1794,7 +1794,7 @@ dependencies = [
 
 [[package]]
 name = "pine-lexer"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "eyre",
  "pine-core",
@@ -1803,7 +1803,7 @@ dependencies = [
 
 [[package]]
 name = "pine-lint"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "pine-ast",
  "pine-diagnostics",
@@ -1813,7 +1813,7 @@ dependencies = [
 
 [[package]]
 name = "pine-lsp"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "pine-lang",
  "tokio",
@@ -1822,7 +1822,7 @@ dependencies = [
 
 [[package]]
 name = "pine-parser"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "clap",
  "eyre",
@@ -1836,7 +1836,7 @@ dependencies = [
 
 [[package]]
 name = "pine-reference"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "clap",
  "comrak",
@@ -1852,7 +1852,7 @@ dependencies = [
 
 [[package]]
 name = "pine-sema"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "pine-ast",
  "pine-core",
@@ -1864,7 +1864,7 @@ dependencies = [
 
 [[package]]
 name = "pinecone"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "clap",
  "eyre",
@@ -1874,7 +1874,7 @@ dependencies = [
 
 [[package]]
 name = "pinecone-benches"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "codspeed-criterion-compat",
  "pine-ast",

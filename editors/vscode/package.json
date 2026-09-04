@@ -2,7 +2,7 @@
   "name": "pinecone",
   "displayName": "Pine Script (pinecone)",
   "description": "Pine Script language support: diagnostics, lint and formatting via the pinecone language server.",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "publisher": "ferranborreguero",
   "license": "MPL-2.0",
   "repository": {
