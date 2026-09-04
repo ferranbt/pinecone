@@ -1788,6 +1788,7 @@ dependencies = [
  "pine-lint",
  "pine-parser",
  "pine-sema",
+ "serde",
  "serde_json",
 ]
 

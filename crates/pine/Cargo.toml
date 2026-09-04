@@ -22,3 +22,4 @@ pine-diagnostics = { workspace = true }
 pine-format = { workspace = true }
 pine-lint = { workspace = true }
 eyre = { workspace = true }
+serde = { workspace = true }

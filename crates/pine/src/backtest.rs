@@ -2,6 +2,7 @@
 
 use pine_broker::Trade;
 use pine_core::Timeframe;
+use serde::{Deserialize, Serialize};
 
 /// Milliseconds in a 365-day year, for annualising a per-bar figure.
 const MS_PER_YEAR: f64 = 365.0 * 24.0 * 60.0 * 60.0 * 1000.0;
@@ -101,7 +102,7 @@ impl Backtest {
 /// Standard summary metrics of a run, from [`Backtest::generate_metrics`]. Every
 /// figure is reported with the context that makes it comparable — returns beside
 /// drawdown, wins beside profit factor.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metrics {
     /// Bars the strategy ran over.
     pub bars: usize,
