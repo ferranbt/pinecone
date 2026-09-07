@@ -139,6 +139,10 @@ pub type PerBarAdvance<O> = Rc<dyn Fn(&mut Interpreter<O>)>;
 /// The insertion-ordered key/value pairs backing a [`Value::Map`].
 pub type MapEntries<O> = Rc<RefCell<Vec<(Value<O>, Value<O>)>>>;
 
+/// The named members backing a namespace object — the `fields` of a
+/// [`Value::Object`], and what an `import` caches per library path.
+pub type ObjectFields<O> = Rc<RefCell<HashMap<String, Value<O>>>>;
+
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value<O: PineOutput> {
@@ -502,6 +506,13 @@ pub struct Interpreter<O: PineOutput> {
     pub library_loader: Option<Box<dyn LibraryLoader>>,
     /// Exported items from this module (for library mode)
     exports: HashMap<String, Value<O>>,
+    /// Namespaces produced by `import`, keyed by library path. A library's
+    /// exports are a pure function of its source (exported functions run in the
+    /// caller's interpreter, so they cannot capture library top-level state), so
+    /// an import is executed once and reused on every later bar instead of being
+    /// re-loaded, re-parsed and re-executed per bar. Also stops the per-bar
+    /// method merge below from growing `methods` unboundedly.
+    imported: HashMap<String, ObjectFields<O>>,
     /// Output storage for plots, labels, logs, etc.
     pub output: O,
     /// Per-variable history for user-computed series (`var` declarations).
@@ -625,6 +636,7 @@ impl<O: PineOutput> Interpreter<O> {
             methods: HashMap::new(),
             library_loader: None,
             exports: HashMap::new(),
+            imported: HashMap::new(),
             output: O::default(),
             user_series_history: HashMap::new(),
             expr_history: HashMap::new(),
@@ -1236,43 +1248,62 @@ impl<O: PineOutput> Interpreter<O> {
             }
 
             Stmt::Import { path, alias, .. } => {
-                let source = match &self.library_loader {
-                    Some(loader) => loader.load_library(path),
-                    None => {
-                        return Err(RuntimeError::LibraryError(
-                            "Cannot import library: no library loader configured".to_string(),
+                // A library's exports and methods are a pure function of its
+                // source, so the whole load/parse/execute is done once per path
+                // and reused; on a later bar the import is a hash lookup.
+                let fields = if let Some(cached) = self.imported.get(path) {
+                    Rc::clone(cached)
+                } else {
+                    let source = match &self.library_loader {
+                        Some(loader) => loader.load_library(path),
+                        None => {
+                            return Err(RuntimeError::LibraryError(
+                                "Cannot import library: no library loader configured".to_string(),
+                            ))
+                        }
+                    }
+                    .map_err(|e| {
+                        RuntimeError::LibraryError(format!(
+                            "Failed to load library '{}': {}",
+                            path, e
                         ))
+                    })?;
+
+                    let library_program =
+                        pine_parser::Parser::parse_source(&source).map_err(|e| {
+                            RuntimeError::LibraryError(format!(
+                                "Failed to parse library '{}': {}",
+                                path, e
+                            ))
+                        })?;
+
+                    // Seed the library with the same built-in namespaces/globals
+                    // (e.g. `library`, `math`) so its declaration and body resolve.
+                    let mut library_interp = Interpreter::new();
+                    for (name, value) in self.snapshot() {
+                        library_interp.set_variable(&name, value);
                     }
-                }
-                .map_err(|e| {
-                    RuntimeError::LibraryError(format!("Failed to load library '{}': {}", path, e))
-                })?;
+                    library_interp.execute(&library_program)?;
 
-                let library_program = pine_parser::Parser::parse_source(&source).map_err(|e| {
-                    RuntimeError::LibraryError(format!("Failed to parse library '{}': {}", path, e))
-                })?;
-
-                // Seed the library with the same built-in namespaces/globals
-                // (e.g. `library`, `math`) so its declaration and body resolve.
-                let mut library_interp = Interpreter::new();
-                for (name, value) in self.snapshot() {
-                    library_interp.set_variable(&name, value);
-                }
-                library_interp.execute(&library_program)?;
-                let library_exports = library_interp.exports();
-
-                for (method_name, method_defs) in &library_interp.methods {
-                    for method_def in method_defs {
-                        self.methods
-                            .entry(method_name.clone())
-                            .or_default()
-                            .push(method_def.clone());
+                    // Merge the library's method definitions once (not per bar,
+                    // which would grow `methods` without bound).
+                    for (method_name, method_defs) in &library_interp.methods {
+                        for method_def in method_defs {
+                            self.methods
+                                .entry(method_name.clone())
+                                .or_default()
+                                .push(method_def.clone());
+                        }
                     }
-                }
+
+                    let fields = Rc::new(RefCell::new(library_interp.exports().clone()));
+                    self.imported.insert(path.clone(), Rc::clone(&fields));
+                    fields
+                };
 
                 let namespace: Value<O> = Value::Object {
                     type_name: alias.clone(),
-                    fields: Rc::new(RefCell::new(library_exports.clone())),
+                    fields,
                     call: None,
                     value: None,
                 };

@@ -1,0 +1,20 @@
+//@version=6
+indicator("import/import_multi_bar")
+// The imported namespace and its merged methods must keep resolving on bars
+// after the first, where the import is served from cache rather than
+// re-executed. `add` (exported fn) and `distance` (exported method) are both
+// exercised each bar, with a per-bar value so a stale cache would show up.
+
+// Bars: 3
+
+import mylib as lib
+
+var int n = 0
+n += 1
+d = lib.Point.new(lib.add(n, 0), 0.0).distance()
+log.info(str.tostring(d))
+
+// Expected output:
+// 1
+// 2
+// 3
