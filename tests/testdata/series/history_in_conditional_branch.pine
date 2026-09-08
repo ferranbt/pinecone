@@ -1,0 +1,30 @@
+//@version=6
+indicator("series/history_in_conditional_branch")
+// KNOWN GAP, pinned here so a fix visibly flips it.
+//
+// series/index_expr_history.pine guarantees that `(expr)[1]` equals
+// `s = expr; s[1]`. That holds only while the reference is reached every bar:
+// an expression subscript gets a per-site buffer advanced on EVALUATION, so on
+// the bars this branch skips nothing is recorded and `(close * 2)[1]` reports
+// the previous evaluation — two bars back — instead of the previous bar. The
+// `close[1] * 2` column is the correct value each line.
+//
+// Closing it means evaluating such sites every bar (they are pure here, but a
+// call site would not be), so it is left as-is. Engine-maintained series are
+// NOT affected — see strategy/history_short_circuit.pine.
+//
+// Skip PineTS: PineTS's direct arithmetic subscript is broken for this form —
+// it returns na on every evaluation (the same defect noted in
+// series/index_expr_history.pine).
+
+// Bars: 6
+
+var int n = 0
+n += 1
+if n % 2 == 0
+    log.info(str.tostring(n) + " " + str.tostring((close * 2)[1]) + " " + str.tostring(close[1] * 2))
+
+// Expected output:
+// 2 NaN 592
+// 4 594 596
+// 6 598 600
