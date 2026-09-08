@@ -744,10 +744,6 @@ impl<F: FillModel> Broker for BarBroker<F> {
         self.halted_bar
     }
 
-    fn pre_hook(&mut self, bar: &Bar) {
-        self.advance(bar);
-    }
-
     fn post_hook(&mut self, bar: &Bar) {
         let equity = self.equity(bar.close);
         self.stats.equity.push(equity);

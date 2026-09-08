@@ -13,10 +13,9 @@ pub use pine_lint as lint;
 pub use pine_parser as parser;
 pub use pine_sema as sema;
 
-mod backtest;
 mod run;
 
-pub use backtest::{Backtest, Metrics};
+pub use pine_broker::{Backtest, Metrics};
 pub use pine_core::{DataProvider, DirLoader, FileResolver, LibraryLoader};
 pub use run::{Run, RunResult};
 
@@ -351,7 +350,6 @@ impl<O: PineOutput> ScriptBuilder<O> {
         Ok(Script {
             program,
             interpreter,
-            timeframe,
             bars,
         })
     }
@@ -366,9 +364,6 @@ impl<O: PineOutput> ScriptBuilder<O> {
 pub struct Script<O: PineOutput> {
     program: Program,
     interpreter: Interpreter<O>,
-    /// The chart timeframe, carried onto the `Backtest` so its metrics can
-    /// annualise per-bar figures.
-    timeframe: Timeframe,
     /// Bars from the builder's source; empty when none was given.
     bars: Vec<Bar>,
 }
@@ -390,125 +385,7 @@ impl<O: PineOutput> Script<O> {
             }
         }
 
-        // Fill orders left pending by the previous bar before the body runs, so
-        // it reads the position and equity they produced. A no-op unless the
-        // script declared a `strategy`.
-        self.advance_broker(bar);
-
         self.interpreter.execute(&self.program).map_err(Error::from)
-    }
-
-    /// Advance the simulated broker one bar and publish its read-only
-    /// `strategy.*` values into the script.
-    fn advance_broker(&mut self, bar: &Bar) {
-        use interpreter::Value;
-
-        let close = bar.close;
-
-        // Read from the broker, then drop the borrow to update `self`'s state.
-        let Some(broker) = self.interpreter.broker.as_mut() else {
-            return;
-        };
-        broker.pre_hook(bar);
-
-        let position = broker.position();
-        let equity = broker.equity(close);
-        let initial = broker.initial_capital();
-        let open_profit: f64 = broker.open_trades().iter().map(|t| t.profit(close)).sum();
-        let closed_trades = broker.closed_trades().len() as i64;
-        let stats = broker.stats();
-        let (gross_profit, gross_loss) = (stats.gross_profit, stats.gross_loss);
-        let (wins, losses, evens) = (stats.wins as i64, stats.losses as i64, stats.evens as i64);
-        let (pct_sum_all, pct_sum_wins, pct_sum_losses) =
-            (stats.pct_sum_all, stats.pct_sum_wins, stats.pct_sum_losses);
-        let (max_drawdown, max_runup) = (stats.max_drawdown, stats.max_runup);
-        let (max_drawdown_percent, max_runup_percent) =
-            (stats.max_drawdown_percent, stats.max_runup_percent);
-        let (max_contracts_all, max_contracts_long, max_contracts_short) = (
-            stats.max_contracts_all,
-            stats.max_contracts_long,
-            stats.max_contracts_short,
-        );
-        let position_entry_name = broker
-            .open_trades()
-            .last()
-            .map_or(Value::Na, |t| Value::String(t.entry_id.clone()));
-
-        // Pine's identity equity = initial + netprofit + openprofit; derive
-        // netprofit from it so commission can't make the two drift.
-        let net_profit = equity - initial - open_profit;
-        // na, not 0, when flat — matching Pine.
-        let avg_price = if position.size == 0.0 {
-            Value::Na
-        } else {
-            Value::Number(position.avg_price)
-        };
-
-        let refreshed = [
-            ("position_size", Value::Number(position.size)),
-            ("position_avg_price", avg_price),
-            ("equity", Value::Number(equity)),
-            ("netprofit", Value::Number(net_profit)),
-            ("openprofit", Value::Number(open_profit)),
-            ("grossprofit", Value::Number(gross_profit)),
-            ("grossloss", Value::Number(gross_loss)),
-            ("max_drawdown", Value::Number(max_drawdown)),
-            ("max_runup", Value::Number(max_runup)),
-            // `opentrades` / `closedtrades` are value-objects that read their
-            // count straight from the broker, so they are not refreshed here.
-            ("wintrades", Value::Int(wins)),
-            ("losstrades", Value::Int(losses)),
-            ("eventrades", Value::Int(evens)),
-        ];
-        for (name, value) in refreshed {
-            self.interpreter.set_object_field("strategy", name, value);
-        }
-
-        // Derived statistics: percentages of the starting capital, and per-trade
-        // averages. `na` when there are no trades to average, matching Pine.
-        let pct = |x: f64| {
-            if initial != 0.0 {
-                x / initial * 100.0
-            } else {
-                0.0
-            }
-        };
-        let per_trade = |total: f64, count: i64| {
-            if count > 0 {
-                Value::Number(total / count as f64)
-            } else {
-                Value::Na
-            }
-        };
-        let derived = [
-            ("netprofit_percent", Value::Number(pct(net_profit))),
-            ("openprofit_percent", Value::Number(pct(open_profit))),
-            ("grossprofit_percent", Value::Number(pct(gross_profit))),
-            ("grossloss_percent", Value::Number(pct(gross_loss))),
-            ("max_drawdown_percent", Value::Number(max_drawdown_percent)),
-            ("max_runup_percent", Value::Number(max_runup_percent)),
-            ("max_contracts_held_all", Value::Number(max_contracts_all)),
-            ("max_contracts_held_long", Value::Number(max_contracts_long)),
-            (
-                "max_contracts_held_short",
-                Value::Number(max_contracts_short),
-            ),
-            ("avg_trade", per_trade(net_profit, closed_trades)),
-            ("avg_winning_trade", per_trade(gross_profit, wins)),
-            // Losing trades are reported as a negative average, so negate the
-            // positive gross-loss magnitude.
-            ("avg_losing_trade", per_trade(-gross_loss, losses)),
-            ("avg_trade_percent", per_trade(pct_sum_all, closed_trades)),
-            ("avg_winning_trade_percent", per_trade(pct_sum_wins, wins)),
-            (
-                "avg_losing_trade_percent",
-                per_trade(pct_sum_losses, losses),
-            ),
-            ("position_entry_name", position_entry_name),
-        ];
-        for (name, value) in derived {
-            self.interpreter.set_object_field("strategy", name, value);
-        }
     }
 
     pub fn run_fn<F>(mut self, mut on_output: F) -> Result<(), Error>
@@ -533,47 +410,8 @@ impl<O: PineOutput> Script<O> {
             .iter()
             .map(|bar| self.execute(bar, last_bar.as_ref()))
             .collect::<Result<Vec<O>, Error>>()?;
-        let backtest = self.take_backtest();
-        Ok(Run { outputs, backtest })
-    }
-
-    fn take_backtest(&self) -> Option<Backtest> {
-        let broker = self.interpreter.broker.as_ref()?;
-        let stats = broker.stats();
-        let close = stats.mark_price;
-
-        // Closed trades first, then those still open.
-        let mut trades: Vec<_> = broker.closed_trades().to_vec();
-        trades.extend(broker.open_trades().into_iter().cloned());
-
-        let open_profit: f64 = broker.open_trades().iter().map(|t| t.profit(close)).sum();
-        let initial_capital = broker.initial_capital();
-        let position_size = broker.position().size;
-
-        let (gross_profit, gross_loss) = (stats.gross_profit, stats.gross_loss);
-        let (win_trades, loss_trades, even_trades) = (stats.wins, stats.losses, stats.evens);
-
-        let equity = stats.equity.clone();
-        let final_equity = equity.last().copied().unwrap_or(initial_capital);
-
-        Some(Backtest {
-            initial_capital,
-            net_profit: final_equity - initial_capital - open_profit,
-            open_profit,
-            gross_profit,
-            gross_loss,
-            max_drawdown: stats.max_drawdown,
-            max_runup: stats.max_runup,
-            win_trades,
-            loss_trades,
-            even_trades,
-            position_size,
-            mark_price: close,
-            equity,
-            trades,
-            halted: broker.halted_bar(),
-            timeframe: self.timeframe.clone(),
-        })
+        let broker = self.interpreter.broker.take();
+        Ok(Run { outputs, broker })
     }
 }
 

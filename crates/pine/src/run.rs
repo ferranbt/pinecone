@@ -1,6 +1,6 @@
 //! The result of replaying a script over a whole series of bars.
 
-use crate::Backtest;
+use pine_broker::Broker;
 use pine_core::{
     AlertCondition, AlertConditionOutput, Indicator, Input, InputOutput, LogEntry, LogOutput,
     MetadataOutput, PineOutput, Plot, PlotOutput,
@@ -12,8 +12,9 @@ use std::collections::BTreeMap;
 pub struct Run<O: PineOutput> {
     /// What each bar produced; [`RunResult::collect`] turns these into columns.
     pub outputs: Vec<O>,
-    /// The backtest, or `None` if the script declared no `strategy`.
-    pub backtest: Option<Backtest>,
+    /// The broker the script traded against, or `None` if it declared no
+    /// `strategy`. Ask it for the [`Backtest`](pine_broker::Backtest).
+    pub broker: Option<Box<dyn Broker>>,
 }
 
 /// A run's per-bar outputs turned into columns.
@@ -167,13 +168,13 @@ if bar_index == 1
             .expect("run");
 
         // The strategy traded against our broker, built once and lazily.
-        assert!(run.backtest.is_some());
+        assert!(run.broker.is_some());
         assert_eq!(calls.load(Ordering::SeqCst), 1);
     }
 
     #[test]
     fn backtest_reports_the_halt_bar() {
-        use crate::core::DefaultPineOutput;
+        use crate::core::{DefaultPineOutput, Timeframe};
         use crate::ScriptBuilder;
 
         // A short into a rising market draws down fast; a tight max_drawdown
@@ -191,7 +192,8 @@ if bar_index == 1
             .expect("compile")
             .run()
             .expect("run");
-        assert!(run.backtest.expect("strategy").halted.is_some());
+        let backtest = run.broker.expect("strategy").backtest(Timeframe::default());
+        assert!(backtest.halted.is_some());
 
         // A strategy that simply stops trading is not halted.
         let quiet = r#"
@@ -206,6 +208,7 @@ if bar_index == 1
             .expect("compile")
             .run()
             .expect("run");
-        assert_eq!(run.backtest.expect("strategy").halted, None);
+        let backtest = run.broker.expect("strategy").backtest(Timeframe::default());
+        assert_eq!(backtest.halted, None);
     }
 }

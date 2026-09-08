@@ -267,8 +267,9 @@ pub fn register_namespace_objects<O: FullPineOutput>(
         namespaces.insert(name, value);
     }
     namespaces.insert("request".to_string(), request::register());
-    let (strategy_ns, strategy_post) = strategy::register(version);
+    let (strategy_ns, strategy_pre, strategy_post) = strategy::register(version);
     namespaces.insert("strategy".to_string(), strategy_ns);
+    advances.push(strategy_pre);
     post_advances.push(strategy_post);
     namespaces.insert("alertcondition".to_string(), alertcondition::register());
     namespaces.insert("fill".to_string(), fill::register());

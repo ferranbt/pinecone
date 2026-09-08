@@ -1,6 +1,6 @@
 //! The outcome of replaying a `strategy`: its equity curve and trade log.
 
-use pine_broker::Trade;
+use crate::Trade;
 use pine_core::Timeframe;
 use serde::{Deserialize, Serialize};
 

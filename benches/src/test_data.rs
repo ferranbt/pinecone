@@ -14,6 +14,10 @@ pub const TEST_SCRIPTS: &[(&str, &str)] = &[
         "function_calls",
         include_str!("../test_data/function_calls.pine"),
     ),
+    (
+        "strategy_trades",
+        include_str!("../test_data/strategy_trades.pine"),
+    ),
 ];
 
 /// Generate synthetic OHLCV bar data for benchmarking

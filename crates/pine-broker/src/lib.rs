@@ -11,11 +11,13 @@
 //! outside the strategy, when an alert is delivered to an external system. This
 //! crate only simulates.
 
-use pine_core::Bar;
+use pine_core::{Bar, Timeframe};
 
+mod backtest;
 mod broker;
 mod fill;
 
+pub use backtest::{Backtest, Metrics};
 pub use broker::BarBroker;
 pub use fill::{FillModel, PineFills};
 
@@ -388,11 +390,53 @@ pub trait Broker {
     fn halted_bar(&self) -> Option<u64>;
 
     /// Runs once the bar's series are set, before the script body: the place
-    /// to fill what the previous bar left pending. Defaults to nothing.
-    fn pre_hook(&mut self, _bar: &Bar) {}
+    /// to fill what the previous bar left pending. Defaults to [`advance`].
+    ///
+    /// [`advance`]: Broker::advance
+    fn pre_hook(&mut self, bar: &Bar) {
+        self.advance(bar);
+    }
 
     /// Runs after the script body, with what the bar left. Defaults to nothing.
     fn post_hook(&mut self, _bar: &Bar) {}
+
+    /// What the run produced so far — the trade log, equity curve and summary
+    /// figures — with `timeframe` carried along so the metrics can annualise.
+    fn backtest(&self, timeframe: Timeframe) -> Backtest {
+        let stats = self.stats();
+        let close = stats.mark_price;
+
+        // Closed trades first, then those still open.
+        let mut trades = self.closed_trades().to_vec();
+        trades.extend(self.open_trades().into_iter().cloned());
+
+        let open_profit = self
+            .open_trades()
+            .iter()
+            .fold(0.0, |acc, t| acc + t.profit(close));
+        let initial_capital = self.initial_capital();
+        let equity = stats.equity.clone();
+        let final_equity = equity.last().copied().unwrap_or(initial_capital);
+
+        Backtest {
+            initial_capital,
+            net_profit: final_equity - initial_capital - open_profit,
+            open_profit,
+            gross_profit: stats.gross_profit,
+            gross_loss: stats.gross_loss,
+            max_drawdown: stats.max_drawdown,
+            max_runup: stats.max_runup,
+            win_trades: stats.wins,
+            loss_trades: stats.losses,
+            even_trades: stats.evens,
+            position_size: self.position().size,
+            mark_price: close,
+            equity,
+            trades,
+            halted: self.halted_bar(),
+            timeframe,
+        }
+    }
 }
 
 /// The account settings a `strategy()` declaration configures its broker with,
