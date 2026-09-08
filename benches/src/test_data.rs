@@ -10,6 +10,10 @@ pub const TEST_SCRIPTS: &[(&str, &str)] = &[
     ("rsi", include_str!("../test_data/rsi.pine")),
     ("macd", include_str!("../test_data/macd.pine")),
     ("complex", include_str!("../test_data/complex.pine")),
+    (
+        "function_calls",
+        include_str!("../test_data/function_calls.pine"),
+    ),
 ];
 
 /// Generate synthetic OHLCV bar data for benchmarking

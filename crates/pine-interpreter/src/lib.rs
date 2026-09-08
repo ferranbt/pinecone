@@ -42,7 +42,7 @@ impl<O: PineOutput, T: serde::de::DeserializeOwned> FromArg<O> for T {
 /// Takes the history map rather than `&mut self` so callers can hold a borrow of
 /// another interpreter field while recording.
 fn push_history<O: PineOutput>(
-    history: &mut HashMap<String, SeriesBuffer<Value<O>>>,
+    history: &mut FastMap<String, SeriesBuffer<Value<O>>>,
     name: &str,
     value: Value<O>,
 ) {
@@ -143,6 +143,9 @@ pub type MapEntries<O> = Rc<RefCell<Vec<(Value<O>, Value<O>)>>>;
 /// [`Value::Object`], and what an `import` caches per library path.
 pub type ObjectFields<O> = Rc<RefCell<HashMap<String, Value<O>>>>;
 
+/// A map on the evaluation path. Keys are short identifiers (or small ints)
+type FastMap<K, V> = HashMap<K, V, ahash::RandomState>;
+
 /// Value types in the interpreter
 #[derive(Clone)]
 pub enum Value<O: PineOutput> {
@@ -159,9 +162,11 @@ pub enum Value<O: PineOutput> {
         call: Option<Builtin<O>>,
         value: Option<ObjectValueFn<O>>,
     },
+    /// A user-defined function. The AST is shared, not copied, since a call
+    /// clones the function's value on every invocation.
     Function {
-        params: Vec<pine_ast::FunctionParam>,
-        body: Vec<Stmt>,
+        params: Rc<[pine_ast::FunctionParam]>,
+        body: Rc<[Stmt]>,
     },
     BuiltinFunction(Builtin<O>), // Builtin callable plus the arguments it accepts
     /// An unevaluated expression, passed to a builtin that captured it (a lazy
@@ -466,8 +471,8 @@ impl<O: PineOutput> Value<O> {
 #[derive(Clone)]
 struct MethodDef {
     type_name: String, // The type this method belongs to (from first param's type annotation)
-    params: Vec<pine_ast::MethodParam>,
-    body: Vec<Stmt>,
+    params: Rc<[pine_ast::MethodParam]>,
+    body: Rc<[Stmt]>,
 }
 
 /// One history-carrying subscript site — `expr[n]` where `expr` is not a plain
@@ -494,14 +499,19 @@ impl<O: PineOutput> SeriesSite<O> {
 
 /// The interpreter executes a program with a given bar
 pub struct Interpreter<O: PineOutput> {
-    /// Local variables in the current scope
-    variables: HashMap<String, Variable<O>>,
+    /// The global scope: builtins, host-set series and top-level user variables.
+    variables: FastMap<String, Variable<O>>,
+    /// One frame per user function/method call in flight, innermost last. A
+    /// lookup walks these top-down before falling back to `variables`; a write
+    /// inside a call lands in the top frame, so every binding a call makes — of
+    /// any kind — vanishes when its frame is popped, with nothing tracking them.
+    frames: Vec<FastMap<String, Variable<O>>>,
     /// User-defined types, kept separate from `variables` so a UDT and a
     /// function/variable may share a name (Pine's type and value namespaces are
     /// distinct). `Type.new` / `Type.copy` resolve here.
     user_types: HashMap<String, Value<O>>,
     /// Method registry (method_name -> Vec<MethodDef>) - can have multiple methods with same name for different types
-    methods: HashMap<String, Vec<MethodDef>>,
+    methods: FastMap<String, Vec<MethodDef>>,
     /// Library loader for importing external libraries
     pub library_loader: Option<Box<dyn LibraryLoader>>,
     /// Exported items from this module (for library mode)
@@ -518,18 +528,18 @@ pub struct Interpreter<O: PineOutput> {
     /// Per-variable history for user-computed series (`var` declarations).
     /// get(0) = previous bar, get(1) = two bars ago, etc.
     /// Populated on each `Stmt::Assignment`; supports Pine's `name[n]` lookback.
-    pub user_series_history: HashMap<String, SeriesBuffer<Value<O>>>,
+    pub user_series_history: FastMap<String, SeriesBuffer<Value<O>>>,
     /// History for subscripted non-variable series expressions (`ta.sma(..)[1]`,
     /// `(high+low)[1]`), keyed by the `Expr::Index` node's id — the same
     /// site-keyed pattern as `function_local_state`.
-    expr_history: HashMap<u32, SeriesSite<O>>,
+    expr_history: FastMap<u32, SeriesSite<O>>,
     /// Persistent local state for user-defined functions, keyed by the call
     /// site's stable lexical id (`Expr::Call::id`). Keying by call site — not
     /// by function name — means two calls to the same function keep independent
     /// state, mirroring TradingView (e.g. `o[1]` inside a function returns the
     /// previous bar's value of that call site's local `o`). A `call_id` of 0
     /// (a call with no stable identity) is not persisted.
-    function_local_state: HashMap<u32, HashMap<String, Variable<O>>>,
+    function_local_state: FastMap<u32, FastMap<String, Variable<O>>>,
     /// `var`/`varip` declarations whose initializer already ran, keyed by
     /// (call-site id, name). Pine `var` initializes only the FIRST time
     /// execution reaches the declaration (once ever, not per bar/iteration).
@@ -540,7 +550,7 @@ pub struct Interpreter<O: PineOutput> {
     ///
     /// The value is the bar it initialized on, so a reassignment can tell that
     /// there is no previous bar to read back yet.
-    var_decls_initialized: HashMap<(u32, String), u64>,
+    var_decls_initialized: FastMap<(u32, String), u64>,
     /// Lexical id of the call site currently executing (0 at top level). Scopes
     /// `var` init-once tracking to the active call site.
     current_call_id: u32,
@@ -561,53 +571,6 @@ pub struct Interpreter<O: PineOutput> {
     pub per_bar_advances: Vec<PerBarAdvance<O>>,
     /// Host-supplied `input.*` overrides, keyed by the input's title.
     pub inputs: HashMap<String, pine_core::InputValue>,
-}
-
-/// Names a statement block ASSIGNS (declares or writes) directly — i.e. the true
-/// locals of a function body. Reads (e.g. `open`) are ignored, and nested function
-/// declarations are a separate scope so their bodies are not descended into. Used to
-/// decide which variables a call site's persistent state should carry across bars.
-fn collect_assigned_names(body: &[Stmt], out: &mut std::collections::HashSet<String>) {
-    for s in body {
-        match s {
-            Stmt::VarDecl { name, .. } => {
-                out.insert(name.clone());
-            }
-            Stmt::Assignment {
-                target: Expr::Variable { name: n, .. },
-                ..
-            } => {
-                out.insert(n.clone());
-            }
-            Stmt::TupleAssignment { names, .. } => {
-                for n in names {
-                    out.insert(n.clone());
-                }
-            }
-            Stmt::If {
-                then_branch,
-                else_if_branches,
-                else_branch,
-                ..
-            } => {
-                collect_assigned_names(then_branch, out);
-                for (_, b) in else_if_branches {
-                    collect_assigned_names(b, out);
-                }
-                if let Some(b) = else_branch {
-                    collect_assigned_names(b, out);
-                }
-            }
-            Stmt::For { var_name, body, .. } => {
-                out.insert(var_name.clone());
-                collect_assigned_names(body, out);
-            }
-            Stmt::While { body, .. } | Stmt::ForIn { body, .. } => {
-                collect_assigned_names(body, out)
-            }
-            _ => {}
-        }
-    }
 }
 
 /// The builtin namespace whose functions back a value's method syntax, e.g.
@@ -631,17 +594,18 @@ fn is_na_operand<O: PineOutput>(v: &Value<O>) -> bool {
 impl<O: PineOutput> Interpreter<O> {
     pub fn new() -> Self {
         Self {
-            variables: HashMap::new(),
+            variables: FastMap::default(),
+            frames: Vec::new(),
             user_types: HashMap::new(),
-            methods: HashMap::new(),
+            methods: FastMap::default(),
             library_loader: None,
             exports: HashMap::new(),
             imported: HashMap::new(),
             output: O::default(),
-            user_series_history: HashMap::new(),
-            expr_history: HashMap::new(),
-            function_local_state: HashMap::new(),
-            var_decls_initialized: HashMap::new(),
+            user_series_history: FastMap::default(),
+            expr_history: FastMap::default(),
+            function_local_state: FastMap::default(),
+            var_decls_initialized: FastMap::default(),
             current_call_id: 0,
             bar_seq: 0,
             broker: None,
@@ -681,6 +645,7 @@ impl<O: PineOutput> Interpreter<O> {
     pub fn snapshot(&self) -> HashMap<String, Value<O>> {
         self.variables
             .iter()
+            .chain(self.frames.iter().flatten())
             .map(|(name, var)| (name.clone(), var.value.clone()))
             .collect()
     }
@@ -710,8 +675,27 @@ impl<O: PineOutput> Interpreter<O> {
     }
 
     /// Get a variable value
+    /// Resolve `name` from the innermost call frame outwards, then the global
+    /// scope.
+    fn var(&self, name: &str) -> Option<&Variable<O>> {
+        self.frames
+            .iter()
+            .rev()
+            .find_map(|frame| frame.get(name))
+            .or_else(|| self.variables.get(name))
+    }
+
+    /// Bind `name` in the current scope: the innermost call frame, or the
+    /// global scope when no call is in flight.
+    fn bind(&mut self, name: String, var: Variable<O>) {
+        match self.frames.last_mut() {
+            Some(frame) => frame.insert(name, var),
+            None => self.variables.insert(name, var),
+        };
+    }
+
     pub fn get_variable(&self, name: &str) -> Option<&Value<O>> {
-        self.variables.get(name).map(|var| &var.value)
+        self.var(name).map(|var| &var.value)
     }
 
     /// Whether `name` is a declared user-defined type.
@@ -721,7 +705,7 @@ impl<O: PineOutput> Interpreter<O> {
 
     /// The `member` field of a builtin namespace object (e.g. `array`'s `push`).
     fn namespace_member(&self, namespace: &str, member: &str) -> Option<Value<O>> {
-        match self.variables.get(namespace).map(|var| &var.value) {
+        match self.var(namespace).map(|var| &var.value) {
             Some(Value::Object { fields, .. }) => fields.borrow().get(member).cloned(),
             _ => None,
         }
@@ -729,7 +713,7 @@ impl<O: PineOutput> Interpreter<O> {
 
     /// Set a variable value (useful for loading objects and test setup)
     pub fn set_variable(&mut self, name: &str, value: Value<O>) {
-        self.variables.insert(
+        self.bind(
             name.to_string(),
             Variable {
                 value,
@@ -746,7 +730,7 @@ impl<O: PineOutput> Interpreter<O> {
     /// as any user variable: history accumulates as bars execute, so `close[1]`
     /// is na until a second bar has run.
     pub fn advance_series(&mut self, name: &str, value: Value<O>) {
-        if let Some(existing) = self.variables.get(name) {
+        if let Some(existing) = self.var(name) {
             // Record the number the series held, not the series wrapper, so a
             // `name[1]` lookback reads as a plain value.
             let previous = match &existing.value {
@@ -765,7 +749,7 @@ impl<O: PineOutput> Interpreter<O> {
         if let Some(Variable {
             value: Value::Object { fields, .. },
             ..
-        }) = self.variables.get(object)
+        }) = self.var(object)
         {
             fields.borrow_mut().insert(field.to_string(), value);
         }
@@ -773,7 +757,7 @@ impl<O: PineOutput> Interpreter<O> {
 
     /// Set a const variable (cannot be reassigned)
     pub fn set_const_variable(&mut self, name: &str, value: Value<O>) {
-        self.variables.insert(
+        self.bind(
             name.to_string(),
             Variable {
                 value,
@@ -871,8 +855,8 @@ impl<O: PineOutput> Interpreter<O> {
                 // Push the previous value to history so `name[1]` lookbacks work, exactly as
                 // the Assignment handler does for `:=` reassignments.
                 if !is_var_persistent {
-                    if let Some(existing) = self.variables.get(name) {
-                        push_history(&mut self.user_series_history, name, existing.value.clone());
+                    if let Some(previous) = self.var(name).map(|var| var.value.clone()) {
+                        push_history(&mut self.user_series_history, name, previous);
                     }
                 }
                 let value = if let Some(init_expr) = initializer {
@@ -881,7 +865,7 @@ impl<O: PineOutput> Interpreter<O> {
                     Value::Na
                 };
                 let is_const = matches!(type_qualifier, Some(pine_ast::TypeQualifier::Const));
-                self.variables.insert(
+                self.bind(
                     name.clone(),
                     Variable {
                         value,
@@ -902,13 +886,17 @@ impl<O: PineOutput> Interpreter<O> {
                 // previous bar yet, and inventing one would make `acc[1]` read the
                 // initializer instead of na.
                 if let Expr::Variable { name, .. } = target {
-                    if let Some(var) = self.variables.get(name) {
+                    let persisted = self
+                        .var(name)
+                        .filter(|var| var.is_var_persistent)
+                        .map(|var| var.value.clone());
+                    if let Some(previous) = persisted {
                         let born_this_bar = self
                             .var_decls_initialized
                             .get(&(self.current_call_id, name.clone()))
                             == Some(&self.bar_seq);
-                        if var.is_var_persistent && !born_this_bar {
-                            push_history(&mut self.user_series_history, name, var.value.clone());
+                        if !born_this_bar {
+                            push_history(&mut self.user_series_history, name, previous);
                         }
                     }
                 }
@@ -917,26 +905,25 @@ impl<O: PineOutput> Interpreter<O> {
                 match target {
                     Expr::Variable { name, .. } => {
                         // Preserve the existing variable's flags (const, persistent).
-                        let (is_const, is_var_persistent) =
-                            if let Some(var) = self.variables.get(name) {
-                                if var.is_const {
-                                    return Err(RuntimeError::ConstReassignment(name.clone()));
-                                }
-                                if !var.is_var_persistent {
+                        let (is_const, is_var_persistent) = match self
+                            .var(name)
+                            .map(|var| (var.is_const, var.is_var_persistent, var.value.clone()))
+                        {
+                            Some((true, _, _)) => {
+                                return Err(RuntimeError::ConstReassignment(name.clone()))
+                            }
+                            Some((false, is_var_persistent, previous)) => {
+                                if !is_var_persistent {
                                     // Non-var: push current value to history after eval (Pine [n] lookback).
-                                    push_history(
-                                        &mut self.user_series_history,
-                                        name,
-                                        var.value.clone(),
-                                    );
+                                    push_history(&mut self.user_series_history, name, previous);
                                 }
                                 // var-persistent: already pushed before eval above.
-                                (false, var.is_var_persistent)
-                            } else {
-                                (false, false)
-                            };
+                                (false, is_var_persistent)
+                            }
+                            None => (false, false),
+                        };
 
-                        self.variables.insert(
+                        self.bind(
                             name.clone(),
                             Variable {
                                 value: val,
@@ -949,7 +936,7 @@ impl<O: PineOutput> Interpreter<O> {
                     Expr::MemberAccess { object, member, .. } => {
                         // Check if we're trying to modify a member of a const variable
                         if let Expr::Variable { name: var_name, .. } = object.as_ref() {
-                            if let Some(var) = self.variables.get(var_name) {
+                            if let Some(var) = self.var(var_name) {
                                 if var.is_const {
                                     return Err(RuntimeError::ConstReassignment(format!(
                                         "{}.{}",
@@ -984,11 +971,11 @@ impl<O: PineOutput> Interpreter<O> {
                     let arr = arr_ref.borrow();
                     for (i, name) in names.iter().enumerate() {
                         // Push current value to history before overwriting (supports [n] lookback).
-                        if let Some(var) = self.variables.get(name) {
-                            push_history(&mut self.user_series_history, name, var.value.clone());
+                        if let Some(previous) = self.var(name).map(|var| var.value.clone()) {
+                            push_history(&mut self.user_series_history, name, previous);
                         }
                         let element_val = arr.get(i).cloned().unwrap_or(Value::Na);
-                        self.variables.insert(
+                        self.bind(
                             name.clone(),
                             Variable {
                                 value: element_val,
@@ -1074,7 +1061,7 @@ impl<O: PineOutput> Interpreter<O> {
                 let step = step_val as i64;
 
                 while if down { i >= end } else { i <= end } {
-                    self.variables.insert(
+                    self.bind(
                         var_name.clone(),
                         Variable {
                             value: Value::Int(i),
@@ -1112,7 +1099,7 @@ impl<O: PineOutput> Interpreter<O> {
                 for (index, item) in arr_borrowed.iter().enumerate() {
                     // Set index variable if tuple form
                     if let Some(idx_var) = index_var {
-                        self.variables.insert(
+                        self.bind(
                             idx_var.clone(),
                             Variable {
                                 value: Value::Int(index as i64),
@@ -1123,7 +1110,7 @@ impl<O: PineOutput> Interpreter<O> {
                     }
 
                     // Set item variable
-                    self.variables.insert(
+                    self.bind(
                         item_var.clone(),
                         Variable {
                             value: item.clone(),
@@ -1171,7 +1158,7 @@ impl<O: PineOutput> Interpreter<O> {
                     fields: fields.clone(),
                 };
                 self.user_types.insert(name.clone(), type_value.clone());
-                self.variables.insert(
+                self.bind(
                     name.clone(),
                     Variable {
                         value: type_value.clone(),
@@ -1212,7 +1199,7 @@ impl<O: PineOutput> Interpreter<O> {
                     call: None,
                     value: None,
                 };
-                self.variables.insert(
+                self.bind(
                     name.clone(),
                     Variable {
                         value: enum_object.clone(),
@@ -1233,13 +1220,13 @@ impl<O: PineOutput> Interpreter<O> {
                 match item {
                     pine_ast::ExportItem::Type(type_name) => {
                         // Export the type - it should already be in variables
-                        if let Some(var) = self.variables.get(type_name) {
+                        if let Some(var) = self.var(type_name) {
                             self.exports.insert(type_name.clone(), var.value.clone());
                         }
                     }
                     pine_ast::ExportItem::Function(func_name) => {
                         // Export the function - it should already be in variables
-                        if let Some(var) = self.variables.get(func_name) {
+                        if let Some(var) = self.var(func_name) {
                             self.exports.insert(func_name.clone(), var.value.clone());
                         }
                     }
@@ -1307,7 +1294,7 @@ impl<O: PineOutput> Interpreter<O> {
                     call: None,
                     value: None,
                 };
-                self.variables.insert(
+                self.bind(
                     alias.clone(),
                     Variable {
                         value: namespace,
@@ -1341,8 +1328,8 @@ impl<O: PineOutput> Interpreter<O> {
                 // Store the method definition
                 let method_def = MethodDef {
                     type_name,
-                    params: params.clone(),
-                    body: body.clone(),
+                    params: params.clone().into(),
+                    body: body.clone().into(),
                 };
 
                 self.methods
@@ -1369,10 +1356,10 @@ impl<O: PineOutput> Interpreter<O> {
             } => {
                 // Create a function value
                 let func_value = Value::Function {
-                    params: params.clone(),
-                    body: body.clone(),
+                    params: params.clone().into(),
+                    body: body.clone().into(),
                 };
-                self.variables.insert(
+                self.bind(
                     name.clone(),
                     Variable {
                         value: func_value.clone(),
@@ -1463,8 +1450,7 @@ impl<O: PineOutput> Interpreter<O> {
             Expr::Literal(lit) => Ok(self.eval_literal(lit)),
 
             Expr::Variable { name, .. } => self
-                .variables
-                .get(name)
+                .var(name)
                 .map(|var| var.value.clone())
                 .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone())),
 
@@ -1560,7 +1546,7 @@ impl<O: PineOutput> Interpreter<O> {
                         }
                         // A plain non-series value with no history (a user var
                         // assigned only this bar) indexes as na, not an error.
-                        if let Some(var) = self.variables.get(var_name) {
+                        if let Some(var) = self.var(var_name) {
                             if !matches!(var.value, Value::Series(_) | Value::Array(_)) {
                                 return Ok(Value::Na);
                             }
@@ -1659,16 +1645,20 @@ impl<O: PineOutput> Interpreter<O> {
                 // Check if this is a method call (object.method())
                 if let Expr::MemberAccess { object, member, .. } = callee.as_ref() {
                     // Try to find a method with this name
-                    if let Some(method_defs) = self.methods.get(member).cloned() {
+                    if self.methods.contains_key(member) {
                         // Evaluate the object (this will be the first parameter)
                         let obj_value = self.eval_expr_raw(object)?;
 
-                        // Find the method that matches the object's type
+                        // Find the method that matches the object's type. Only
+                        // that one definition is cloned, and its AST is shared.
                         let obj_type = self.get_object_type_name(&obj_value)?;
+                        let method_def = self
+                            .methods
+                            .get(member)
+                            .and_then(|defs| defs.iter().find(|m| m.type_name == obj_type))
+                            .cloned();
 
-                        if let Some(method_def) =
-                            method_defs.iter().find(|m| m.type_name == obj_type)
-                        {
+                        if let Some(method_def) = method_def {
                             // Evaluate the other arguments
                             let mut evaluated_args: Vec<EvaluatedArg<O>> =
                                 vec![EvaluatedArg::Positional(obj_value)];
@@ -1805,8 +1795,8 @@ impl<O: PineOutput> Interpreter<O> {
             Expr::Function { params, body } => {
                 // params is already Vec<FunctionParam> from the AST
                 Ok(Value::Function {
-                    params: params.clone(),
-                    body: body.clone(),
+                    params: params.clone().into(),
+                    body: body.clone().into(),
                 })
             }
         }
@@ -1985,11 +1975,7 @@ impl<O: PineOutput> Interpreter<O> {
             // Literals are always const
             Expr::Literal(_) => true,
             // Variable is const if it's stored as const
-            Expr::Variable { name, .. } => self
-                .variables
-                .get(name)
-                .map(|var| var.is_const)
-                .unwrap_or(false),
+            Expr::Variable { name, .. } => self.var(name).map(|var| var.is_const).unwrap_or(false),
             // Member access is const if the base object is const
             Expr::MemberAccess { object, .. } => self.is_const_expr(object),
             // All other expressions are not const
@@ -2080,80 +2066,59 @@ impl<O: PineOutput> Interpreter<O> {
         self.run_call_site_body(call_id, param_bindings, body)
     }
 
-    /// Run a user function or method body as a stateful call site: restore this
-    /// call site's persisted locals, bind the given parameters, execute the body
-    /// under the call site's id (scoping `var` init-once), then persist the call
-    /// site's locals and restore the outer scope. Keying state by call site —
-    /// not by callable name — keeps two call sites of the same function/method
-    /// independent, matching TradingView. A `call_id` of 0 (no stable identity)
-    /// is not persisted.
+    /// Run a user function or method body as a stateful call site: push a frame
+    /// holding this call site's persisted locals with the parameters bound,
+    /// execute the body under the call site's id (scoping `var` init-once), then
+    /// pop the frame and persist it minus the parameters, which are re-bound
+    /// every call. Keying state by call site — not by callable name — keeps two
+    /// call sites of the same function/method independent, matching
+    /// TradingView. A `call_id` of 0 (no stable identity) is not persisted.
     fn run_call_site_body(
         &mut self,
         call_id: u32,
         param_bindings: Vec<(String, Variable<O>)>,
         body: &[Stmt],
     ) -> Result<Value<O>, RuntimeError> {
-        let param_names: std::collections::HashSet<String> =
-            param_bindings.iter().map(|(n, _)| n.clone()).collect();
+        let param_names: Vec<String> = param_bindings.iter().map(|(n, _)| n.clone()).collect();
+        let mut frame = if call_id != 0 {
+            self.function_local_state
+                .remove(&call_id)
+                .unwrap_or_default()
+        } else {
+            FastMap::default()
+        };
+        frame.extend(param_bindings);
+        self.frames.push(frame);
 
-        // Save the outer scope.
-        let saved_vars = self.variables.clone();
-
-        // Restore this call site's locals (all locals persist across calls, not
-        // just `var`s, so series indexing like `o[1]` works inside the body).
-        // Parameters are excluded — they are freshly bound below.
-        if call_id != 0 {
-            if let Some(local_state) = self.function_local_state.get(&call_id) {
-                for (var_name, var) in local_state {
-                    if !param_names.contains(var_name) {
-                        self.variables.insert(var_name.clone(), var.clone());
-                    }
-                }
-            }
-        }
-
-        // Bind parameters (freshly each call).
-        for (name, var) in param_bindings {
-            self.variables.insert(name, var);
-        }
-
-        // Execute the body under this call site's id, so `var` init-once tracking
-        // is scoped to the call site. Restored afterwards to support
-        // nested/recursive calls. (Like the scope restore below, an error just
-        // propagates and aborts the script.)
+        // Restored afterwards to support nested/recursive calls. The frame is
+        // popped even on error, so a host that keeps going after a failed bar
+        // does not run on inside a stale scope.
         let prev_call_id = self.current_call_id;
         self.current_call_id = call_id;
+        let result = self.run_body(body);
+        self.current_call_id = prev_call_id;
+
+        let mut frame = self.frames.pop().expect("call frame pushed above");
+        if call_id != 0 {
+            for name in &param_names {
+                frame.remove(name);
+            }
+            self.function_local_state.insert(call_id, frame);
+        }
+        result
+    }
+
+    /// Execute a body's statements; an explicit return, else the last
+    /// expression, is the value.
+    fn run_body(&mut self, body: &[Stmt]) -> Result<Value<O>, RuntimeError> {
         let mut result: Value<O> = Value::Na;
         for stmt in body {
             if let Some(return_value) = self.execute_stmt(stmt)? {
                 result = return_value;
             } else if let Stmt::Expression(expr) = stmt {
-                // Last expression is the return value
                 result = self.eval_expr(expr)?;
             }
         }
-        self.current_call_id = prev_call_id;
-
-        // Restore the outer scope. This call site's locals live only in
-        // function_local_state (keyed by call_id) and are NOT leaked into the
-        // outer/global scope, so two call sites keep independent state.
-        let call_vars = std::mem::replace(&mut self.variables, saved_vars);
-        if call_id != 0 {
-            // Persist only the names the body actually ASSIGNS — its true locals
-            // (both `var` and plain, so their series history advances). The scope
-            // also holds read-only builtins/globals inherited from the outer scope
-            // (`open`/`high`/`low`/`close`/…); saving one of those would restore it
-            // stale on the next call, freezing any indicator that reads it inside
-            // the function (e.g. a recursive Heikin-Ashi open).
-            let mut assigned: std::collections::HashSet<String> = std::collections::HashSet::new();
-            collect_assigned_names(body, &mut assigned);
-            let local_state: HashMap<String, Variable<O>> = call_vars
-                .into_iter()
-                .filter(|(k, _)| !param_names.contains(k) && assigned.contains(k))
-                .collect();
-            self.function_local_state.insert(call_id, local_state);
-        }
-
         Ok(result)
     }
 
