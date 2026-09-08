@@ -1956,6 +1956,14 @@ impl<O: PineOutput> Interpreter<O> {
     }
 
     fn values_equal(&self, left: &Value<O>, right: &Value<O>) -> Result<bool, RuntimeError> {
+        // A series compares as its current value, exactly as it does in
+        // arithmetic — otherwise `close == 0` is false however close moves.
+        if let Value::Series(series) = left {
+            return self.values_equal(&series.current, right);
+        }
+        if let Value::Series(series) = right {
+            return self.values_equal(left, &series.current);
+        }
         match (left, right) {
             (Value::Int(l), Value::Int(r)) => Ok(l == r),
             // int and float compare by value, so `1 == 1.0`.

@@ -4,11 +4,12 @@
 //! `strategy` is both callable and a namespace — `strategy("My Strat", ...)`
 //! declares the script and sets up the simulated [`Broker`], while
 //! `strategy.entry`/`strategy.close`/… submit orders to it. The read-only
-//! values (`strategy.position_size`, `strategy.equity`, …) read straight from
-//! the broker on each use; the interpreter itself holds only the broker handle
-//! and carries no backtest logic.
+//! values (`strategy.position_size`, `strategy.equity`, …) are the [`Strategy`]
+//! account: `series float`s taken from the broker once a bar, so `[n]` reaches
+//! the bars behind. The interpreter itself holds only the broker handle and
+//! carries no backtest logic.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -17,9 +18,10 @@ use pine_broker::{
     RiskRule, RiskType, Sizing, Trade,
 };
 use pine_builtin_macro::BuiltinFunction;
-use pine_core::{PineOutput, PineVersion};
+use pine_core::{PineOutput, PineVersion, SeriesBuffer, MAX_LOOKBACK};
 use pine_interpreter::{
-    Builtin, BuiltinFn, EvaluatedArg, Interpreter, PerBarAdvance, RuntimeError, Value,
+    Builtin, BuiltinFn, EvaluatedArg, Interpreter, ObjectFields, PerBarAdvance, RuntimeError,
+    Series, Value,
 };
 
 /// TradingView's default starting capital.
@@ -99,6 +101,18 @@ impl StrategyFn {
                 RuntimeError::TypeError("strategy() has no broker configured".to_string())
             })?;
             ctx.broker = Some(factory.build(&config));
+
+            // The account rolled before the body ran, when there was no broker
+            // to read; write this bar's figures now, so the bar that declares
+            // the strategy does not see a flat account.
+            if let (Some(fields), Some(close)) = (
+                account_fields(ctx),
+                ctx.current_bar.as_ref().map(|bar| bar.close),
+            ) {
+                if let Some(broker) = ctx.broker.as_deref() {
+                    Strategy::write(&mut fields.borrow_mut(), broker, close);
+                }
+            }
         }
 
         Ok(Value::Na)
@@ -804,10 +818,196 @@ fn open_profit_at(broker: &dyn Broker, close: f64) -> f64 {
         .fold(0.0, |acc, t| acc + t.profit(close))
 }
 
-/// Pine's identity equity = initial + netprofit + openprofit; derive netprofit
-/// from it so commission can't make the two drift.
-fn net_profit_at(broker: &dyn Broker, close: f64) -> f64 {
-    broker.equity(close) - broker.initial_capital() - open_profit_at(broker, close)
+/// The `strategy` namespace's own fields, so the declaration can write this
+/// bar's account figures into them.
+fn account_fields<O: PineOutput>(ctx: &Interpreter<O>) -> Option<ObjectFields<O>> {
+    match ctx.get_variable("strategy") {
+        Some(Value::Object { fields, .. }) => Some(Rc::clone(fields)),
+        _ => None,
+    }
+}
+
+/// The `strategy.*` account. The reference types each of these `series float`
+/// (or `series int`), so each owns a history buffer and the whole account
+/// advances once per BAR from the broker — never per evaluation, which is all a
+/// per-site buffer could offer once short-circuiting skips the reference.
+struct Strategy<O: PineOutput> {
+    /// The namespace's fields, shared with the `strategy` object itself.
+    fields: Rc<RefCell<HashMap<String, Value<O>>>>,
+    /// A series' value only becomes history from the second bar on.
+    advanced: Cell<bool>,
+}
+
+impl<O: PineOutput> Strategy<O> {
+    /// The account series, seeded flat and zero-profit — what a script reads
+    /// before its `strategy` declaration has run.
+    fn seed(fields: &mut HashMap<String, Value<O>>) {
+        let mut series = |name: &str, seed: Value<O>| {
+            fields.insert(
+                name.to_string(),
+                Value::Series(Series {
+                    id: format!("strategy.{name}"),
+                    current: Box::new(seed),
+                    history: Some(Rc::new(RefCell::new(SeriesBuffer::default()))),
+                }),
+            );
+        };
+        for name in [
+            "position_size",
+            "equity",
+            "initial_capital",
+            "netprofit",
+            "openprofit",
+            "grossprofit",
+            "grossloss",
+            "max_drawdown",
+            "max_runup",
+            "netprofit_percent",
+            "openprofit_percent",
+            "grossprofit_percent",
+            "grossloss_percent",
+            "max_drawdown_percent",
+            "max_runup_percent",
+            "max_contracts_held_all",
+            "max_contracts_held_long",
+            "max_contracts_held_short",
+        ] {
+            series(name, Value::Number(0.0));
+        }
+        for name in ["wintrades", "losstrades", "eventrades"] {
+            series(name, Value::Int(0));
+        }
+        // na, not 0, while flat or with nothing to average — matching Pine.
+        for name in [
+            "position_avg_price",
+            "avg_trade",
+            "avg_winning_trade",
+            "avg_losing_trade",
+            "avg_trade_percent",
+            "avg_winning_trade_percent",
+            "avg_losing_trade_percent",
+        ] {
+            series(name, Value::Na);
+        }
+    }
+
+    /// Roll the account one bar: every series' value becomes its history, then
+    /// `broker`'s figures become the new values, computing what they share
+    /// once. With no broker the account stays flat, but still rolls.
+    fn advance(&self, broker: Option<&dyn Broker>, close: f64) {
+        let mut fields = self.fields.borrow_mut();
+        if self.advanced.replace(true) {
+            for value in fields.values_mut() {
+                if let Value::Series(series) = value {
+                    if let Some(history) = &series.history {
+                        let previous = series
+                            .current
+                            .to_number()
+                            .ok()
+                            .flatten()
+                            .unwrap_or(f64::NAN);
+                        history.borrow_mut().push(previous, MAX_LOOKBACK);
+                    }
+                }
+            }
+        }
+
+        if let Some(broker) = broker {
+            Self::write(&mut fields, broker, close);
+        }
+    }
+
+    /// This bar's figures, computing what they share once.
+    fn write(fields: &mut HashMap<String, Value<O>>, broker: &dyn Broker, close: f64) {
+        let position = broker.position();
+        let equity = broker.equity(close);
+        let initial = broker.initial_capital();
+        let open_profit = open_profit_at(broker, close);
+        // Pine's identity equity = initial + netprofit + openprofit; derive
+        // netprofit from it so commission can't make the two drift.
+        let net_profit = equity - initial - open_profit;
+        let stats = broker.stats();
+        let closed = broker.closed_trades().len();
+
+        let mut set = |name: &str, value: Value<O>| {
+            if let Some(Value::Series(series)) = fields.get_mut(name) {
+                *series.current = value;
+            }
+        };
+        set("position_size", Value::Number(position.size));
+        set(
+            "position_avg_price",
+            if position.size == 0.0 {
+                Value::Na
+            } else {
+                Value::Number(position.avg_price)
+            },
+        );
+        set("equity", Value::Number(equity));
+        set("initial_capital", Value::Number(initial));
+        set("netprofit", Value::Number(net_profit));
+        set("openprofit", Value::Number(open_profit));
+        set("grossprofit", Value::Number(stats.gross_profit));
+        set("grossloss", Value::Number(stats.gross_loss));
+        set("max_drawdown", Value::Number(stats.max_drawdown));
+        set("max_runup", Value::Number(stats.max_runup));
+        set("wintrades", Value::Int(stats.wins as i64));
+        set("losstrades", Value::Int(stats.losses as i64));
+        set("eventrades", Value::Int(stats.evens as i64));
+        set(
+            "netprofit_percent",
+            Value::Number(pct_of(net_profit, initial)),
+        );
+        set(
+            "openprofit_percent",
+            Value::Number(pct_of(open_profit, initial)),
+        );
+        set(
+            "grossprofit_percent",
+            Value::Number(pct_of(stats.gross_profit, initial)),
+        );
+        set(
+            "grossloss_percent",
+            Value::Number(pct_of(stats.gross_loss, initial)),
+        );
+        set(
+            "max_drawdown_percent",
+            Value::Number(stats.max_drawdown_percent),
+        );
+        set("max_runup_percent", Value::Number(stats.max_runup_percent));
+        set(
+            "max_contracts_held_all",
+            Value::Number(stats.max_contracts_all),
+        );
+        set(
+            "max_contracts_held_long",
+            Value::Number(stats.max_contracts_long),
+        );
+        set(
+            "max_contracts_held_short",
+            Value::Number(stats.max_contracts_short),
+        );
+        set("avg_trade", per_trade(net_profit, closed));
+        set(
+            "avg_winning_trade",
+            per_trade(stats.gross_profit, stats.wins),
+        );
+        // Losing trades are reported as a negative average, so negate the
+        // positive gross-loss magnitude.
+        set(
+            "avg_losing_trade",
+            per_trade(-stats.gross_loss, stats.losses),
+        );
+        set("avg_trade_percent", per_trade(stats.pct_sum_all, closed));
+        set(
+            "avg_winning_trade_percent",
+            per_trade(stats.pct_sum_wins, stats.wins),
+        );
+        set(
+            "avg_losing_trade_percent",
+            per_trade(stats.pct_sum_losses, stats.losses),
+        );
+    }
 }
 
 fn pct_of(x: f64, initial: f64) -> f64 {
@@ -949,178 +1149,17 @@ pub fn register<O: PineOutput>(
         },
     );
 
-    // Read-only account values, computed from the broker on each use; before a
-    // `strategy` is declared they read as a flat, zero-profit account.
-    let zero = Value::Number(0.0);
-    let account = [
-        (
-            "position_size",
-            account_field(zero.clone(), |b, _| Value::Number(b.position().size)),
-        ),
-        // na, not 0, when flat — matching Pine.
-        (
-            "position_avg_price",
-            account_field(Value::Na, |b, _| {
-                let position = b.position();
-                if position.size == 0.0 {
-                    Value::Na
-                } else {
-                    Value::Number(position.avg_price)
-                }
-            }),
-        ),
-        (
-            "equity",
-            account_field(zero.clone(), |b, close| Value::Number(b.equity(close))),
-        ),
-        (
-            "initial_capital",
-            account_field(zero.clone(), |b, _| Value::Number(b.initial_capital())),
-        ),
-        (
-            "netprofit",
-            account_field(zero.clone(), |b, close| {
-                Value::Number(net_profit_at(b, close))
-            }),
-        ),
-        (
-            "openprofit",
-            account_field(zero.clone(), |b, close| {
-                Value::Number(open_profit_at(b, close))
-            }),
-        ),
-        (
-            "grossprofit",
-            account_field(zero.clone(), |b, _| Value::Number(b.stats().gross_profit)),
-        ),
-        (
-            "grossloss",
-            account_field(zero.clone(), |b, _| Value::Number(b.stats().gross_loss)),
-        ),
-        (
-            "max_drawdown",
-            account_field(zero.clone(), |b, _| Value::Number(b.stats().max_drawdown)),
-        ),
-        (
-            "max_runup",
-            account_field(zero.clone(), |b, _| Value::Number(b.stats().max_runup)),
-        ),
-        (
-            "wintrades",
-            account_field(Value::Int(0), |b, _| Value::Int(b.stats().wins as i64)),
-        ),
-        (
-            "losstrades",
-            account_field(Value::Int(0), |b, _| Value::Int(b.stats().losses as i64)),
-        ),
-        (
-            "eventrades",
-            account_field(Value::Int(0), |b, _| Value::Int(b.stats().evens as i64)),
-        ),
-        (
-            "netprofit_percent",
-            account_field(zero.clone(), |b, close| {
-                Value::Number(pct_of(net_profit_at(b, close), b.initial_capital()))
-            }),
-        ),
-        (
-            "openprofit_percent",
-            account_field(zero.clone(), |b, close| {
-                Value::Number(pct_of(open_profit_at(b, close), b.initial_capital()))
-            }),
-        ),
-        (
-            "grossprofit_percent",
-            account_field(zero.clone(), |b, _| {
-                Value::Number(pct_of(b.stats().gross_profit, b.initial_capital()))
-            }),
-        ),
-        (
-            "grossloss_percent",
-            account_field(zero.clone(), |b, _| {
-                Value::Number(pct_of(b.stats().gross_loss, b.initial_capital()))
-            }),
-        ),
-        (
-            "max_drawdown_percent",
-            account_field(zero.clone(), |b, _| {
-                Value::Number(b.stats().max_drawdown_percent)
-            }),
-        ),
-        (
-            "max_runup_percent",
-            account_field(zero.clone(), |b, _| {
-                Value::Number(b.stats().max_runup_percent)
-            }),
-        ),
-        (
-            "max_contracts_held_all",
-            account_field(zero.clone(), |b, _| {
-                Value::Number(b.stats().max_contracts_all)
-            }),
-        ),
-        (
-            "max_contracts_held_long",
-            account_field(zero.clone(), |b, _| {
-                Value::Number(b.stats().max_contracts_long)
-            }),
-        ),
-        (
-            "max_contracts_held_short",
-            account_field(zero.clone(), |b, _| {
-                Value::Number(b.stats().max_contracts_short)
-            }),
-        ),
-        (
-            "avg_trade",
-            account_field(Value::Na, |b, close| {
-                per_trade(net_profit_at(b, close), b.closed_trades().len())
-            }),
-        ),
-        (
-            "avg_winning_trade",
-            account_field(Value::Na, |b, _| {
-                per_trade(b.stats().gross_profit, b.stats().wins)
-            }),
-        ),
-        // Losing trades are reported as a negative average, so negate the
-        // positive gross-loss magnitude.
-        (
-            "avg_losing_trade",
-            account_field(Value::Na, |b, _| {
-                per_trade(-b.stats().gross_loss, b.stats().losses)
-            }),
-        ),
-        (
-            "avg_trade_percent",
-            account_field(Value::Na, |b, _| {
-                per_trade(b.stats().pct_sum_all, b.closed_trades().len())
-            }),
-        ),
-        (
-            "avg_winning_trade_percent",
-            account_field(Value::Na, |b, _| {
-                per_trade(b.stats().pct_sum_wins, b.stats().wins)
-            }),
-        ),
-        (
-            "avg_losing_trade_percent",
-            account_field(Value::Na, |b, _| {
-                per_trade(b.stats().pct_sum_losses, b.stats().losses)
-            }),
-        ),
-        (
-            "position_entry_name",
-            account_field(Value::Na, |b, _| {
-                b.open_trades()
-                    .last()
-                    .map_or(Value::Na, |t| Value::String(t.entry_id.clone()))
-            }),
-        ),
-    ];
-    for (name, value) in account {
-        fields.insert(name.to_string(), value);
-    }
+    // The account series, plus the one `series string` among them: the history
+    // buffer holds floats, so that one stays a value read on use.
+    Strategy::seed(&mut fields);
+    fields.insert(
+        "position_entry_name".to_string(),
+        account_field(Value::Na, |b, _| {
+            b.open_trades()
+                .last()
+                .map_or(Value::Na, |t| Value::String(t.entry_id.clone()))
+        }),
+    );
     fields.insert("margin_liquidation_price".to_string(), Value::Na);
     fields.insert(
         "account_currency".to_string(),
@@ -1143,19 +1182,33 @@ pub fn register<O: PineOutput>(
     fields.insert("closedtrades".to_string(), register_closedtrades());
     fields.insert("opentrades".to_string(), register_opentrades());
 
+    let fields = Rc::new(RefCell::new(fields));
     let value = Value::Object {
         type_name: "strategy".to_string(),
-        fields: Rc::new(RefCell::new(fields)),
+        fields: Rc::clone(&fields),
         call: Some(Builtin::untyped(
             Rc::new(StrategyFn::builtin_fn) as BuiltinFn<O>
         )),
         value: None,
     };
-    let pre: PerBarAdvance<O> = Rc::new(|ctx: &mut Interpreter<O>| {
-        if let (Some(broker), Some(bar)) = (ctx.broker.as_mut(), ctx.current_bar.as_ref()) {
-            broker.pre_hook(bar);
-        }
-    });
+    // Before the bar's statements: fill what the previous bar left pending, then
+    // roll the account, so the body reads this bar's figures and `[n]` reads the
+    // bars behind it.
+    let pre: PerBarAdvance<O> = {
+        let account = Strategy {
+            fields,
+            advanced: Cell::new(false),
+        };
+        Rc::new(move |ctx: &mut Interpreter<O>| {
+            let Some(bar) = ctx.current_bar.clone() else {
+                return;
+            };
+            if let Some(broker) = ctx.broker.as_mut() {
+                broker.pre_hook(&bar);
+            }
+            account.advance(ctx.broker.as_deref(), bar.close);
+        })
+    };
     let post: PerBarAdvance<O> = Rc::new(|ctx: &mut Interpreter<O>| {
         if let (Some(broker), Some(bar)) = (ctx.broker.as_mut(), ctx.current_bar.as_ref()) {
             broker.post_hook(bar);

@@ -1,0 +1,28 @@
+//@version=5
+strategy("strategy/history_short_circuit", initial_capital = 10000)
+// `strategy.*` history must advance every bar, not only on the bars where a
+// `[n]` reference happens to be evaluated. Under `and` short-circuiting the
+// right operand is skipped while the left is false, so both orderings of the
+// same condition must agree on the fill bar.
+
+// Bars: 5
+// Skip PineTS: PineTS gives strategy.position_size a per-evaluation buffer, so
+// its `[1]` is na on the fill bar when short-circuiting skips the reference.
+// The reference types it `series float`, whose history the runtime advances
+// every bar; PineTS also does not model the host broker (see strategy/stats).
+
+var int n = 0
+n += 1
+if n == 3
+    strategy.entry("L", strategy.long)
+
+lazy = strategy.position_size != 0 and strategy.position_size[1] == 0
+eager = strategy.position_size[1] == 0 and strategy.position_size != 0
+log.info(str.tostring(lazy) + " " + str.tostring(eager))
+
+// Expected output:
+// false false
+// false false
+// false false
+// true true
+// false false
