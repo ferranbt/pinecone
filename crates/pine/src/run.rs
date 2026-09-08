@@ -174,7 +174,7 @@ if bar_index == 1
 
     #[test]
     fn backtest_reports_the_halt_bar() {
-        use crate::core::{DefaultPineOutput, Timeframe};
+        use crate::core::DefaultPineOutput;
         use crate::ScriptBuilder;
 
         // A short into a rising market draws down fast; a tight max_drawdown
@@ -192,7 +192,7 @@ if bar_index == 1
             .expect("compile")
             .run()
             .expect("run");
-        let backtest = run.broker.expect("strategy").backtest(Timeframe::default());
+        let backtest = run.broker.expect("strategy").backtest();
         assert!(backtest.halted.is_some());
 
         // A strategy that simply stops trading is not halted.
@@ -208,7 +208,7 @@ if bar_index == 1
             .expect("compile")
             .run()
             .expect("run");
-        let backtest = run.broker.expect("strategy").backtest(Timeframe::default());
+        let backtest = run.broker.expect("strategy").backtest();
         assert_eq!(backtest.halted, None);
     }
 }

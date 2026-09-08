@@ -1,7 +1,7 @@
 /// Example: Running a strategy backtest
 ///
-/// Declares a `strategy`, replays it over synthetic bars, and reads the
-/// equity curve and trade log back from the `RunResult`.
+/// Declares a `strategy`, replays it over synthetic bars, and asks the broker
+/// it traded against for the backtest: the equity curve and trade log.
 use pine_lang::ScriptBuilder;
 use pine_core::DefaultPineOutput;
 
@@ -22,7 +22,8 @@ fn main() {
         .expect("Compilation failed")
         .run()
         .expect("Execution failed");
-    let backtest = run.backtest.expect("the script declared a strategy");
+    let broker = run.broker.expect("the script declared a strategy");
+    let backtest = broker.backtest();
 
     println!("Net profit:    {:.2}", backtest.net_profit);
     println!("Final equity:  {:.2}", backtest.final_equity());

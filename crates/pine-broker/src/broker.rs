@@ -8,7 +8,7 @@ use crate::{
     Broker, Commission, Direction, EntryFilter, Exit, FillModel, OcaType, Order, OrderKind,
     Position, RiskRule, RiskType, Sizing, Stats, Trade,
 };
-use pine_core::Bar;
+use pine_core::{Bar, Timeframe};
 use std::collections::HashMap;
 
 pub struct BarBroker<F: FillModel> {
@@ -20,6 +20,8 @@ pub struct BarBroker<F: FillModel> {
     max_entries: usize,
     /// Tick size, so `strategy.exit` distances given in ticks become prices.
     mintick: f64,
+    /// The chart timeframe the strategy runs on, for annualising its metrics.
+    timeframe: Timeframe,
     /// Starting capital, kept so `strategy.netprofit` can be derived from the
     /// equity identity.
     initial: f64,
@@ -82,6 +84,7 @@ impl<F: FillModel> BarBroker<F> {
             sizing: Sizing::Contracts(1.0),
             max_entries: 1,
             mintick: 0.0,
+            timeframe: Timeframe::default(),
             initial: initial_capital,
             cash: initial_capital,
             realized: 0.0,
@@ -130,6 +133,11 @@ impl<F: FillModel> BarBroker<F> {
 
     pub fn with_pyramiding(mut self, pyramiding: usize) -> Self {
         self.max_entries = pyramiding.max(1);
+        self
+    }
+
+    pub fn with_timeframe(mut self, timeframe: Timeframe) -> Self {
+        self.timeframe = timeframe;
         self
     }
 
@@ -738,6 +746,10 @@ impl<F: FillModel> Broker for BarBroker<F> {
 
     fn stats(&self) -> &Stats {
         &self.stats
+    }
+
+    fn timeframe(&self) -> Timeframe {
+        self.timeframe.clone()
     }
 
     fn halted_bar(&self) -> Option<u64> {

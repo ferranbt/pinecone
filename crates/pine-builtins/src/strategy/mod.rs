@@ -92,6 +92,7 @@ impl StrategyFn {
                 pyramiding: self.pyramiding.unwrap_or(0.0) as usize,
                 commission,
                 slippage: self.slippage,
+                timeframe: ctx.timeframe.clone(),
             };
 
             let factory = ctx.broker_factory.as_ref().ok_or_else(|| {

@@ -385,6 +385,10 @@ pub trait Broker {
     /// Running totals over the closed trades.
     fn stats(&self) -> &Stats;
 
+    /// The chart timeframe the strategy runs on, carried onto the [`Backtest`]
+    /// so its metrics can annualise.
+    fn timeframe(&self) -> Timeframe;
+
     /// The bar the run halted on if a rest-of-run risk rule fired
     /// (`max_drawdown`, `max_cons_loss_days`), else `None`.
     fn halted_bar(&self) -> Option<u64>;
@@ -400,9 +404,9 @@ pub trait Broker {
     /// Runs after the script body, with what the bar left. Defaults to nothing.
     fn post_hook(&mut self, _bar: &Bar) {}
 
-    /// What the run produced so far — the trade log, equity curve and summary
-    /// figures — with `timeframe` carried along so the metrics can annualise.
-    fn backtest(&self, timeframe: Timeframe) -> Backtest {
+    /// What the run produced so far: the trade log, equity curve and summary
+    /// figures.
+    fn backtest(&self) -> Backtest {
         let stats = self.stats();
         let close = stats.mark_price;
 
@@ -434,7 +438,7 @@ pub trait Broker {
             equity,
             trades,
             halted: self.halted_bar(),
-            timeframe,
+            timeframe: self.timeframe(),
         }
     }
 }
@@ -442,7 +446,7 @@ pub trait Broker {
 /// The account settings a `strategy()` declaration configures its broker with,
 /// so a custom [`BrokerFactory`] can honour the script's parameters rather than
 /// inventing its own.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BrokerConfig {
     /// Starting capital (`strategy.initial_capital`).
     pub initial_capital: f64,
@@ -456,6 +460,8 @@ pub struct BrokerConfig {
     pub commission: Option<Commission>,
     /// Slippage applied to fills, in ticks.
     pub slippage: f64,
+    /// The chart timeframe the strategy runs on.
+    pub timeframe: Timeframe,
 }
 
 /// Running totals over the trades a broker has closed, folded in as each one
@@ -535,7 +541,8 @@ impl BrokerFactory for DefaultBrokerFactory {
         let mut broker = BarBroker::new(fills, config.initial_capital)
             .with_mintick(config.mintick)
             .with_sizing(config.sizing)
-            .with_pyramiding(config.pyramiding);
+            .with_pyramiding(config.pyramiding)
+            .with_timeframe(config.timeframe.clone());
         if let Some(commission) = config.commission {
             broker = broker.with_commission(commission);
         }

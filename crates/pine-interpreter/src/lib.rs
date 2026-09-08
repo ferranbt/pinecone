@@ -565,6 +565,8 @@ pub struct Interpreter<O: PineOutput> {
     /// The feed `request.security` draws other symbols/timeframes from.
     pub request_provider: Option<Rc<dyn pine_core::DataProvider>>,
     pub chart_period: Option<i64>,
+    /// The chart timeframe, for the account a `strategy()` declaration sets up.
+    pub timeframe: pine_core::Timeframe,
     /// The current bar's opening time (UNIX ms), the raw datum every date name
     /// (`time`, `year`, …) derives its bare value from. Set by the host each bar.
     pub current_time: Option<i64>,
@@ -616,6 +618,7 @@ impl<O: PineOutput> Interpreter<O> {
             broker_factory: Some(Box::new(pine_broker::DefaultBrokerFactory)),
             request_provider: None,
             chart_period: None,
+            timeframe: pine_core::Timeframe::default(),
             current_time: None,
             current_bar: None,
             per_bar_advances: Vec::new(),

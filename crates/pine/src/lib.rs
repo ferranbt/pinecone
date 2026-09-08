@@ -339,6 +339,7 @@ impl<O: PineOutput> ScriptBuilder<O> {
         interpreter.library_loader = self.library_loader;
         interpreter.request_provider = self.request_provider.map(Rc::from);
         interpreter.chart_period = chart_period;
+        interpreter.timeframe = timeframe.clone();
         if let Some(broker_factory) = self.broker_factory {
             interpreter.broker_factory = Some(broker_factory);
         }
