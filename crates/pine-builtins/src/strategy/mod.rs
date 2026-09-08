@@ -18,7 +18,9 @@ use pine_broker::{
 };
 use pine_builtin_macro::BuiltinFunction;
 use pine_core::{PineOutput, PineVersion};
-use pine_interpreter::{Builtin, BuiltinFn, EvaluatedArg, Interpreter, RuntimeError, Value};
+use pine_interpreter::{
+    Builtin, BuiltinFn, EvaluatedArg, Interpreter, PerBarAdvance, RuntimeError, Value,
+};
 
 /// TradingView's default starting capital.
 const DEFAULT_INITIAL_CAPITAL: f64 = 1_000_000.0;
@@ -782,7 +784,7 @@ fn register_opentrades<O: PineOutput>() -> Value<O> {
 /// Build the `strategy` namespace object: the callable declaration, the order
 /// commands, the direction and sizing constants, and the read-only values the
 /// host refreshes each bar (seeded to a flat, zero-profit account).
-pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
+pub fn register<O: PineOutput>(_version: PineVersion) -> (Value<O>, PerBarAdvance<O>) {
     let mut fields: HashMap<String, Value<O>> = HashMap::new();
 
     // Order commands.
@@ -962,12 +964,19 @@ pub fn register<O: PineOutput>(_version: PineVersion) -> Value<O> {
     fields.insert("closedtrades".to_string(), register_closedtrades());
     fields.insert("opentrades".to_string(), register_opentrades());
 
-    Value::Object {
+    let value = Value::Object {
         type_name: "strategy".to_string(),
         fields: Rc::new(RefCell::new(fields)),
         call: Some(Builtin::untyped(
             Rc::new(StrategyFn::builtin_fn) as BuiltinFn<O>
         )),
         value: None,
-    }
+    };
+    // After each bar's statements, on whatever broker the declaration bound.
+    let post: PerBarAdvance<O> = Rc::new(|ctx: &mut Interpreter<O>| {
+        if let (Some(broker), Some(bar)) = (ctx.broker.as_mut(), ctx.current_bar.as_ref()) {
+            broker.post_hook(bar);
+        }
+    });
+    (value, post)
 }

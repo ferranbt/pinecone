@@ -568,7 +568,11 @@ pub struct Interpreter<O: PineOutput> {
     /// The current bar's opening time (UNIX ms), the raw datum every date name
     /// (`time`, `year`, …) derives its bare value from. Set by the host each bar.
     pub current_time: Option<i64>,
+    /// The bar being executed, for the per-bar hooks. Set by the host each bar.
+    pub current_bar: Option<pine_core::Bar>,
+    /// Run before a bar's statements (once its series are set), and after them.
     pub per_bar_advances: Vec<PerBarAdvance<O>>,
+    pub per_bar_post_advances: Vec<PerBarAdvance<O>>,
     /// Host-supplied `input.*` overrides, keyed by the input's title.
     pub inputs: HashMap<String, pine_core::InputValue>,
 }
@@ -613,7 +617,9 @@ impl<O: PineOutput> Interpreter<O> {
             request_provider: None,
             chart_period: None,
             current_time: None,
+            current_bar: None,
             per_bar_advances: Vec::new(),
+            per_bar_post_advances: Vec::new(),
             inputs: HashMap::new(),
         }
     }
@@ -668,6 +674,10 @@ impl<O: PineOutput> Interpreter<O> {
 
         for stmt in &program.statements {
             self.execute_stmt(stmt)?;
+        }
+
+        for advance in self.per_bar_post_advances.clone() {
+            advance(self);
         }
 
         // Return a clone of the output

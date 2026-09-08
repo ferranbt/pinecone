@@ -380,9 +380,19 @@ pub trait Broker {
     /// Trades already closed, in the order they closed.
     fn closed_trades(&self) -> &[Trade];
 
+    /// Running totals over the closed trades.
+    fn stats(&self) -> &Stats;
+
     /// The bar the run halted on if a rest-of-run risk rule fired
     /// (`max_drawdown`, `max_cons_loss_days`), else `None`.
     fn halted_bar(&self) -> Option<u64>;
+
+    /// Runs once the bar's series are set, before the script body: the place
+    /// to fill what the previous bar left pending. Defaults to nothing.
+    fn pre_hook(&mut self, _bar: &Bar) {}
+
+    /// Runs after the script body, with what the bar left. Defaults to nothing.
+    fn post_hook(&mut self, _bar: &Bar) {}
 }
 
 /// The account settings a `strategy()` declaration configures its broker with,
@@ -402,6 +412,62 @@ pub struct BrokerConfig {
     pub commission: Option<Commission>,
     /// Slippage applied to fills, in ticks.
     pub slippage: f64,
+}
+
+/// Running totals over the trades a broker has closed, folded in as each one
+/// closes so reading them costs nothing per bar.
+#[derive(Debug, Clone, Default)]
+pub struct Stats {
+    pub gross_profit: f64,
+    /// Total loss of the losing trades, as a positive magnitude.
+    pub gross_loss: f64,
+    pub wins: usize,
+    pub losses: usize,
+    pub evens: usize,
+    /// Sums of each trade's percent return — over all trades, the winners and
+    /// the losers — behind the average-trade-percent figures.
+    pub pct_sum_all: f64,
+    pub pct_sum_wins: f64,
+    pub pct_sum_losses: f64,
+    /// Largest peak-to-trough equity drop and trough-to-peak rise, in cash and
+    /// as a percentage of the peak/trough — tracked separately, since the
+    /// percentage extreme need not coincide with the cash one.
+    pub max_drawdown: f64,
+    pub max_runup: f64,
+    pub max_drawdown_percent: f64,
+    pub max_runup_percent: f64,
+    /// Largest position (in contracts) ever held, overall and per side.
+    pub max_contracts_all: f64,
+    pub max_contracts_long: f64,
+    pub max_contracts_short: f64,
+    /// Account value at each bar's close, in bar order.
+    pub equity: Vec<f64>,
+    /// The last bar's close, at which open trades are valued.
+    pub mark_price: f64,
+}
+
+impl Stats {
+    pub fn record_close(&mut self, trade: &Trade) {
+        let profit = trade.profit(0.0); // closed, so the price is ignored
+        let basis = trade.entry_price * trade.size.abs();
+        let ret = if basis != 0.0 {
+            profit / basis * 100.0
+        } else {
+            0.0
+        };
+        self.pct_sum_all += ret;
+        if profit > 0.0 {
+            self.gross_profit += profit;
+            self.wins += 1;
+            self.pct_sum_wins += ret;
+        } else if profit < 0.0 {
+            self.gross_loss -= profit;
+            self.losses += 1;
+            self.pct_sum_losses += ret;
+        } else {
+            self.evens += 1;
+        }
+    }
 }
 
 /// Builds the [`Broker`] a `strategy` trades against. The default,
