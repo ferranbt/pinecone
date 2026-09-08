@@ -9,3 +9,4 @@ homepage.workspace = true
 
 [dependencies]
 pine-core = { workspace = true }
+serde = { workspace = true }

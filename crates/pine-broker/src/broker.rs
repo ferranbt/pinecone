@@ -6,9 +6,9 @@
 
 use crate::{
     Broker, Commission, Direction, EntryFilter, Exit, FillModel, OcaType, Order, OrderKind,
-    Position, RiskRule, RiskType, Sizing, Trade,
+    Position, RiskRule, RiskType, Sizing, Stats, Trade,
 };
-use pine_core::Bar;
+use pine_core::{Bar, Timeframe};
 use std::collections::HashMap;
 
 pub struct BarBroker<F: FillModel> {
@@ -20,6 +20,8 @@ pub struct BarBroker<F: FillModel> {
     max_entries: usize,
     /// Tick size, so `strategy.exit` distances given in ticks become prices.
     mintick: f64,
+    /// The chart timeframe the strategy runs on, for annualising its metrics.
+    timeframe: Timeframe,
     /// Starting capital, kept so `strategy.netprofit` can be derived from the
     /// equity identity.
     initial: f64,
@@ -37,6 +39,7 @@ pub struct BarBroker<F: FillModel> {
 
     open: Vec<Trade>,
     closed: Vec<Trade>,
+    stats: Stats,
 
     bar_index: u64,
 
@@ -49,6 +52,11 @@ pub struct BarBroker<F: FillModel> {
     max_intraday_filled_orders: Option<u32>,
     /// Highest equity seen over the whole run (for `max_drawdown`).
     peak_equity: f64,
+    /// Close-equity extremes the reported drawdown/run-up measure against.
+    /// Kept apart from `peak_equity`, which the risk rule updates before a
+    /// flatten; these follow the settled equity after it.
+    close_peak: f64,
+    close_trough: f64,
     /// The current trading day, as a UTC day bucket of `bar.time`.
     day: Option<i64>,
     /// Equity entering the current day (for the daily loss/win verdict).
@@ -76,6 +84,7 @@ impl<F: FillModel> BarBroker<F> {
             sizing: Sizing::Contracts(1.0),
             max_entries: 1,
             mintick: 0.0,
+            timeframe: Timeframe::default(),
             initial: initial_capital,
             cash: initial_capital,
             realized: 0.0,
@@ -84,6 +93,7 @@ impl<F: FillModel> BarBroker<F> {
             exits: Vec::new(),
             open: Vec::new(),
             closed: Vec::new(),
+            stats: Stats::default(),
             bar_index: 0,
             entry_filter: EntryFilter::All,
             max_position_size: None,
@@ -92,6 +102,8 @@ impl<F: FillModel> BarBroker<F> {
             max_cons_loss_days: None,
             max_intraday_filled_orders: None,
             peak_equity: initial_capital,
+            close_peak: initial_capital,
+            close_trough: initial_capital,
             day: None,
             day_start_equity: initial_capital,
             intraday_peak: initial_capital,
@@ -121,6 +133,11 @@ impl<F: FillModel> BarBroker<F> {
 
     pub fn with_pyramiding(mut self, pyramiding: usize) -> Self {
         self.max_entries = pyramiding.max(1);
+        self
+    }
+
+    pub fn with_timeframe(mut self, timeframe: Timeframe) -> Self {
+        self.timeframe = timeframe;
         self
     }
 
@@ -196,7 +213,7 @@ impl<F: FillModel> BarBroker<F> {
             self.realized += (price - lot.entry_price) * closed_signed;
             signed_qty += closed_signed; // moves signed_qty toward zero
 
-            self.closed.push(Trade {
+            let trade = Trade {
                 entry_id: lot.entry_id.clone(),
                 size: closed_signed,
                 entry_price: lot.entry_price,
@@ -204,7 +221,9 @@ impl<F: FillModel> BarBroker<F> {
                 exit_price: Some(price),
                 exit_bar: Some(self.bar_index),
                 commission: entry_share + exit_share,
-            });
+            };
+            self.stats.record_close(&trade);
+            self.closed.push(trade);
 
             let lot = &mut self.open[index];
             lot.size -= closed_signed;
@@ -548,6 +567,36 @@ impl<F: FillModel> BarBroker<F> {
         // from the settled equity.
         self.last_equity = self.equity(bar.close);
     }
+
+    /// Update the reported equity extremes and position maxima from the
+    /// settled state at the bar's close. The peak/trough track close equity,
+    /// so an intrabar swing measures against them without moving them.
+    fn mark_stats(&mut self, bar: &Bar) {
+        let equity = self.equity(bar.close);
+        self.close_peak = self.close_peak.max(equity);
+        self.close_trough = self.close_trough.min(equity);
+        let (hi, lo) = (self.equity(bar.high), self.equity(bar.low));
+        let (intrabar_low, intrabar_high) = (hi.min(lo), hi.max(lo));
+        let size = self.position().size;
+
+        let stats = &mut self.stats;
+        stats.max_drawdown = stats.max_drawdown.max(self.close_peak - intrabar_low);
+        stats.max_runup = stats.max_runup.max(intrabar_high - self.close_trough);
+        if self.close_peak > 0.0 {
+            let dd = (self.close_peak - intrabar_low) / self.close_peak * 100.0;
+            stats.max_drawdown_percent = stats.max_drawdown_percent.max(dd);
+        }
+        if self.close_trough > 0.0 {
+            let ru = (intrabar_high - self.close_trough) / self.close_trough * 100.0;
+            stats.max_runup_percent = stats.max_runup_percent.max(ru);
+        }
+        stats.max_contracts_all = stats.max_contracts_all.max(size.abs());
+        if size > 0.0 {
+            stats.max_contracts_long = stats.max_contracts_long.max(size);
+        } else if size < 0.0 {
+            stats.max_contracts_short = stats.max_contracts_short.max(-size);
+        }
+    }
 }
 
 impl<F: FillModel> Broker for BarBroker<F> {
@@ -649,8 +698,10 @@ impl<F: FillModel> Broker for BarBroker<F> {
         // Then the protective exits, against the position those fills produced.
         self.evaluate_exits(bar);
 
-        // Finally settle equity for the bar and enforce the equity-drop rules.
+        // Finally settle equity for the bar and enforce the equity-drop rules,
+        // then take the reported figures from what settled.
         self.mark_and_check_risk(bar);
+        self.mark_stats(bar);
     }
 
     fn position(&self) -> Position {
@@ -693,8 +744,22 @@ impl<F: FillModel> Broker for BarBroker<F> {
         &self.closed
     }
 
+    fn stats(&self) -> &Stats {
+        &self.stats
+    }
+
+    fn timeframe(&self) -> Timeframe {
+        self.timeframe.clone()
+    }
+
     fn halted_bar(&self) -> Option<u64> {
         self.halted_bar
+    }
+
+    fn post_hook(&mut self, bar: &Bar) {
+        let equity = self.equity(bar.close);
+        self.stats.equity.push(equity);
+        self.stats.mark_price = bar.close;
     }
 }
 

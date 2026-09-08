@@ -206,12 +206,10 @@ pub fn register_namespace_objects<O: FullPineOutput>(
     version: PineVersion,
     syminfo: Option<SymInfo>,
     timeframe: Option<Timeframe>,
-) -> (
-    HashMap<String, Value<O>>,
-    Vec<pine_interpreter::PerBarAdvance<O>>,
-) {
+) -> (HashMap<String, Value<O>>, BarAdvances<O>) {
     let mut namespaces = HashMap::new();
     let mut advances = Vec::new();
+    let mut post_advances = Vec::new();
 
     // `syminfo` and `timeframe` are always present in Pine, so an absent one
     // falls back to defaults.
@@ -269,7 +267,10 @@ pub fn register_namespace_objects<O: FullPineOutput>(
         namespaces.insert(name, value);
     }
     namespaces.insert("request".to_string(), request::register());
-    namespaces.insert("strategy".to_string(), strategy::register(version));
+    let (strategy_ns, strategy_pre, strategy_post) = strategy::register(version);
+    namespaces.insert("strategy".to_string(), strategy_ns);
+    advances.push(strategy_pre);
+    post_advances.push(strategy_post);
     namespaces.insert("alertcondition".to_string(), alertcondition::register());
     namespaces.insert("fill".to_string(), fill::register());
     for (name, value) in globals::register() {
@@ -341,7 +342,18 @@ pub fn register_namespace_objects<O: FullPineOutput>(
         namespaces.insert(name, func);
     }
 
-    (namespaces, advances)
+    (
+        namespaces,
+        BarAdvances {
+            pre: advances,
+            post: post_advances,
+        },
+    )
+}
+
+pub struct BarAdvances<O: PineOutput> {
+    pub pre: Vec<pine_interpreter::PerBarAdvance<O>>,
+    pub post: Vec<pine_interpreter::PerBarAdvance<O>>,
 }
 
 /// Per-bar variables, rebuilt for each [`Bar`] and registered before it executes.

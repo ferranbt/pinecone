@@ -1,0 +1,12 @@
+//@version=6
+strategy("strategy_trades", initial_capital = 1000000, default_qty_type = strategy.fixed, default_qty_value = 1)
+
+// Closes a trade every other bar, so the closed-trade log grows with the run,
+// while reading account figures every bar. The per-bar cost must not grow with
+// the number of trades closed so far.
+if bar_index % 2 == 0
+    strategy.entry("L", strategy.long)
+else
+    strategy.close("L")
+
+plot(strategy.netprofit + strategy.grossprofit + strategy.avg_trade_percent + strategy.max_drawdown)

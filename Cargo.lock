@@ -1683,6 +1683,7 @@ name = "pine-broker"
 version = "0.2.6"
 dependencies = [
  "pine-core",
+ "serde",
 ]
 
 [[package]]

@@ -11,11 +11,13 @@
 //! outside the strategy, when an alert is delivered to an external system. This
 //! crate only simulates.
 
-use pine_core::Bar;
+use pine_core::{Bar, Timeframe};
 
+mod backtest;
 mod broker;
 mod fill;
 
+pub use backtest::{Backtest, Metrics};
 pub use broker::BarBroker;
 pub use fill::{FillModel, PineFills};
 
@@ -380,15 +382,71 @@ pub trait Broker {
     /// Trades already closed, in the order they closed.
     fn closed_trades(&self) -> &[Trade];
 
+    /// Running totals over the closed trades.
+    fn stats(&self) -> &Stats;
+
+    /// The chart timeframe the strategy runs on, carried onto the [`Backtest`]
+    /// so its metrics can annualise.
+    fn timeframe(&self) -> Timeframe;
+
     /// The bar the run halted on if a rest-of-run risk rule fired
     /// (`max_drawdown`, `max_cons_loss_days`), else `None`.
     fn halted_bar(&self) -> Option<u64>;
+
+    /// Runs once the bar's series are set, before the script body: the place
+    /// to fill what the previous bar left pending. Defaults to [`advance`].
+    ///
+    /// [`advance`]: Broker::advance
+    fn pre_hook(&mut self, bar: &Bar) {
+        self.advance(bar);
+    }
+
+    /// Runs after the script body, with what the bar left. Defaults to nothing.
+    fn post_hook(&mut self, _bar: &Bar) {}
+
+    /// What the run produced so far: the trade log, equity curve and summary
+    /// figures.
+    fn backtest(&self) -> Backtest {
+        let stats = self.stats();
+        let close = stats.mark_price;
+
+        // Closed trades first, then those still open.
+        let mut trades = self.closed_trades().to_vec();
+        trades.extend(self.open_trades().into_iter().cloned());
+
+        let open_profit = self
+            .open_trades()
+            .iter()
+            .fold(0.0, |acc, t| acc + t.profit(close));
+        let initial_capital = self.initial_capital();
+        let equity = stats.equity.clone();
+        let final_equity = equity.last().copied().unwrap_or(initial_capital);
+
+        Backtest {
+            initial_capital,
+            net_profit: final_equity - initial_capital - open_profit,
+            open_profit,
+            gross_profit: stats.gross_profit,
+            gross_loss: stats.gross_loss,
+            max_drawdown: stats.max_drawdown,
+            max_runup: stats.max_runup,
+            win_trades: stats.wins,
+            loss_trades: stats.losses,
+            even_trades: stats.evens,
+            position_size: self.position().size,
+            mark_price: close,
+            equity,
+            trades,
+            halted: self.halted_bar(),
+            timeframe: self.timeframe(),
+        }
+    }
 }
 
 /// The account settings a `strategy()` declaration configures its broker with,
 /// so a custom [`BrokerFactory`] can honour the script's parameters rather than
 /// inventing its own.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BrokerConfig {
     /// Starting capital (`strategy.initial_capital`).
     pub initial_capital: f64,
@@ -402,6 +460,64 @@ pub struct BrokerConfig {
     pub commission: Option<Commission>,
     /// Slippage applied to fills, in ticks.
     pub slippage: f64,
+    /// The chart timeframe the strategy runs on.
+    pub timeframe: Timeframe,
+}
+
+/// Running totals over the trades a broker has closed, folded in as each one
+/// closes so reading them costs nothing per bar.
+#[derive(Debug, Clone, Default)]
+pub struct Stats {
+    pub gross_profit: f64,
+    /// Total loss of the losing trades, as a positive magnitude.
+    pub gross_loss: f64,
+    pub wins: usize,
+    pub losses: usize,
+    pub evens: usize,
+    /// Sums of each trade's percent return — over all trades, the winners and
+    /// the losers — behind the average-trade-percent figures.
+    pub pct_sum_all: f64,
+    pub pct_sum_wins: f64,
+    pub pct_sum_losses: f64,
+    /// Largest peak-to-trough equity drop and trough-to-peak rise, in cash and
+    /// as a percentage of the peak/trough — tracked separately, since the
+    /// percentage extreme need not coincide with the cash one.
+    pub max_drawdown: f64,
+    pub max_runup: f64,
+    pub max_drawdown_percent: f64,
+    pub max_runup_percent: f64,
+    /// Largest position (in contracts) ever held, overall and per side.
+    pub max_contracts_all: f64,
+    pub max_contracts_long: f64,
+    pub max_contracts_short: f64,
+    /// Account value at each bar's close, in bar order.
+    pub equity: Vec<f64>,
+    /// The last bar's close, at which open trades are valued.
+    pub mark_price: f64,
+}
+
+impl Stats {
+    pub fn record_close(&mut self, trade: &Trade) {
+        let profit = trade.profit(0.0); // closed, so the price is ignored
+        let basis = trade.entry_price * trade.size.abs();
+        let ret = if basis != 0.0 {
+            profit / basis * 100.0
+        } else {
+            0.0
+        };
+        self.pct_sum_all += ret;
+        if profit > 0.0 {
+            self.gross_profit += profit;
+            self.wins += 1;
+            self.pct_sum_wins += ret;
+        } else if profit < 0.0 {
+            self.gross_loss -= profit;
+            self.losses += 1;
+            self.pct_sum_losses += ret;
+        } else {
+            self.evens += 1;
+        }
+    }
 }
 
 /// Builds the [`Broker`] a `strategy` trades against. The default,
@@ -425,7 +541,8 @@ impl BrokerFactory for DefaultBrokerFactory {
         let mut broker = BarBroker::new(fills, config.initial_capital)
             .with_mintick(config.mintick)
             .with_sizing(config.sizing)
-            .with_pyramiding(config.pyramiding);
+            .with_pyramiding(config.pyramiding)
+            .with_timeframe(config.timeframe.clone());
         if let Some(commission) = config.commission {
             broker = broker.with_commission(commission);
         }
