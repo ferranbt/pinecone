@@ -1,0 +1,18 @@
+//@version=6
+indicator("function_calls")
+
+// Exercises the user-defined-function call path (run_call_site_body) hard:
+// `step` is called many times per bar, and carries locals plus a `var` so each
+// call does the full scope save/restore + local-state persistence.
+step(x) =>
+    var float acc = 0.0
+    a = x * 2.0
+    b = a + close
+    acc := acc + b - close
+    acc
+
+s = 0.0
+for i = 0 to 20
+    s := s + step(close + i)
+
+plot(s)
