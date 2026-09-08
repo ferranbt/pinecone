@@ -42,7 +42,7 @@ impl<O: PineOutput, T: serde::de::DeserializeOwned> FromArg<O> for T {
 /// Takes the history map rather than `&mut self` so callers can hold a borrow of
 /// another interpreter field while recording.
 fn push_history<O: PineOutput>(
-    history: &mut HashMap<String, SeriesBuffer<Value<O>>>,
+    history: &mut FastMap<String, SeriesBuffer<Value<O>>>,
     name: &str,
     value: Value<O>,
 ) {
@@ -142,6 +142,9 @@ pub type MapEntries<O> = Rc<RefCell<Vec<(Value<O>, Value<O>)>>>;
 /// The named members backing a namespace object — the `fields` of a
 /// [`Value::Object`], and what an `import` caches per library path.
 pub type ObjectFields<O> = Rc<RefCell<HashMap<String, Value<O>>>>;
+
+/// A map on the evaluation path. Keys are short identifiers (or small ints)
+type FastMap<K, V> = HashMap<K, V, ahash::RandomState>;
 
 /// Value types in the interpreter
 #[derive(Clone)]
@@ -497,18 +500,18 @@ impl<O: PineOutput> SeriesSite<O> {
 /// The interpreter executes a program with a given bar
 pub struct Interpreter<O: PineOutput> {
     /// The global scope: builtins, host-set series and top-level user variables.
-    variables: HashMap<String, Variable<O>>,
+    variables: FastMap<String, Variable<O>>,
     /// One frame per user function/method call in flight, innermost last. A
     /// lookup walks these top-down before falling back to `variables`; a write
     /// inside a call lands in the top frame, so every binding a call makes — of
     /// any kind — vanishes when its frame is popped, with nothing tracking them.
-    frames: Vec<HashMap<String, Variable<O>>>,
+    frames: Vec<FastMap<String, Variable<O>>>,
     /// User-defined types, kept separate from `variables` so a UDT and a
     /// function/variable may share a name (Pine's type and value namespaces are
     /// distinct). `Type.new` / `Type.copy` resolve here.
     user_types: HashMap<String, Value<O>>,
     /// Method registry (method_name -> Vec<MethodDef>) - can have multiple methods with same name for different types
-    methods: HashMap<String, Vec<MethodDef>>,
+    methods: FastMap<String, Vec<MethodDef>>,
     /// Library loader for importing external libraries
     pub library_loader: Option<Box<dyn LibraryLoader>>,
     /// Exported items from this module (for library mode)
@@ -525,18 +528,18 @@ pub struct Interpreter<O: PineOutput> {
     /// Per-variable history for user-computed series (`var` declarations).
     /// get(0) = previous bar, get(1) = two bars ago, etc.
     /// Populated on each `Stmt::Assignment`; supports Pine's `name[n]` lookback.
-    pub user_series_history: HashMap<String, SeriesBuffer<Value<O>>>,
+    pub user_series_history: FastMap<String, SeriesBuffer<Value<O>>>,
     /// History for subscripted non-variable series expressions (`ta.sma(..)[1]`,
     /// `(high+low)[1]`), keyed by the `Expr::Index` node's id — the same
     /// site-keyed pattern as `function_local_state`.
-    expr_history: HashMap<u32, SeriesSite<O>>,
+    expr_history: FastMap<u32, SeriesSite<O>>,
     /// Persistent local state for user-defined functions, keyed by the call
     /// site's stable lexical id (`Expr::Call::id`). Keying by call site — not
     /// by function name — means two calls to the same function keep independent
     /// state, mirroring TradingView (e.g. `o[1]` inside a function returns the
     /// previous bar's value of that call site's local `o`). A `call_id` of 0
     /// (a call with no stable identity) is not persisted.
-    function_local_state: HashMap<u32, HashMap<String, Variable<O>>>,
+    function_local_state: FastMap<u32, FastMap<String, Variable<O>>>,
     /// `var`/`varip` declarations whose initializer already ran, keyed by
     /// (call-site id, name). Pine `var` initializes only the FIRST time
     /// execution reaches the declaration (once ever, not per bar/iteration).
@@ -547,7 +550,7 @@ pub struct Interpreter<O: PineOutput> {
     ///
     /// The value is the bar it initialized on, so a reassignment can tell that
     /// there is no previous bar to read back yet.
-    var_decls_initialized: HashMap<(u32, String), u64>,
+    var_decls_initialized: FastMap<(u32, String), u64>,
     /// Lexical id of the call site currently executing (0 at top level). Scopes
     /// `var` init-once tracking to the active call site.
     current_call_id: u32,
@@ -591,18 +594,18 @@ fn is_na_operand<O: PineOutput>(v: &Value<O>) -> bool {
 impl<O: PineOutput> Interpreter<O> {
     pub fn new() -> Self {
         Self {
-            variables: HashMap::new(),
+            variables: FastMap::default(),
             frames: Vec::new(),
             user_types: HashMap::new(),
-            methods: HashMap::new(),
+            methods: FastMap::default(),
             library_loader: None,
             exports: HashMap::new(),
             imported: HashMap::new(),
             output: O::default(),
-            user_series_history: HashMap::new(),
-            expr_history: HashMap::new(),
-            function_local_state: HashMap::new(),
-            var_decls_initialized: HashMap::new(),
+            user_series_history: FastMap::default(),
+            expr_history: FastMap::default(),
+            function_local_state: FastMap::default(),
+            var_decls_initialized: FastMap::default(),
             current_call_id: 0,
             bar_seq: 0,
             broker: None,
@@ -2082,7 +2085,7 @@ impl<O: PineOutput> Interpreter<O> {
                 .remove(&call_id)
                 .unwrap_or_default()
         } else {
-            HashMap::new()
+            FastMap::default()
         };
         frame.extend(param_bindings);
         self.frames.push(frame);

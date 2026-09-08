@@ -1762,6 +1762,7 @@ dependencies = [
 name = "pine-interpreter"
 version = "0.2.6"
 dependencies = [
+ "ahash",
  "eyre",
  "pine-ast",
  "pine-broker",
