@@ -159,9 +159,11 @@ pub enum Value<O: PineOutput> {
         call: Option<Builtin<O>>,
         value: Option<ObjectValueFn<O>>,
     },
+    /// A user-defined function. The AST is shared, not copied, since a call
+    /// clones the function's value on every invocation.
     Function {
-        params: Vec<pine_ast::FunctionParam>,
-        body: Vec<Stmt>,
+        params: Rc<[pine_ast::FunctionParam]>,
+        body: Rc<[Stmt]>,
     },
     BuiltinFunction(Builtin<O>), // Builtin callable plus the arguments it accepts
     /// An unevaluated expression, passed to a builtin that captured it (a lazy
@@ -466,8 +468,8 @@ impl<O: PineOutput> Value<O> {
 #[derive(Clone)]
 struct MethodDef {
     type_name: String, // The type this method belongs to (from first param's type annotation)
-    params: Vec<pine_ast::MethodParam>,
-    body: Vec<Stmt>,
+    params: Rc<[pine_ast::MethodParam]>,
+    body: Rc<[Stmt]>,
 }
 
 /// One history-carrying subscript site — `expr[n]` where `expr` is not a plain
@@ -1323,8 +1325,8 @@ impl<O: PineOutput> Interpreter<O> {
                 // Store the method definition
                 let method_def = MethodDef {
                     type_name,
-                    params: params.clone(),
-                    body: body.clone(),
+                    params: params.clone().into(),
+                    body: body.clone().into(),
                 };
 
                 self.methods
@@ -1351,8 +1353,8 @@ impl<O: PineOutput> Interpreter<O> {
             } => {
                 // Create a function value
                 let func_value = Value::Function {
-                    params: params.clone(),
-                    body: body.clone(),
+                    params: params.clone().into(),
+                    body: body.clone().into(),
                 };
                 self.bind(
                     name.clone(),
@@ -1640,16 +1642,20 @@ impl<O: PineOutput> Interpreter<O> {
                 // Check if this is a method call (object.method())
                 if let Expr::MemberAccess { object, member, .. } = callee.as_ref() {
                     // Try to find a method with this name
-                    if let Some(method_defs) = self.methods.get(member).cloned() {
+                    if self.methods.contains_key(member) {
                         // Evaluate the object (this will be the first parameter)
                         let obj_value = self.eval_expr_raw(object)?;
 
-                        // Find the method that matches the object's type
+                        // Find the method that matches the object's type. Only
+                        // that one definition is cloned, and its AST is shared.
                         let obj_type = self.get_object_type_name(&obj_value)?;
+                        let method_def = self
+                            .methods
+                            .get(member)
+                            .and_then(|defs| defs.iter().find(|m| m.type_name == obj_type))
+                            .cloned();
 
-                        if let Some(method_def) =
-                            method_defs.iter().find(|m| m.type_name == obj_type)
-                        {
+                        if let Some(method_def) = method_def {
                             // Evaluate the other arguments
                             let mut evaluated_args: Vec<EvaluatedArg<O>> =
                                 vec![EvaluatedArg::Positional(obj_value)];
@@ -1786,8 +1792,8 @@ impl<O: PineOutput> Interpreter<O> {
             Expr::Function { params, body } => {
                 // params is already Vec<FunctionParam> from the AST
                 Ok(Value::Function {
-                    params: params.clone(),
-                    body: body.clone(),
+                    params: params.clone().into(),
+                    body: body.clone().into(),
                 })
             }
         }
